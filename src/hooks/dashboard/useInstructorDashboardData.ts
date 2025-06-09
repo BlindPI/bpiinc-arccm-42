@@ -1,127 +1,190 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { InstructorSession, ComplianceData } from '@/types/dashboard';
+import { useAuth } from '@/contexts/AuthContext';
 
-interface InstructorMetrics {
+export interface InstructorMetrics {
   upcomingClasses: number;
   studentsTaught: number;
   certificationsIssued: number;
   teachingHours: number;
 }
 
-export function useInstructorDashboardData(userId: string) {
-  const { data: metrics, isLoading } = useQuery({
-    queryKey: ['instructor-dashboard-data', userId],
-    queryFn: async (): Promise<InstructorMetrics> => {
-      // Get real upcoming course schedules
-      const { data: upcomingSchedules } = await supabase
-        .from('course_schedules')
-        .select('id')
-        .eq('instructor_id', userId)
-        .gte('start_date', new Date().toISOString());
-
-      // Get real certificates issued by this instructor
-      const { data: certificates } = await supabase
-        .from('certificates')
-        .select('id')
-        .eq('issued_by', userId);
-
-      // Get real students taught through course enrollments
-      const { data: enrollments } = await supabase
-        .from('course_enrollments')
-        .select(`
-          user_id,
-          course_schedules!inner(instructor_id)
-        `)
-        .eq('course_schedules.instructor_id', userId);
-
-      const uniqueStudents = new Set(enrollments?.map(e => e.user_id) || []).size;
-
-      // Calculate real teaching hours from completed course schedules
-      const { data: completedSchedules } = await supabase
-        .from('course_schedules')
-        .select(`
-          start_date,
-          end_date,
-          courses!inner(length)
-        `)
-        .eq('instructor_id', userId)
-        .lte('end_date', new Date().toISOString());
-
-      const teachingHours = completedSchedules?.reduce((total, schedule) => {
-        return total + (schedule.courses?.length || 0);
-      }, 0) || 0;
-
-      return {
-        upcomingClasses: upcomingSchedules?.length || 0,
-        studentsTaught: uniqueStudents,
-        certificationsIssued: certificates?.length || 0,
-        teachingHours
-      };
-    },
-    enabled: !!userId
-  });
-
-  // Get real recent sessions for widget
-  const { data: recentSessions } = useQuery({
-    queryKey: ['instructor-recent-sessions', userId],
-    queryFn: async (): Promise<InstructorSession[]> => {
-      const { data, error } = await supabase
-        .from('course_schedules')
-        .select(`
-          id,
-          start_date,
-          end_date,
-          courses!inner(name, length),
-          course_enrollments(user_id)
-        `)
-        .eq('instructor_id', userId)
-        .lte('end_date', new Date().toISOString())
-        .order('start_date', { ascending: false })
-        .limit(5);
-
-      if (error) throw error;
-
-      return (data || []).map(session => ({
-        id: session.id,
-        courseName: session.courses?.name || 'Unknown Course',
-        sessionDate: session.start_date,
-        attendanceCount: session.course_enrollments?.length || 0,
-        duration: session.courses?.length || 0
-      }));
-    },
-    enabled: !!userId
-  });
-
-  // Get real compliance data for widget
-  const { data: complianceData } = useQuery({
-    queryKey: ['instructor-compliance', userId],
-    queryFn: async (): Promise<ComplianceData> => {
-      const { data: issues } = await supabase
-        .from('compliance_issues')
-        .select('severity, status')
-        .eq('user_id', userId);
-
-      const openIssues = issues?.filter(issue => issue.status === 'OPEN').length || 0;
-      const criticalIssues = issues?.filter(issue => issue.severity === 'HIGH' && issue.status === 'OPEN').length || 0;
-      
-      // Calculate score based on open issues
-      const score = Math.max(0, 100 - (openIssues * 10) - (criticalIssues * 20));
-
-      return {
-        score,
-        status: score >= 90 ? 'compliant' : score >= 70 ? 'warning' : 'critical',
-        lastEvaluation: new Date().toISOString()
-      };
-    },
-    enabled: !!userId
-  });
-
-  return { 
-    metrics, 
-    recentSessions: recentSessions || [],
-    complianceData: complianceData || { score: 0, status: 'critical' },
-    isLoading 
-  };
+export interface TeachingSession {
+  id: string;
+  courseName: string;
+  sessionDate: string;
+  attendanceCount: number;
+  duration: number;
 }
+
+export interface ComplianceData {
+  score: number;
+  status: 'compliant' | 'warning' | 'critical';
+  lastEvaluation?: string;
+}
+
+export const useInstructorDashboardData = (instructorId: string) => {
+  const { user } = useAuth();
+
+  // Get instructor metrics
+  const { data: metrics, isLoading: metricsLoading } = useQuery({
+    queryKey: ['instructor-metrics', instructorId],
+    queryFn: async () => {
+      try {
+        // Get upcoming classes (next 14 days)
+        const fourteenDaysFromNow = new Date();
+        fourteenDaysFromNow.setDate(fourteenDaysFromNow.getDate() + 14);
+
+        const { count: upcomingClasses, error: upcomingError } = await supabase
+          .from('teaching_sessions')
+          .select('*', { count: 'exact', head: true })
+          .eq('instructor_id', instructorId)
+          .gte('session_date', new Date().toISOString())
+          .lte('session_date', fourteenDaysFromNow.toISOString());
+
+        if (upcomingError) throw upcomingError;
+
+        // Get students taught (last 12 months)
+        const twelveMonthsAgo = new Date();
+        twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
+
+        const { data: sessionsData, error: sessionsError } = await supabase
+          .from('teaching_sessions')
+          .select('attendees')
+          .eq('instructor_id', instructorId)
+          .gte('session_date', twelveMonthsAgo.toISOString());
+
+        if (sessionsError) throw sessionsError;
+
+        const uniqueStudents = new Set();
+        sessionsData?.forEach(session => {
+          if (session.attendees) {
+            session.attendees.forEach((studentId: string) => uniqueStudents.add(studentId));
+          }
+        });
+
+        // Get certifications issued (last 12 months)
+        const { count: certificationsIssued, error: certsError } = await supabase
+          .from('certificates')
+          .select('*', { count: 'exact', head: true })
+          .eq('issued_by', instructorId)
+          .gte('created_at', twelveMonthsAgo.toISOString());
+
+        if (certsError) throw certsError;
+
+        // Get teaching hours (last 3 months)
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+        const { data: hoursData, error: hoursError } = await supabase
+          .from('teaching_sessions')
+          .select('teaching_hours_credit')
+          .eq('instructor_id', instructorId)
+          .gte('session_date', threeMonthsAgo.toISOString());
+
+        if (hoursError) throw hoursError;
+
+        const teachingHours = hoursData?.reduce((total, session) => 
+          total + (session.teaching_hours_credit || 0), 0) || 0;
+
+        return {
+          upcomingClasses: upcomingClasses || 0,
+          studentsTaught: uniqueStudents.size,
+          certificationsIssued: certificationsIssued || 0,
+          teachingHours: Math.round(teachingHours)
+        };
+      } catch (error) {
+        console.error('Error fetching instructor metrics:', error);
+        throw error;
+      }
+    },
+    enabled: !!instructorId
+  });
+
+  // Get recent teaching sessions
+  const { data: recentSessions, isLoading: sessionsLoading } = useQuery({
+    queryKey: ['instructor-sessions', instructorId],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('teaching_sessions')
+          .select(`
+            id,
+            session_date,
+            duration_minutes,
+            attendance_count,
+            courses(name)
+          `)
+          .eq('instructor_id', instructorId)
+          .order('session_date', { ascending: false })
+          .limit(5);
+
+        if (error) throw error;
+
+        return data?.map(session => ({
+          id: session.id,
+          courseName: session.courses?.name || 'Unknown Course',
+          sessionDate: session.session_date,
+          attendanceCount: session.attendance_count || 0,
+          duration: session.duration_minutes || 0
+        })) || [];
+      } catch (error) {
+        console.error('Error fetching teaching sessions:', error);
+        return [];
+      }
+    },
+    enabled: !!instructorId
+  });
+
+  // Get compliance data
+  const { data: complianceData, isLoading: complianceLoading } = useQuery({
+    queryKey: ['instructor-compliance', instructorId],
+    queryFn: async () => {
+      try {
+        // Get recent supervisor evaluations
+        const { data: evaluations, error } = await supabase
+          .from('supervisor_evaluations')
+          .select('teaching_competency, created_at')
+          .eq('instructor_id', instructorId)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (error) throw error;
+
+        if (!evaluations || evaluations.length === 0) {
+          return {
+            score: 0,
+            status: 'critical' as const,
+            lastEvaluation: undefined
+          };
+        }
+
+        const avgScore = evaluations.reduce((sum, evaluation) => sum + evaluation.teaching_competency, 0) / evaluations.length;
+        const status = avgScore >= 80 ? 'compliant' : avgScore >= 60 ? 'warning' : 'critical';
+
+        return {
+          score: Math.round(avgScore),
+          status,
+          lastEvaluation: evaluations[0]?.created_at
+        };
+      } catch (error) {
+        console.error('Error fetching compliance data:', error);
+        return {
+          score: 0,
+          status: 'critical' as const,
+          lastEvaluation: undefined
+        };
+      }
+    },
+    enabled: !!instructorId
+  });
+
+  return {
+    metrics,
+    recentSessions: recentSessions || [],
+    complianceData,
+    isLoading: metricsLoading || sessionsLoading || complianceLoading,
+    error: null
+  };
+};

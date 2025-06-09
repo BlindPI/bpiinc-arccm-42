@@ -1,5 +1,4 @@
-
-export type UserRole = 'IT' | 'IP' | 'IC' | 'AP' | 'AD' | 'SA' | 'IN' | 'TL' | 'ST';
+export type UserRole = 'IT' | 'IP' | 'IC' | 'AP' | 'AD' | 'SA' | 'IN';
 
 export interface AuthUserWithProfile {
   id: string;
@@ -15,7 +14,7 @@ export interface UserProfile {
   email?: string;
   display_name?: string;
   role: UserRole;
-  status?: 'ACTIVE' | 'INACTIVE' | 'PENDING';
+  status: 'ACTIVE' | 'INACTIVE' | 'PENDING';
   organization?: string;
   job_title?: string;
   phone?: string;

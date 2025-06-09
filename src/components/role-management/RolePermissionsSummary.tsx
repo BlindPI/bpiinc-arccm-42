@@ -1,63 +1,88 @@
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { DatabaseUserRole } from '@/types/database-roles';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Shield, Lock, Unlock } from "lucide-react";
+import { ROLE_LABELS, UserRole } from "@/lib/roles";
 
-const ROLE_PERMISSIONS: Record<DatabaseUserRole, string[]> = {
-  SA: ['manage_users', 'manage_system', 'manage_roles', 'view_all_data', 'system_configuration'],
-  AD: ['manage_users', 'manage_teams', 'view_analytics', 'manage_courses', 'approve_requests'],
-  AP: ['manage_team_members', 'view_team_analytics', 'create_teams', 'manage_courses'],
-  IC: ['teach_courses', 'evaluate_students', 'manage_enrollments', 'view_student_progress'],
-  IP: ['teach_courses', 'view_student_progress', 'request_evaluations'],
-  IT: ['assist_instruction', 'view_assigned_courses', 'submit_evaluations'],
-  IN: ['observe_classes', 'access_training_materials', 'submit_progress_reports'],
-  TL: ['manage_team_members', 'view_team_progress', 'assign_tasks', 'coordinate_activities'],
-  ST: ['enroll_courses', 'view_progress', 'access_materials', 'submit_assignments']
+// Define mocked permissions for visualization
+const ROLE_PERMISSIONS: { [key in UserRole]: string[] } = {
+  SA: [
+    "Manage all users/roles",
+    "Platform/system settings",
+    "Issue/revoke certificates",
+    "Access audit logs"
+  ],
+  AD: [
+    "Manage users/roles (org)",
+    "Approve certificate requests",
+    "View compliance dashboard"
+  ],
+  AP: [
+    "Supervise instructors",
+    "Submit evaluations",
+    "Manage course offerings"
+  ],
+  IC: [
+    "Teach certified courses",
+    "Request upgrades",
+    "View own progress"
+  ],
+  IP: [
+    "Teach basic courses",
+    "Request supervision",
+    "View progress"
+  ],
+  IT: [
+    "Participate in training",
+    "Request supervisor",
+    "View own profile"
+  ],
+  IN: [
+    "Complete orientation",
+    "View training resources",
+    "Update profile"
+  ]
 };
 
-const ROLE_DESCRIPTIONS: Record<DatabaseUserRole, string> = {
-  SA: 'Full system administration with complete access to all features and data',
-  AD: 'Administrative oversight with user and team management capabilities',
-  AP: 'Provider-level access with team and course management for assigned locations',
-  IC: 'Certified instructor with full teaching and evaluation privileges',
-  IP: 'Provisional instructor with supervised teaching capabilities',
-  IT: 'Instructor trainee with assisted teaching under supervision',
-  IN: 'New instructor with observation and basic training access',
-  TL: 'Team leadership with member coordination and progress oversight',
-  ST: 'Student access with course enrollment and progress tracking'
-};
-
-interface RolePermissionsSummaryProps {
-  userRole: DatabaseUserRole;
-}
-
-export const RolePermissionsSummary: React.FC<RolePermissionsSummaryProps> = ({ userRole }) => {
-  const permissions = ROLE_PERMISSIONS[userRole] || [];
-  const description = ROLE_DESCRIPTIONS[userRole] || 'No description available';
+export function RolePermissionsSummary() {
+  const ROLE_ORDER: UserRole[] = ['SA', 'AD', 'AP', 'IC', 'IP', 'IT', 'IN'];
+  const roleColors: { [key in UserRole]: string } = {
+    SA: "bg-red-100 text-red-700",
+    AD: "bg-purple-100 text-purple-700",
+    AP: "bg-blue-100 text-blue-700",
+    IC: "bg-green-100 text-green-700",
+    IP: "bg-amber-100 text-amber-700",
+    IT: "bg-gray-100 text-gray-700",
+    IN: "bg-slate-100 text-slate-700"
+  };
 
   return (
-    <Card>
+    <Card className="mt-4 animate-fade-in">
       <CardHeader>
-        <CardTitle>Role Permissions Summary</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Shield className="h-5 w-5 text-primary" />
+          <span>Role Permissions Overview</span>
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <h3 className="font-semibold text-lg mb-2">Current Role: {userRole}</h3>
-          <p className="text-sm text-muted-foreground mb-4">{description}</p>
-        </div>
-
-        <div>
-          <h4 className="font-medium mb-2">Permissions ({permissions.length})</h4>
-          <div className="flex flex-wrap gap-2">
-            {permissions.map((permission, index) => (
-              <Badge key={index} variant="outline">
-                {permission.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-              </Badge>
-            ))}
-          </div>
+      <CardContent>
+        <div className="grid md:grid-cols-3 gap-4">
+          {ROLE_ORDER.map((role) => (
+            <div
+              key={role}
+              className={`rounded-lg p-4 border ${roleColors[role]} flex flex-col gap-2 shadow-sm`}
+            >
+              <div className="flex items-center gap-2 font-semibold">
+                <span className="uppercase text-xs font-bold">{role}</span>
+                <span>{ROLE_LABELS[role]}</span>
+              </div>
+              <ul className="list-disc pl-5 space-y-0.5 text-[15px]">
+                {ROLE_PERMISSIONS[role].map((perm) => (
+                  <li key={perm}>{perm}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>
   );
-};
+}

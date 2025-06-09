@@ -1,249 +1,167 @@
 
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { UserProfile } from '@/types/auth';
+import { DashboardConfig } from '@/hooks/useDashboardConfig';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { GraduationCap, Calendar, Award, Clock, ArrowUpCircle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import { 
-  BookOpen, 
-  Users, 
-  Award, 
-  Star,
-  Clock,
-  TrendingUp,
-  Calendar,
-  CheckCircle,
-  AlertTriangle
-} from 'lucide-react';
-import { ComprehensiveDashboardService } from '@/services/dashboard/comprehensiveDashboardService';
-import { useAuth } from '@/contexts/AuthContext';
+import { ROLE_LABELS } from '@/lib/roles';
+import { useInstructorDashboardData } from '@/hooks/dashboard/useInstructorDashboardData';
 import { DashboardActionButton } from '../ui/DashboardActionButton';
+import { InlineLoader } from '@/components/ui/LoadingStates';
 
-export const InstructorDashboard: React.FC = () => {
-  const { user } = useAuth();
+interface InstructorDashboardProps {
+  config: DashboardConfig;
+  profile: UserProfile;
+}
+
+const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
+  const role = profile.role || 'IT';
+  const { metrics, isLoading } = useInstructorDashboardData(profile.id);
   
-  const { data: metrics, isLoading, error } = useQuery({
-    queryKey: ['instructor-dashboard', user?.id],
-    queryFn: () => user?.id ? ComprehensiveDashboardService.getInstructorDashboard(user.id) : Promise.reject('No user ID'),
-    enabled: !!user?.id,
-    refetchInterval: 300000 // Refresh every 5 minutes
-  });
+  // Determine next role for progression path
+  const getNextRole = () => {
+    if (role === 'IT') return 'IP';
+    if (role === 'IP') return 'IC';
+    return null;
+  };
+  
+  const nextRole = getNextRole();
+  
+  // Mock progression data - this would come from progression system
+  const getProgressionPercentage = () => {
+    if (role === 'IT') return 65;
+    if (role === 'IP') return 40;
+    return 100;
+  };
 
   if (isLoading) {
-    return (
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {[...Array(8)].map((_, i) => (
-          <Card key={i} className="animate-pulse">
-            <CardContent className="p-6">
-              <div className="h-4 bg-gray-200 rounded mb-2"></div>
-              <div className="h-8 bg-gray-200 rounded"></div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
+    return <InlineLoader message="Loading instructor dashboard..." />;
   }
-
-  if (error) {
-    return (
-      <Card className="bg-red-50 border-red-200">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-red-600" />
-            <span className="text-red-800">Failed to load instructor dashboard data</span>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!metrics) return null;
 
   return (
-    <div className="space-y-6">
-      {/* Instructor Overview */}
-      <Card className="bg-gradient-to-r from-green-50 to-emerald-50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Teaching Dashboard
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{metrics.coursesAssigned}</div>
-              <div className="text-sm text-muted-foreground">Courses Assigned</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{metrics.studentsEnrolled}</div>
-              <div className="text-sm text-muted-foreground">Students Enrolled</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{metrics.completionRate}%</div>
-              <div className="text-sm text-muted-foreground">Completion Rate</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">{metrics.averageRating}</div>
-              <div className="text-sm text-muted-foreground">Avg Rating</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-6 animate-fade-in">
+      <Alert className="bg-gradient-to-r from-teal-50 to-white border-teal-200 shadow-sm">
+        <GraduationCap className="h-4 w-4 text-teal-600 mr-2" />
+        <AlertDescription className="text-teal-800 font-medium">
+          You are logged in as {ROLE_LABELS[role as any]}
+        </AlertDescription>
+      </Alert>
 
-      {/* Key Performance Indicators */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Upcoming Classes</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+        <Card className="bg-gradient-to-br from-teal-50 to-white border-0 shadow-md hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Upcoming Classes</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.upcomingClasses}</div>
-            <p className="text-xs text-muted-foreground">Scheduled this week</p>
+            <div className="text-2xl font-bold text-gray-900">{metrics?.upcomingClasses || 0}</div>
+            <p className="text-xs text-gray-500 mt-1">Scheduled in next 14 days</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Certificates Issued</CardTitle>
-            <Award className="h-4 w-4 text-muted-foreground" />
+        <Card className="bg-gradient-to-br from-blue-50 to-white border-0 shadow-md hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Students Taught</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.certificatesIssued}</div>
-            <p className="text-xs text-muted-foreground">This month</p>
+            <div className="text-2xl font-bold text-gray-900">{metrics?.studentsTaught || 0}</div>
+            <p className="text-xs text-gray-500 mt-1">Last 12 months</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Hours Delivered</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+        <Card className="bg-gradient-to-br from-purple-50 to-white border-0 shadow-md hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Certifications Issued</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.hoursDelivered}</div>
-            <p className="text-xs text-muted-foreground">Total teaching hours</p>
+            <div className="text-2xl font-bold text-gray-900">{metrics?.certificationsIssued || 0}</div>
+            <p className="text-xs text-gray-500 mt-1">Last 12 months</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Compliance Status</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+        <Card className="bg-gradient-to-br from-amber-50 to-white border-0 shadow-md hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Teaching Hours</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-lg font-bold capitalize">{metrics.complianceStatus.replace('_', ' ')}</div>
-            <Badge variant={
-              metrics.complianceStatus === 'compliant' ? 'default' :
-              metrics.complianceStatus === 'at_risk' ? 'secondary' : 'destructive'
-            }>
-              {metrics.complianceStatus.replace('_', ' ')}
-            </Badge>
+            <div className="text-2xl font-bold text-amber-600">{metrics?.teachingHours || 0}</div>
+            <p className="text-xs text-gray-500 mt-1">Last 3 months</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Teaching Actions */}
-      <Card>
+      {nextRole && (
+        <Card className="border-2 bg-gradient-to-br from-blue-50 to-white shadow-md hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <CardTitle className="text-xl text-gray-900">Progression Path</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-blue-100 rounded-full">
+                <ArrowUpCircle className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Progress to {ROLE_LABELS[nextRole as any]}
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  You're on your way to becoming a {ROLE_LABELS[nextRole as any]}
+                </p>
+                <div className="mt-2">
+                  <Progress value={getProgressionPercentage()} className="h-2" />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {getProgressionPercentage()}% of requirements completed
+                  </p>
+                </div>
+              </div>
+              <DashboardActionButton
+                icon={ArrowUpCircle}
+                label="View Path"
+                path="/role-management"
+                colorScheme="blue"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="border-2 bg-gradient-to-br from-white to-gray-50/50 shadow-md">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5" />
-            Teaching Actions
-          </CardTitle>
+          <CardTitle className="text-xl text-gray-900">Instructor Actions</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <DashboardActionButton
-              icon={BookOpen}
-              label="My Courses"
-              description="Manage assigned courses"
-              path="/courses"
-              colorScheme="blue"
-            />
-            <DashboardActionButton
-              icon={Users}
-              label="Students"
-              description="View enrolled students"
-              path="/students"
-              colorScheme="green"
-            />
-            <DashboardActionButton
               icon={Calendar}
-              label="Schedule"
-              description="Manage class schedule"
-              path="/schedule"
-              colorScheme="purple"
+              label="View Schedule"
+              description="View your teaching schedule"
+              path="/courses"
+              colorScheme="teal"
             />
             <DashboardActionButton
               icon={Award}
-              label="Certificates"
-              description="Issue certificates"
+              label="Issue Certificate"
+              description="Issue certificates to students"
               path="/certificates"
+              colorScheme="blue"
+            />
+            <DashboardActionButton
+              icon={Clock}
+              label="Log Hours"
+              description="Log your teaching hours"
+              path="/teaching-sessions"
+              colorScheme="purple"
+            />
+            <DashboardActionButton
+              icon={GraduationCap}
+              label="Training Resources"
+              description="Access training materials"
+              path="/courses"
               colorScheme="amber"
             />
           </div>
         </CardContent>
       </Card>
-
-      {/* Performance Metrics */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Teaching Performance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Course Completion Rate</span>
-                  <span>{metrics.completionRate}%</span>
-                </div>
-                <Progress value={metrics.completionRate} className="h-2" />
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Student Rating</span>
-                  <span>{metrics.averageRating}/5.0</span>
-                </div>
-                <Progress value={(metrics.averageRating / 5) * 100} className="h-2" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Star className="h-5 w-5" />
-              Teaching Statistics
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-lg font-bold text-blue-600">{metrics.studentsEnrolled}</div>
-                <div className="text-sm text-blue-700">Total Students</div>
-              </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-lg font-bold text-green-600">{metrics.certificatesIssued}</div>
-                <div className="text-sm text-green-700">Certificates Issued</div>
-              </div>
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <div className="text-lg font-bold text-purple-600">{metrics.hoursDelivered}</div>
-                <div className="text-sm text-purple-700">Hours Delivered</div>
-              </div>
-              <div className="text-center p-4 bg-orange-50 rounded-lg">
-                <div className="text-lg font-bold text-orange-600">{metrics.averageRating}</div>
-                <div className="text-sm text-orange-700">Avg Rating</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 };

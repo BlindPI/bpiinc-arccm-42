@@ -31,41 +31,12 @@ export class DashboardDataService {
    */
   static async getSystemAdminMetrics(): Promise<DashboardMetrics> {
     try {
-      console.log('🔧 DASHBOARD-DATA: Fetching system admin metrics...');
-      
-      // Try the enhanced function first
-      try {
-        const { data, error } = await supabase.rpc('get_enhanced_executive_dashboard_metrics');
-        
-        if (error) {
-          console.warn('🔧 DASHBOARD-DATA: Enhanced function failed, falling back to basic queries:', error.message);
-          throw error;
-        }
-        
-        if (data) {
-          console.log('🔧 DASHBOARD-DATA: Enhanced metrics loaded successfully:', data);
-          return {
-            totalUsers: data.totalUsers || 0,
-            activeCourses: data.activeCourses || 0,
-            totalCertificates: data.totalCertificates || 0,
-            pendingRequests: data.pendingApprovals || 0
-          };
-        }
-      } catch (enhancedError) {
-        console.warn('🔧 DASHBOARD-DATA: Enhanced function not available, using fallback queries');
-      }
-
-      // Fallback to individual queries
-      console.log('🔧 DASHBOARD-DATA: Using fallback queries for system admin metrics...');
-      
       // Get total users count
       const { count: totalUsers, error: usersError } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true });
 
-      if (usersError) {
-        console.error('🔧 DASHBOARD-DATA: Error fetching users:', usersError);
-      }
+      if (usersError) throw usersError;
 
       // Get active courses count
       const { count: activeCourses, error: coursesError } = await supabase
@@ -73,18 +44,14 @@ export class DashboardDataService {
         .select('*', { count: 'exact', head: true })
         .eq('status', 'ACTIVE');
 
-      if (coursesError) {
-        console.error('🔧 DASHBOARD-DATA: Error fetching courses:', coursesError);
-      }
+      if (coursesError) throw coursesError;
 
       // Get total certificates
       const { count: totalCertificates, error: certsError } = await supabase
         .from('certificates')
         .select('*', { count: 'exact', head: true });
 
-      if (certsError) {
-        console.error('🔧 DASHBOARD-DATA: Error fetching certificates:', certsError);
-      }
+      if (certsError) throw certsError;
 
       // Get pending requests
       const { count: pendingRequests, error: requestsError } = await supabase
@@ -92,23 +59,16 @@ export class DashboardDataService {
         .select('*', { count: 'exact', head: true })
         .eq('status', 'PENDING');
 
-      if (requestsError) {
-        console.error('🔧 DASHBOARD-DATA: Error fetching pending requests:', requestsError);
-      }
+      if (requestsError) throw requestsError;
 
-      const result = {
+      return {
         totalUsers: totalUsers || 0,
         activeCourses: activeCourses || 0,
         totalCertificates: totalCertificates || 0,
         pendingRequests: pendingRequests || 0
       };
-
-      console.log('🔧 DASHBOARD-DATA: Fallback metrics loaded:', result);
-      return result;
-      
     } catch (error) {
-      console.error('🔧 DASHBOARD-DATA: Error in getSystemAdminMetrics:', error);
-      // Return safe defaults instead of throwing
+      console.error('Error fetching system admin metrics:', error);
       return {
         totalUsers: 0,
         activeCourses: 0,
@@ -123,8 +83,6 @@ export class DashboardDataService {
    */
   static async getTeamScopedMetrics(teamId: string, userId: string): Promise<DashboardMetrics> {
     try {
-      console.log('🔧 DASHBOARD-DATA: Fetching team metrics for team:', teamId, 'user:', userId);
-      
       // Verify user is a member of this team
       const { data: membership, error: membershipError } = await supabase
         .from('team_members')
@@ -134,7 +92,6 @@ export class DashboardDataService {
         .single();
 
       if (membershipError || !membership) {
-        console.error('🔧 DASHBOARD-DATA: User not a member of team:', membershipError);
         throw new Error('Access denied: User not a member of this team');
       }
 
@@ -150,10 +107,7 @@ export class DashboardDataService {
         .eq('id', teamId)
         .single();
 
-      if (teamError) {
-        console.error('🔧 DASHBOARD-DATA: Error fetching team info:', teamError);
-        throw teamError;
-      }
+      if (teamError) throw teamError;
 
       // Get team size
       const { count: teamSize } = await supabase
@@ -182,18 +136,14 @@ export class DashboardDataService {
         activeCourses = count || 0;
       }
 
-      const result = {
+      return {
         teamSize: teamSize || 0,
         locationName: team.locations?.name || 'No Location',
         totalCertificates,
         activeCourses
       };
-
-      console.log('🔧 DASHBOARD-DATA: Team metrics loaded:', result);
-      return result;
-      
     } catch (error) {
-      console.error('🔧 DASHBOARD-DATA: Error in getTeamScopedMetrics:', error);
+      console.error('Error fetching team metrics:', error);
       return {
         teamSize: 0,
         locationName: 'Unknown',
@@ -208,55 +158,70 @@ export class DashboardDataService {
    */
   static async getInstructorMetrics(instructorId: string): Promise<DashboardMetrics> {
     try {
-      console.log('🔧 DASHBOARD-DATA: Fetching instructor metrics for:', instructorId);
-      
-      // Try enhanced function first
-      try {
-        const { data, error } = await supabase.rpc('get_instructor_performance_metrics', {
-          p_instructor_id: instructorId
-        });
-        
-        if (!error && data) {
-          console.log('🔧 DASHBOARD-DATA: Enhanced instructor metrics loaded:', data);
-          return {
-            upcomingClasses: data.totalSessions || 0,
-            studentsTaught: data.studentsCount || 0,
-            certificationsIssued: data.certificatesIssued || 0,
-            teachingHours: data.totalHours || 0
-          };
-        }
-      } catch (enhancedError) {
-        console.warn('🔧 DASHBOARD-DATA: Enhanced instructor function not available, using fallback');
-      }
-
-      // Fallback queries
+      // Get upcoming classes (next 14 days)
       const fourteenDaysFromNow = new Date();
       fourteenDaysFromNow.setDate(fourteenDaysFromNow.getDate() + 14);
 
-      const { count: upcomingClasses } = await supabase
+      const { count: upcomingClasses, error: upcomingError } = await supabase
         .from('teaching_sessions')
         .select('*', { count: 'exact', head: true })
         .eq('instructor_id', instructorId)
         .gte('session_date', new Date().toISOString())
         .lte('session_date', fourteenDaysFromNow.toISOString());
 
-      const { count: certificationsIssued } = await supabase
+      if (upcomingError) throw upcomingError;
+
+      // Get students taught (last 12 months)
+      const twelveMonthsAgo = new Date();
+      twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
+
+      const { data: sessionsData, error: sessionsError } = await supabase
+        .from('teaching_sessions')
+        .select('attendees')
+        .eq('instructor_id', instructorId)
+        .gte('session_date', twelveMonthsAgo.toISOString());
+
+      if (sessionsError) throw sessionsError;
+
+      const uniqueStudents = new Set();
+      sessionsData?.forEach(session => {
+        if (session.attendees) {
+          session.attendees.forEach((studentId: string) => uniqueStudents.add(studentId));
+        }
+      });
+
+      // Get certifications issued
+      const { count: certificationsIssued, error: certsError } = await supabase
         .from('certificates')
         .select('*', { count: 'exact', head: true })
-        .eq('issued_by', instructorId);
+        .eq('issued_by', instructorId)
+        .gte('created_at', twelveMonthsAgo.toISOString());
 
-      const result = {
+      if (certsError) throw certsError;
+
+      // Get teaching hours
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+      const { data: hoursData, error: hoursError } = await supabase
+        .from('teaching_sessions')
+        .select('teaching_hours_credit')
+        .eq('instructor_id', instructorId)
+        .gte('session_date', threeMonthsAgo.toISOString());
+
+      if (hoursError) throw hoursError;
+
+      const teachingHours = hoursData?.reduce((total, session) => 
+        total + (session.teaching_hours_credit || 0), 0) || 0;
+
+      return {
         upcomingClasses: upcomingClasses || 0,
-        studentsTaught: 0, // Would need session data
+        studentsTaught: uniqueStudents.size,
         certificationsIssued: certificationsIssued || 0,
-        teachingHours: 0 // Would need session duration data
+        teachingHours: Math.round(teachingHours)
       };
-
-      console.log('🔧 DASHBOARD-DATA: Instructor metrics loaded (fallback):', result);
-      return result;
-      
     } catch (error) {
-      console.error('🔧 DASHBOARD-DATA: Error in getInstructorMetrics:', error);
+      console.error('Error fetching instructor metrics:', error);
       return {
         upcomingClasses: 0,
         studentsTaught: 0,
@@ -271,45 +236,45 @@ export class DashboardDataService {
    */
   static async getStudentMetrics(studentId: string): Promise<DashboardMetrics> {
     try {
-      console.log('🔧 DASHBOARD-DATA: Fetching student metrics for:', studentId);
-      
       // Get active enrollments
-      const { count: activeCourses } = await supabase
+      const { count: activeCourses, error: activeError } = await supabase
         .from('course_enrollments')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', studentId)
         .eq('status', 'enrolled');
 
+      if (activeError) throw activeError;
+
       // Get certificates
-      const { count: activeCertifications } = await supabase
+      const { count: activeCertifications, error: certsError } = await supabase
         .from('certificates')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', studentId)
         .eq('status', 'ACTIVE');
 
+      if (certsError) throw certsError;
+
       // Get expiring certificates (next 60 days)
       const sixtyDaysFromNow = new Date();
       sixtyDaysFromNow.setDate(sixtyDaysFromNow.getDate() + 60);
 
-      const { count: expiringSoon } = await supabase
+      const { count: expiringSoon, error: expiringError } = await supabase
         .from('certificates')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', studentId)
         .eq('status', 'ACTIVE')
         .lte('expiry_date', sixtyDaysFromNow.toISOString());
 
-      const result = {
+      if (expiringError) throw expiringError;
+
+      return {
         activeCourses: activeCourses || 0,
         activeCertifications: activeCertifications || 0,
         expiringSoon: expiringSoon || 0,
-        complianceIssues: 0
+        complianceIssues: 0 // Students don't have compliance issues tracked
       };
-
-      console.log('🔧 DASHBOARD-DATA: Student metrics loaded:', result);
-      return result;
-      
     } catch (error) {
-      console.error('🔧 DASHBOARD-DATA: Error in getStudentMetrics:', error);
+      console.error('Error fetching student metrics:', error);
       return {
         activeCourses: 0,
         activeCertifications: 0,
@@ -324,8 +289,6 @@ export class DashboardDataService {
    */
   static async getRecentActivities(userId: string, userRole: string, teamId?: string): Promise<RecentActivity[]> {
     try {
-      console.log('🔧 DASHBOARD-DATA: Fetching recent activities for user:', userId, 'role:', userRole);
-      
       const activities: RecentActivity[] = [];
 
       if (['SA', 'AD'].includes(userRole)) {
@@ -381,11 +344,9 @@ export class DashboardDataService {
         }
       }
 
-      console.log('🔧 DASHBOARD-DATA: Recent activities loaded:', activities.length, 'items');
       return activities;
-      
     } catch (error) {
-      console.error('🔧 DASHBOARD-DATA: Error fetching recent activities:', error);
+      console.error('Error fetching recent activities:', error);
       return [];
     }
   }

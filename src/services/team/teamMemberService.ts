@@ -1,133 +1,220 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { TeamMemberWithProfile } from '@/types/team-management';
+import { TeamMemberHistoryService } from './teamMemberHistoryService';
+import type { TeamMemberWithProfile } from '@/types/team-management';
 
 export class TeamMemberService {
-  static async getTeamMembers(teamId: string): Promise<TeamMemberWithProfile[]> {
-    const { data, error } = await supabase
-      .from('team_members')
-      .select(`
-        *,
-        profiles!inner(
-          id,
-          display_name,
-          email,
-          role,
-          created_at,
-          updated_at,
-          compliance_status,
-          last_training_date,
-          next_training_due,
-          performance_score,
-          training_hours,
-          certifications_count,
-          location_id,
-          department,
-          supervisor_id,
-          user_id,
-          organization,
-          job_title,
-          phone,
-          status
-        )
-      `)
-      .eq('team_id', teamId);
+  async getTeamMembers(teamId: string): Promise<TeamMemberWithProfile[]> {
+    try {
+      const { data, error } = await supabase
+        .from('team_members')
+        .select(`
+          *,
+          profiles(*)
+        `)
+        .eq('team_id', teamId)
+        .order('created_at', { ascending: false });
 
-    if (error) throw error;
+      if (error) throw error;
 
-    return (data || []).map(member => ({
-      id: member.id,
-      team_id: member.team_id,
-      user_id: member.user_id,
-      role: member.role as 'MEMBER' | 'ADMIN',
-      status: member.status as 'active' | 'inactive' | 'on_leave' | 'suspended',
-      location_assignment: member.location_assignment,
-      assignment_start_date: member.assignment_start_date,
-      assignment_end_date: member.assignment_end_date,
-      team_position: member.team_position,
-      permissions: Array.isArray(member.permissions) ? 
-                   member.permissions.map(p => String(p)) : 
-                   (typeof member.permissions === 'string' ? [member.permissions] : []),
-      created_at: member.created_at,
-      updated_at: member.updated_at,
-      last_activity: member.last_activity || member.updated_at,
-      joined_at: member.created_at,
-      display_name: member.profiles?.display_name || 'Unknown User',
-      profiles: {
-        id: member.profiles?.id || '',
+      return (data || []).map(member => ({
+        ...member,
+        role: this.validateMemberRole(member.role),
+        status: this.validateMemberStatus(member.status),
+        permissions: this.safeJsonParse(member.permissions, {}),
         display_name: member.profiles?.display_name || 'Unknown User',
-        email: member.profiles?.email || '',
-        role: member.profiles?.role || '',
-        created_at: member.profiles?.created_at || '',
-        updated_at: member.profiles?.updated_at || '',
-        compliance_status: member.profiles?.compliance_status,
-        last_training_date: member.profiles?.last_training_date || null,
-        next_training_due: member.profiles?.next_training_due || null,
-        performance_score: member.profiles?.performance_score || null,
-        training_hours: member.profiles?.training_hours || null,
-        certifications_count: member.profiles?.certifications_count || null,
-        location_id: member.profiles?.location_id || null,
-        department: member.profiles?.department || null,
-        supervisor_id: member.profiles?.supervisor_id || null,
-        user_id: member.profiles?.user_id
-      }
-    }));
+        last_activity: member.last_activity || member.updated_at,
+        profiles: member.profiles
+      }));
+    } catch (error) {
+      console.error('Error fetching team members:', error);
+      return [];
+    }
   }
 
-  static async updateMemberRole(memberId: string, newRole: string): Promise<void> {
-    const { error } = await supabase
-      .from('team_members')
-      .update({ role: newRole })
-      .eq('id', memberId);
+  async addTeamMember(
+    teamId: string, 
+    userId: string, 
+    role: 'ADMIN' | 'MEMBER' = 'MEMBER'
+  ): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('team_members')
+        .insert({
+          team_id: teamId,
+          user_id: userId,
+          role: role,
+          status: 'active',
+          permissions: {},
+          assignment_start_date: new Date().toISOString()
+        });
 
-    if (error) throw error;
-  }
+      if (error) throw error;
 
-  static async updateMemberStatus(memberId: string, newStatus: string): Promise<void> {
-    const { error } = await supabase
-      .from('team_members')
-      .update({ status: newStatus })
-      .eq('id', memberId);
-
-    if (error) throw error;
-  }
-
-  static async removeMember(memberId: string): Promise<void> {
-    const { error } = await supabase
-      .from('team_members')
-      .delete()
-      .eq('id', memberId);
-
-    if (error) throw error;
-  }
-
-  static async addMember(teamId: string, userId: string, role: string = 'MEMBER'): Promise<void> {
-    const { error } = await supabase
-      .from('team_members')
-      .insert({
-        team_id: teamId,
-        user_id: userId,
+      // Log the addition using static method
+      await TeamMemberHistoryService.logStatusChange(
+        userId,
+        '',
+        'active',
+        '',
         role,
-        status: 'active',
-        created_at: new Date().toISOString()
-      });
-
-    if (error) throw error;
+        'Added to team'
+      );
+    } catch (error) {
+      console.error('Error adding team member:', error);
+      throw error;
+    }
   }
 
-  // Alias methods for compatibility with different calling patterns
-  static async addTeamMember(teamId: string, userId: string, role: string = 'MEMBER'): Promise<void> {
-    return this.addMember(teamId, userId, role);
+  async removeTeamMember(teamId: string, userId: string): Promise<void> {
+    try {
+      // Get current member details
+      const { data: member, error: fetchError } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('team_id', teamId)
+        .eq('user_id', userId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Remove the member
+      const { error } = await supabase
+        .from('team_members')
+        .delete()
+        .eq('team_id', teamId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      // Log the removal using static method
+      await TeamMemberHistoryService.logStatusChange(
+        member.id,
+        member.status,
+        'removed',
+        member.role,
+        '',
+        'Removed from team'
+      );
+    } catch (error) {
+      console.error('Error removing team member:', error);
+      throw error;
+    }
   }
 
-  static async removeTeamMember(teamId: string, memberId: string): Promise<void> {
-    return this.removeMember(memberId);
+  async updateMemberRole(
+    teamId: string, 
+    userId: string, 
+    newRole: 'ADMIN' | 'MEMBER'
+  ): Promise<void> {
+    try {
+      // Get current member details
+      const { data: member, error: fetchError } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('team_id', teamId)
+        .eq('user_id', userId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Update the role
+      const { error } = await supabase
+        .from('team_members')
+        .update({ 
+          role: newRole,
+          updated_at: new Date().toISOString()
+        })
+        .eq('team_id', teamId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      // Log the role change using static method
+      await TeamMemberHistoryService.logStatusChange(
+        member.id,
+        member.status,
+        member.status,
+        member.role,
+        newRole,
+        `Role updated from ${member.role} to ${newRole}`
+      );
+    } catch (error) {
+      console.error('Error updating member role:', error);
+      throw error;
+    }
   }
 
-  static async updateTeamMemberRole(teamId: string, memberId: string, newRole: string): Promise<void> {
-    return this.updateMemberRole(memberId, newRole);
+  async updateMemberStatus(
+    teamId: string, 
+    userId: string, 
+    newStatus: 'active' | 'inactive' | 'suspended' | 'on_leave'
+  ): Promise<void> {
+    try {
+      // Get current member details
+      const { data: member, error: fetchError } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('team_id', teamId)
+        .eq('user_id', userId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Update the status
+      const { error } = await supabase
+        .from('team_members')
+        .update({ 
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('team_id', teamId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      // Log the status change using static method
+      await TeamMemberHistoryService.logStatusChange(
+        member.id,
+        member.status,
+        newStatus,
+        member.role,
+        member.role,
+        `Status updated from ${member.status} to ${newStatus}`
+      );
+    } catch (error) {
+      console.error('Error updating member status:', error);
+      throw error;
+    }
+  }
+
+  // Helper methods
+  private validateMemberRole(role: string): 'MEMBER' | 'ADMIN' {
+    if (role === 'ADMIN' || role === 'MEMBER') {
+      return role;
+    }
+    return 'MEMBER'; // Default fallback
+  }
+
+  private validateMemberStatus(status: string): 'active' | 'inactive' | 'suspended' | 'on_leave' {
+    if (status === 'active' || status === 'inactive' || status === 'suspended' || status === 'on_leave') {
+      return status;
+    }
+    return 'active'; // Default fallback
+  }
+
+  private safeJsonParse<T>(value: any, defaultValue: T): T {
+    if (value === null || value === undefined) return defaultValue;
+    if (typeof value === 'object' && value !== null) return value as T;
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value) as T;
+      } catch {
+        return defaultValue;
+      }
+    }
+    return defaultValue;
   }
 }
 
-// Export both class and instance for compatibility
-export const teamMemberService = TeamMemberService;
+export const teamMemberService = new TeamMemberService();

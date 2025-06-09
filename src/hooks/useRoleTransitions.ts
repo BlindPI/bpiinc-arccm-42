@@ -306,18 +306,6 @@ export function useRoleTransitions() {
     toast.success('Document uploaded successfully');
   };
 
-  const PROGRESSION_PATHS: Record<UserRole, UserRole> = {
-    IT: 'IP',    // Instructor Trainer to Instructor Provisional
-    IP: 'IC',    // Instructor Provisional to Instructor Candidate
-    IC: 'AP',    // Instructor Candidate to Authorized Provider
-    AP: 'AD',    // Authorized Provider to Administrator
-    AD: 'SA',    // Administrator to System Administrator
-    SA: 'SA',    // System Administrator (highest level)
-    IN: 'IT',    // Instructor to Instructor Trainer
-    TL: 'AD',    // Team Leader to Administrator
-    ST: 'IC'     // Student to Instructor Candidate
-  };
-
   return {
     transitionRequests,
     requestsLoading,
@@ -333,15 +321,13 @@ export function useRoleTransitions() {
 // Helper function to get the next role in the hierarchy - now includes AP
 const getNextRole = (currentRole: UserRole): UserRole => {
   const roleProgression: { [key in UserRole]: UserRole } = {
-    'IT': 'IP',    // Instructor Trainer to Instructor Provisional
-    'IP': 'IC',    // Instructor Provisional to Instructor Candidate
-    'IC': 'AP',    // Instructor Candidate to Authorized Provider
-    'AP': 'AD',    // Authorized Provider to Administrator
-    'AD': 'SA',    // Administrator to System Administrator
-    'SA': 'SA',    // System Administrator (highest level)
-    'IN': 'IT',    // Instructor to Instructor Trainer
-    'TL': 'AD',    // Team Leader to Administrator
-    'ST': 'IC'     // Student to Instructor Candidate
+    'IT': 'IP',
+    'IP': 'IC',
+    'IC': 'AP',
+    'AP': 'AD',
+    'AD': 'SA',
+    'SA': 'SA',
+    'IN': 'IT'
   };
   
   return roleProgression[currentRole];

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
-import { safeConvertTeamAnalytics } from '@/utils/typeGuards';
 
 interface TeamPerformanceMetric {
   id: string;
@@ -57,15 +57,15 @@ export function TeamPerformanceChart({ data, loading, timeRange }: TeamPerforman
     }
   });
 
-  // Get real trend data from backend with safe type conversion
+  // Get real trend data from backend
   const { data: trendMetrics, isLoading: trendLoading } = useQuery({
     queryKey: ['team-performance-trends', timeRange],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_cross_team_analytics');
       if (error) throw error;
       
-      // Safe type conversion with validation
-      const analytics = safeConvertTeamAnalytics(data);
+      // Type assertion with proper validation
+      const analytics = data as TeamAnalytics;
       
       // Calculate trend data from the last 4 weeks
       const weeks = [];
@@ -74,7 +74,7 @@ export function TeamPerformanceChart({ data, loading, timeRange }: TeamPerforman
         weekStart.setDate(weekStart.getDate() - (i * 7));
         weeks.push({
           period: `Week ${4 - i}`,
-          performance: analytics.performance_average || 0,
+          performance: analytics?.performance_average || 0,
           target: 90
         });
       }

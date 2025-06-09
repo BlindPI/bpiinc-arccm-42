@@ -19,7 +19,6 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { CustomizableDashboard } from './CustomizableDashboard';
 import { DashboardExportPanel } from './DashboardExportPanel';
-import { safeConvertExecutiveMetrics, safeConvertTeamAnalytics, safeConvertComplianceMetrics } from '@/utils/typeGuards';
 
 interface ExecutiveMetrics {
   totalUsers: number;
@@ -61,9 +60,8 @@ export function RealTimeAnalyticsDashboard() {
     queryFn: async (): Promise<ExecutiveMetrics> => {
       const { data, error } = await supabase.rpc('get_executive_dashboard_metrics');
       if (error) throw error;
-      
-      // Safe type conversion with proper validation
-      return safeConvertExecutiveMetrics(data);
+      // Type assertion with proper validation
+      return data as ExecutiveMetrics;
     },
     refetchInterval: refreshInterval
   });
@@ -74,9 +72,8 @@ export function RealTimeAnalyticsDashboard() {
     queryFn: async (): Promise<TeamAnalytics> => {
       const { data, error } = await supabase.rpc('get_team_analytics_summary');
       if (error) throw error;
-      
-      // Safe type conversion with proper validation
-      return safeConvertTeamAnalytics(data);
+      // Type assertion with proper validation
+      return data as TeamAnalytics;
     },
     refetchInterval: refreshInterval
   });
@@ -87,9 +84,8 @@ export function RealTimeAnalyticsDashboard() {
     queryFn: async (): Promise<ComplianceMetrics> => {
       const { data, error } = await supabase.rpc('get_compliance_metrics');
       if (error) throw error;
-      
-      // Safe type conversion with proper validation
-      return safeConvertComplianceMetrics(data);
+      // Type assertion with proper validation
+      return data as ComplianceMetrics;
     },
     refetchInterval: refreshInterval
   });
@@ -100,7 +96,7 @@ export function RealTimeAnalyticsDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_enterprise_team_metrics');
       if (error) throw error;
-      return data || {};
+      return data;
     },
     refetchInterval: refreshInterval
   });

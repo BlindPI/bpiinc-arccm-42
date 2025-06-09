@@ -5,15 +5,13 @@ import type { DatabaseUserRole } from "@/types/database-roles";
  * Role hierarchy map for determining access levels
  */
 export const ROLE_HIERARCHY: { [key in DatabaseUserRole]: number } = {
-  SA: 9, // System Admin (highest)
-  AD: 8, // Admin
-  AP: 7, // Authorized Provider
-  IC: 6, // Instructor Certified
-  IP: 5, // Instructor Provisional
-  IT: 4, // Instructor Trainee
-  IN: 3, // Instructor New
-  TL: 2, // Team Leader
-  ST: 1, // Student (lowest)
+  SA: 7, // System Admin (highest)
+  AD: 6, // Admin
+  AP: 5, // Authorized Provider
+  IC: 4, // Instructor Certified
+  IP: 3, // Instructor Provisional
+  IT: 2, // Instructor Trainee
+  IN: 1, // Instructor New (lowest)
 };
 
 /**
@@ -38,8 +36,6 @@ export const ROLE_PROGRESSION: { [key in DatabaseUserRole]: DatabaseUserRole } =
   IP: "IC", // Instructor Provisional progresses to Instructor Certified
   IT: "IP", // Instructor Trainee progresses to Instructor Provisional
   IN: "IT", // Instructor New progresses to Instructor Trainee
-  TL: "AD", // Team Leader progresses to Admin
-  ST: "IC", // Student progresses to Instructor Certified
 };
 
 /**
