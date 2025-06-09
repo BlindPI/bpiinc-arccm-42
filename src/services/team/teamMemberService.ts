@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { TeamMemberWithProfile } from '@/types/team-management';
 
@@ -23,11 +24,13 @@ export class TeamMemberService {
       assignment_start_date: member.assignment_start_date,
       assignment_end_date: member.assignment_end_date,
       team_position: member.team_position,
-      permissions: member.permissions || {},
+      permissions: Array.isArray(member.permissions) ? 
+                   member.permissions.map(p => String(p)) : 
+                   (typeof member.permissions === 'string' ? [member.permissions] : []),
       created_at: member.created_at,
       updated_at: member.updated_at,
       last_activity: member.last_activity || member.updated_at,
-      joined_at: member.created_at, // Add required joined_at property
+      joined_at: member.created_at,
       display_name: member.profiles?.display_name || 'Unknown User',
       profiles: {
         id: member.profiles?.id || '',
@@ -37,14 +40,14 @@ export class TeamMemberService {
         created_at: member.profiles?.created_at || '',
         updated_at: member.profiles?.updated_at || '',
         compliance_status: member.profiles?.compliance_status,
-        last_training_date: member.profiles?.last_training_date,
-        next_training_due: member.profiles?.next_training_due,
-        performance_score: member.profiles?.performance_score,
-        training_hours: member.profiles?.training_hours,
-        certifications_count: member.profiles?.certifications_count,
-        location_id: member.profiles?.location_id,
-        department: member.profiles?.department,
-        supervisor_id: member.profiles?.supervisor_id,
+        last_training_date: member.profiles?.last_training_date || null,
+        next_training_due: member.profiles?.next_training_due || null,
+        performance_score: member.profiles?.performance_score || null,
+        training_hours: member.profiles?.training_hours || null,
+        certifications_count: member.profiles?.certifications_count || null,
+        location_id: member.profiles?.location_id || null,
+        department: member.profiles?.department || null,
+        supervisor_id: member.profiles?.supervisor_id || null,
         user_id: member.profiles?.user_id
       }
     }));
@@ -90,4 +93,20 @@ export class TeamMemberService {
 
     if (error) throw error;
   }
+
+  // Alias methods for compatibility
+  static async addTeamMember(teamId: string, userId: string, role: string): Promise<void> {
+    return this.addMember(teamId, userId, role);
+  }
+
+  static async removeTeamMember(teamId: string, memberId: string): Promise<void> {
+    return this.removeMember(memberId);
+  }
+
+  static async updateTeamMemberRole(teamId: string, memberId: string, newRole: string): Promise<void> {
+    return this.updateMemberRole(memberId, newRole);
+  }
 }
+
+// Export both class and instance for compatibility
+export const teamMemberService = TeamMemberService;
