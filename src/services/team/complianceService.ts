@@ -1,6 +1,13 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { safeParseJson, safeNumber, safeString } from '@/utils/databaseTypes';
+import { 
+  safeParseJson, 
+  safeNumber, 
+  safeString,
+  parseComplianceMetricsResponse,
+  safeAccessProperty,
+  isRecord 
+} from '@/utils/databaseTypes';
 
 export interface ComplianceMetrics {
   overallCompliance: number;
@@ -33,15 +40,14 @@ export class ComplianceService {
       
       if (error) throw error;
       
-      // Handle the JSONB response from the database function
-      // The function returns a single JSONB object, not an array
-      const dbMetrics = data || {};
+      // Parse the database response safely
+      const dbMetrics = parseComplianceMetricsResponse(data);
       
       return {
-        overallCompliance: safeNumber(dbMetrics.overall_compliance || 87.5),
-        activeIssues: safeNumber(dbMetrics.active_issues || 0),
-        resolvedIssues: safeNumber(dbMetrics.resolved_issues || 0),
-        complianceByLocation: safeParseJson(dbMetrics.compliance_by_location, {})
+        overallCompliance: safeNumber(safeAccessProperty(dbMetrics, 'overall_compliance', 87.5)),
+        activeIssues: safeNumber(safeAccessProperty(dbMetrics, 'active_issues', 0)),
+        resolvedIssues: safeNumber(safeAccessProperty(dbMetrics, 'resolved_issues', 0)),
+        complianceByLocation: safeParseJson(safeAccessProperty(dbMetrics, 'compliance_by_location'), {})
       };
     } catch (error) {
       console.error('Error fetching compliance metrics:', error);
@@ -104,7 +110,6 @@ export class ComplianceService {
     }
   }
 
-  // Add the missing method that RealTimeMemberManagement is expecting
   static async getTeamComplianceOverview(teamId: string): Promise<ComplianceOverview> {
     try {
       // Get team compliance data using the existing database function

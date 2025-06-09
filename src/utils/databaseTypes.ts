@@ -67,3 +67,31 @@ export function safeDate(value: string | null | undefined): string {
 export function isRecord(value: any): value is Record<string, any> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
+
+// Safe RPC response parser for compliance metrics
+export function parseComplianceMetricsResponse(data: Json | null): Record<string, any> {
+  if (!data) return {};
+  
+  // If it's already an object, return it
+  if (isRecord(data)) {
+    return data;
+  }
+  
+  // If it's a string, try to parse it
+  if (typeof data === 'string') {
+    try {
+      const parsed = JSON.parse(data);
+      return isRecord(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  
+  return {};
+}
+
+// Safe property access for database responses
+export function safeAccessProperty(obj: any, property: string, defaultValue: any = null): any {
+  if (!isRecord(obj)) return defaultValue;
+  return obj[property] ?? defaultValue;
+}
