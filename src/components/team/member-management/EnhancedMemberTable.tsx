@@ -1,130 +1,122 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
 import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { 
+  Users, 
   Search, 
   Filter, 
-  Download, 
-  Edit, 
-  Trash2, 
-  Mail,
-  Phone,
-  Calendar,
-  MoreVertical,
-  UserCheck,
-  Shield
+  MoreHorizontal,
+  Edit,
+  UserMinus,
+  Shield,
+  Activity
 } from 'lucide-react';
-import { RealEnterpriseTeamService } from '@/services/team/realEnterpriseTeamService';
-import type { TeamMember } from '@/types/team-management';
+import { RealEnterpriseTeamService, TeamMemberWithProfile } from '@/services/team/realEnterpriseTeamService';
+import { toast } from 'sonner';
 
-interface EnhancedMemberTableProps {
+export interface EnhancedMemberTableProps {
   teamId: string;
-  canManage: boolean;
+  userRole: string;
+  onSelectionChange: (memberIds: string[]) => void;
+  selectedMembers: string[];
 }
 
-export function EnhancedMemberTable({ teamId, canManage }: EnhancedMemberTableProps) {
+export function EnhancedMemberTable({ 
+  teamId, 
+  userRole, 
+  onSelectionChange, 
+  selectedMembers 
+}: EnhancedMemberTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [roleFilter, setRoleFilter] = useState<string>('all');
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: members = [], isLoading } = useQuery({
     queryKey: ['team-members', teamId],
-    queryFn: async () => {
-      const response = await RealEnterpriseTeamService.getTeamMembers(teamId);
-      return response;
-    },
-    refetchInterval: 30000
+    queryFn: () => RealEnterpriseTeamService.getTeamMembers(teamId)
   });
 
-  const updateMemberRoleMutation = useMutation({
-    mutationFn: ({ memberId, newRole }: { memberId: string; newRole: 'ADMIN' | 'MEMBER' }) =>
-      RealEnterpriseTeamService.updateTeamMemberRole(teamId, memberId, newRole),
+  const updateRoleMutation = useMutation({
+    mutationFn: ({ memberId, newRole }: { memberId: string; newRole: string }) =>
+      RealEnterpriseTeamService.updateMemberRole(memberId, newRole),
     onSuccess: () => {
-      toast({ title: 'Member role updated successfully' });
-      queryClient.invalidateQueries(['team-members', teamId]);
+      toast.success('Member role updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['team-members', teamId] });
     },
-    onError: () => {
-      toast({ title: 'Failed to update member role', variant: 'destructive' });
+    onError: (error) => {
+      toast.error(`Failed to update role: ${error.message}`);
     }
   });
 
   const removeMemberMutation = useMutation({
-    mutationFn: (memberId: string) =>
-      RealEnterpriseTeamService.removeTeamMember(teamId, memberId),
+    mutationFn: (memberId: string) => RealEnterpriseTeamService.removeMember(memberId),
     onSuccess: () => {
-      toast({ title: 'Member removed successfully' });
-      queryClient.invalidateQueries(['team-members', teamId]);
+      toast.success('Member removed successfully');
+      queryClient.invalidateQueries({ queryKey: ['team-members', teamId] });
     },
-    onError: () => {
-      toast({ title: 'Failed to remove member', variant: 'destructive' });
+    onError: (error) => {
+      toast.error(`Failed to remove member: ${error.message}`);
     }
   });
 
-  const handleRoleChange = (memberId: string, newRole: string) => {
-    if (newRole === 'ADMIN' || newRole === 'MEMBER') {
-      updateMemberRoleMutation.mutate({ memberId, newRole });
-    }
-  };
+  const filteredMembers = members.filter(member => {
+    const matchesSearch = member.profiles.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         member.profiles.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || member.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
-  const filteredMembers = useMemo(() => {
-    return members.filter(member => {
-      const matchesSearch = !searchTerm || 
-        member.profiles?.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        member.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesStatus = statusFilter === 'all' || member.status === statusFilter;
-      const matchesRole = roleFilter === 'all' || member.role === roleFilter;
-      
-      return matchesSearch && matchesStatus && matchesRole;
-    });
-  }, [members, searchTerm, statusFilter, roleFilter]);
-
-  const handleSelectAll = () => {
-    if (selectedMembers.length === filteredMembers.length) {
-      setSelectedMembers([]);
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      onSelectionChange(filteredMembers.map(m => m.id));
     } else {
-      setSelectedMembers(filteredMembers.map(m => m.id));
+      onSelectionChange([]);
     }
   };
 
-  const handleSelectMember = (memberId: string) => {
-    setSelectedMembers(prev => 
-      prev.includes(memberId) 
-        ? prev.filter(id => id !== memberId)
-        : [...prev, memberId]
-    );
+  const handleSelectMember = (memberId: string, checked: boolean) => {
+    if (checked) {
+      onSelectionChange([...selectedMembers, memberId]);
+    } else {
+      onSelectionChange(selectedMembers.filter(id => id !== memberId));
+    }
   };
 
-  const exportMembers = () => {
-    const csvContent = [
-      ['Name', 'Email', 'Role', 'Status', 'Joined Date'],
-      ...filteredMembers.map(member => [
-        member.profiles?.display_name || 'N/A',
-        member.profiles?.email || 'N/A',
-        member.role,
-        member.status,
-        new Date(member.created_at).toLocaleDateString()
-      ])
-    ].map(row => row.join(',')).join('\n');
+  const getRoleBadgeVariant = (role: string) => {
+    switch (role) {
+      case 'ADMIN': return 'default';
+      case 'MEMBER': return 'secondary';
+      case 'VIEWER': return 'outline';
+      default: return 'outline';
+    }
+  };
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `team-members-${teamId}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'active': return 'default';
+      case 'inactive': return 'secondary';
+      case 'pending': return 'outline';
+      default: return 'outline';
+    }
   };
 
   if (isLoading) {
@@ -138,23 +130,10 @@ export function EnhancedMemberTable({ teamId, canManage }: EnhancedMemberTablePr
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <UserCheck className="h-5 w-5" />
-            Team Members ({filteredMembers.length})
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            {selectedMembers.length > 0 && (
-              <Badge variant="secondary">
-                {selectedMembers.length} selected
-              </Badge>
-            )}
-            <Button variant="outline" size="sm" onClick={exportMembers}>
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
-          </div>
-        </div>
+        <CardTitle className="flex items-center gap-2">
+          <Users className="h-5 w-5" />
+          Team Members ({filteredMembers.length})
+        </CardTitle>
       </CardHeader>
       <CardContent>
         {/* Search and Filters */}
@@ -169,158 +148,121 @@ export function EnhancedMemberTable({ teamId, canManage }: EnhancedMemberTablePr
             />
           </div>
           
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="ADMIN">Admin</SelectItem>
-              <SelectItem value="MEMBER">Member</SelectItem>
-            </SelectContent>
-          </Select>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Filter className="h-4 w-4 mr-2" />
+                Status: {statusFilter === 'all' ? 'All' : statusFilter}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => setStatusFilter('all')}>
+                All Statuses
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('active')}>
+                Active
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('inactive')}>
+                Inactive
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('pending')}>
+                Pending
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Members Table */}
-        <div className="border rounded-md">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12">
+                <Checkbox
+                  checked={selectedMembers.length === filteredMembers.length && filteredMembers.length > 0}
+                  onCheckedChange={handleSelectAll}
+                />
+              </TableHead>
+              <TableHead>Member</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Joined</TableHead>
+              <TableHead>Last Activity</TableHead>
+              <TableHead className="w-12"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredMembers.map((member) => (
+              <TableRow key={member.id}>
+                <TableCell>
                   <Checkbox
-                    checked={selectedMembers.length === filteredMembers.length && filteredMembers.length > 0}
-                    onCheckedChange={handleSelectAll}
+                    checked={selectedMembers.includes(member.id)}
+                    onCheckedChange={(checked) => handleSelectMember(member.id, checked as boolean)}
                   />
-                </TableHead>
-                <TableHead>Member</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Joined</TableHead>
-                <TableHead>Activity</TableHead>
-                {canManage && <TableHead className="w-20">Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredMembers.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedMembers.includes(member.id)}
-                      onCheckedChange={() => handleSelectMember(member.id)}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-medium">
-                          {member.profiles?.display_name?.charAt(0) || 'U'}
-                        </span>
-                      </div>
-                      <div>
-                        <div className="font-medium">
-                          {member.profiles?.display_name || 'Unknown User'}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {member.profiles?.role || 'No role'}
-                        </div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1 text-sm">
-                        <Mail className="h-3 w-3" />
-                        {member.profiles?.email || 'No email'}
-                      </div>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Phone className="h-3 w-3" />
-                        {member.profiles?.phone || 'No phone'}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {canManage ? (
-                      <Select 
-                        value={member.role} 
-                        onValueChange={(value) => handleRoleChange(member.id, value)}
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{member.profiles.display_name}</span>
+                    <span className="text-sm text-muted-foreground">{member.profiles.email}</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={getRoleBadgeVariant(member.role)}>
+                    {member.role}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={getStatusBadgeVariant(member.status)}>
+                    {member.status}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  {new Date(member.joined_at).toLocaleDateString()}
+                </TableCell>
+                <TableCell>
+                  {member.last_activity ? 
+                    new Date(member.last_activity).toLocaleDateString() : 
+                    'Never'
+                  }
+                </TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => console.log('Edit member:', member.id)}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => console.log('Manage permissions:', member.id)}>
+                        <Shield className="h-4 w-4 mr-2" />
+                        Manage Permissions
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => console.log('View activity:', member.id)}>
+                        <Activity className="h-4 w-4 mr-2" />
+                        View Activity
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => removeMemberMutation.mutate(member.id)}
+                        className="text-destructive"
                       >
-                        <SelectTrigger className="w-24">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="ADMIN">Admin</SelectItem>
-                          <SelectItem value="MEMBER">Member</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Badge variant={member.role === 'ADMIN' ? 'default' : 'secondary'}>
-                        {member.role}
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant={
-                        member.status === 'active' ? 'default' :
-                        member.status === 'pending' ? 'secondary' : 'outline'
-                      }
-                    >
-                      {member.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1 text-sm">
-                      <Calendar className="h-3 w-3" />
-                      {new Date(member.created_at).toLocaleDateString()}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm text-muted-foreground">
-                      {member.last_activity 
-                        ? new Date(member.last_activity).toLocaleDateString()
-                        : 'No activity'
-                      }
-                    </div>
-                  </TableCell>
-                  {canManage && (
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm">
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => removeMemberMutation.mutate(member.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+                        <UserMinus className="h-4 w-4 mr-2" />
+                        Remove Member
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
 
         {filteredMembers.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">
-            <UserCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No members found matching your criteria</p>
+          <div className="text-center py-8">
+            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p className="text-muted-foreground">No members found</p>
           </div>
         )}
       </CardContent>

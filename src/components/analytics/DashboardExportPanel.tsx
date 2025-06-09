@@ -112,7 +112,7 @@ export function DashboardExportPanel({ dashboardData }: DashboardExportPanelProp
 
   return (
     <div className="flex items-center gap-2">
-      <Select value={exportFormat} onValueChange={setExportFormat}>
+      <Select value={exportFormat} onValueChange={(value: 'pdf' | 'xlsx' | 'csv' | 'png') => setExportFormat(value)}>
         <SelectTrigger className="w-24">
           <SelectValue />
         </SelectTrigger>
