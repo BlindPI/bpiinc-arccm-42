@@ -12,6 +12,10 @@ export function safeAssignmentType(value: any): AssignmentType {
   return validTypes.includes(value) ? value : 'round_robin';
 }
 
+// Role type definitions
+export type UserRole = 'SA' | 'AD' | 'AP' | 'IT' | 'IC' | 'IP' | 'IN';
+
+// Status types
 export type ContactStatus = 'active' | 'inactive';
 export type AccountType = 'prospect' | 'customer' | 'partner' | 'competitor';
 export type AccountStatus = 'active' | 'inactive' | 'prospect';
@@ -19,6 +23,78 @@ export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'converted' | 'lost
 export type OpportunityStage = 'prospect' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost';
 export type OpportunityStatus = 'open' | 'closed';
 export type ActivityType = 'call' | 'email' | 'meeting' | 'task' | 'note';
+
+// Location interface
+export interface Location {
+  id: string;
+  name: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Certificate Request interface
+export interface CertificateRequest {
+  id: string;
+  recipient_name: string;
+  recipient_email?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  course_name: string;
+  issue_date: string;
+  expiry_date: string;
+  city?: string;
+  province?: string;
+  postal_code?: string;
+  instructor_name?: string;
+  instructor_level?: string;
+  first_aid_level?: string;
+  cpr_level?: string;
+  length?: number;
+  assessment_status?: string;
+  status: string;
+  user_id?: string;
+  reviewer_id?: string;
+  rejection_reason?: string;
+  location_id?: string;
+  batch_id?: string;
+  batch_name?: string;
+  roster_id?: string;
+  generation_attempts?: number;
+  generation_error?: string;
+  last_generation_attempt?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Enhanced Certificate Request with additional properties
+export interface EnhancedCertificateRequest extends CertificateRequest {
+  submitter?: {
+    id: string;
+    display_name?: string;
+    email: string;
+  };
+  location?: {
+    id: string;
+    name: string;
+    city?: string;
+    state?: string;
+  };
+}
+
+// Certificate Request with Submitter info
+export interface CertificateRequestWithSubmitter extends CertificateRequest {
+  submitter?: {
+    id: string;
+    display_name?: string;
+    email: string;
+  };
+}
 
 export interface Database {
   public: {

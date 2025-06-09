@@ -1,6 +1,15 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { EmailCampaign, CampaignWizardData } from '@/types/crm';
+import { EmailCampaign } from '@/types/crm';
+
+export interface CampaignWizardData {
+  name: string;
+  type: string;
+  target_audience: string;
+  template_id?: string;
+  schedule_date?: string;
+  settings: Record<string, any>;
+}
 
 export class CampaignManagementService {
   static async getEmailCampaigns(): Promise<EmailCampaign[]> {

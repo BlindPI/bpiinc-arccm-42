@@ -10,6 +10,7 @@ export interface PipelineAnalytics {
     stage_name: string;
     total_value: number;
     opportunity_count: number;
+    avg_probability?: number;
   }>;
   conversionRates: Record<string, number>;
   averageDealSize: number;
@@ -56,12 +57,13 @@ export class RevenueAnalyticsService {
       const stageGroups = (opportunities || []).reduce((acc, opp) => {
         const stage = opp.stage || 'unknown';
         if (!acc[stage]) {
-          acc[stage] = { count: 0, totalValue: 0 };
+          acc[stage] = { count: 0, totalValue: 0, totalProbability: 0 };
         }
         acc[stage].count++;
         acc[stage].totalValue += opp.estimated_value || 0;
+        acc[stage].totalProbability += opp.probability || 0;
         return acc;
-      }, {} as Record<string, { count: number; totalValue: number }>);
+      }, {} as Record<string, { count: number; totalValue: number; totalProbability: number }>);
 
       const stageDistribution = Object.entries(stageGroups).map(([stage, data]) => ({
         stage,
@@ -69,7 +71,8 @@ export class RevenueAnalyticsService {
         count: data.count,
         stage_name: stage,
         total_value: data.totalValue,
-        opportunity_count: data.count
+        opportunity_count: data.count,
+        avg_probability: data.count > 0 ? data.totalProbability / data.count : 0
       }));
 
       const totalPipelineValue = stageDistribution.reduce((sum, stage) => sum + stage.total_value, 0);
