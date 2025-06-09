@@ -75,7 +75,7 @@ export function RoleBasedDashboard() {
   // Get user role
   const userRole = profile?.role;
 
-  if (!userRole) {
+  if (!userRole || !profile) {
     return (
       <Card className="mx-6 my-4">
         <CardContent className="p-6 text-center">
@@ -91,10 +91,10 @@ export function RoleBasedDashboard() {
 
   console.log('🔧 ROLE-BASED-DASHBOARD: Rendering dashboard for role:', userRole);
 
-  // Route to role-specific dashboard
+  // Route to role-specific dashboard with proper props
   switch (userRole) {
     case 'SA':
-      return <SystemAdminDashboard />;
+      return <SystemAdminDashboard config={config} profile={profile} />;
     
     case 'AD':
       return <AdminDashboard />;

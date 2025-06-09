@@ -6,7 +6,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Shield, Users, Settings, BarChart3, Monitor, AlertTriangle, Loader2 } from 'lucide-react';
 import { useSystemAdminDashboardData } from '@/hooks/dashboard/useSystemAdminDashboardData';
 import { DashboardActionButton } from '../ui/DashboardActionButton';
-import { InlineLoader } from '@/components/ui/LoadingStates';
 
 interface SystemAdminDashboardProps {
   config: DashboardConfig;
@@ -58,7 +57,7 @@ const SystemAdminDashboard = ({ config, profile }: SystemAdminDashboardProps) =>
       <Alert className="bg-gradient-to-r from-blue-50 to-white border-blue-200 shadow-sm">
         <Shield className="h-4 w-4 text-blue-600" />
         <AlertDescription className="text-blue-800 font-medium">
-          Welcome back, {profile.display_name}! You are logged in as a System Administrator.
+          Welcome back, {profile?.display_name || 'System Administrator'}! You are logged in as a System Administrator.
         </AlertDescription>
       </Alert>
 

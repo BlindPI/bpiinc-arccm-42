@@ -39,7 +39,7 @@ export interface TeamLeaderMetrics {
   teamName: string;
   memberCount: number;
   activeMembers: number;
-  teamPerformance: number; // Changed from teamPerformanceScore
+  teamPerformance: number;
   complianceRate: number;
   certificatesIssued: number;
   coursesCompleted: number;

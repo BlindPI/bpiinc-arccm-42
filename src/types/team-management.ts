@@ -102,12 +102,19 @@ export interface TeamAnalytics {
 export interface InstructorPerformanceMetrics {
   instructorId: string;
   instructorName: string;
+  role?: string;
   coursesDelivered: number;
   totalStudents: number;
+  totalSessions?: number;
   averageRating: number;
   certificationRate: number;
+  certificatesIssued?: number;
   hoursDelivered: number;
+  totalHours?: number;
   complianceStatus: 'compliant' | 'at_risk' | 'non_compliant';
+  complianceScore?: number;
+  studentsCount?: number;
+  averageSessionRating?: number;
 }
 
 export interface TeamPerformanceMetrics {
@@ -147,4 +154,22 @@ export interface CreateTeamRequest {
   team_type: string;
   location_id?: string;
   provider_id?: string;
+  created_by?: string;
+}
+
+// Add AuthorizedProvider interface to fix provider component errors
+export interface AuthorizedProvider {
+  id: string;
+  name: string;
+  description?: string;
+  status: 'active' | 'inactive' | 'pending' | 'suspended';
+  provider_type?: string;
+  primary_location_id?: string;
+  performance_rating?: number;
+  compliance_score?: number;
+  contact_email?: string;
+  contact_phone?: string;
+  website?: string;
+  created_at: string;
+  updated_at: string;
 }
