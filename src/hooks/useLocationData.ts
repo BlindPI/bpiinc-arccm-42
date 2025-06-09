@@ -1,46 +1,36 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Location } from '@/types/supabase-schema';
+import type { Location } from '@/types/supabase-schema';
 
-export function useLocationData(filters?: { search?: string; city?: string; status?: string }) {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['locations', filters],
-    queryFn: async () => {
-      let query = supabase
+export function useLocationData() {
+  return useQuery({
+    queryKey: ['locations'],
+    queryFn: async (): Promise<Location[]> => {
+      const { data, error } = await supabase
         .from('locations')
-        .select('*');
-      
-      // Apply filters if provided
-      if (filters?.status) {
-        query = query.eq('status', filters.status);
-      }
-      
-      if (filters?.city) {
-        query = query.eq('city', filters.city);
-      }
-      
-      if (filters?.search) {
-        query = query.or(`name.ilike.%${filters.search}%,address.ilike.%${filters.search}%`);
-      }
-      
-      // Always sort by name
-      query = query.order('name');
-      
-      const { data: locations, error } = await query;
+        .select('*')
+        .order('name');
       
       if (error) throw error;
-      return locations as Location[];
-    },
+      
+      // Transform database records to application types with proper field mapping
+      return (data || []).map(location => ({
+        id: location.id,
+        name: location.name,
+        address: location.address,
+        city: location.city,
+        state: location.state,
+        postal_code: location.zip || location.postal_code || '', // Handle both field names
+        country: location.country,
+        email: location.email,
+        phone: location.phone,
+        website: location.website,
+        logo_url: location.logo_url,
+        status: location.status as 'ACTIVE' | 'INACTIVE',
+        created_at: location.created_at,
+        updated_at: location.updated_at
+      }));
+    }
   });
-
-  // Get unique cities from locations data
-  const cities = data ? [...new Set(data.filter(location => location.city).map(location => location.city))] : [];
-
-  return {
-    locations: data || [],
-    cities,
-    isLoading,
-    error
-  };
 }

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,7 +29,7 @@ export default function LocationTable() {
         address: location.address,
         city: location.city,
         state: location.state,
-        postal_code: location.zip || location.postal_code || '', // Handle both fields
+        postal_code: location.zip || location.postal_code || '', // Handle both database field names
         country: location.country,
         email: location.email,
         phone: location.phone,

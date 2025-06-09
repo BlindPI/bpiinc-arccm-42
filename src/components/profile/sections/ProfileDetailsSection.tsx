@@ -3,10 +3,28 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface ProfileDetailsSectionProps {
-  user: any;
+  profile: any;
+  isEditing: boolean;
+  isSaving: boolean;
+  formData: any;
+  profileCompleteness: number;
+  onEdit: () => void;
+  onCancel: () => void;
+  onSave: () => Promise<void>;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-export function ProfileDetailsSection({ user }: ProfileDetailsSectionProps) {
+export function ProfileDetailsSection({ 
+  profile, 
+  isEditing, 
+  isSaving, 
+  formData, 
+  profileCompleteness, 
+  onEdit, 
+  onCancel, 
+  onSave, 
+  onChange 
+}: ProfileDetailsSectionProps) {
   return (
     <Card>
       <CardHeader>
@@ -16,15 +34,15 @@ export function ProfileDetailsSection({ user }: ProfileDetailsSectionProps) {
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium">Display Name</label>
-            <p className="text-sm text-muted-foreground">{user?.display_name || 'Not set'}</p>
+            <p className="text-sm text-muted-foreground">{profile?.display_name || 'Not set'}</p>
           </div>
           <div>
             <label className="text-sm font-medium">Email</label>
-            <p className="text-sm text-muted-foreground">{user?.email || 'Not set'}</p>
+            <p className="text-sm text-muted-foreground">{profile?.email || 'Not set'}</p>
           </div>
           <div>
             <label className="text-sm font-medium">Role</label>
-            <p className="text-sm text-muted-foreground">{user?.role || 'Not set'}</p>
+            <p className="text-sm text-muted-foreground">{profile?.role || 'Not set'}</p>
           </div>
         </div>
       </CardContent>

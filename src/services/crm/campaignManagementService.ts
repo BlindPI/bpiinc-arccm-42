@@ -29,14 +29,19 @@ export class CampaignManagementService {
     return (data || []).map(this.transformCampaign);
   }
 
+  // Alias for compatibility
+  static async getEmailCampaigns(): Promise<EmailCampaign[]> {
+    return this.getCampaigns();
+  }
+
   static async createCampaign(campaignData: Partial<EmailCampaign>): Promise<EmailCampaign> {
     const { data, error } = await supabase
       .from('crm_email_campaigns')
       .insert({
-        campaign_name: campaignData.campaign_name || 'Untitled Campaign',
+        name: campaignData.campaign_name || 'Untitled Campaign',
         campaign_type: campaignData.campaign_type || 'promotional',
-        subject_line: campaignData.subject_line || '',
-        email_content: campaignData.email_content || '',
+        subject: campaignData.subject_line || '',
+        content: campaignData.email_content || '',
         target_audience: campaignData.target_audience || {},
         status: campaignData.status || 'draft'
       })
@@ -45,6 +50,29 @@ export class CampaignManagementService {
 
     if (error) throw error;
     return this.transformCampaign(data);
+  }
+
+  // Wizard-specific creation method
+  static async createCampaignWizard(campaignData: any): Promise<EmailCampaign> {
+    return this.createCampaign({
+      campaign_name: campaignData.name,
+      campaign_type: campaignData.type,
+      target_audience: campaignData.target_audience,
+      subject_line: campaignData.subject || '',
+      email_content: campaignData.content || '',
+      status: 'draft'
+    });
+  }
+
+  // Nurturing campaign creation
+  static async createNurturingCampaign(campaignData: any): Promise<EmailCampaign> {
+    return this.createCampaign({
+      campaign_name: campaignData.campaign_name,
+      campaign_type: 'nurturing',
+      target_audience: campaignData.enrollment_criteria,
+      email_content: JSON.stringify(campaignData.sequence_config),
+      status: 'draft'
+    });
   }
 
   static async updateCampaign(campaignId: string, updates: Partial<EmailCampaign>): Promise<EmailCampaign> {
@@ -78,6 +106,18 @@ export class CampaignManagementService {
       conversionRate: campaign.conversion_rate,
       roi: this.calculateROI(campaign)
     };
+  }
+
+  // Performance metrics method
+  static async getCampaignPerformanceMetrics(): Promise<any[]> {
+    const campaigns = await this.getCampaigns();
+    return campaigns.map(campaign => ({
+      campaign_id: campaign.id,
+      opens: campaign.opened_count || 0,
+      clicks: campaign.clicked_count || 0,
+      conversions: campaign.converted_count || 0,
+      roi: this.calculateROI(campaign)
+    }));
   }
 
   private static calculateROI(campaign: EmailCampaign): number {

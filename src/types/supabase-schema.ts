@@ -34,31 +34,33 @@ export interface ExtendedProfile extends Profile {
 
 // UNIFIED UserRole type - SINGLE SOURCE OF TRUTH
 export type UserRole = 
-  | 'SA' 
-  | 'AD' 
-  | 'TL' 
-  | 'IT' 
-  | 'IC' 
-  | 'IP' 
-  | 'ITC'
-  | 'student'
-  | 'instructor_candidate'
-  | 'instructor_provisional'
-  | 'instructor_trainer';
+  | 'SA'     // System Administrator
+  | 'AD'     // Administrator  
+  | 'AP'     // Authorized Provider
+  | 'TL'     // Team Leader
+  | 'IC'     // Instructor Candidate
+  | 'IP'     // Instructor Provisional
+  | 'IT'     // Instructor Trainer
+  | 'IN'     // Instructor
+  | 'ITC'    // Instructor Trainer Candidate
+  | 'S'      // Student
+  | 'N'      // New User
+  | 'ST';    // Student (alternative)
 
 // Database user roles (from Supabase)
 export type DatabaseUserRole = 
-  | 'SA' 
-  | 'AD' 
-  | 'TL' 
-  | 'IT' 
-  | 'IC' 
-  | 'IP' 
-  | 'ITC'
-  | 'student'
-  | 'instructor_candidate'
-  | 'instructor_provisional'
-  | 'instructor_trainer';
+  | 'SA'     // System Administrator
+  | 'AD'     // Administrator  
+  | 'AP'     // Authorized Provider
+  | 'TL'     // Team Leader
+  | 'IC'     // Instructor Candidate
+  | 'IP'     // Instructor Provisional
+  | 'IT'     // Instructor Trainer
+  | 'IN'     // Instructor
+  | 'ITC'    // Instructor Trainer Candidate
+  | 'S'      // Student
+  | 'N'      // New User
+  | 'ST';    // Student (alternative)
 
 // UNIFIED Location interface - handle both postal_code and zip from database
 export interface Location {
@@ -350,7 +352,7 @@ export interface TeamMemberWithProfile {
 
 // UTILITY FUNCTIONS - SINGLE SOURCE OF TRUTH
 export function safeUserRole(role: any): UserRole {
-  if (typeof role === 'string' && ['SA', 'AD', 'TL', 'IT', 'IC', 'IP', 'ITC', 'student', 'instructor_candidate', 'instructor_provisional', 'instructor_trainer'].includes(role)) {
+  if (typeof role === 'string' && ['SA', 'AD', 'AP', 'TL', 'IC', 'IP', 'IT', 'IN', 'ITC', 'S', 'N', 'ST'].includes(role)) {
     return role as UserRole;
   }
   return 'IT';
