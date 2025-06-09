@@ -22,15 +22,15 @@ export default function LocationTable() {
       
       if (error) throw error;
       
-      // CRITICAL: Map database properties to interface
+      // Map database properties to interface with proper postal_code handling
       return (data || []).map(location => ({
         id: location.id,
         name: location.name,
         address: location.address,
         city: location.city,
         state: location.state,
-        postal_code: location.postal_code || location.zip, // Handle both properties
-        zip: location.zip,
+        postal_code: location.postal_code || location.zip, // Handle both database columns
+        zip: location.zip || location.postal_code, // Ensure zip is available for legacy code
         country: location.country,
         email: location.email,
         phone: location.phone,
@@ -106,7 +106,7 @@ export default function LocationTable() {
                 <div className="flex-1">
                   <h3 className="font-medium">{location.name}</h3>
                   <p className="text-sm text-gray-600">
-                    {[location.address, location.city, location.state].filter(Boolean).join(', ')}
+                    {[location.address, location.city, location.state, location.postal_code].filter(Boolean).join(', ')}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

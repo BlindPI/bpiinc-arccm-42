@@ -1,14 +1,15 @@
 
+// UNIFIED TYPE SYSTEM - SINGLE SOURCE OF TRUTH
 export interface Profile {
   id: string;
-  display_name: string; // Required for consistency
+  display_name: string;
   email: string;
-  role: string;
+  role: UserRole;
   phone?: string;
   organization?: string;
-  job_title?: string; // Add missing property
-  bio?: string; // Add missing property
-  status: 'ACTIVE' | 'INACTIVE' | 'PENDING'; // Add missing property
+  job_title?: string;
+  bio?: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'PENDING';
   created_at: string;
   updated_at: string;
   compliance_status?: boolean | null;
@@ -40,51 +41,55 @@ export interface ExtendedProfile extends Profile {
   };
 }
 
-// CRITICAL: Add comprehensive UserRole type
+// UNIFIED UserRole type - SINGLE SOURCE OF TRUTH
 export type UserRole = 'SA' | 'AD' | 'IT' | 'ITC' | 'IP' | 'IC' | 'S' | 'N' | 'AP' | 'TL' | 'IN' | 'ST';
-export type DatabaseUserRole = UserRole; // Alias for compatibility
+export type DatabaseUserRole = UserRole;
 
-// CRITICAL: Add missing CRM types
-export interface Lead {
+// UNIFIED Location interface with proper property mapping
+export interface Location {
   id: string;
-  first_name?: string;
-  last_name?: string;
+  name: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  zip?: string;
+  country?: string;
   email?: string;
   phone?: string;
-  company_name?: string;
-  job_title?: string;
-  lead_source?: string;
-  lead_status: LeadStatus;
-  lead_score?: number;
-  training_urgency?: string;
-  estimated_participant_count?: number;
-  qualification_notes?: string;
+  website?: string;
+  logo_url?: string;
+  status: 'ACTIVE' | 'INACTIVE';
   created_at: string;
   updated_at: string;
-  assigned_to?: string;
-  conversion_date?: string;
-  converted_to_contact_id?: string;
-  converted_to_account_id?: string;
 }
 
-export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
-
-// CRITICAL: Add missing utility functions
-export function safeUserRole(role: any): UserRole {
-  if (typeof role === 'string' && ['SA', 'AD', 'IT', 'ITC', 'IP', 'IC', 'S', 'N', 'AP', 'TL', 'IN', 'ST'].includes(role)) {
-    return role as UserRole;
-  }
-  return 'IT'; // Default fallback
+// UNIFIED AuthorizedProvider interface with all missing properties
+export interface AuthorizedProvider {
+  id: string;
+  name: string;
+  provider_type: string;
+  status: string;
+  performance_rating?: number;
+  compliance_score?: number;
+  created_at: string;
+  updated_at: string;
+  description?: string;
+  primary_location_id?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  address?: string;
+  website?: string;
+  logo_url?: string;
+  specializations?: any;
+  certification_levels?: any;
+  metadata?: any;
+  approved_by?: string;
+  approval_date?: string;
+  user_id?: string;
 }
 
-export function safeAssignmentType(type: any): 'primary' | 'secondary' | 'temporary' {
-  if (typeof type === 'string' && ['primary', 'secondary', 'temporary'].includes(type)) {
-    return type as 'primary' | 'secondary' | 'temporary';
-  }
-  return 'primary';
-}
-
-// CRITICAL: Add missing CertificateRequest interface
+// COMPLETE CertificateRequest interface with all database properties
 export interface CertificateRequest {
   id: string;
   recipient_name: string;
@@ -119,26 +124,141 @@ export interface CertificateRequest {
   updated_at: string;
 }
 
-// CRITICAL: Add missing Location interface with proper postal_code
-export interface Location {
+// COMPLETE CRM Types - SINGLE SOURCE OF TRUTH
+export interface Lead {
   id: string;
-  name: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  postal_code?: string; // Fix property name
-  zip?: string; // Legacy support
-  country?: string;
-  email?: string;
+  first_name: string;
+  last_name: string;
+  email: string;
   phone?: string;
-  website?: string;
-  logo_url?: string;
-  status: 'ACTIVE' | 'INACTIVE';
+  company_name?: string;
+  job_title?: string;
+  lead_status: 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
+  lead_source: 'website' | 'referral' | 'cold_call' | 'email' | 'social_media' | 'trade_show' | 'other';
+  lead_score: number;
+  assigned_to?: string;
+  notes?: string;
+  training_urgency?: 'immediate' | 'within_month' | 'within_quarter' | 'planning';
+  estimated_participant_count?: number;
+  lead_type?: 'individual' | 'corporate' | 'government';
+  preferred_training_format?: 'online' | 'in_person' | 'hybrid';
+  budget_range?: string;
   created_at: string;
   updated_at: string;
 }
 
-// CRITICAL: Add missing ExecutiveMetrics interface
+export interface Contact {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  mobile_phone?: string;
+  title?: string;
+  department?: string;
+  account_id?: string;
+  contact_status: 'active' | 'inactive';
+  lead_source?: string;
+  preferred_contact_method?: 'email' | 'phone' | 'mail';
+  do_not_call?: boolean;
+  do_not_email?: boolean;
+  last_activity_date?: string;
+  notes?: string;
+  converted_from_lead_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Account {
+  id: string;
+  account_name: string;
+  account_type: 'prospect' | 'customer' | 'partner' | 'competitor';
+  industry?: string;
+  account_status: 'active' | 'inactive' | 'prospect';
+  phone?: string;
+  email?: string;
+  website?: string;
+  address?: string;
+  company_size?: string;
+  fax?: string;
+  billing_address?: string;
+  billing_city?: string;
+  billing_state?: string;
+  billing_postal_code?: string;
+  billing_country?: string;
+  shipping_address?: string;
+  annual_revenue?: number;
+  notes?: string;
+  converted_from_lead_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Opportunity {
+  id: string;
+  opportunity_name: string;
+  account_name?: string;
+  account_id?: string;
+  estimated_value: number;
+  stage: 'prospect' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost';
+  probability: number;
+  expected_close_date?: string;
+  opportunity_status: 'open' | 'closed';
+  description?: string;
+  created_by: string;
+  lead_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Activity {
+  id: string;
+  activity_type: 'call' | 'email' | 'meeting' | 'task' | 'note';
+  subject: string;
+  description?: string;
+  activity_date: string;
+  due_date?: string;
+  completed: boolean;
+  lead_id?: string;
+  opportunity_id?: string;
+  contact_id?: string;
+  account_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssignmentRule {
+  id: string;
+  rule_name: string;
+  rule_description?: string;
+  criteria: Record<string, any>;
+  assignment_type: 'round_robin' | 'load_based' | 'territory' | 'skills';
+  assigned_user_id?: string;
+  priority: number;
+  is_active: boolean;
+  working_hours?: Record<string, any>;
+  escalation_rules?: Record<string, any>;
+  automation_enabled?: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// UTILITY FUNCTIONS - SINGLE SOURCE OF TRUTH
+export function safeUserRole(role: any): UserRole {
+  if (typeof role === 'string' && ['SA', 'AD', 'IT', 'ITC', 'IP', 'IC', 'S', 'N', 'AP', 'TL', 'IN', 'ST'].includes(role)) {
+    return role as UserRole;
+  }
+  return 'IT';
+}
+
+export function safeAssignmentType(type: any): 'primary' | 'secondary' | 'temporary' {
+  if (typeof type === 'string' && ['primary', 'secondary', 'temporary'].includes(type)) {
+    return type as 'primary' | 'secondary' | 'temporary';
+  }
+  return 'primary';
+}
+
+// METRICS INTERFACES
 export interface ExecutiveMetrics {
   totalRevenue: number;
   totalUsers: number;
@@ -150,7 +270,6 @@ export interface ExecutiveMetrics {
   performanceIndex: number;
 }
 
-// CRITICAL: Add missing ComplianceMetrics interface
 export interface ComplianceMetrics {
   overallScore: number;
   compliantTeams: number;
@@ -161,6 +280,7 @@ export interface ComplianceMetrics {
   resolved_issues: number;
 }
 
+// DATABASE SCHEMA DEFINITION
 export interface Database {
   public: {
     Tables: {
@@ -178,6 +298,11 @@ export interface Database {
         Row: Location;
         Insert: Partial<Location>;
         Update: Partial<Location>;
+      };
+      authorized_providers: {
+        Row: AuthorizedProvider;
+        Insert: Partial<AuthorizedProvider>;
+        Update: Partial<AuthorizedProvider>;
       };
       teams: {
         Row: {

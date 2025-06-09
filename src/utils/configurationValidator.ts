@@ -4,6 +4,13 @@ export interface ConfigValidation {
   errors: string[];
 }
 
+export interface ConfigurationValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings?: string[];
+  details?: Record<string, any>;
+}
+
 export function validateSupabaseConfiguration(): ConfigValidation {
   const errors: string[] = [];
   
@@ -18,6 +25,25 @@ export function validateSupabaseConfiguration(): ConfigValidation {
   return {
     isValid: errors.length === 0,
     errors
+  };
+}
+
+export function validateProductionReadiness(): ConfigurationValidationResult {
+  const validation = validateSupabaseConfiguration();
+  const warnings: string[] = [];
+  
+  if (import.meta.env.DEV) {
+    warnings.push('Running in development mode');
+  }
+  
+  return {
+    isValid: validation.isValid,
+    errors: validation.errors,
+    warnings,
+    details: {
+      environment: import.meta.env.MODE,
+      supabaseConfigured: validation.isValid
+    }
   };
 }
 

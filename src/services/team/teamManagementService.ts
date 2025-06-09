@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { EnhancedTeam } from '@/types/team-management';
+import { EnhancedTeam, CreateTeamRequest } from '@/types/team-management';
 
 export class TeamManagementService {
   static async getProviderTeams(providerId: string): Promise<EnhancedTeam[]> {
@@ -32,6 +32,35 @@ export class TeamManagementService {
     return data;
   }
 
+  static async getTeamsByLocation(locationId: string): Promise<EnhancedTeam[]> {
+    const { data, error } = await supabase
+      .from('teams')
+      .select(`
+        *,
+        location:locations(*),
+        provider:authorized_providers(*)
+      `)
+      .eq('location_id', locationId);
+    
+    if (error) throw error;
+    return data || [];
+  }
+
+  static async createTeam(teamData: CreateTeamRequest): Promise<EnhancedTeam> {
+    const { data, error } = await supabase
+      .from('teams')
+      .insert(teamData)
+      .select(`
+        *,
+        location:locations(*),
+        provider:authorized_providers(*)
+      `)
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+
   static async updateTeamMember(memberId: string, updates: any) {
     const { data, error } = await supabase
       .from('team_members')
@@ -52,3 +81,6 @@ export class TeamManagementService {
     return data;
   }
 }
+
+// Export instance for backwards compatibility
+export const teamManagementService = TeamManagementService;
