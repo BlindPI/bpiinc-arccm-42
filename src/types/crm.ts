@@ -18,13 +18,23 @@ export interface Activity {
 export interface Account {
   id: string;
   account_name: string;
-  account_type: string;
+  account_type: 'prospect' | 'customer' | 'partner' | 'competitor';
   industry?: string;
   account_status: 'active' | 'inactive' | 'prospect';
   phone?: string;
   email?: string;
   website?: string;
   address?: string;
+  company_size?: string;
+  fax?: string;
+  billing_address?: string;
+  billing_city?: string;
+  billing_state?: string;
+  billing_postal_code?: string;
+  billing_country?: string;
+  shipping_address?: string;
+  annual_revenue?: number;
+  notes?: string;
   created_at: string;
   updated_at: string;
 }
@@ -52,6 +62,7 @@ export interface Opportunity {
   id: string;
   opportunity_name: string;
   account_name?: string;
+  account_id?: string;
   estimated_value: number;
   stage: 'prospect' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost';
   probability: number;
@@ -69,10 +80,17 @@ export interface Contact {
   last_name: string;
   email: string;
   phone?: string;
+  mobile_phone?: string;
   title?: string;
   department?: string;
   account_id?: string;
   contact_status: 'active' | 'inactive';
+  lead_source?: string;
+  preferred_contact_method?: 'email' | 'phone' | 'mail';
+  do_not_call?: boolean;
+  do_not_email?: boolean;
+  last_activity_date?: string;
+  notes?: string;
   created_at: string;
   updated_at: string;
 }
@@ -111,4 +129,40 @@ export interface EmailCampaign {
   revenue_attributed: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface AssignmentRule {
+  id: string;
+  rule_name: string;
+  criteria: Record<string, any>;
+  assignment_type: 'round_robin' | 'load_based' | 'territory' | 'skills';
+  priority: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LeadScoringRule {
+  id: string;
+  rule_name: string;
+  criteria: Record<string, any>;
+  score_value: number;
+  rule_type: 'demographic' | 'behavioral' | 'firmographic';
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DateRange {
+  start: Date;
+  end: Date;
+}
+
+export interface CampaignWizardData {
+  name: string;
+  type: string;
+  target_audience: string;
+  template_id?: string;
+  schedule_date?: string;
+  settings: Record<string, any>;
 }
