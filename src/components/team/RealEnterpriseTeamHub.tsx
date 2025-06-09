@@ -6,13 +6,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { realTeamDataService } from '@/services/team/realTeamDataService';
+import { RealTeamDataService } from '@/services/team/realTeamDataService';
 import { TeamCreationForm } from './forms/TeamCreationForm';
 import { MemberInvitationWorkflow } from './workflows/MemberInvitationWorkflow';
 import { BulkOperationsInterface } from './bulk/BulkOperationsInterface';
 import { TeamAnalyticsDashboard } from './analytics/TeamAnalyticsDashboard';
 import { WorkflowQueue } from './workflow/WorkflowQueue';
-import { complianceService } from '@/services/team/complianceService';
+import { ComplianceService } from '@/services/team/complianceService';
 import { 
   Users, 
   Building2, 
@@ -35,19 +35,19 @@ export function RealEnterpriseTeamHub() {
 
   const { data: teams = [], isLoading, error } = useQuery({
     queryKey: ['enhanced-teams'],
-    queryFn: () => realTeamDataService.getEnhancedTeams(),
+    queryFn: () => RealTeamDataService.getEnhancedTeams(),
     refetchInterval: 60000,
   });
 
   const { data: analytics } = useQuery({
     queryKey: ['team-analytics'],
-    queryFn: () => realTeamDataService.getTeamAnalytics(),
+    queryFn: () => RealTeamDataService.getTeamAnalytics(),
     refetchInterval: 300000,
   });
 
   const { data: complianceMetrics } = useQuery({
     queryKey: ['compliance-metrics'],
-    queryFn: () => complianceService.getComplianceMetrics(),
+    queryFn: () => ComplianceService.getComplianceMetrics(),
     refetchInterval: 300000,
   });
 
@@ -229,7 +229,7 @@ export function RealEnterpriseTeamHub() {
               <Building2 className="h-4 w-4 text-blue-600" />
               <span className="text-sm font-medium">Total Teams</span>
             </div>
-            <p className="text-2xl font-bold mt-1">{analytics?.total_teams || 0}</p>
+            <p className="text-2xl font-bold mt-1">{analytics?.totalTeams || 0}</p>
           </CardContent>
         </Card>
         <Card>
@@ -238,7 +238,7 @@ export function RealEnterpriseTeamHub() {
               <Users className="h-4 w-4 text-green-600" />
               <span className="text-sm font-medium">Total Members</span>
             </div>
-            <p className="text-2xl font-bold mt-1">{analytics?.total_members || 0}</p>
+            <p className="text-2xl font-bold mt-1">{analytics?.totalMembers || 0}</p>
           </CardContent>
         </Card>
         <Card>
@@ -248,7 +248,7 @@ export function RealEnterpriseTeamHub() {
               <span className="text-sm font-medium">Avg Performance</span>
             </div>
             <p className="text-2xl font-bold mt-1">
-              {Math.round(analytics?.performance_average || 0)}%
+              {Math.round(analytics?.averagePerformance || 0)}%
             </p>
           </CardContent>
         </Card>

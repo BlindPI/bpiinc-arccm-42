@@ -5,77 +5,128 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { toast } from 'sonner';
+import { workflowService } from '@/services/team/workflowService';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
+  Clock, 
   CheckCircle, 
   XCircle, 
-  Clock, 
+  AlertTriangle,
   User,
-  AlertTriangle 
+  Calendar,
+  FileText
 } from 'lucide-react';
-import { WorkflowService, type WorkflowRequest } from '@/services/team/workflowService';
-import { toast } from 'sonner';
 
-export function WorkflowQueue() {
+interface WorkflowQueueProps {
+  teamId: string;
+}
+
+export function WorkflowQueue({ teamId }: WorkflowQueueProps) {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowRequest | null>(null);
-  const [rejectionReason, setRejectionReason] = useState('');
+  const [selectedWorkflow, setSelectedWorkflow] = useState<any>(null);
+  const [approvalNotes, setApprovalNotes] = useState('');
 
-  const { data: pendingWorkflows = [], isLoading } = useQuery({
-    queryKey: ['pending-workflows'],
-    queryFn: () => WorkflowService.getPendingWorkflows(),
-    refetchInterval: 30000, // Refresh every 30 seconds
+  const { data: workflowQueue = [], isLoading } = useQuery({
+    queryKey: ['workflow-queue', user?.id],
+    queryFn: () => workflowService.getWorkflowQueue(user?.id || ''),
+    enabled: !!user?.id
   });
 
-  const { data: workflowStats } = useQuery({
-    queryKey: ['workflow-statistics'],
-    queryFn: () => WorkflowService.getWorkflowStatistics(),
-    refetchInterval: 60000,
+  const { data: teamWorkflows = [] } = useQuery({
+    queryKey: ['team-workflows', teamId],
+    queryFn: () => workflowService.getWorkflowInstances(teamId)
   });
 
   const approveWorkflowMutation = useMutation({
-    mutationFn: ({ workflowId, approvedBy }: { workflowId: string; approvedBy: string }) =>
-      WorkflowService.approveWorkflow(workflowId, approvedBy),
+    mutationFn: ({ instanceId, notes }: { instanceId: string; notes?: string }) =>
+      workflowService.approveWorkflow(instanceId, user?.id || '', notes),
     onSuccess: () => {
       toast.success('Workflow approved successfully');
-      queryClient.invalidateQueries({ queryKey: ['pending-workflows'] });
-      queryClient.invalidateQueries({ queryKey: ['workflow-statistics'] });
+      queryClient.invalidateQueries({ queryKey: ['workflow-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['team-workflows'] });
       setSelectedWorkflow(null);
+      setApprovalNotes('');
     },
-    onError: (error: any) => {
-      console.error('Error approving workflow:', error);
+    onError: () => {
       toast.error('Failed to approve workflow');
     }
   });
 
   const rejectWorkflowMutation = useMutation({
-    mutationFn: ({ workflowId, rejectedBy, reason }: { workflowId: string; rejectedBy: string; reason: string }) =>
-      WorkflowService.rejectWorkflow(workflowId, rejectedBy, reason),
+    mutationFn: ({ instanceId, notes }: { instanceId: string; notes: string }) =>
+      workflowService.rejectWorkflow(instanceId, user?.id || '', notes),
     onSuccess: () => {
       toast.success('Workflow rejected');
-      queryClient.invalidateQueries({ queryKey: ['pending-workflows'] });
-      queryClient.invalidateQueries({ queryKey: ['workflow-statistics'] });
+      queryClient.invalidateQueries({ queryKey: ['workflow-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['team-workflows'] });
       setSelectedWorkflow(null);
-      setRejectionReason('');
+      setApprovalNotes('');
     },
-    onError: (error: any) => {
-      console.error('Error rejecting workflow:', error);
+    onError: () => {
       toast.error('Failed to reject workflow');
     }
   });
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Clock className="h-4 w-4 text-yellow-500" />;
+      case 'in_progress':
+        return <AlertTriangle className="h-4 w-4 text-blue-500" />;
+      case 'completed':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'rejected':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      case 'escalated':
+        return <AlertTriangle className="h-4 w-4 text-orange-500" />;
+      default:
+        return <Clock className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'in_progress': return 'bg-blue-100 text-blue-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'pending':
+        return 'secondary';
+      case 'in_progress':
+        return 'outline';
+      case 'completed':
+        return 'default';
+      case 'rejected':
+        return 'destructive';
+      case 'escalated':
+        return 'secondary';
+      default:
+        return 'outline';
+    }
+  };
+
+  const handleApprove = () => {
+    if (selectedWorkflow) {
+      approveWorkflowMutation.mutate({
+        instanceId: selectedWorkflow.id,
+        notes: approvalNotes
+      });
+    }
+  };
+
+  const handleReject = () => {
+    if (selectedWorkflow && approvalNotes.trim()) {
+      rejectWorkflowMutation.mutate({
+        instanceId: selectedWorkflow.id,
+        notes: approvalNotes
+      });
+    } else {
+      toast.error('Please provide a reason for rejection');
     }
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
@@ -83,177 +134,154 @@ export function WorkflowQueue() {
 
   return (
     <div className="space-y-6">
-      {/* Header with Statistics */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Workflow Queue</h2>
-          <p className="text-muted-foreground">
-            Manage pending workflow approvals and review requests
-          </p>
-        </div>
-        {workflowStats && (
-          <div className="flex items-center gap-4">
-            <div className="text-center">
-              <div className="flex items-center gap-1">
-                <Clock className="h-4 w-4 text-yellow-500" />
-                <span className="font-semibold">{workflowStats.pending}</span>
-              </div>
-              <p className="text-xs text-muted-foreground">Pending</p>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center gap-1">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span className="font-semibold">{workflowStats.approved}</span>
-              </div>
-              <p className="text-xs text-muted-foreground">Approved</p>
-            </div>
-            <div className="text-center">
-              <span className="font-semibold">{Math.round(workflowStats.complianceRate)}%</span>
-              <p className="text-xs text-muted-foreground">Compliance</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Workflow List */}
-      <div className="space-y-4">
-        {pendingWorkflows.length === 0 ? (
-          <Card>
-            <CardContent className="flex items-center justify-center h-32">
-              <div className="text-center">
-                <CheckCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-muted-foreground">No pending workflows</p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          pendingWorkflows.map((workflow) => (
-            <Card key={workflow.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      {workflow.workflow_type.replace('_', ' ').toUpperCase()}
-                      <Badge className={getStatusColor(workflow.workflow_status)}>
-                        {workflow.workflow_status}
-                      </Badge>
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {workflow.entity_type}: {workflow.entity_id}
-                    </p>
-                  </div>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="pt-0">
-                <div className="space-y-3">
-                  {/* Workflow Details */}
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="flex items-center gap-1">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span>Initiated by: {workflow.initiated_by}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span>Created: {new Date(workflow.created_at).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-
-                  {/* Workflow Data Preview */}
-                  {workflow.workflow_data && Object.keys(workflow.workflow_data).length > 0 && (
-                    <div className="bg-gray-50 p-3 rounded-md">
-                      <p className="text-sm font-medium mb-1">Request Details:</p>
-                      <pre className="text-xs text-muted-foreground whitespace-pre-wrap">
-                        {JSON.stringify(workflow.workflow_data, null, 2)}
-                      </pre>
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex items-center justify-between pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedWorkflow(workflow)}
-                    >
-                      Review Details
-                    </Button>
-                    
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => approveWorkflowMutation.mutate({ 
-                          workflowId: workflow.id, 
-                          approvedBy: 'current-user' // Replace with actual user ID
-                        })}
-                        disabled={approveWorkflowMutation.isPending}
-                      >
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                        Approve
-                      </Button>
+      {/* Pending Approvals */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Pending Approvals ({workflowQueue.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {workflowQueue.length > 0 ? (
+            <div className="space-y-3">
+              {workflowQueue.map((workflow) => (
+                <div key={workflow.id} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        {getStatusIcon(workflow.workflow_status)}
+                        <h3 className="font-medium">{workflow.instance_name}</h3>
+                        <Badge variant={getStatusColor(workflow.workflow_status)}>
+                          {workflow.workflow_status}
+                        </Badge>
+                      </div>
                       
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => setSelectedWorkflow(workflow)}
-                      >
-                        <XCircle className="h-4 w-4 mr-1" />
-                        Reject
-                      </Button>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          Initiated: {new Date(workflow.initiated_at).toLocaleDateString()}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          Entity: {workflow.entity_type}
+                        </div>
+                        {workflow.sla_deadline && (
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            Due: {new Date(workflow.sla_deadline).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
                     </div>
+                    
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setSelectedWorkflow(workflow)}
+                        >
+                          Review
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Review Workflow</DialogTitle>
+                        </DialogHeader>
+                        
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="font-medium mb-2">Workflow Details</h4>
+                            <div className="bg-muted p-3 rounded-lg space-y-2 text-sm">
+                              <div><strong>Name:</strong> {selectedWorkflow?.instance_name}</div>
+                              <div><strong>Type:</strong> {selectedWorkflow?.entity_type}</div>
+                              <div><strong>Status:</strong> {selectedWorkflow?.workflow_status}</div>
+                              <div><strong>Initiated:</strong> {selectedWorkflow && new Date(selectedWorkflow.initiated_at).toLocaleString()}</div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <label className="text-sm font-medium">Approval Notes</label>
+                            <Textarea
+                              value={approvalNotes}
+                              onChange={(e) => setApprovalNotes(e.target.value)}
+                              placeholder="Add notes for your decision..."
+                              className="mt-1"
+                            />
+                          </div>
+                          
+                          <div className="flex gap-2">
+                            <Button 
+                              onClick={handleApprove}
+                              disabled={approveWorkflowMutation.isPending}
+                              className="flex-1"
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Approve
+                            </Button>
+                            <Button 
+                              variant="destructive"
+                              onClick={handleReject}
+                              disabled={rejectWorkflowMutation.isPending || !approvalNotes.trim()}
+                              className="flex-1"
+                            >
+                              <XCircle className="h-4 w-4 mr-2" />
+                              Reject
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
-
-      {/* Rejection Modal */}
-      {selectedWorkflow && (
-        <Card className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">
-              Reject Workflow: {selectedWorkflow.workflow_type}
-            </h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Rejection Reason</label>
-                <Textarea
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                  placeholder="Please provide a reason for rejection..."
-                  rows={3}
-                />
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="destructive"
-                  onClick={() => rejectWorkflowMutation.mutate({
-                    workflowId: selectedWorkflow.id,
-                    rejectedBy: 'current-user', // Replace with actual user ID
-                    reason: rejectionReason
-                  })}
-                  disabled={rejectWorkflowMutation.isPending || !rejectionReason.trim()}
-                >
-                  Confirm Rejection
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedWorkflow(null);
-                    setRejectionReason('');
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
+              ))}
             </div>
-          </div>
-        </Card>
-      )}
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No pending approvals</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Team Workflow History */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Team Workflow History
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {teamWorkflows.length > 0 ? (
+            <div className="space-y-3">
+              {teamWorkflows.slice(0, 10).map((workflow) => (
+                <div key={workflow.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    {getStatusIcon(workflow.workflow_status)}
+                    <div>
+                      <p className="font-medium">{workflow.instance_name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(workflow.initiated_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant={getStatusColor(workflow.workflow_status)}>
+                    {workflow.workflow_status}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No workflow history available</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
