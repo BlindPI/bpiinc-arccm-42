@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { safeConvertTeamAnalytics } from '@/utils/typeGuards';
 
 export interface TeamMemberWithProfile {
   id: string;
@@ -35,7 +36,7 @@ export interface EnhancedTeam {
   name: string;
   description?: string;
   team_type: string;
-  status: string;
+  status: 'active' | 'inactive' | 'suspended';
   performance_score: number;
   location_id?: string;
   provider_id?: string;
@@ -67,30 +68,56 @@ export class RealEnterpriseTeamService {
         )
       `)
       .eq('team_id', teamId)
-      .order('joined_at', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    
+    // Transform data to match expected interface
+    return (data || []).map(member => ({
+      id: member.id,
+      team_id: member.team_id,
+      user_id: member.user_id,
+      role: member.role,
+      status: member.status,
+      joined_at: member.created_at, // Use created_at as joined_at
+      last_activity: member.last_activity || member.updated_at,
+      permissions: member.permissions || [],
+      profiles: {
+        id: member.profiles?.id || '',
+        display_name: member.profiles?.display_name || 'Unknown User',
+        email: member.profiles?.email || '',
+        role: member.profiles?.role || '',
+        organization: member.profiles?.organization,
+        phone: member.profiles?.phone,
+        job_title: member.profiles?.job_title
+      }
+    }));
   }
 
   static async getEnhancedTeams(): Promise<EnhancedTeam[]> {
     const { data, error } = await supabase.rpc('get_enhanced_teams_data');
     if (error) throw error;
     
-    return (data || []).map((row: any) => row.team_data);
+    return (data || []).map((row: any) => ({
+      ...row.team_data,
+      status: row.team_data.status || 'active' // Ensure status is properly typed
+    }));
   }
 
   static async getTeamAnalytics(): Promise<TeamAnalytics> {
     const { data, error } = await supabase.rpc('get_team_analytics_summary');
     if (error) throw error;
     
+    // Use type guard for safe conversion
+    const safeData = safeConvertTeamAnalytics(data);
+    
     return {
-      totalTeams: data?.total_teams || 0,
-      totalMembers: data?.total_members || 0,
-      averagePerformance: data?.performance_average || 0,
-      averageCompliance: data?.compliance_score || 0,
-      teamsByLocation: data?.teamsByLocation || {},
-      performanceByTeamType: data?.performanceByTeamType || {}
+      totalTeams: safeData.total_teams,
+      totalMembers: safeData.total_members,
+      averagePerformance: safeData.performance_average,
+      averageCompliance: safeData.compliance_score,
+      teamsByLocation: safeData.cross_location_teams ? { cross_location: safeData.cross_location_teams } : {},
+      performanceByTeamType: {}
     };
   }
 
@@ -135,10 +162,23 @@ export class RealEnterpriseTeamService {
         user_id: userId,
         role,
         status: 'active',
-        joined_at: new Date().toISOString()
+        created_at: new Date().toISOString()
       });
 
     if (error) throw error;
+  }
+
+  // Alias methods for compatibility with existing components
+  static async addTeamMember(teamId: string, userId: string, role: string): Promise<void> {
+    return this.addMember(teamId, userId, role);
+  }
+
+  static async removeTeamMember(teamId: string, memberId: string): Promise<void> {
+    return this.removeMember(memberId);
+  }
+
+  static async updateTeamMemberRole(teamId: string, memberId: string, newRole: string): Promise<void> {
+    return this.updateMemberRole(memberId, newRole);
   }
 
   static async bulkUpdateMembers(memberIds: string[], updates: Partial<TeamMemberWithProfile>): Promise<void> {

@@ -38,22 +38,19 @@ export interface EnhancedMemberTableProps {
   userRole: string;
   onSelectionChange: (memberIds: string[]) => void;
   selectedMembers: string[];
+  members: TeamMemberWithProfile[];
 }
 
 export function EnhancedMemberTable({ 
   teamId, 
   userRole, 
   onSelectionChange, 
-  selectedMembers 
+  selectedMembers,
+  members = []
 }: EnhancedMemberTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const queryClient = useQueryClient();
-
-  const { data: members = [], isLoading } = useQuery({
-    queryKey: ['team-members', teamId],
-    queryFn: () => RealEnterpriseTeamService.getTeamMembers(teamId)
-  });
 
   const updateRoleMutation = useMutation({
     mutationFn: ({ memberId, newRole }: { memberId: string; newRole: string }) =>
@@ -79,8 +76,8 @@ export function EnhancedMemberTable({
   });
 
   const filteredMembers = members.filter(member => {
-    const matchesSearch = member.profiles.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         member.profiles.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = member.profiles?.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         member.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || member.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -118,14 +115,6 @@ export function EnhancedMemberTable({
       default: return 'outline';
     }
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
 
   return (
     <Card>
@@ -201,8 +190,8 @@ export function EnhancedMemberTable({
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col">
-                    <span className="font-medium">{member.profiles.display_name}</span>
-                    <span className="text-sm text-muted-foreground">{member.profiles.email}</span>
+                    <span className="font-medium">{member.profiles?.display_name || 'Unknown User'}</span>
+                    <span className="text-sm text-muted-foreground">{member.profiles?.email || 'No email'}</span>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -216,7 +205,7 @@ export function EnhancedMemberTable({
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  {new Date(member.joined_at).toLocaleDateString()}
+                  {member.joined_at ? new Date(member.joined_at).toLocaleDateString() : 'Unknown'}
                 </TableCell>
                 <TableCell>
                   {member.last_activity ? 
