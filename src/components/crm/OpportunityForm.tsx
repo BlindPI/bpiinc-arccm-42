@@ -1,145 +1,215 @@
 
-import React, { useState } from 'react';
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Button } from '@/components/ui/button';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { Opportunity } from '@/types/crm';
-import { toast } from 'sonner';
+
+const opportunitySchema = z.object({
+  opportunity_name: z.string().min(1, 'Opportunity name is required'),
+  estimated_value: z.number().min(0, 'Value must be positive'),
+  stage: z.enum(['prospect', 'proposal', 'negotiation', 'closed_won', 'closed_lost']),
+  probability: z.number().min(0).max(100),
+  expected_close_date: z.string().optional(),
+  description: z.string().optional(),
+  type: z.string().optional(),
+  lead_source: z.string().optional(),
+});
+
+type OpportunityFormData = z.infer<typeof opportunitySchema>;
 
 interface OpportunityFormProps {
   opportunity?: Opportunity;
-  onSave: (opportunity: Omit<Opportunity, 'id' | 'created_at' | 'updated_at'>) => void;
+  onSubmit: (data: OpportunityFormData) => void;
   onCancel: () => void;
+  isLoading?: boolean;
 }
 
-export const OpportunityForm: React.FC<OpportunityFormProps> = ({
-  opportunity,
-  onSave,
-  onCancel
-}) => {
-  const [formData, setFormData] = useState({
-    opportunity_name: opportunity?.opportunity_name || '',
-    account_name: opportunity?.account_name || '',
-    estimated_value: opportunity?.estimated_value || 0,
-    stage: opportunity?.stage || 'Prospect' as const,
-    probability: opportunity?.probability || 50,
-    expected_close_date: opportunity?.expected_close_date || '',
-    description: opportunity?.description || ''
+export function OpportunityForm({ opportunity, onSubmit, onCancel, isLoading }: OpportunityFormProps) {
+  const form = useForm<OpportunityFormData>({
+    resolver: zodResolver(opportunitySchema),
+    defaultValues: {
+      opportunity_name: opportunity?.opportunity_name || '',
+      estimated_value: opportunity?.estimated_value || 0,
+      stage: opportunity?.stage || 'prospect',
+      probability: opportunity?.probability || 25,
+      expected_close_date: opportunity?.expected_close_date || '',
+      description: opportunity?.description || '',
+      type: opportunity?.type || 'training_contract',
+      lead_source: opportunity?.lead_source || '',
+    },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.opportunity_name.trim()) {
-      toast.error('Opportunity name is required');
-      return;
-    }
-
-    onSave({
-      ...formData,
-      opportunity_status: 'open',
-      created_by: '', // Will be set by the backend
-    } as Omit<Opportunity, 'id' | 'created_at' | 'updated_at'>);
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="opportunity_name">Opportunity Name</Label>
-        <Input
-          id="opportunity_name"
-          value={formData.opportunity_name}
-          onChange={(e) => setFormData({...formData, opportunity_name: e.target.value})}
-          placeholder="Enter opportunity name"
-          required
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="opportunity_name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Opportunity Name</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter opportunity name" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="account_name">Account Name</Label>
-        <Input
-          id="account_name"
-          value={formData.account_name}
-          onChange={(e) => setFormData({...formData, account_name: e.target.value})}
-          placeholder="Enter account name"
-        />
-      </div>
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="estimated_value"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Estimated Value ($)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    {...field}
+                    onChange={(e) => field.onChange(Number(e.target.value))}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="estimated_value">Estimated Value</Label>
-          <Input
-            id="estimated_value"
-            type="number"
-            value={formData.estimated_value}
-            onChange={(e) => setFormData({...formData, estimated_value: Number(e.target.value)})}
-            placeholder="0"
+          <FormField
+            control={form.control}
+            name="probability"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Probability (%)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    placeholder="25"
+                    {...field}
+                    onChange={(e) => field.onChange(Number(e.target.value))}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="probability">Probability (%)</Label>
-          <Input
-            id="probability"
-            type="number"
-            min="0"
-            max="100"
-            value={formData.probability}
-            onChange={(e) => setFormData({...formData, probability: Number(e.target.value)})}
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="stage"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Stage</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select stage" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="prospect">Prospect</SelectItem>
+                    <SelectItem value="proposal">Proposal</SelectItem>
+                    <SelectItem value="negotiation">Negotiation</SelectItem>
+                    <SelectItem value="closed_won">Closed Won</SelectItem>
+                    <SelectItem value="closed_lost">Closed Lost</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="expected_close_date"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Expected Close Date</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         </div>
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="stage">Stage</Label>
-        <Select
-          value={formData.stage}
-          onValueChange={(value) => setFormData({...formData, stage: value as Opportunity['stage']})}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select stage" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Prospect">Prospect</SelectItem>
-            <SelectItem value="Proposal">Proposal</SelectItem>
-            <SelectItem value="Negotiation">Negotiation</SelectItem>
-            <SelectItem value="Closed Won">Closed Won</SelectItem>
-            <SelectItem value="Closed Lost">Closed Lost</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="expected_close_date">Expected Close Date</Label>
-        <Input
-          id="expected_close_date"
-          type="date"
-          value={formData.expected_close_date}
-          onChange={(e) => setFormData({...formData, expected_close_date: e.target.value})}
+        <FormField
+          control={form.control}
+          name="type"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Opportunity Type</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="training_contract">Training Contract</SelectItem>
+                  <SelectItem value="certification">Certification</SelectItem>
+                  <SelectItem value="consulting">Consulting</SelectItem>
+                  <SelectItem value="equipment">Equipment Sales</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          value={formData.description}
-          onChange={(e) => setFormData({...formData, description: e.target.value})}
-          placeholder="Enter opportunity description"
-          rows={3}
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Enter opportunity description"
+                  {...field}
+                  rows={3}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="flex justify-end space-x-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit">
-          {opportunity ? 'Update' : 'Create'} Opportunity
-        </Button>
-      </div>
-    </form>
+        <div className="flex justify-end space-x-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? 'Saving...' : opportunity ? 'Update' : 'Create'} Opportunity
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
-};
+}

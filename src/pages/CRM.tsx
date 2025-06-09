@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LeadsTable } from '@/components/crm/LeadsTable';
+import { LeadPipeline } from '@/components/crm/LeadPipeline';
 import { OpportunityPipeline } from '@/components/crm/OpportunityPipeline';
 import { ContactsTable } from '@/components/crm/contacts/ContactsTable';
 import { AccountsTable } from '@/components/crm/accounts/AccountsTable';
@@ -10,10 +11,14 @@ import { ActivitiesTable } from '@/components/crm/ActivitiesTable';
 import { RevenueMetricsDashboard } from '@/components/crm/RevenueMetricsDashboard';
 import { CRMDebugPanel } from '@/components/debug/CRMDebugPanel';
 import { useCRMContacts } from '@/hooks/useCRMContacts';
+import { useRealtimeCRMData } from '@/hooks/useRealtimeCRMData';
 
 export default function CRM() {
   const [activeTab, setActiveTab] = useState('overview');
   const contactsProps = useCRMContacts();
+  
+  // Enable real-time updates for CRM data
+  useRealtimeCRMData();
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -27,9 +32,10 @@ export default function CRM() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="leads">Leads</TabsTrigger>
+          <TabsTrigger value="pipeline">Lead Pipeline</TabsTrigger>
           <TabsTrigger value="opportunities">Opportunities</TabsTrigger>
           <TabsTrigger value="contacts">Contacts</TabsTrigger>
           <TabsTrigger value="accounts">Accounts</TabsTrigger>
@@ -60,6 +66,18 @@ export default function CRM() {
             </CardHeader>
             <CardContent>
               <LeadsTable />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="pipeline" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Lead Pipeline</CardTitle>
+              <CardDescription>Visual pipeline for managing leads through different stages</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LeadPipeline />
             </CardContent>
           </Card>
         </TabsContent>

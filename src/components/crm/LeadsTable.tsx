@@ -7,7 +7,8 @@ import {
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
-  DropdownMenuTrigger 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { 
   Plus, 
@@ -17,11 +18,14 @@ import {
   Trash2, 
   RefreshCw,
   Filter,
-  Download
+  Download,
+  CheckCircle,
+  ArrowRight
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CRMService } from '@/services/crm/crmService';
 import { LeadFormDialog } from '@/components/crm/forms/LeadFormDialog';
+import { LeadConversionDialog } from '@/components/crm/forms/LeadConversionDialog';
 import { toast } from 'sonner';
 import type { Lead } from '@/types/crm';
 
@@ -30,6 +34,8 @@ export function LeadsTable() {
   const [selectedLead, setSelectedLead] = useState<Lead | undefined>();
   const [dialogMode, setDialogMode] = useState<'create' | 'edit' | 'view'>('create');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [conversionDialogOpen, setConversionDialogOpen] = useState(false);
+  const [leadToConvert, setLeadToConvert] = useState<Lead | null>(null);
 
   const { data: leads = [], isLoading, refetch } = useQuery({
     queryKey: ['crm-leads'],
@@ -69,6 +75,11 @@ export function LeadsTable() {
     if (confirm(`Are you sure you want to delete the lead for ${lead.first_name} ${lead.last_name}?`)) {
       deleteMutation.mutate(lead.id);
     }
+  };
+
+  const handleConvertLead = (lead: Lead) => {
+    setLeadToConvert(lead);
+    setConversionDialogOpen(true);
   };
 
   const handleRefresh = () => {
@@ -124,6 +135,10 @@ export function LeadsTable() {
       case 'email': return 'bg-orange-50 text-orange-700';
       default: return 'bg-gray-50 text-gray-700';
     }
+  };
+
+  const canConvert = (lead: Lead) => {
+    return lead.lead_status !== 'converted' && lead.lead_status !== 'lost';
   };
 
   if (isLoading) {
@@ -191,6 +206,15 @@ export function LeadsTable() {
                     </div>
                     
                     <div className="flex items-center space-x-3">
+                      <div className="text-right">
+                        <div className="text-sm font-medium">Score: {lead.lead_score}/100</div>
+                        {lead.training_urgency && (
+                          <div className="text-xs text-gray-500 capitalize">
+                            {lead.training_urgency.replace('_', ' ')}
+                          </div>
+                        )}
+                      </div>
+                      
                       <Badge className={getStatusColor(lead.lead_status)}>
                         {lead.lead_status.replace('_', ' ')}
                       </Badge>
@@ -213,6 +237,18 @@ export function LeadsTable() {
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          {canConvert(lead) && (
+                            <DropdownMenuItem onClick={() => handleConvertLead(lead)}>
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Convert Lead
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem onClick={() => handleEditLead(lead)}>
+                            <ArrowRight className="h-4 w-4 mr-2" />
+                            Change Stage
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             onClick={() => handleDeleteLead(lead)}
                             className="text-red-600"
@@ -238,6 +274,18 @@ export function LeadsTable() {
         mode={dialogMode}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['crm-leads'] });
+        }}
+      />
+
+      <LeadConversionDialog
+        open={conversionDialogOpen}
+        onOpenChange={setConversionDialogOpen}
+        lead={leadToConvert}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['crm-leads'] });
+          queryClient.invalidateQueries({ queryKey: ['crm-opportunities'] });
+          queryClient.invalidateQueries({ queryKey: ['crm-contacts'] });
+          queryClient.invalidateQueries({ queryKey: ['crm-accounts'] });
         }}
       />
     </>

@@ -902,6 +902,42 @@ export type Database = {
           },
         ]
       }
+      backend_function_status: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          error_message: string | null
+          function_name: string
+          id: string
+          is_connected: boolean | null
+          last_checked: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          error_message?: string | null
+          function_name: string
+          id?: string
+          is_connected?: boolean | null
+          last_checked?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          error_message?: string | null
+          function_name?: string
+          id?: string
+          is_connected?: boolean | null
+          last_checked?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       background_jobs: {
         Row: {
           completed_at: string | null
@@ -6545,48 +6581,100 @@ export type Database = {
       }
       profiles: {
         Row: {
+          certifications_count: number | null
           compliance_status: boolean | null
           created_at: string
+          department: string | null
           display_name: string | null
           email: string | null
           id: string
           job_title: string | null
+          last_training_date: string | null
+          location_id: string | null
+          next_training_due: string | null
           organization: string | null
+          performance_score: number | null
           phone: string | null
           role: string
           status: string
+          supervisor_id: string | null
+          training_hours: number | null
           updated_at: string
           user_id: string | null
         }
         Insert: {
+          certifications_count?: number | null
           compliance_status?: boolean | null
           created_at?: string
+          department?: string | null
           display_name?: string | null
           email?: string | null
           id: string
           job_title?: string | null
+          last_training_date?: string | null
+          location_id?: string | null
+          next_training_due?: string | null
           organization?: string | null
+          performance_score?: number | null
           phone?: string | null
           role?: string
           status?: string
+          supervisor_id?: string | null
+          training_hours?: number | null
           updated_at?: string
           user_id?: string | null
         }
         Update: {
+          certifications_count?: number | null
           compliance_status?: boolean | null
           created_at?: string
+          department?: string | null
           display_name?: string | null
           email?: string | null
           id?: string
           job_title?: string | null
+          last_training_date?: string | null
+          location_id?: string | null
+          next_training_due?: string | null
           organization?: string | null
+          performance_score?: number | null
           phone?: string | null
           role?: string
           status?: string
+          supervisor_id?: string | null
+          training_hours?: number | null
           updated_at?: string
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "profiles_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "profiles_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_user_id_fkey"
             columns: ["user_id"]
@@ -9234,7 +9322,9 @@ export type Database = {
           end_date: string | null
           id: string
           location_id: string | null
+          location_name: string | null
           start_date: string | null
+          status: string | null
           team_id: string | null
           updated_at: string | null
         }
@@ -9244,7 +9334,9 @@ export type Database = {
           end_date?: string | null
           id?: string
           location_id?: string | null
+          location_name?: string | null
           start_date?: string | null
+          status?: string | null
           team_id?: string | null
           updated_at?: string | null
         }
@@ -9254,7 +9346,9 @@ export type Database = {
           end_date?: string | null
           id?: string
           location_id?: string | null
+          location_name?: string | null
           start_date?: string | null
+          status?: string | null
           team_id?: string | null
           updated_at?: string | null
         }
@@ -9285,6 +9379,68 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_member_achievements: {
+        Row: {
+          achieved_at: string | null
+          achievement_type: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          team_id: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          achieved_at?: string | null
+          achievement_type?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          team_id?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          achieved_at?: string | null
+          achievement_type?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          team_id?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_member_achievements_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_member_achievements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_member_achievements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_member_achievements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -9363,6 +9519,74 @@ export type Database = {
             columns: ["team_member_id"]
             isOneToOne: false
             referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_member_deadlines: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          due_date: string
+          id: string
+          priority: string | null
+          status: string | null
+          team_id: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          due_date: string
+          id?: string
+          priority?: string | null
+          status?: string | null
+          team_id?: string | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          due_date?: string
+          id?: string
+          priority?: string | null
+          status?: string | null
+          team_id?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_member_deadlines_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_member_deadlines_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_member_deadlines_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_member_deadlines_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -11127,6 +11351,10 @@ export type Database = {
         Args: { p_lead_id: string }
         Returns: number
       }
+      calculate_enhanced_team_performance_metrics: {
+        Args: { p_team_id: string; p_start_date: string; p_end_date: string }
+        Returns: Json
+      }
       calculate_lead_score: {
         Args: { lead_id: string }
         Returns: number
@@ -11249,6 +11477,17 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_backend_function_status: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          name: string
+          description: string
+          is_connected: boolean
+          last_checked: string
+          error_message: string
+          category: string
+        }[]
+      }
       get_cache_entry: {
         Args: { p_cache_key: string }
         Returns: Json
@@ -11280,6 +11519,14 @@ export type Database = {
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_enhanced_executive_dashboard_metrics: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      get_enhanced_provider_dashboard_metrics: {
+        Args: { p_provider_id: number }
+        Returns: Json
       }
       get_enhanced_teams_data: {
         Args: Record<PropertyKey, never>
@@ -11338,6 +11585,10 @@ export type Database = {
           avg_probability: number
         }[]
       }
+      get_provider_dashboard_metrics: {
+        Args: { p_provider_id: string }
+        Returns: Json
+      }
       get_provider_location_kpis: {
         Args: { p_provider_id: number }
         Returns: {
@@ -11394,11 +11645,19 @@ export type Database = {
           revoked_certificates: number
         }[]
       }
+      get_system_admin_dashboard_metrics: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_team_analytics_summary: {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
       get_team_compliance_report: {
+        Args: { p_team_id: string }
+        Returns: Json
+      }
+      get_team_leader_dashboard_metrics: {
         Args: { p_team_id: string }
         Returns: Json
       }
@@ -11412,6 +11671,22 @@ export type Database = {
           avg_satisfaction: number
           compliance_score: number
           performance_trend: number
+        }[]
+      }
+      get_team_workflows: {
+        Args: { p_team_id: string }
+        Returns: {
+          id: string
+          team_id: string
+          workflow_type: string
+          status: string
+          requested_by: string
+          approved_by: string
+          request_data: Json
+          approval_data: Json
+          created_at: string
+          updated_at: string
+          completed_at: string
         }[]
       }
       get_top_certificate_courses: {
@@ -11428,6 +11703,10 @@ export type Database = {
       get_workflow_statistics: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      initialize_all_integrations: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       initiate_workflow: {
         Args: {
@@ -11526,6 +11805,10 @@ export type Database = {
           p_ttl_seconds?: number
           p_cache_tags?: string[]
         }
+        Returns: undefined
+      }
+      sync_team_location_names: {
+        Args: Record<PropertyKey, never>
         Returns: undefined
       }
       test_conversion_system: {
