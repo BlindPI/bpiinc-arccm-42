@@ -3,6 +3,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { AssignmentPerformance } from '@/types/crm';
 
 export class AssignmentPerformanceService {
+  static transformPerformance(dbPerformance: any): AssignmentPerformance {
+    return {
+      ...dbPerformance,
+      user_name: dbPerformance.profiles?.display_name || 'Unknown User',
+      avg_response_time: String(dbPerformance.avg_response_time || ''),
+      quality_score: dbPerformance.quality_score || 0,
+      current_load: dbPerformance.current_load || 0,
+      max_capacity: dbPerformance.max_capacity || 50,
+      availability_status: dbPerformance.availability_status as 'available' | 'busy' | 'unavailable' || 'available'
+    };
+  }
+
   static async getAssignmentPerformance(): Promise<AssignmentPerformance[]> {
     try {
       const { data, error } = await supabase
@@ -17,16 +29,7 @@ export class AssignmentPerformanceService {
         `);
 
       if (error) throw error;
-
-      return (data || []).map(performance => ({
-        ...performance,
-        user_name: performance.profiles?.display_name || 'Unknown User',
-        avg_response_time: String(performance.avg_response_time || ''),
-        quality_score: performance.quality_score || 0,
-        current_load: performance.current_load || 0,
-        max_capacity: performance.max_capacity || 50,
-        availability_status: performance.availability_status || 'available'
-      }));
+      return (data || []).map(this.transformPerformance);
     } catch (error) {
       console.error('Error fetching assignment performance:', error);
       return [];
@@ -46,11 +49,18 @@ export class AssignmentPerformanceService {
           ...updates,
           updated_at: new Date().toISOString()
         })
-        .select()
+        .select(`
+          *,
+          profiles:user_id (
+            display_name,
+            email,
+            role
+          )
+        `)
         .single();
 
       if (error) throw error;
-      return data;
+      return data ? this.transformPerformance(data) : null;
     } catch (error) {
       console.error('Error updating assignment performance:', error);
       return null;

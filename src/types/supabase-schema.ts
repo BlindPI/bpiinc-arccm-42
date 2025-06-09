@@ -1,4 +1,3 @@
-
 // UNIFIED TYPE SYSTEM - SINGLE SOURCE OF TRUTH
 export interface Profile {
   id: string;
@@ -34,23 +33,46 @@ export interface ExtendedProfile extends Profile {
 }
 
 // UNIFIED UserRole type - SINGLE SOURCE OF TRUTH
-export type UserRole = 'SA' | 'AD' | 'IT' | 'ITC' | 'IP' | 'IC' | 'S' | 'N' | 'AP' | 'TL' | 'IN' | 'ST';
-export type DatabaseUserRole = UserRole;
+export type UserRole = 
+  | 'SA' 
+  | 'AD' 
+  | 'TL' 
+  | 'IT' 
+  | 'IC' 
+  | 'IP' 
+  | 'ITC'
+  | 'student'
+  | 'instructor_candidate'
+  | 'instructor_provisional'
+  | 'instructor_trainer';
+
+// Database user roles (from Supabase)
+export type DatabaseUserRole = 
+  | 'SA' 
+  | 'AD' 
+  | 'TL' 
+  | 'IT' 
+  | 'IC' 
+  | 'IP' 
+  | 'ITC'
+  | 'student'
+  | 'instructor_candidate'
+  | 'instructor_provisional'
+  | 'instructor_trainer';
 
 // UNIFIED Location interface - handle both postal_code and zip from database
 export interface Location {
   id: string;
   name: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  postal_code?: string; // Unified property name
-  zip?: string; // Database might have this instead
-  country?: string;
-  email?: string;
-  phone?: string;
-  website?: string;
-  logo_url?: string;
+  address: string;
+  city: string;
+  state: string;
+  postal_code: string; // Unified field
+  country: string;
+  email: string;
+  phone: string;
+  website: string;
+  logo_url: string;
   status: 'ACTIVE' | 'INACTIVE';
   created_at: string;
   updated_at: string;
@@ -259,7 +281,7 @@ export type TeamStatus = 'active' | 'inactive' | 'suspended' | 'archived';
 export interface AssignmentPerformance {
   id: string;
   user_id: string;
-  user_name: string;
+  user_name: string; // Computed property
   assignment_date: string;
   leads_assigned: number;
   leads_contacted: number;
@@ -280,19 +302,14 @@ export interface EmailCampaign {
   campaign_type: string;
   subject_line: string;
   email_content: string;
-  target_audience: Record<string, any>;
-  sent_count: number;
-  open_count: number;
-  click_count: number;
-  bounce_count: number;
-  unsubscribe_count: number;
-  open_rate: number;
-  click_rate: number;
-  conversion_rate: number;
-  campaign_status: 'draft' | 'scheduled' | 'sent' | 'completed';
-  scheduled_at?: string;
-  sent_at?: string;
-  created_by: string;
+  target_audience: any;
+  status: string;
+  sent_count: number; // Computed property
+  open_rate: number; // Computed property
+  click_rate: number; // Computed property
+  conversion_rate: number; // Computed property
+  campaign_cost?: number;
+  revenue_attributed?: number;
   created_at: string;
   updated_at: string;
 }
@@ -333,7 +350,7 @@ export interface TeamMemberWithProfile {
 
 // UTILITY FUNCTIONS - SINGLE SOURCE OF TRUTH
 export function safeUserRole(role: any): UserRole {
-  if (typeof role === 'string' && ['SA', 'AD', 'IT', 'ITC', 'IP', 'IC', 'S', 'N', 'AP', 'TL', 'IN', 'ST'].includes(role)) {
+  if (typeof role === 'string' && ['SA', 'AD', 'TL', 'IT', 'IC', 'IP', 'ITC', 'student', 'instructor_candidate', 'instructor_provisional', 'instructor_trainer'].includes(role)) {
     return role as UserRole;
   }
   return 'IT';

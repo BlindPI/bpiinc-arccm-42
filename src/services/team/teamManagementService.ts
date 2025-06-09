@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { EnhancedTeam, CreateTeamRequest, TeamAnalytics, TeamMemberWithProfile } from '@/types/team-management';
 
@@ -81,7 +80,6 @@ export class TeamManagementService {
     return data;
   }
 
-  // Fix: Add the missing getTeamMembers method
   static async getTeamMembers(teamId: string): Promise<{ data: TeamMemberWithProfile[]; error: any }> {
     try {
       const { data, error } = await supabase
@@ -94,7 +92,6 @@ export class TeamManagementService {
       
       if (error) throw error;
       
-      // Map the data to match expected interface
       const members = (data || []).map(member => ({
         ...member,
         profile: member.profile || undefined
@@ -147,7 +144,7 @@ export class TeamManagementService {
       totalTeams: teams.length,
       totalMembers: teams.reduce((sum, team) => sum + (team.member_count || 0), 0),
       averagePerformance: teams.reduce((sum, team) => sum + (team.performance_score || 0), 0) / teams.length || 0,
-      averageCompliance: 85, // Mock compliance score
+      averageCompliance: 85,
       teamsByLocation: teams.reduce((acc, team) => {
         const locationName = team.location?.name || 'Unknown';
         acc[locationName] = (acc[locationName] || 0) + 1;
@@ -200,7 +197,7 @@ export class TeamManagementService {
       teamId,
       performanceScore: team?.performance_score || 0,
       memberCount: team?.member_count || 0,
-      complianceScore: 85, // Mock data
+      complianceScore: 85,
       monthlyMetrics: {}
     };
   }
@@ -236,5 +233,4 @@ export class TeamManagementService {
   }
 }
 
-// Export instance for backwards compatibility
 export const teamManagementService = TeamManagementService;

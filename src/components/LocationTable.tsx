@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,14 +21,14 @@ export default function LocationTable() {
       
       if (error) throw error;
       
-      // Map database properties to unified interface - handle both postal_code and zip
+      // Transform database records to application types
       return (data || []).map(location => ({
         id: location.id,
         name: location.name,
         address: location.address,
         city: location.city,
         state: location.state,
-        postal_code: location.postal_code || location.zip || '',
+        postal_code: location.zip || location.postal_code || '', // Handle both fields
         country: location.country,
         email: location.email,
         phone: location.phone,

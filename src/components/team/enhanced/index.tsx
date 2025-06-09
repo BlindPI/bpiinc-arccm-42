@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnhancedMemberManagement } from './EnhancedMemberManagement';
@@ -51,3 +50,8 @@ export function EnhancedTeamManagementTabs({ teamId }: EnhancedTeamManagementTab
     </Tabs>
   );
 }
+
+export { EnhancedTeamManagementHub } from './EnhancedTeamManagementHub';
+export { BulkOperationsManager } from './BulkOperationsManager';
+export { WorkflowManagement } from './WorkflowManagement';
+export { TeamSettingsModal } from './TeamSettingsModal';
