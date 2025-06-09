@@ -15,7 +15,7 @@ export function safeAssignmentType(value: any): AssignmentType {
 // Role type definitions
 export type UserRole = 'SA' | 'AD' | 'AP' | 'IT' | 'IC' | 'IP' | 'IN';
 
-// Safe user role function - missing export that was causing the error
+// Safe user role function
 export function safeUserRole(value: any): UserRole {
   const validRoles: UserRole[] = ['SA', 'AD', 'AP', 'IT', 'IC', 'IP', 'IN'];
   return validRoles.includes(value) ? value : 'IT';
@@ -26,9 +26,75 @@ export type ContactStatus = 'active' | 'inactive';
 export type AccountType = 'prospect' | 'customer' | 'partner' | 'competitor';
 export type AccountStatus = 'active' | 'inactive' | 'prospect';
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
+export type LeadSource = 'website' | 'referral' | 'cold_call' | 'email' | 'social_media' | 'trade_show' | 'other';
+export type LeadType = 'individual' | 'corporate' | 'government';
+export type TrainingUrgency = 'immediate' | 'within_month' | 'within_quarter' | 'planning';
+export type PreferredTrainingFormat = 'online' | 'in_person' | 'hybrid';
+export type PreferredContactMethod = 'email' | 'phone' | 'mail';
 export type OpportunityStage = 'prospect' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost';
 export type OpportunityStatus = 'open' | 'closed';
 export type ActivityType = 'call' | 'email' | 'meeting' | 'task' | 'note';
+
+// Safe functions for all types
+export function safeLeadStatus(value: any): LeadStatus {
+  const validStatuses: LeadStatus[] = ['new', 'contacted', 'qualified', 'converted', 'lost'];
+  return validStatuses.includes(value) ? value : 'new';
+}
+
+export function safeLeadSource(value: any): LeadSource {
+  const validSources: LeadSource[] = ['website', 'referral', 'cold_call', 'email', 'social_media', 'trade_show', 'other'];
+  return validSources.includes(value) ? value : 'other';
+}
+
+export function safeLeadType(value: any): LeadType {
+  const validTypes: LeadType[] = ['individual', 'corporate', 'government'];
+  return validTypes.includes(value) ? value : 'individual';
+}
+
+export function safeTrainingUrgency(value: any): TrainingUrgency {
+  const validUrgencies: TrainingUrgency[] = ['immediate', 'within_month', 'within_quarter', 'planning'];
+  return validUrgencies.includes(value) ? value : 'planning';
+}
+
+export function safePreferredTrainingFormat(value: any): PreferredTrainingFormat {
+  const validFormats: PreferredTrainingFormat[] = ['online', 'in_person', 'hybrid'];
+  return validFormats.includes(value) ? value : 'in_person';
+}
+
+export function safeContactStatus(value: any): ContactStatus {
+  const validStatuses: ContactStatus[] = ['active', 'inactive'];
+  return validStatuses.includes(value) ? value : 'active';
+}
+
+export function safePreferredContactMethod(value: any): PreferredContactMethod {
+  const validMethods: PreferredContactMethod[] = ['email', 'phone', 'mail'];
+  return validMethods.includes(value) ? value : 'email';
+}
+
+export function safeAccountType(value: any): AccountType {
+  const validTypes: AccountType[] = ['prospect', 'customer', 'partner', 'competitor'];
+  return validTypes.includes(value) ? value : 'prospect';
+}
+
+export function safeAccountStatus(value: any): AccountStatus {
+  const validStatuses: AccountStatus[] = ['active', 'inactive', 'prospect'];
+  return validStatuses.includes(value) ? value : 'prospect';
+}
+
+export function safeOpportunityStage(value: any): OpportunityStage {
+  const validStages: OpportunityStage[] = ['prospect', 'proposal', 'negotiation', 'closed_won', 'closed_lost'];
+  return validStages.includes(value) ? value : 'prospect';
+}
+
+export function safeOpportunityStatus(value: any): OpportunityStatus {
+  const validStatuses: OpportunityStatus[] = ['open', 'closed'];
+  return validStatuses.includes(value) ? value : 'open';
+}
+
+export function safeActivityType(value: any): ActivityType {
+  const validTypes: ActivityType[] = ['call', 'email', 'meeting', 'task', 'note'];
+  return validTypes.includes(value) ? value : 'call';
+}
 
 // Unified Location interface with status property
 export interface Location {

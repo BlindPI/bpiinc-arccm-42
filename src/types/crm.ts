@@ -1,4 +1,3 @@
-
 export interface Activity {
   id: string;
   activity_type: 'call' | 'email' | 'meeting' | 'task' | 'note';
@@ -55,6 +54,10 @@ export interface Lead {
   notes?: string;
   training_urgency?: 'immediate' | 'within_month' | 'within_quarter' | 'planning';
   estimated_participant_count?: number;
+  // Additional properties for form compatibility
+  lead_type?: string;
+  preferred_training_format?: string;
+  budget_range?: string;
   created_at: string;
   updated_at: string;
 }
@@ -255,7 +258,58 @@ export interface Profile {
   job_title?: string;
 }
 
-// Date range interface for analytics
+// Additional interfaces for enhanced functionality
+export interface RevenueMetrics {
+  currentRevenue: number;
+  previousRevenue: number;
+  growthRate: number;
+  pipelineValue: number;
+  averageDealSize: number;
+  forecastValue: number;
+  monthly_data: Array<{
+    month: string;
+    revenue: number;
+  }>;
+  revenue_by_source: Array<{
+    source: string;
+    revenue: number;
+  }>;
+  forecast: {
+    current_quarter: number;
+    next_quarter: number;
+    confidence_level: number;
+  };
+}
+
+export interface PipelineMetrics {
+  stage_name: string;
+  opportunity_count: number;
+  total_value: number;
+  avg_probability: number;
+  stageDistribution: Array<{
+    stage_name: string;
+    opportunity_count: number;
+    total_value: number;
+    avg_probability: number;
+  }>;
+  totalPipelineValue: number;
+  weightedPipelineValue: number;
+  averageCloseTime: number;
+  conversionRate: number;
+}
+
+export interface CRMStats {
+  total_leads: number;
+  total_opportunities: number;
+  total_pipeline_value: number;
+  total_activities: number;
+  conversion_rate: number;
+  win_rate: number;
+  average_deal_size: number;
+  totalCertificates?: number;
+  pendingRequests?: number;
+}
+
 export interface DateRange {
   start: Date;
   end: Date;

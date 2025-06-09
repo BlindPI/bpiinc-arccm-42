@@ -1,5 +1,5 @@
 
-// Team management types - missing interfaces
+// Team management types - complete interface definitions
 
 export interface TeamAnalytics {
   totalTeams: number;
@@ -25,6 +25,7 @@ export interface TeamAnalytics {
   averageCompliance: number;
   teamsByLocation: Record<string, number>;
   performanceByTeamType: Record<string, number>;
+  teamsByProvider: Record<string, number>;
 }
 
 export interface InstructorPerformanceMetrics {
@@ -58,6 +59,8 @@ export interface TeamLocationAssignment {
   is_active: boolean;
   assigned_at: string;
   assigned_by: string;
+  start_date?: string;
+  location_name?: string;
   team?: {
     id: string;
     name: string;
@@ -83,6 +86,13 @@ export interface TeamPerformanceMetrics {
   last_updated: string;
   key_achievements: string[];
   improvement_areas: string[];
+  // Additional properties for components
+  total_certificates?: number;
+  total_courses?: number;
+  averageSatisfaction?: number;
+  complianceScore?: number;
+  location_name?: string;
+  performance_trend?: number;
 }
 
 export interface SystemWideAnalytics {
@@ -107,6 +117,43 @@ export interface SystemWideAnalytics {
     performanceTrend: number;
     membershipTrend: number;
   };
+  // Additional properties needed by components
+  totalTeams: number;
+  totalMembers: number;
+  averagePerformance: number;
+  averageCompliance: number;
+  teamsByProvider: Record<string, number>;
+}
+
+// Core Team interfaces
+export interface Team {
+  id: string;
+  name: string;
+  description?: string;
+  team_type: string;
+  status: 'active' | 'inactive' | 'archived';
+  location_id?: string;
+  provider_id?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  performance_score?: number;
+}
+
+export interface TeamMemberWithProfile {
+  id: string;
+  team_id: string;
+  user_id: string;
+  role: 'ADMIN' | 'MEMBER';
+  joined_at: string;
+  status: 'active' | 'inactive';
+  permissions?: string[];
+  profile?: {
+    id: string;
+    display_name?: string;
+    email: string;
+    role: string;
+  };
 }
 
 // Enhanced Team interface with missing properties
@@ -123,20 +170,40 @@ export interface EnhancedTeam {
   updated_at: string;
   performance_score?: number;
   member_count?: number;
-  members?: Array<{
-    id: string;
-    user_id: string;
-    role: string;
-    joined_at: string;
-    profile?: {
-      display_name?: string;
-      email: string;
-    };
-  }>;
+  members?: TeamMemberWithProfile[];
   location?: {
     id: string;
     name: string;
     city?: string;
     state?: string;
   };
+  provider?: {
+    id: string;
+    name: string;
+    provider_type?: string;
+    status?: string;
+  };
+  metrics?: {
+    performance_score: number;
+    compliance_score: number;
+    member_count: number;
+  };
+}
+
+// Request and workflow types
+export interface CreateTeamRequest {
+  name: string;
+  description?: string;
+  team_type: string;
+  location_id?: string;
+  provider_id?: string;
+}
+
+export interface WorkflowRequest {
+  id: string;
+  request_type: string;
+  status: 'pending' | 'approved' | 'rejected';
+  requested_by: string;
+  request_data: Record<string, any>;
+  created_at: string;
 }
