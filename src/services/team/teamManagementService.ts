@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { 
   Team, 
@@ -48,6 +49,10 @@ export class TeamManagementService {
     }
   }
 
+  static async getAllEnhancedTeams(): Promise<EnhancedTeam[]> {
+    return this.getEnhancedTeams();
+  }
+
   static async getTeamMembers(teamId: string): Promise<TeamMemberWithProfile[]> {
     try {
       const { data, error } = await supabase
@@ -62,7 +67,7 @@ export class TeamManagementService {
           )
         `)
         .eq('team_id', teamId)
-        .order('joined_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       
@@ -95,11 +100,33 @@ export class TeamManagementService {
     }
   }
 
+  static async addTeamMember(teamId: string, userId: string, role: 'ADMIN' | 'MEMBER' = 'MEMBER'): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('team_members')
+        .insert({
+          team_id: teamId,
+          user_id: userId,
+          role: role,
+          status: 'active',
+          permissions: role === 'ADMIN' ? ['manage_members', 'edit_settings'] : ['view_team']
+        });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error adding team member:', error);
+      throw error;
+    }
+  }
+
   static async updateMemberRole(memberId: string, newRole: 'ADMIN' | 'MEMBER'): Promise<void> {
     try {
       const { error } = await supabase
         .from('team_members')
-        .update({ role: newRole })
+        .update({ 
+          role: newRole,
+          permissions: newRole === 'ADMIN' ? ['manage_members', 'edit_settings'] : ['view_team']
+        })
         .eq('id', memberId);
 
       if (error) throw error;
@@ -107,6 +134,10 @@ export class TeamManagementService {
       console.error('Error updating member role:', error);
       throw error;
     }
+  }
+
+  static async updateTeamMemberRole(teamId: string, memberId: string, newRole: 'ADMIN' | 'MEMBER'): Promise<void> {
+    return this.updateMemberRole(memberId, newRole);
   }
 
   static async removeMember(memberId: string): Promise<void> {
@@ -121,6 +152,10 @@ export class TeamManagementService {
       console.error('Error removing member:', error);
       throw error;
     }
+  }
+
+  static async removeTeamMember(teamId: string, memberId: string): Promise<void> {
+    return this.removeMember(memberId);
   }
 
   static async createTeam(teamData: CreateTeamRequest): Promise<Team | null> {
@@ -194,14 +229,12 @@ export class TeamManagementService {
     }
   }
 
-  static async getProviderTeams(providerId: string): Promise<Team[]> {
+  static async getProviderTeams(providerId: string | number): Promise<Team[]> {
     try {
-      const providerIdNum = isNaN(Number(providerId)) ? providerId : Number(providerId);
-      
       const { data, error } = await supabase
         .from('teams')
         .select('*')
-        .eq('provider_id', providerIdNum)
+        .eq('provider_id', providerId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -286,6 +319,51 @@ export class TeamManagementService {
         totalMembers: 0,
         averagePerformance: 0,
         averageCompliance: 0,
+        teamsByProvider: {}
+      };
+    }
+  }
+
+  static async getTeamAnalytics(): Promise<TeamAnalytics> {
+    try {
+      const { data, error } = await supabase.rpc('get_team_analytics_summary');
+      if (error) throw error;
+      
+      return {
+        totalTeams: data?.total_teams || 0,
+        activeTeams: data?.active_teams || 0,
+        totalMembers: data?.total_members || 0,
+        averageTeamSize: data?.average_team_size || 0,
+        teamsByType: data?.teams_by_type || {},
+        performanceMetrics: {
+          averagePerformanceScore: data?.performance_average || 0,
+          topPerformingTeams: data?.top_performing_teams || []
+        },
+        complianceMetrics: {
+          compliantTeams: data?.compliant_teams || 0,
+          pendingReviews: data?.pending_reviews || 0,
+          overdueTasks: data?.overdue_tasks || 0
+        },
+        averagePerformance: data?.performance_average || 0,
+        averageCompliance: data?.compliance_score || 0,
+        teamsByLocation: data?.teams_by_location || {},
+        performanceByTeamType: data?.performance_by_team_type || {},
+        teamsByProvider: data?.teams_by_provider || {}
+      };
+    } catch (error) {
+      console.error('Error fetching team analytics:', error);
+      return {
+        totalTeams: 0,
+        activeTeams: 0,
+        totalMembers: 0,
+        averageTeamSize: 0,
+        teamsByType: {},
+        performanceMetrics: { averagePerformanceScore: 0, topPerformingTeams: [] },
+        complianceMetrics: { compliantTeams: 0, pendingReviews: 0, overdueTasks: 0 },
+        averagePerformance: 0,
+        averageCompliance: 0,
+        teamsByLocation: {},
+        performanceByTeamType: {},
         teamsByProvider: {}
       };
     }

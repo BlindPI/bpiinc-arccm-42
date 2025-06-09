@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,7 +15,7 @@ import {
   Filter,
   Download
 } from 'lucide-react';
-import { RealEnterpriseTeamService } from '@/services/team/realEnterpriseTeamService';
+import { TeamManagementService } from '@/services/team/teamManagementService';
 import { TeamMemberManagement } from './TeamMemberManagement';
 import { CreateTeamDialog } from './CreateTeamDialog';
 import { TeamTable } from './TeamTable';
@@ -28,8 +27,6 @@ interface ProfessionalTeamManagementHubProps {
   userRole?: string;
 }
 
-type UserRole = 'SA' | 'AD' | 'AP' | 'IP' | 'IT' | 'IC' | 'MEMBER';
-
 export function ProfessionalTeamManagementHub({ userRole }: ProfessionalTeamManagementHubProps) {
   const [selectedTeam, setSelectedTeam] = useState<EnhancedTeam | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
@@ -38,14 +35,14 @@ export function ProfessionalTeamManagementHub({ userRole }: ProfessionalTeamMana
 
   const { data: teams = [], isLoading, error } = useQuery({
     queryKey: ['enhanced-teams'],
-    queryFn: () => RealEnterpriseTeamService.getEnhancedTeams(),
-    refetchInterval: 60000, // Refresh every minute
+    queryFn: () => TeamManagementService.getEnhancedTeams(),
+    refetchInterval: 60000,
   });
 
   const { data: analytics } = useQuery({
     queryKey: ['team-analytics'],
-    queryFn: () => RealEnterpriseTeamService.getTeamAnalytics(),
-    refetchInterval: 300000, // Refresh every 5 minutes
+    queryFn: () => TeamManagementService.getTeamAnalytics(),
+    refetchInterval: 300000,
   });
 
   const handleTeamSelect = (team: EnhancedTeam) => {
@@ -256,7 +253,6 @@ export function ProfessionalTeamManagementHub({ userRole }: ProfessionalTeamMana
           onOpenChange={setShowCreateDialog}
           onTeamCreated={() => {
             setShowCreateDialog(false);
-            // Refresh teams list
             window.location.reload();
           }}
         />

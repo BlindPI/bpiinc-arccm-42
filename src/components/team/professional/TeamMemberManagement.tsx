@@ -6,9 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { RealEnterpriseTeamService } from '@/services/team/realEnterpriseTeamService';
+import { TeamManagementService } from '@/services/team/teamManagementService';
 import { MemberInvitationModal } from './MemberInvitationModal';
-import { RealMemberTable } from '../functional/RealMemberTable';
 import type { EnhancedTeam, TeamMemberWithProfile } from '@/types/team-management';
 import { toast } from 'sonner';
 import { Users, UserPlus, Search } from 'lucide-react';
@@ -25,7 +24,6 @@ export function TeamMemberManagement({ team, userRole }: TeamMemberManagementPro
 
   const canManage = ['SA', 'AD'].includes(userRole || '');
 
-  // Fetch team members with proper type conversion
   const { data: members = [], isLoading, error } = useQuery({
     queryKey: ['team-members', team.id],
     queryFn: async () => {
@@ -33,7 +31,7 @@ export function TeamMemberManagement({ team, userRole }: TeamMemberManagementPro
         .from('team_members')
         .select(`
           *,
-          profiles!inner(
+          profile:user_id (
             id,
             display_name,
             email,
@@ -46,30 +44,30 @@ export function TeamMemberManagement({ team, userRole }: TeamMemberManagementPro
 
       if (error) throw error;
 
-      // Convert to proper TeamMemberWithProfile format
       return (data || []).map(member => ({
         id: member.id,
         team_id: member.team_id,
         user_id: member.user_id,
         role: member.role as 'MEMBER' | 'ADMIN',
-        status: member.status as 'active' | 'inactive' | 'on_leave' | 'suspended',
+        status: member.status as 'active' | 'inactive',
         location_assignment: member.location_assignment,
         assignment_start_date: member.assignment_start_date,
         assignment_end_date: member.assignment_end_date,
         team_position: member.team_position,
-        permissions: member.permissions || {},
+        permissions: member.permissions || [],
         created_at: member.created_at,
         updated_at: member.updated_at,
         last_activity: member.last_activity,
-        display_name: member.profiles?.display_name || 'Unknown User',
-        profiles: {
-          id: member.profiles.id,
-          display_name: member.profiles.display_name,
-          email: member.profiles.email,
-          role: member.profiles.role,
-          created_at: member.profiles.created_at,
-          updated_at: member.profiles.updated_at
-        }
+        display_name: member.profile?.display_name || 'Unknown User',
+        joined_at: member.created_at,
+        profile: member.profile ? {
+          id: member.profile.id,
+          display_name: member.profile.display_name,
+          email: member.profile.email,
+          role: member.profile.role,
+          created_at: member.profile.created_at,
+          updated_at: member.profile.updated_at
+        } : undefined
       })) as TeamMemberWithProfile[];
     },
     refetchInterval: 30000
@@ -77,7 +75,7 @@ export function TeamMemberManagement({ team, userRole }: TeamMemberManagementPro
 
   const addMemberMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: 'MEMBER' | 'ADMIN' }) => {
-      return RealEnterpriseTeamService.addTeamMember(team.id, userId, role);
+      return TeamManagementService.addTeamMember(team.id, userId, role);
     },
     onSuccess: () => {
       toast.success('Member added successfully');
@@ -91,7 +89,7 @@ export function TeamMemberManagement({ team, userRole }: TeamMemberManagementPro
 
   const removeMemberMutation = useMutation({
     mutationFn: async (memberId: string) => {
-      return RealEnterpriseTeamService.removeTeamMember(team.id, memberId);
+      return TeamManagementService.removeTeamMember(team.id, memberId);
     },
     onSuccess: () => {
       toast.success('Member removed successfully');
@@ -105,7 +103,7 @@ export function TeamMemberManagement({ team, userRole }: TeamMemberManagementPro
 
   const updateRoleMutation = useMutation({
     mutationFn: async ({ memberId, newRole }: { memberId: string; newRole: 'MEMBER' | 'ADMIN' }) => {
-      return RealEnterpriseTeamService.updateTeamMemberRole(team.id, memberId, newRole);
+      return TeamManagementService.updateTeamMemberRole(team.id, memberId, newRole);
     },
     onSuccess: () => {
       toast.success('Member role updated successfully');
@@ -118,14 +116,13 @@ export function TeamMemberManagement({ team, userRole }: TeamMemberManagementPro
   });
 
   const handleAddMembers = () => {
-    // Refresh the members list after adding
     queryClient.invalidateQueries({ queryKey: ['team-members', team.id] });
     setShowInviteModal(false);
   };
 
   const filteredMembers = members.filter(member =>
-    member.profiles?.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    member.profile?.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    member.profile?.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (isLoading) {
@@ -197,15 +194,15 @@ export function TeamMemberManagement({ team, userRole }: TeamMemberManagementPro
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
                     <span className="text-sm font-medium">
-                      {member.profiles?.display_name?.charAt(0) || 'U'}
+                      {member.profile?.display_name?.charAt(0) || 'U'}
                     </span>
                   </div>
                   <div className="flex-1">
                     <h3 className="font-medium">
-                      {member.profiles?.display_name || 'Unknown User'}
+                      {member.profile?.display_name || 'Unknown User'}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {member.profiles?.email}
+                      {member.profile?.email}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge variant={member.role === 'ADMIN' ? 'default' : 'secondary'}>

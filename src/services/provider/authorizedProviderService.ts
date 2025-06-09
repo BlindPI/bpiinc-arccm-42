@@ -45,7 +45,7 @@ export class AuthorizedProviderService {
     }
   }
 
-  static async getProviderById(providerId: string): Promise<AuthorizedProvider | null> {
+  static async getProviderById(providerId: string | number): Promise<AuthorizedProvider | null> {
     try {
       const { data, error } = await supabase
         .from('authorized_providers')
@@ -77,7 +77,7 @@ export class AuthorizedProviderService {
     }
   }
 
-  static async updateProvider(id: string, updates: Partial<AuthorizedProvider>): Promise<AuthorizedProvider | null> {
+  static async updateProvider(id: string | number, updates: Partial<AuthorizedProvider>): Promise<AuthorizedProvider | null> {
     try {
       const { data, error } = await supabase
         .from('authorized_providers')
@@ -94,7 +94,7 @@ export class AuthorizedProviderService {
     }
   }
 
-  static async deleteProvider(id: string): Promise<void> {
+  static async deleteProvider(id: string | number): Promise<void> {
     try {
       const { error } = await supabase
         .from('authorized_providers')
@@ -108,3 +108,6 @@ export class AuthorizedProviderService {
     }
   }
 }
+
+// Export both class and instance for compatibility
+export const authorizedProviderService = AuthorizedProviderService;

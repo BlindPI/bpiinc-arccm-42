@@ -1,40 +1,43 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useQuery } from '@tanstack/react-query';
-import { teamManagementService } from '@/services/team/teamManagementService';
 import { AuthorizedProviderService } from '@/services/provider/authorizedProviderService';
-import { ProviderTeamList } from './ProviderTeamList';
-import { LocationTeamManager } from './LocationTeamManager';
-import { CreateProviderTeamWizard } from './CreateProviderTeamWizard';
-import { ProviderPerformanceView } from './ProviderPerformanceView';
-import { 
-  Building2, 
-  Users, 
-  MapPin, 
-  TrendingUp, 
-  Star,
-  Activity
-} from 'lucide-react';
 
-interface ProviderDashboardProps {
-  providerId: string;
+export interface AuthorizedProvider {
+  id: string | number;
+  name: string;
+  provider_name?: string;
+  provider_type: string;
+  status: 'APPROVED' | 'REJECTED' | 'PENDING' | 'SUSPENDED';
+  contact_email?: string;
+  contact_phone?: string;
+  address?: string;
+  website?: string;
+  description?: string;
+  logo_url?: string;
+  compliance_score: number;
+  performance_rating: number;
+  contract_start_date?: string;
+  contract_end_date?: string;
+  specializations?: string[];
+  certification_levels?: string[];
+  primary_location_id?: string;
+  metadata?: Record<string, any>;
+  approved_by?: string;
+  approval_date?: string;
+  user_id?: string;
+  created_at: string;
+  updated_at: string;
 }
 
-export function ProviderDashboard({ providerId }: ProviderDashboardProps) {
-  const { data: provider } = useQuery({
-    queryKey: ['provider-details', providerId],
-    queryFn: () => AuthorizedProviderService.getProviderById(providerId)
+export function ProviderDashboard() {
+  const { data: providers = [], isLoading } = useQuery({
+    queryKey: ['authorized-providers'],
+    queryFn: () => AuthorizedProviderService.getProviders()
   });
 
-  const { data: providerTeams = [] } = useQuery({
-    queryKey: ['provider-teams', providerId],
-    queryFn: () => teamManagementService.getProviderTeams(providerId)
-  });
-
-  if (!provider) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -42,134 +45,70 @@ export function ProviderDashboard({ providerId }: ProviderDashboardProps) {
     );
   }
 
+  const activeProviders = providers.filter(p => p.status === 'APPROVED');
+  const pendingProviders = providers.filter(p => p.status === 'PENDING');
+
   return (
     <div className="space-y-6">
-      {/* Provider Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Building2 className="h-8 w-8 text-primary" />
-            {provider.name}
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Provider Dashboard - Manage teams, locations, and performance
+          <h1 className="text-2xl font-bold">Authorized Providers</h1>
+          <p className="text-muted-foreground">
+            Manage and monitor authorized training providers
           </p>
         </div>
-        
-        <div className="flex items-center gap-3">
-          <Badge variant={provider.status === 'active' ? 'default' : 'secondary'}>
-            {provider.status}
-          </Badge>
-          <Badge variant="outline">{provider.provider_type}</Badge>
-        </div>
       </div>
 
-      {/* Provider Stats */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Active Teams
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{providerTeams.length}</div>
-            <p className="text-xs text-gray-500 mt-1">Operational units</p>
+          <CardContent className="p-4">
+            <CardHeader>
+              <CardTitle>Total Providers</CardTitle>
+            </CardHeader>
+            <div className="text-2xl font-bold">{providers.length}</div>
           </CardContent>
         </Card>
-
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Locations
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {new Set(providerTeams.map(team => team.location_id).filter(Boolean)).size}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">Service areas</p>
+          <CardContent className="p-4">
+            <CardHeader>
+              <CardTitle>Active Providers</CardTitle>
+            </CardHeader>
+            <div className="text-2xl font-bold">{activeProviders.length}</div>
           </CardContent>
         </Card>
-
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <Star className="h-4 w-4" />
-              Performance Rating
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{provider.performance_rating.toFixed(1)}</div>
-            <p className="text-xs text-gray-500 mt-1">Out of 5.0</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <Activity className="h-4 w-4" />
-              Compliance Score
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-600">
-              {provider.compliance_score?.toFixed(1) || '0.0'}%
-            </div>
-            <p className="text-xs text-gray-500 mt-1">Compliance rating</p>
+          <CardContent className="p-4">
+            <CardHeader>
+              <CardTitle>Pending Approvals</CardTitle>
+            </CardHeader>
+            <div className="text-2xl font-bold">{pendingProviders.length}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Dashboard Tabs */}
-      <Tabs defaultValue="teams" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="teams">Teams</TabsTrigger>
-          <TabsTrigger value="locations">Locations</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="create">Create Team</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="teams" className="space-y-6">
-          <ProviderTeamList 
-            teams={providerTeams}
-            providerId={providerId}
-            canManage={true}
-          />
-        </TabsContent>
-
-        <TabsContent value="locations" className="space-y-6">
-          {provider.primary_location_id ? (
-            <LocationTeamManager 
-              locationId={provider.primary_location_id} 
-              providerId={providerId} 
-            />
-          ) : (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-medium mb-2">No Primary Location Set</h3>
-                <p className="text-muted-foreground">
-                  Configure a primary location to manage location-based teams
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="performance" className="space-y-6">
-          <ProviderPerformanceView providerId={providerId} />
-        </TabsContent>
-
-        <TabsContent value="create" className="space-y-6">
-          <CreateProviderTeamWizard 
-            providerId={providerId}
-            locationId={provider.primary_location_id || undefined}
-          />
-        </TabsContent>
-      </Tabs>
+      <div className="grid gap-6">
+        {providers.map((provider) => (
+          <Card key={provider.id}>
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold">{provider.name}</h3>
+                  <p className="text-muted-foreground">{provider.description}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge variant="outline">{provider.provider_type}</Badge>
+                    <Badge 
+                      variant={provider.status === 'APPROVED' ? 'default' : 
+                              provider.status === 'PENDING' ? 'secondary' : 'destructive'}
+                    >
+                      {provider.status}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
