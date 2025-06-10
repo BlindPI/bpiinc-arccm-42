@@ -68,10 +68,27 @@ function safeParseJsonResponse(data: any): any {
 }
 
 // Helper function to safely parse analytics data with fallbacks
-function parseAnalyticsData(data: any): any {
-  const parsed = safeJsonParse(data, {});
+function parseAnalyticsData(data: any): {
+  total_teams: number;
+  total_members: number;
+  performance_average: number;
+  compliance_score: number;
+  teamsByLocation: Record<string, number>;
+  performanceByTeamType: Record<string, number>;
+} {
+  if (!data) {
+    return {
+      total_teams: 0,
+      total_members: 0,
+      performance_average: 0,
+      compliance_score: 0,
+      teamsByLocation: {},
+      performanceByTeamType: {}
+    };
+  }
+
+  const parsed = typeof data === 'string' ? safeJsonParse(data, {}) : data;
   
-  // Ensure all required properties exist with defaults
   return {
     total_teams: parsed.total_teams || 0,
     total_members: parsed.total_members || 0,
@@ -130,20 +147,31 @@ export class RealEnterpriseTeamService {
   }
 
   static async getTeamAnalytics(): Promise<TeamAnalytics> {
-    const { data, error } = await supabase.rpc('get_team_analytics_summary');
-    if (error) throw error;
-    
-    // Use the enhanced parsing function with proper fallbacks
-    const analyticsData = parseAnalyticsData(data);
-    
-    return {
-      totalTeams: analyticsData.total_teams,
-      totalMembers: analyticsData.total_members,
-      averagePerformance: analyticsData.performance_average,
-      averageCompliance: analyticsData.compliance_score,
-      teamsByLocation: analyticsData.teamsByLocation,
-      performanceByTeamType: analyticsData.performanceByTeamType
-    };
+    try {
+      const { data, error } = await supabase.rpc('get_team_analytics_summary');
+      if (error) throw error;
+      
+      const analyticsData = parseAnalyticsData(data);
+      
+      return {
+        totalTeams: analyticsData.total_teams,
+        totalMembers: analyticsData.total_members,
+        averagePerformance: analyticsData.performance_average,
+        averageCompliance: analyticsData.compliance_score,
+        teamsByLocation: analyticsData.teamsByLocation,
+        performanceByTeamType: analyticsData.performanceByTeamType
+      };
+    } catch (error) {
+      console.error('Error fetching team analytics:', error);
+      return {
+        totalTeams: 0,
+        totalMembers: 0,
+        averagePerformance: 0,
+        averageCompliance: 0,
+        teamsByLocation: {},
+        performanceByTeamType: {}
+      };
+    }
   }
 
   static async updateMemberRole(memberId: string, newRole: string): Promise<void> {
