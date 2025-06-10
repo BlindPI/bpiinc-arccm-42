@@ -29,7 +29,7 @@ export function LeadsTable({ onLeadSelect }: LeadsTableProps) {
     mutationFn: CRMLeadService.deleteLead,
     onSuccess: () => {
       toast.success('Lead deleted successfully');
-      queryClient.invalidateQueries(['crm-leads']);
+      queryClient.invalidateQueries({ queryKey: ['crm-leads'] });
     }
   });
 
@@ -39,6 +39,12 @@ export function LeadsTable({ onLeadSelect }: LeadsTableProps) {
     lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (lead.company_name && lead.company_name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  const handleFormSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['crm-leads'] });
+    setShowAddForm(false);
+    setEditingLead(null);
+  };
 
   const columns = [
     {
@@ -143,18 +149,13 @@ export function LeadsTable({ onLeadSelect }: LeadsTableProps) {
       <DataTable
         columns={columns}
         data={filteredLeads}
-        loading={isLoading}
       />
 
       {(showAddForm || editingLead) && (
         <LeadForm
           lead={editingLead}
-          onClose={() => {
-            setShowAddForm(false);
-            setEditingLead(null);
-          }}
-          onSuccess={() => {
-            queryClient.invalidateQueries(['crm-leads']);
+          onSave={handleFormSuccess}
+          onCancel={() => {
             setShowAddForm(false);
             setEditingLead(null);
           }}

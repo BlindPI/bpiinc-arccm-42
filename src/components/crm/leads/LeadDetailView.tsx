@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -43,7 +42,7 @@ export function LeadDetailView({ leadId, onClose }: LeadDetailViewProps) {
     mutationFn: (updates: any) => CRMLeadService.updateLead(leadId, updates),
     onSuccess: () => {
       toast.success('Lead updated successfully');
-      queryClient.invalidateQueries(['lead-detail', leadId]);
+      queryClient.invalidateQueries({ queryKey: ['lead-detail', leadId] });
       setIsEditing(false);
     }
   });
@@ -58,7 +57,7 @@ export function LeadDetailView({ leadId, onClose }: LeadDetailViewProps) {
     }),
     onSuccess: () => {
       toast.success('Note added successfully');
-      queryClient.invalidateQueries(['lead-detail', leadId]);
+      queryClient.invalidateQueries({ queryKey: ['lead-detail', leadId] });
       setNewNote('');
     }
   });

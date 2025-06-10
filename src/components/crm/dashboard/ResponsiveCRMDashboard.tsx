@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Users, 
   Target, 
@@ -41,6 +40,11 @@ export function ResponsiveCRMDashboard() {
       start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
       end: new Date()
     })
+  });
+
+  const { data: contacts = [], isLoading: contactsLoading } = useQuery({
+    queryKey: ['crm-contacts'],
+    queryFn: () => EnhancedCRMService.getContacts()
   });
 
   const tabItems = [
@@ -252,7 +256,13 @@ export function ResponsiveCRMDashboard() {
                 <CardTitle>Contact Management</CardTitle>
               </CardHeader>
               <CardContent>
-                <ContactsTable />
+                <ContactsTable 
+                  contacts={contacts}
+                  isLoading={contactsLoading}
+                  onCreateContact={() => {}}
+                  onUpdateContact={() => {}}
+                  onDeleteContact={() => {}}
+                />
               </CardContent>
             </Card>
           )}

@@ -1,9 +1,18 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Activity } from '@/types/crm';
 
 // Type guard for valid activity priority
 function isValidActivityPriority(priority: string): priority is 'low' | 'medium' | 'high' {
   return ['low', 'medium', 'high'].includes(priority);
+}
+
+// CRM Stats interface
+export interface CRMStats {
+  totalContacts: number;
+  totalOpportunities: number;
+  totalRevenue: number;
+  conversionRate: number;
 }
 
 // Revenue metrics interface
