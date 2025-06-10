@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Activity } from '@/types/crm';
 
@@ -71,12 +70,16 @@ export interface CRMContact {
   department?: string;
   account_id?: string;
   contact_status: string;
+  converted_from_lead_id?: string;
   lead_source?: string;
   preferred_contact_method?: string;
   do_not_call: boolean;
   do_not_email: boolean;
+  notes?: string;
+  last_activity_date?: string;
   created_at: string;
   updated_at: string;
+  created_by?: string;
 }
 
 export interface CRMOpportunity {
