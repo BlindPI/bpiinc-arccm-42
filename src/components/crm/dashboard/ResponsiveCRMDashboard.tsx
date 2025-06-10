@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +13,7 @@ import {
   Menu
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { EnhancedCRMService, type CRMContact } from '@/services/crm/enhancedCRMService';
+import { EnhancedCRMService } from '@/services/crm/enhancedCRMService';
 import { LeadsTable } from '@/components/crm/LeadsTable';
 import { LeadPipeline } from '@/components/crm/LeadPipeline';
 import { OpportunityPipeline } from '@/components/crm/OpportunityPipeline';
@@ -22,6 +21,8 @@ import { ContactsTable } from '@/components/crm/contacts/ContactsTable';
 import { AccountsTable } from '@/components/crm/accounts/AccountsTable';
 import { ActivitiesTable } from '@/components/crm/ActivitiesTable';
 import { LeadDetailView } from '../leads/LeadDetailView';
+import { convertCRMContactToContact } from '@/utils/crmTypeConverters';
+import { useCRMContacts } from '@/hooks/useCRMContacts';
 
 // Helper function to convert CRMContact to Contact type
 const convertCRMContactToContact = (crmContact: CRMContact) => ({
@@ -54,6 +55,9 @@ export function ResponsiveCRMDashboard() {
     queryKey: ['crm-contacts'],
     queryFn: () => EnhancedCRMService.getContacts()
   });
+
+  // Use the CRM contacts hook for proper contact management
+  const { contacts: managedContacts, onCreateContact, onUpdateContact, onDeleteContact } = useCRMContacts();
 
   // Convert CRMContact[] to Contact[] for the ContactsTable
   const contacts = crmContacts.map(convertCRMContactToContact);
@@ -268,11 +272,11 @@ export function ResponsiveCRMDashboard() {
               </CardHeader>
               <CardContent>
                 <ContactsTable 
-                  contacts={contacts}
+                  contacts={managedContacts}
                   isLoading={contactsLoading}
-                  onCreateContact={() => {}}
-                  onUpdateContact={() => {}}
-                  onDeleteContact={() => {}}
+                  onCreateContact={onCreateContact}
+                  onUpdateContact={onUpdateContact}
+                  onDeleteContact={onDeleteContact}
                 />
               </CardContent>
             </Card>

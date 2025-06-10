@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Activity } from '@/types/crm';
 
@@ -267,22 +268,34 @@ export class EnhancedCRMService {
     return data as CRMOpportunity;
   }
 
-  // Missing methods that components are trying to use
-  static async getContacts(): Promise<CRMContact[]> {
-    const { data, error } = await supabase
+  // Updated methods with proper filter parameters
+  static async getContacts(filters?: { accountId?: string }): Promise<CRMContact[]> {
+    let query = supabase
       .from('crm_contacts')
       .select('*')
       .order('created_at', { ascending: false });
+
+    if (filters?.accountId) {
+      query = query.eq('account_id', filters.accountId);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return (data || []) as CRMContact[];
   }
 
-  static async getOpportunities(): Promise<CRMOpportunity[]> {
-    const { data, error } = await supabase
+  static async getOpportunities(filters?: { accountId?: string }): Promise<CRMOpportunity[]> {
+    let query = supabase
       .from('crm_opportunities')
       .select('*')
       .order('created_at', { ascending: false });
+
+    if (filters?.accountId) {
+      query = query.eq('account_id', filters.accountId);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return (data || []) as CRMOpportunity[];
@@ -377,15 +390,23 @@ export class EnhancedCRMService {
     return data;
   }
 
-  // Fixed methods for AccountProfile component
-  static async updateAccount(): Promise<void> {
-    // Implementation for updating account
-    console.log('Account updated');
+  // Fixed methods for AccountProfile component with proper parameters
+  static async updateAccount(accountId: string, updates: Partial<CRMAccount>): Promise<void> {
+    const { error } = await supabase
+      .from('crm_accounts')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', accountId);
+
+    if (error) throw error;
   }
 
-  static async deleteAccount(): Promise<void> {
-    // Implementation for deleting account
-    console.log('Account deleted');
+  static async deleteAccount(accountId: string): Promise<void> {
+    const { error } = await supabase
+      .from('crm_accounts')
+      .delete()
+      .eq('id', accountId);
+
+    if (error) throw error;
   }
 }
 
