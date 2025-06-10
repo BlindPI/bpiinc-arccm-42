@@ -1,322 +1,270 @@
 
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 import { 
-  Building2, 
-  Edit, 
-  Globe, 
-  Phone, 
+  Building, 
   Mail, 
-  MapPin, 
+  Phone, 
+  Globe, 
   Users, 
   DollarSign,
-  Calendar,
-  Activity
+  Edit,
+  Trash2
 } from 'lucide-react';
-import { CRMService } from '@/services/crm/enhancedCRMService';
-import type { Account } from '@/types/crm';
+import { EnhancedCRMService } from '@/services/crm/enhancedCRMService';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
 interface AccountProfileProps {
-  account: Account;
-  isOpen: boolean;
-  onClose: () => void;
-  onEdit: () => void;
+  accountId: string;
+  onEdit?: (accountId: string) => void;
+  onDelete?: (accountId: string) => void;
 }
 
-const accountTypeColors = {
-  prospect: 'bg-blue-100 text-blue-800',
-  customer: 'bg-green-100 text-green-800',
-  partner: 'bg-purple-100 text-purple-800',
-  competitor: 'bg-red-100 text-red-800'
-};
-
-const accountStatusColors = {
-  active: 'bg-green-100 text-green-800',
-  inactive: 'bg-gray-100 text-gray-800'
-};
-
-export const AccountProfile: React.FC<AccountProfileProps> = ({
-  account,
-  isOpen,
-  onClose,
-  onEdit
-}) => {
-  // Get related data for the account
-  const { data: relatedContacts } = useQuery({
-    queryKey: ['contacts', account.id],
-    queryFn: () => CRMService.getContacts({ account_id: account.id }),
-    enabled: isOpen
+export function AccountProfile({ accountId, onEdit, onDelete }: AccountProfileProps) {
+  const { data: account, isLoading: accountLoading } = useQuery({
+    queryKey: ['crm-account', accountId],
+    queryFn: () => EnhancedCRMService.getAccountWithContacts(accountId)
   });
 
-  const { data: relatedOpportunities } = useQuery({
-    queryKey: ['opportunities', account.id],
-    queryFn: () => CRMService.getOpportunities({ account_id: account.id }),
-    enabled: isOpen
+  const { data: contacts = [], isLoading: contactsLoading } = useQuery({
+    queryKey: ['crm-contacts', accountId],
+    queryFn: () => EnhancedCRMService.getContacts({ accountId })
   });
 
-  const totalOpportunityValue = relatedOpportunities?.reduce(
-    (sum, opp) => sum + (opp.estimated_value || 0), 
-    0
-  ) || 0;
+  const { data: opportunities = [], isLoading: opportunitiesLoading } = useQuery({
+    queryKey: ['crm-opportunities', accountId],
+    queryFn: () => EnhancedCRMService.getOpportunities({ accountId })
+  });
+
+  if (accountLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-32 bg-gray-200 rounded-lg mb-4"></div>
+          <div className="h-20 bg-gray-200 rounded-lg mb-4"></div>
+          <div className="h-40 bg-gray-200 rounded-lg"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!account) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">Account not found</p>
+      </div>
+    );
+  }
+
+  const totalOpportunityValue = opportunities.reduce((sum, opp) => sum + (opp.estimated_value || 0), 0);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            <Building2 className="h-6 w-6" />
-            {account.account_name}
-            <div className="flex items-center gap-2 ml-auto">
-              <Badge className={accountTypeColors[account.account_type]}>
-                {account.account_type.charAt(0).toUpperCase() + account.account_type.slice(1)}
-              </Badge>
-              {account.account_status && (
-                <Badge className={accountStatusColors[account.account_status]}>
-                  {account.account_status.charAt(0).toUpperCase() + account.account_status.slice(1)}
-                </Badge>
+    <div className="space-y-6">
+      {/* Account Header */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-blue-100 rounded-lg">
+                <Building className="h-8 w-8 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold">{account.account_name}</h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant={account.account_status === 'active' ? 'default' : 'secondary'}>
+                    {account.account_status}
+                  </Badge>
+                  <Badge variant="outline">{account.account_type}</Badge>
+                  {account.industry && (
+                    <Badge variant="outline">{account.industry}</Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              {onEdit && (
+                <Button variant="outline" size="sm" onClick={() => onEdit(accountId)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+              )}
+              {onDelete && (
+                <Button variant="outline" size="sm" onClick={() => onDelete(accountId)}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
               )}
             </div>
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-6">
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Contacts</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{relatedContacts?.length || 0}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Opportunities</CardTitle>
-                <Activity className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{relatedOpportunities?.length || 0}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pipeline Value</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(totalOpportunityValue)}</div>
-              </CardContent>
-            </Card>
           </div>
-
-          {/* Account Details */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Basic Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Account Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Industry</label>
-                    <p className="text-sm">{account.industry || 'Not specified'}</p>
-                  </div>
-
-                  {account.company_size && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Company Size</label>
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{account.company_size}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {account.annual_revenue && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Annual Revenue</label>
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">{formatCurrency(account.annual_revenue)}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Created</label>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{formatDate(account.created_at)}</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Contact Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Contact Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  {account.website && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Website</label>
-                      <div className="flex items-center gap-2">
-                        <Globe className="h-4 w-4 text-muted-foreground" />
-                        <a 
-                          href={account.website.startsWith('http') ? account.website : `https://${account.website}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:underline"
-                        >
-                          {account.website}
-                        </a>
-                      </div>
-                    </div>
-                  )}
+            <div>
+              <h3 className="font-semibold mb-3">Contact Information</h3>
+              <div className="space-y-2">
+                {account.phone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">{account.phone}</span>
+                  </div>
+                )}
+                {account.website && (
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-muted-foreground" />
+                    <a 
+                      href={account.website} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:underline"
+                    >
+                      {account.website}
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
 
-                  {account.phone && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Phone</label>
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{account.phone}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {account.billing_address && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Billing Address</label>
-                      <div className="flex items-start gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                        <span className="text-sm">{account.billing_address}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {account.shipping_address && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Shipping Address</label>
-                      <div className="flex items-start gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                        <span className="text-sm">{account.shipping_address}</span>
-                      </div>
-                    </div>
-                  )}
+            {/* Business Information */}
+            <div>
+              <h3 className="font-semibold mb-3">Business Information</h3>
+              <div className="space-y-2">
+                {account.company_size && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Company Size:</span> {account.company_size}
+                  </div>
+                )}
+                {account.annual_revenue && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Annual Revenue:</span> {formatCurrency(account.annual_revenue)}
+                  </div>
+                )}
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Created:</span> {formatDate(account.created_at)}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
+
+            {/* Quick Stats */}
+            <div>
+              <h3 className="font-semibold mb-3">Quick Stats</h3>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">{contacts.length} Contacts</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">{opportunities.length} Opportunities</span>
+                </div>
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Pipeline Value:</span> {formatCurrency(totalOpportunityValue)}
+                </div>
+              </div>
+            </div>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Notes */}
-          {account.notes && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Notes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm whitespace-pre-wrap">{account.notes}</p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Related Data */}
-          <div className="space-y-4">
-            <Separator />
-            
-            {/* Related Contacts */}
-            {relatedContacts && relatedContacts.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Related Contacts ({relatedContacts.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {relatedContacts.slice(0, 5).map((contact) => (
-                      <div key={contact.id} className="flex items-center justify-between p-2 border rounded">
-                        <div className="flex items-center gap-3">
-                          <div>
-                            <p className="font-medium text-sm">
-                              {contact.first_name} {contact.last_name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">{contact.email}</p>
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="text-xs">
-                          {contact.contact_status}
-                        </Badge>
+      {/* Related Data */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Contacts */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Contacts ({contacts.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {contactsLoading ? (
+              <div className="space-y-2">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-16 bg-gray-100 rounded animate-pulse" />
+                ))}
+              </div>
+            ) : contacts.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">No contacts found</p>
+            ) : (
+              <div className="space-y-3">
+                {contacts.slice(0, 5).map((contact) => (
+                  <div key={contact.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <p className="font-medium">{contact.first_name} {contact.last_name}</p>
+                      <p className="text-sm text-muted-foreground">{contact.title}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Mail className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">{contact.email}</span>
                       </div>
-                    ))}
-                    {relatedContacts.length > 5 && (
-                      <p className="text-xs text-muted-foreground text-center py-2">
-                        +{relatedContacts.length - 5} more contacts
-                      </p>
-                    )}
+                    </div>
+                    <Badge variant={contact.contact_status === 'active' ? 'default' : 'secondary'}>
+                      {contact.contact_status}
+                    </Badge>
                   </div>
-                </CardContent>
-              </Card>
+                ))}
+                {contacts.length > 5 && (
+                  <p className="text-sm text-muted-foreground text-center">
+                    +{contacts.length - 5} more contacts
+                  </p>
+                )}
+              </div>
             )}
+          </CardContent>
+        </Card>
 
-            {/* Related Opportunities */}
-            {relatedOpportunities && relatedOpportunities.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Related Opportunities ({relatedOpportunities.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {relatedOpportunities.slice(0, 5).map((opportunity) => (
-                      <div key={opportunity.id} className="flex items-center justify-between p-2 border rounded">
-                        <div className="flex items-center gap-3">
-                          <div>
-                            <p className="font-medium text-sm">{opportunity.opportunity_name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatCurrency(opportunity.estimated_value)} • {opportunity.probability}% probability
-                            </p>
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="text-xs">
-                          {opportunity.stage}
-                        </Badge>
-                      </div>
-                    ))}
-                    {relatedOpportunities.length > 5 && (
-                      <p className="text-xs text-muted-foreground text-center py-2">
-                        +{relatedOpportunities.length - 5} more opportunities
+        {/* Opportunities */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Opportunities ({opportunities.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {opportunitiesLoading ? (
+              <div className="space-y-2">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-16 bg-gray-100 rounded animate-pulse" />
+                ))}
+              </div>
+            ) : opportunities.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">No opportunities found</p>
+            ) : (
+              <div className="space-y-3">
+                {opportunities.slice(0, 5).map((opportunity) => (
+                  <div key={opportunity.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <p className="font-medium">{opportunity.opportunity_name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {formatCurrency(opportunity.estimated_value)}
                       </p>
-                    )}
+                      {opportunity.expected_close_date && (
+                        <p className="text-xs text-muted-foreground">
+                          Expected: {formatDate(opportunity.expected_close_date)}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <Badge variant="outline">{opportunity.stage}</Badge>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {opportunity.probability}% probability
+                      </p>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                ))}
+                {opportunities.length > 5 && (
+                  <p className="text-sm text-muted-foreground text-center">
+                    +{opportunities.length - 5} more opportunities
+                  </p>
+                )}
+              </div>
             )}
-          </div>
-
-          {/* Actions */}
-          <div className="flex justify-end space-x-2 pt-4 border-t">
-            <Button variant="outline" onClick={onClose}>
-              Close
-            </Button>
-            <Button onClick={onEdit}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Account
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
-};
+}

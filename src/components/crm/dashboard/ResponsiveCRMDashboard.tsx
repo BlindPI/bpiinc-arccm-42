@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,14 +24,6 @@ import { ActivitiesTable } from '@/components/crm/ActivitiesTable';
 import { LeadDetailView } from '../leads/LeadDetailView';
 import { convertCRMContactToContact } from '@/utils/crmTypeConverters';
 import { useCRMContacts } from '@/hooks/useCRMContacts';
-
-// Helper function to convert CRMContact to Contact type
-const convertCRMContactToContact = (crmContact: CRMContact) => ({
-  ...crmContact,
-  contact_status: (crmContact.contact_status === 'active' || crmContact.contact_status === 'inactive') 
-    ? crmContact.contact_status 
-    : 'active' as 'active' | 'inactive'
-});
 
 export function ResponsiveCRMDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
