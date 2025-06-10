@@ -14,7 +14,7 @@ import {
   Menu
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { EnhancedCRMService } from '@/services/crm/enhancedCRMService';
+import { EnhancedCRMService, type CRMContact } from '@/services/crm/enhancedCRMService';
 import { LeadsTable } from '@/components/crm/LeadsTable';
 import { LeadPipeline } from '@/components/crm/LeadPipeline';
 import { OpportunityPipeline } from '@/components/crm/OpportunityPipeline';
@@ -22,6 +22,14 @@ import { ContactsTable } from '@/components/crm/contacts/ContactsTable';
 import { AccountsTable } from '@/components/crm/accounts/AccountsTable';
 import { ActivitiesTable } from '@/components/crm/ActivitiesTable';
 import { LeadDetailView } from '../leads/LeadDetailView';
+
+// Helper function to convert CRMContact to Contact type
+const convertCRMContactToContact = (crmContact: CRMContact) => ({
+  ...crmContact,
+  contact_status: (crmContact.contact_status === 'active' || crmContact.contact_status === 'inactive') 
+    ? crmContact.contact_status 
+    : 'active' as 'active' | 'inactive'
+});
 
 export function ResponsiveCRMDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -42,10 +50,13 @@ export function ResponsiveCRMDashboard() {
     })
   });
 
-  const { data: contacts = [], isLoading: contactsLoading } = useQuery({
+  const { data: crmContacts = [], isLoading: contactsLoading } = useQuery({
     queryKey: ['crm-contacts'],
     queryFn: () => EnhancedCRMService.getContacts()
   });
+
+  // Convert CRMContact[] to Contact[] for the ContactsTable
+  const contacts = crmContacts.map(convertCRMContactToContact);
 
   const tabItems = [
     { id: 'overview', label: 'Overview', icon: TrendingUp },
