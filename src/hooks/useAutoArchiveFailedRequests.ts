@@ -20,10 +20,10 @@ export function useAutoArchiveFailedRequests() {
       if (error) throw error;
       return data || [];
     },
-    refetchInterval: 30000 // Check every 30 seconds
+    refetchInterval: 10000 // Check every 10 seconds for failed requests
   });
 
-  // Auto-archive failed requests
+  // Auto-archive failed requests mutation
   const autoArchiveMutation = useMutation({
     mutationFn: async (requestIds: string[]) => {
       const { error } = await supabase
@@ -39,11 +39,15 @@ export function useAutoArchiveFailedRequests() {
     },
     onSuccess: (count) => {
       if (count > 0) {
-        toast.info(`Auto-archived ${count} failed assessment request${count > 1 ? 's' : ''}`);
+        toast.info(`Auto-archived ${count} failed assessment request${count > 1 ? 's' : ''} - these will not generate certificates`);
+        // Invalidate relevant queries to refresh the UI
         queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
         queryClient.invalidateQueries({ queryKey: ['enhanced-certificate-requests'] });
         queryClient.invalidateQueries({ queryKey: ['failed-pending-requests'] });
       }
+    },
+    onError: (error) => {
+      console.error('Failed to auto-archive requests:', error);
     }
   });
 
@@ -51,9 +55,10 @@ export function useAutoArchiveFailedRequests() {
   useEffect(() => {
     if (failedPendingRequests && failedPendingRequests.length > 0) {
       const requestIds = failedPendingRequests.map(req => req.id);
+      console.log(`Auto-archiving ${requestIds.length} failed assessment requests`);
       autoArchiveMutation.mutate(requestIds);
     }
-  }, [failedPendingRequests, autoArchiveMutation]);
+  }, [failedPendingRequests]);
 
   return {
     failedPendingCount: failedPendingRequests?.length || 0,

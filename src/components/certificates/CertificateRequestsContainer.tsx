@@ -23,13 +23,13 @@ export function CertificateRequestsContainer() {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('PENDING');
   const [isRefreshing, setIsRefreshing] = React.useState(false);
-  const [viewMode, setViewMode] = React.useState<ViewMode>('enterprise');
+  // Default to 'batch' view for proper batch review functionality
+  const [viewMode, setViewMode] = React.useState<ViewMode>('batch');
   const [selectedRequestId, setSelectedRequestId] = React.useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = React.useState('');
   
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
   
-  // Only use the legacy hooks for non-pending requests or non-enterprise view
   const { requests, isLoading, error: queryError } = useCertificateRequests({
     isAdmin,
     statusFilter,
@@ -97,7 +97,7 @@ export function CertificateRequestsContainer() {
     }
   };
 
-  // Show enterprise view for pending requests
+  // Show enterprise view only when specifically selected
   if (statusFilter === 'PENDING' && viewMode === 'enterprise') {
     return (
       <Card>
@@ -135,7 +135,7 @@ export function CertificateRequestsContainer() {
     );
   }
 
-  // Legacy views for other statuses or view modes
+  // Default view now shows batch view for proper review workflow
   return (
     <Card>
       <CardHeader className="border-b">
