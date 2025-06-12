@@ -33,7 +33,8 @@ export function ActivityFormDialog({ open, onOpenChange, activity, mode }: Activ
     lead_id: activity?.lead_id || '',
     contact_id: activity?.contact_id || '',
     account_id: activity?.account_id || '',
-    opportunity_id: activity?.opportunity_id || ''
+    opportunity_id: activity?.opportunity_id || '',
+    completed: activity?.completed || false
   });
 
   const createMutation = useMutation({
@@ -66,16 +67,29 @@ export function ActivityFormDialog({ open, onOpenChange, activity, mode }: Activ
     e.preventDefault();
     if (isReadOnly) return;
 
+    // Sync completed field with status
+    const submitData = {
+      ...formData,
+      completed: formData.status === 'completed'
+    };
+
     if (mode === 'create') {
-      createMutation.mutate(formData);
+      createMutation.mutate(submitData);
     } else if (mode === 'edit') {
-      updateMutation.mutate(formData);
+      updateMutation.mutate(submitData);
     }
   };
 
   const handleChange = (field: string, value: any) => {
     if (isReadOnly) return;
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value };
+      // Auto-sync completed field when status changes
+      if (field === 'status') {
+        newData.completed = value === 'completed';
+      }
+      return newData;
+    });
   };
 
   return (
