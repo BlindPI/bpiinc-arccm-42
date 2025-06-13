@@ -263,15 +263,166 @@ export class CRMService {
 
   // CRM Statistics
   static async getCRMStats(): Promise<CRMStats> {
-    // For now, return mock data until we have proper aggregation functions
-    return {
-      total_leads: 0,
-      total_opportunities: 0,
-      total_pipeline_value: 0,
-      total_activities: 0,
-      conversion_rate: 0,
-      win_rate: 0,
-      average_deal_size: 0
-    };
+    try {
+      // Get leads count
+      const { count: leadsCount } = await supabase
+        .from('crm_leads')
+        .select('*', { count: 'exact', head: true });
+
+      // Get opportunities data
+      const { data: opportunities } = await supabase
+        .from('crm_opportunities')
+        .select('estimated_value, stage, opportunity_status');
+
+      // Get activities count
+      const { count: activitiesCount } = await supabase
+        .from('crm_activities')
+        .select('*', { count: 'exact', head: true });
+
+      // Get revenue data
+      const { data: revenueData } = await supabase
+        .from('crm_revenue_records')
+        .select('amount');
+
+      // Calculate metrics
+      const totalOpportunities = opportunities?.length || 0;
+      const totalPipelineValue = opportunities?.reduce((sum, opp) => sum + (opp.estimated_value || 0), 0) || 0;
+      const closedWonOpportunities = opportunities?.filter(opp => opp.stage === 'closed_won').length || 0;
+      const closedOpportunities = opportunities?.filter(opp => opp.stage === 'closed_won' || opp.stage === 'closed_lost').length || 0;
+      const totalRevenue = revenueData?.reduce((sum, record) => sum + (record.amount || 0), 0) || 0;
+
+      const conversionRate = leadsCount && totalOpportunities ? (totalOpportunities / leadsCount) * 100 : 0;
+      const winRate = closedOpportunities > 0 ? (closedWonOpportunities / closedOpportunities) * 100 : 0;
+      const averageDealSize = closedWonOpportunities > 0 ? totalRevenue / closedWonOpportunities : 0;
+
+      return {
+        total_leads: leadsCount || 0,
+        total_opportunities: totalOpportunities,
+        total_pipeline_value: totalPipelineValue,
+        total_activities: activitiesCount || 0,
+        conversion_rate: conversionRate,
+        win_rate: winRate,
+        average_deal_size: averageDealSize
+      };
+    } catch (error) {
+      console.error('Error fetching CRM stats:', error);
+      return {
+        total_leads: 0,
+        total_opportunities: 0,
+        total_pipeline_value: 0,
+        total_activities: 0,
+        conversion_rate: 0,
+        win_rate: 0,
+        average_deal_size: 0
+      };
+    }
+  }
+
+  // Real Analytics Methods
+  static async getAnalyticsMetrics() {
+    try {
+      const [
+        { data: leads },
+        { data: opportunities },
+        { data: activities },
+        { data: revenue },
+        { data: contacts }
+      ] = await Promise.all([
+        supabase.from('crm_leads').select('*'),
+        supabase.from('crm_opportunities').select('*'),
+        supabase.from('crm_activities').select('*'),
+        supabase.from('crm_revenue_records').select('*'),
+        supabase.from('crm_contacts').select('*')
+      ]);
+
+      // Calculate real metrics
+      const totalLeads = leads?.length || 0;
+      const totalOpportunities = opportunities?.length || 0;
+      const totalRevenue = revenue?.reduce((sum, r) => sum + (r.amount || 0), 0) || 0;
+      const totalPipelineValue = opportunities?.reduce((sum, o) => sum + (o.estimated_value || 0), 0) || 0;
+      
+      const closedWonOpps = opportunities?.filter(o => o.stage === 'closed_won') || [];
+      const closedOpps = opportunities?.filter(o => o.stage === 'closed_won' || o.stage === 'closed_lost') || [];
+      
+      const conversionRate = totalLeads > 0 ? (totalOpportunities / totalLeads) * 100 : 0;
+      const winRate = closedOpps.length > 0 ? (closedWonOpps.length / closedOpps.length) * 100 : 0;
+      const averageDealSize = closedWonOpps.length > 0 ? totalRevenue / closedWonOpps.length : 0;
+
+      // Calculate this month's data
+      const thisMonth = new Date();
+      thisMonth.setDate(1);
+      const newLeadsThisMonth = leads?.filter(l => new Date(l.created_at) >= thisMonth).length || 0;
+
+      // Calculate lead sources
+      const leadsBySource = leads?.reduce((acc, lead) => {
+        const source = lead.lead_source || 'Unknown';
+        acc[source] = (acc[source] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      const leadSourceData = Object.entries(leadsBySource).map(([source, count]) => ({
+        source,
+        count,
+        percentage: totalLeads > 0 ? Math.round((count / totalLeads) * 100) : 0
+      }));
+
+      // Calculate activities by type
+      const activitiesByType = activities?.reduce((acc, activity) => {
+        const type = activity.activity_type || 'Other';
+        acc[type] = (acc[type] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      const activityTypeData = Object.entries(activitiesByType).map(([type, count]) => ({
+        type,
+        count
+      }));
+
+      return {
+        totalLeads,
+        totalOpportunities,
+        totalRevenue,
+        totalPipelineValue,
+        conversionRate,
+        winRate,
+        averageDealSize,
+        newLeadsThisMonth,
+        leadsBySource: leadSourceData,
+        activitiesByType: activityTypeData,
+        salesVelocity: 30, // TODO: Calculate from actual data
+        taskCompletionRate: 85, // TODO: Calculate from actual task data
+        overdueTasks: 0 // TODO: Calculate from actual task data
+      };
+    } catch (error) {
+      console.error('Error fetching analytics metrics:', error);
+      throw error;
+    }
+  }
+
+  // Export functionality
+  static async exportData(type: 'opportunities' | 'leads' | 'contacts' | 'activities') {
+    try {
+      const { data, error } = await supabase
+        .from(`crm_${type}`)
+        .select('*')
+        .csv();
+
+      if (error) throw error;
+
+      const blob = new Blob([data], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `crm-${type}-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      return true;
+    } catch (error) {
+      console.error('Export error:', error);
+      throw error;
+    }
   }
 }
