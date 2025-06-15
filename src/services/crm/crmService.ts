@@ -220,19 +220,49 @@ export class CRMService {
     if (error) throw error;
   }
 
-  // CRM Stats
-  static async getCRMStats(): Promise<any> {
-    const [leadsResult, contactsResult, accountsResult, opportunitiesResult] = await Promise.all([
+  // Dashboard-specific methods
+  static async getUpcomingTasks(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('crm_activities')
+      .select('*')
+      .gte('due_date', new Date().toISOString().split('T')[0])
+      .eq('completed', false)
+      .order('due_date', { ascending: true })
+      .limit(10);
+    
+    if (error) throw error;
+    return data || [];
+  }
+
+  static async getRecentActivities(limit: number = 20): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('crm_activities')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    
+    if (error) throw error;
+    return data || [];
+  }
+
+  static async getDashboardMetrics(): Promise<any> {
+    const [leadsResult, contactsResult, accountsResult, opportunitiesResult, activitiesResult] = await Promise.all([
       supabase.from('crm_leads').select('id', { count: 'exact' }),
       supabase.from('crm_contacts').select('id', { count: 'exact' }),
       supabase.from('crm_accounts').select('id', { count: 'exact' }),
-      supabase.from('crm_opportunities').select('id', { count: 'exact' })
+      supabase.from('crm_opportunities').select('id, estimated_value', { count: 'exact' }),
+      supabase.from('crm_activities').select('id', { count: 'exact' })
     ]);
 
     const totalLeads = leadsResult.count || 0;
     const totalContacts = contactsResult.count || 0;
     const totalAccounts = accountsResult.count || 0;
     const totalOpportunities = opportunitiesResult.count || 0;
+    const totalActivities = activitiesResult.count || 0;
+
+    // Calculate pipeline value
+    const pipelineValue = opportunitiesResult.data?.reduce((sum, opp) => 
+      sum + (opp.estimated_value || 0), 0) || 0;
 
     const conversionRate = totalLeads > 0 ? (totalOpportunities / totalLeads) * 100 : 0;
 
@@ -241,11 +271,17 @@ export class CRMService {
       total_contacts: totalContacts,
       total_accounts: totalAccounts,
       total_opportunities: totalOpportunities,
+      total_activities: totalActivities,
+      total_pipeline_value: pipelineValue,
       conversion_rate: Math.round(conversionRate * 100) / 100,
       win_rate: 68.5,
-      average_deal_size: 125000,
-      total_pipeline_value: 4800000
+      average_deal_size: pipelineValue > 0 ? Math.round(pipelineValue / totalOpportunities) : 0
     };
+  }
+
+  // CRM Stats
+  static async getCRMStats(): Promise<any> {
+    return this.getDashboardMetrics();
   }
 
   // Lead Conversion
