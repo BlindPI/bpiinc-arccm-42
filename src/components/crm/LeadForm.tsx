@@ -9,8 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { CRMService } from '@/services/crm/crmService';
-import type { Lead } from '@/types/crm';
+import { CRMService, type Lead } from '@/services/crm/crmService';
 import { toast } from 'sonner';
 
 const leadFormSchema = z.object({
@@ -50,7 +49,8 @@ export const LeadForm: React.FC<LeadFormProps> = ({ lead, onSave, onCancel }) =>
   });
 
   const createMutation = useMutation({
-    mutationFn: CRMService.createLead,
+    mutationFn: (data: Omit<Lead, 'id' | 'created_at' | 'updated_at'>) => 
+      CRMService.createLead(data),
     onSuccess: () => {
       toast.success('Lead created successfully');
       onSave();
@@ -79,7 +79,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({ lead, onSave, onCancel }) =>
       createMutation.mutate({
         ...data,
         lead_score: 0
-      } as Omit<Lead, 'id' | 'created_at' | 'updated_at'>);
+      });
     }
   };
 

@@ -20,26 +20,51 @@ export interface LeadConversionModalProps {
 export function LeadConversionModal({ isOpen, onClose, lead, onSuccess }: LeadConversionModalProps) {
   const queryClient = useQueryClient();
   const [conversionData, setConversionData] = useState({
-    opportunity_name: lead?.company || '',
+    opportunity_name: lead?.company_name || '',
     estimated_value: '',
-    close_date: '',
-    stage: 'qualification',
+    expected_close_date: '',
+    stage: 'prospect' as const,
     notes: ''
   });
 
   const convertLeadMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Create contact if needed
+      let contactId = lead.contact_id;
+      if (!contactId) {
+        const contact = await CRMService.createContact({
+          first_name: lead.first_name,
+          last_name: lead.last_name,
+          email: lead.email,
+          phone: lead.phone,
+          title: lead.job_title,
+          account_id: lead.account_id
+        });
+        contactId = contact.id;
+      }
+
+      // Create account if needed
+      let accountId = lead.account_id;
+      if (!accountId && lead.company_name) {
+        const account = await CRMService.createAccount({
+          account_name: lead.company_name,
+          account_type: 'prospect'
+        });
+        accountId = account.id;
+      }
+
       const opportunityData = {
         lead_id: lead.id,
-        account_id: lead.account_id,
-        contact_id: lead.contact_id,
+        account_id: accountId,
+        contact_id: contactId,
         opportunity_name: data.opportunity_name,
         opportunity_status: 'open' as const,
         estimated_value: parseFloat(data.estimated_value) || 0,
-        close_date: data.close_date,
+        expected_close_date: data.expected_close_date,
         stage: data.stage,
         probability: 25,
-        notes: data.notes
+        notes: data.notes,
+        created_by: 'current-user' // This should come from auth context
       };
 
       const opportunity = await CRMService.createOpportunity(opportunityData);
@@ -75,7 +100,7 @@ export function LeadConversionModal({ isOpen, onClose, lead, onSuccess }: LeadCo
         <DialogHeader>
           <DialogTitle>Convert Lead to Opportunity</DialogTitle>
           <DialogDescription>
-            Convert {lead?.first_name} {lead?.last_name} from {lead?.company} into a sales opportunity.
+            Convert {lead?.first_name} {lead?.last_name} from {lead?.company_name} into a sales opportunity.
           </DialogDescription>
         </DialogHeader>
 
@@ -103,12 +128,12 @@ export function LeadConversionModal({ isOpen, onClose, lead, onSuccess }: LeadCo
           </div>
 
           <div>
-            <Label htmlFor="close_date">Expected Close Date</Label>
+            <Label htmlFor="expected_close_date">Expected Close Date</Label>
             <Input
-              id="close_date"
+              id="expected_close_date"
               type="date"
-              value={conversionData.close_date}
-              onChange={(e) => setConversionData(prev => ({ ...prev, close_date: e.target.value }))}
+              value={conversionData.expected_close_date}
+              onChange={(e) => setConversionData(prev => ({ ...prev, expected_close_date: e.target.value }))}
             />
           </div>
 
@@ -116,14 +141,13 @@ export function LeadConversionModal({ isOpen, onClose, lead, onSuccess }: LeadCo
             <Label htmlFor="stage">Initial Stage</Label>
             <Select 
               value={conversionData.stage} 
-              onValueChange={(value) => setConversionData(prev => ({ ...prev, stage: value }))}
+              onValueChange={(value) => setConversionData(prev => ({ ...prev, stage: value as any }))}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="qualification">Qualification</SelectItem>
-                <SelectItem value="needs_analysis">Needs Analysis</SelectItem>
+                <SelectItem value="prospect">Prospect</SelectItem>
                 <SelectItem value="proposal">Proposal</SelectItem>
                 <SelectItem value="negotiation">Negotiation</SelectItem>
               </SelectContent>
