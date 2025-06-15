@@ -21,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Target, DollarSign } from 'lucide-react';
 import type { Opportunity } from '@/types/crm';
 
 const opportunitySchema = z.object({
@@ -65,52 +64,35 @@ export function OpportunityForm({ opportunity, onSave, onCancel, isLoading }: Op
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-2 mb-4">
-          <Target className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-medium">
-            {opportunity ? 'Edit Opportunity' : 'Create New Opportunity'}
-          </h3>
-        </div>
-
-        {/* Essential Fields */}
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="opportunity_name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Opportunity Name *</FormLabel>
+              <FormLabel>Opportunity Name</FormLabel>
               <FormControl>
-                <Input
-                  placeholder="Enter opportunity name"
-                  {...field}
-                  className="text-base"
-                />
+                <Input placeholder="Enter opportunity name" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="estimated_value"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Estimated Value ($) *</FormLabel>
+                <FormLabel>Estimated Value ($)</FormLabel>
                 <FormControl>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="number"
-                      placeholder="50000"
-                      className="pl-10"
-                      {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
-                  </div>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    {...field}
+                    onChange={(e) => field.onChange(Number(e.target.value))}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -122,13 +104,13 @@ export function OpportunityForm({ opportunity, onSave, onCancel, isLoading }: Op
             name="probability"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Probability (%) *</FormLabel>
+                <FormLabel>Probability (%)</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
                     min="0"
                     max="100"
-                    placeholder="75"
+                    placeholder="25"
                     {...field}
                     onChange={(e) => field.onChange(Number(e.target.value))}
                   />
@@ -139,13 +121,13 @@ export function OpportunityForm({ opportunity, onSave, onCancel, isLoading }: Op
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="stage"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Stage *</FormLabel>
+                <FormLabel>Stage</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
@@ -153,11 +135,11 @@ export function OpportunityForm({ opportunity, onSave, onCancel, isLoading }: Op
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="prospect">🔍 Prospect</SelectItem>
-                    <SelectItem value="proposal">📋 Proposal</SelectItem>
-                    <SelectItem value="negotiation">🤝 Negotiation</SelectItem>
-                    <SelectItem value="closed_won">✅ Closed Won</SelectItem>
-                    <SelectItem value="closed_lost">❌ Closed Lost</SelectItem>
+                    <SelectItem value="prospect">Prospect</SelectItem>
+                    <SelectItem value="proposal">Proposal</SelectItem>
+                    <SelectItem value="negotiation">Negotiation</SelectItem>
+                    <SelectItem value="closed_won">Closed Won</SelectItem>
+                    <SelectItem value="closed_lost">Closed Lost</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -193,11 +175,11 @@ export function OpportunityForm({ opportunity, onSave, onCancel, isLoading }: Op
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="training_contract">🎓 Training Contract</SelectItem>
-                  <SelectItem value="certification">📜 Certification</SelectItem>
-                  <SelectItem value="consulting">💼 Consulting</SelectItem>
-                  <SelectItem value="equipment">🛠️ Equipment Sales</SelectItem>
-                  <SelectItem value="other">📦 Other</SelectItem>
+                  <SelectItem value="training_contract">Training Contract</SelectItem>
+                  <SelectItem value="certification">Certification</SelectItem>
+                  <SelectItem value="consulting">Consulting</SelectItem>
+                  <SelectItem value="equipment">Equipment Sales</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -213,9 +195,9 @@ export function OpportunityForm({ opportunity, onSave, onCancel, isLoading }: Op
               <FormLabel>Description</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Describe the opportunity, key requirements, and next steps..."
+                  placeholder="Enter opportunity description"
                   {...field}
-                  rows={4}
+                  rows={3}
                 />
               </FormControl>
               <FormMessage />
@@ -223,22 +205,12 @@ export function OpportunityForm({ opportunity, onSave, onCancel, isLoading }: Op
           )}
         />
 
-        {/* Form Actions */}
-        <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t">
-          <Button type="button" variant="outline" onClick={onCancel} className="sm:w-auto w-full">
+        <div className="flex justify-end space-x-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit" disabled={isLoading} className="sm:w-auto w-full">
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                {opportunity ? 'Update' : 'Create'} Opportunity
-              </>
-            )}
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? 'Saving...' : opportunity ? 'Update' : 'Create'} Opportunity
           </Button>
         </div>
       </form>
