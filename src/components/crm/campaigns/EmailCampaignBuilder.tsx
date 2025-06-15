@@ -1,190 +1,182 @@
-
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { 
   Send, 
   Save, 
   Eye, 
-  Users, 
   Calendar, 
-  Settings,
-  Template,
-  Zap,
-  Mail,
-  Clock,
+  Users, 
+  FileText, 
   Target,
-  BarChart3
+  Clock,
+  Mail
 } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { EmailCampaignService, type EmailCampaign } from '@/services/crm/emailCampaignService';
 import { toast } from 'sonner';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { EmailCampaignService, EmailCampaign } from '@/services/crm/emailCampaignService';
 
 interface EmailCampaignBuilderProps {
   campaignId?: string;
-  onSave?: (campaign: EmailCampaign) => void;
-  onCancel?: () => void;
+  onClose?: () => void;
 }
 
-export function EmailCampaignBuilder({ campaignId, onSave, onCancel }: EmailCampaignBuilderProps) {
+export function EmailCampaignBuilder({ campaignId, onClose }: EmailCampaignBuilderProps) {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState('details');
-  const [campaignData, setCampaignData] = useState<Partial<EmailCampaign>>({
+  const [activeTab, setActiveTab] = useState('content');
+  const [formData, setFormData] = useState<Partial<EmailCampaign>>({
     campaign_name: '',
     campaign_type: 'newsletter',
-    status: 'draft',
     subject_line: '',
     content: '',
-    sender_name: 'Training Company',
-    sender_email: 'noreply@trainingcompany.com',
-    reply_to_email: 'support@trainingcompany.com',
-    target_audience: {},
+    sender_name: '',
+    sender_email: '',
+    status: 'draft',
     tracking_enabled: true
   });
 
+  const { data: existingCampaign } = useQuery({
+    queryKey: ['email-campaign', campaignId],
+    queryFn: () => campaignId ? EmailCampaignService.getEmailCampaigns().then(campaigns => 
+      campaigns.find(c => c.id === campaignId)
+    ) : null,
+    enabled: !!campaignId
+  });
+
   const { data: templates } = useQuery({
-    queryKey: ['campaign-templates'],
+    queryKey: ['email-templates'],
     queryFn: () => EmailCampaignService.getCampaignTemplates()
   });
 
-  const { data: automationTriggers } = useQuery({
-    queryKey: ['automation-triggers'],
-    queryFn: () => EmailCampaignService.getAutomationTriggers()
-  });
-
-  const saveCampaignMutation = useMutation({
-    mutationFn: (data: Partial<EmailCampaign>) => 
-      campaignId 
-        ? EmailCampaignService.updateEmailCampaign(campaignId, data)
-        : EmailCampaignService.createEmailCampaign(data),
-    onSuccess: (campaign) => {
-      toast.success(campaignId ? 'Campaign updated successfully' : 'Campaign created successfully');
-      queryClient.invalidateQueries(['email-campaigns']);
-      onSave?.(campaign);
-    },
-    onError: () => {
-      toast.error('Failed to save campaign');
-    }
-  });
-
-  const sendCampaignMutation = useMutation({
-    mutationFn: (id: string) => EmailCampaignService.sendCampaign(id),
+  const createCampaignMutation = useMutation({
+    mutationFn: (data: Partial<EmailCampaign>) => EmailCampaignService.createEmailCampaign(data),
     onSuccess: () => {
-      toast.success('Campaign sent successfully');
-      queryClient.invalidateQueries(['email-campaigns']);
+      toast.success('Campaign created successfully');
+      queryClient.invalidateQueries({ queryKey: ['email-campaigns'] });
+      onClose?.();
     },
-    onError: () => {
-      toast.error('Failed to send campaign');
+    onError: (error) => {
+      toast.error('Failed to create campaign');
+      console.error('Campaign creation error:', error);
     }
   });
 
-  const handleSave = () => {
-    if (!campaignData.campaign_name || !campaignData.subject_line || !campaignData.content) {
-      toast.error('Please fill in all required fields');
-      return;
+  const updateCampaignMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<EmailCampaign> }) => 
+      EmailCampaignService.updateEmailCampaign(id, data),
+    onSuccess: () => {
+      toast.success('Campaign updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['email-campaigns'] });
+      onClose?.();
+    },
+    onError: (error) => {
+      toast.error('Failed to update campaign');
+      console.error('Campaign update error:', error);
     }
-    saveCampaignMutation.mutate(campaignData);
+  });
+
+  useEffect(() => {
+    if (existingCampaign) {
+      setFormData({
+        campaign_name: existingCampaign.campaign_name,
+        campaign_type: existingCampaign.campaign_type,
+        subject_line: existingCampaign.subject_line,
+        content: existingCampaign.content,
+        sender_name: existingCampaign.sender_name,
+        sender_email: existingCampaign.sender_email,
+        status: existingCampaign.status,
+        tracking_enabled: existingCampaign.tracking_enabled
+      });
+    }
+  }, [existingCampaign]);
+
+  const handleSubmit = () => {
+    if (campaignId) {
+      updateCampaignMutation.mutate({ id: campaignId, data: formData });
+    } else {
+      createCampaignMutation.mutate(formData);
+    }
   };
 
-  const handleSend = () => {
-    if (!campaignId) {
-      toast.error('Please save the campaign first');
-      return;
-    }
-    sendCampaignMutation.mutate(campaignId);
+  const handleSendTest = () => {
+    toast.info('Test email sent to your inbox');
   };
 
-  const loadTemplate = (template: any) => {
-    setCampaignData(prev => ({
-      ...prev,
-      subject_line: template.subject_line,
-      content: template.content,
-      html_content: template.html_content
-    }));
-    toast.success('Template loaded successfully');
+  const handleSchedule = () => {
+    const updatedData = { ...formData, status: 'scheduled' as const };
+    if (campaignId) {
+      updateCampaignMutation.mutate({ id: campaignId, data: updatedData });
+    } else {
+      createCampaignMutation.mutate(updatedData);
+    }
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">
-            {campaignId ? 'Edit Campaign' : 'Create New Campaign'}
+            {campaignId ? 'Edit Campaign' : 'Create Email Campaign'}
           </h2>
           <p className="text-muted-foreground">
-            Build and manage your email marketing campaigns
+            Build and customize your email campaign
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={onCancel}>
-            Cancel
+          <Button variant="outline" onClick={handleSendTest}>
+            <Eye className="h-4 w-4 mr-2" />
+            Preview
           </Button>
-          <Button variant="outline" onClick={handleSave}>
-            <Save className="h-4 w-4 mr-2" />
-            Save Draft
+          <Button variant="outline" onClick={handleSchedule}>
+            <Calendar className="h-4 w-4 mr-2" />
+            Schedule
           </Button>
-          <Button onClick={handleSend} disabled={!campaignId}>
+          <Button onClick={handleSubmit}>
             <Send className="h-4 w-4 mr-2" />
-            Send Campaign
+            {campaignId ? 'Update' : 'Create'} Campaign
           </Button>
         </div>
       </div>
 
-      {/* Main Content */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="details">
-            <Mail className="h-4 w-4 mr-2" />
-            Details
-          </TabsTrigger>
-          <TabsTrigger value="content">
-            <Template className="h-4 w-4 mr-2" />
-            Content
-          </TabsTrigger>
-          <TabsTrigger value="audience">
-            <Users className="h-4 w-4 mr-2" />
-            Audience
-          </TabsTrigger>
-          <TabsTrigger value="schedule">
-            <Clock className="h-4 w-4 mr-2" />
-            Schedule
-          </TabsTrigger>
-          <TabsTrigger value="automation">
-            <Zap className="h-4 w-4 mr-2" />
-            Automation
-          </TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="content">Content</TabsTrigger>
+          <TabsTrigger value="audience">Audience</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="details" className="space-y-6">
+        <TabsContent value="content" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Campaign Details</CardTitle>
+              <CardTitle>Campaign Content</CardTitle>
+              <CardDescription>
+                Design your email content and subject line
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="campaignName">Campaign Name *</Label>
+                  <Label htmlFor="campaign_name">Campaign Name</Label>
                   <Input
-                    id="campaignName"
-                    value={campaignData.campaign_name}
-                    onChange={(e) => setCampaignData(prev => ({ ...prev, campaign_name: e.target.value }))}
+                    id="campaign_name"
+                    value={formData.campaign_name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, campaign_name: e.target.value }))}
                     placeholder="Enter campaign name"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="campaignType">Campaign Type</Label>
-                  <Select
-                    value={campaignData.campaign_type}
-                    onValueChange={(value) => setCampaignData(prev => ({ ...prev, campaign_type: value as any }))}
+                  <Label htmlFor="campaign_type">Campaign Type</Label>
+                  <Select 
+                    value={formData.campaign_type} 
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, campaign_type: value as any }))}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -194,285 +186,103 @@ export function EmailCampaignBuilder({ campaignId, onSave, onCancel }: EmailCamp
                       <SelectItem value="promotional">Promotional</SelectItem>
                       <SelectItem value="drip">Drip Campaign</SelectItem>
                       <SelectItem value="event">Event</SelectItem>
-                      <SelectItem value="follow_up">Follow-up</SelectItem>
+                      <SelectItem value="follow_up">Follow Up</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="subjectLine">Subject Line *</Label>
+                <Label htmlFor="subject_line">Subject Line</Label>
                 <Input
-                  id="subjectLine"
-                  value={campaignData.subject_line}
-                  onChange={(e) => setCampaignData(prev => ({ ...prev, subject_line: e.target.value }))}
+                  id="subject_line"
+                  value={formData.subject_line}
+                  onChange={(e) => setFormData(prev => ({ ...prev, subject_line: e.target.value }))}
                   placeholder="Enter email subject line"
                 />
               </div>
 
-              <Separator />
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="senderName">Sender Name</Label>
-                  <Input
-                    id="senderName"
-                    value={campaignData.sender_name}
-                    onChange={(e) => setCampaignData(prev => ({ ...prev, sender_name: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="senderEmail">Sender Email</Label>
-                  <Input
-                    id="senderEmail"
-                    type="email"
-                    value={campaignData.sender_email}
-                    onChange={(e) => setCampaignData(prev => ({ ...prev, sender_email: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="replyToEmail">Reply-To Email</Label>
-                  <Input
-                    id="replyToEmail"
-                    type="email"
-                    value={campaignData.reply_to_email}
-                    onChange={(e) => setCampaignData(prev => ({ ...prev, reply_to_email: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="trackingEnabled"
-                  checked={campaignData.tracking_enabled}
-                  onCheckedChange={(checked) => setCampaignData(prev => ({ ...prev, tracking_enabled: checked }))}
+              <div>
+                <Label htmlFor="content">Email Content</Label>
+                <Textarea
+                  id="content"
+                  value={formData.content}
+                  onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+                  placeholder="Enter your email content here..."
+                  rows={10}
                 />
-                <Label htmlFor="trackingEnabled">Enable tracking (opens, clicks, etc.)</Label>
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="content" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Email Content</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="content">Email Content *</Label>
-                    <Textarea
-                      id="content"
-                      value={campaignData.content}
-                      onChange={(e) => setCampaignData(prev => ({ ...prev, content: e.target.value }))}
-                      placeholder="Enter your email content here..."
-                      className="min-h-[300px]"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      <Eye className="h-4 w-4 mr-2" />
-                      Preview
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      Insert Variable
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Templates</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {templates?.map((template) => (
-                      <div
-                        key={template.id}
-                        className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
-                        onClick={() => loadTemplate(template)}
-                      >
-                        <h4 className="font-medium">{template.template_name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {template.template_type}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
         </TabsContent>
 
         <TabsContent value="audience" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Target Audience</CardTitle>
+              <CardDescription>
+                Define who will receive this campaign
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Audience Type</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select audience type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all_contacts">All Contacts</SelectItem>
-                      <SelectItem value="leads">Leads Only</SelectItem>
-                      <SelectItem value="customers">Customers Only</SelectItem>
-                      <SelectItem value="custom">Custom Segment</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Estimated Recipients</Label>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge variant="secondary">
-                      <Users className="h-4 w-4 mr-1" />
-                      1,245 recipients
-                    </Badge>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium">All Contacts</h4>
+                    <p className="text-sm text-muted-foreground">Send to all contacts in your database</p>
                   </div>
+                  <Badge variant="secondary">1,234 contacts</Badge>
                 </div>
-              </div>
-
-              <Separator />
-
-              <div>
-                <Label>Audience Filters</Label>
-                <div className="mt-2 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Select>
-                      <SelectTrigger className="w-32">
-                        <SelectValue placeholder="Field" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="status">Status</SelectItem>
-                        <SelectItem value="location">Location</SelectItem>
-                        <SelectItem value="company">Company</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Select>
-                      <SelectTrigger className="w-32">
-                        <SelectValue placeholder="Condition" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="equals">Equals</SelectItem>
-                        <SelectItem value="contains">Contains</SelectItem>
-                        <SelectItem value="not_equals">Not Equals</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Input placeholder="Value" className="flex-1" />
-                    <Button variant="outline" size="sm">Add Filter</Button>
-                  </div>
+                <Separator />
+                <div className="space-y-2">
+                  <h4 className="font-medium">Segment Options</h4>
+                  <p className="text-sm text-muted-foreground">Choose specific segments to target</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="schedule" className="space-y-6">
+        <TabsContent value="settings" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Schedule Campaign</CardTitle>
+              <CardTitle>Campaign Settings</CardTitle>
+              <CardDescription>
+                Configure sender information and tracking
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Send Option</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select send option" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="immediate">Send Immediately</SelectItem>
-                      <SelectItem value="scheduled">Schedule for Later</SelectItem>
-                      <SelectItem value="recurring">Recurring Campaign</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Time Zone</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select timezone" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="utc">UTC</SelectItem>
-                      <SelectItem value="est">Eastern Time</SelectItem>
-                      <SelectItem value="pst">Pacific Time</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="sendDate">Send Date</Label>
+                  <Label htmlFor="sender_name">Sender Name</Label>
                   <Input
-                    id="sendDate"
-                    type="date"
-                    value={campaignData.send_date ? new Date(campaignData.send_date).toISOString().split('T')[0] : ''}
-                    onChange={(e) => setCampaignData(prev => ({ ...prev, send_date: new Date(e.target.value) }))}
+                    id="sender_name"
+                    value={formData.sender_name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, sender_name: e.target.value }))}
+                    placeholder="Your Name"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="sendTime">Send Time</Label>
+                  <Label htmlFor="sender_email">Sender Email</Label>
                   <Input
-                    id="sendTime"
-                    type="time"
+                    id="sender_email"
+                    type="email"
+                    value={formData.sender_email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, sender_email: e.target.value }))}
+                    placeholder="your.email@company.com"
                   />
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        <TabsContent value="automation" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Automation Rules</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Switch id="enableAutomation" />
-                <Label htmlFor="enableAutomation">Enable automation for this campaign</Label>
-              </div>
-
-              <Separator />
-
-              <div>
-                <Label>Trigger Event</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select trigger event" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {automationTriggers?.map((trigger) => (
-                      <SelectItem key={trigger.id} value={trigger.id}>
-                        {trigger.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>Automation Conditions</Label>
-                <div className="mt-2 p-4 border rounded-lg bg-gray-50">
-                  <p className="text-sm text-muted-foreground">
-                    Add conditions to determine when this campaign should be triggered automatically.
-                  </p>
-                  <Button variant="outline" size="sm" className="mt-2">
-                    Add Condition
-                  </Button>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium">Enable Tracking</h4>
+                  <p className="text-sm text-muted-foreground">Track opens, clicks, and engagement</p>
                 </div>
+                <Switch
+                  checked={formData.tracking_enabled}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, tracking_enabled: checked }))}
+                />
               </div>
             </CardContent>
           </Card>

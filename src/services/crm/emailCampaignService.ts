@@ -1,5 +1,4 @@
-
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface EmailCampaign {
   id: string;
@@ -257,6 +256,52 @@ export class EmailCampaignService {
     } catch (error) {
       console.error('Error duplicating campaign:', error);
       throw error;
+    }
+  }
+
+  static async exportCampaignData(campaignIds: string[]): Promise<any> {
+    try {
+      const { data, error } = await supabase
+        .from('email_campaigns')
+        .select('*')
+        .in('id', campaignIds);
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error exporting campaign data:', error);
+      throw error;
+    }
+  }
+
+  static async getDefaultEmailTemplates(): Promise<CampaignTemplate[]> {
+    try {
+      // Return some default templates
+      return [
+        {
+          id: 'default-1',
+          template_name: 'Welcome Email',
+          template_type: 'welcome',
+          subject_line: 'Welcome to {{company_name}}!',
+          content: 'Thank you for joining us, {{first_name}}!',
+          variables: ['company_name', 'first_name'],
+          created_at: new Date(),
+          created_by: 'system'
+        },
+        {
+          id: 'default-2',
+          template_name: 'Newsletter',
+          template_type: 'newsletter',
+          subject_line: 'Monthly Newsletter - {{month}}',
+          content: 'Here are the latest updates...',
+          variables: ['month'],
+          created_at: new Date(),
+          created_by: 'system'
+        }
+      ];
+    } catch (error) {
+      console.error('Error fetching default templates:', error);
+      return [];
     }
   }
 

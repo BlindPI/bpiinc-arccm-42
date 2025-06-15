@@ -1,40 +1,33 @@
+
 import React from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
-import { useAuth } from './contexts/AuthContext';
-import { LoginPage } from './pages/LoginPage';
-import { RegistrationPage } from './pages/RegistrationPage';
-import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
-import { ResetPasswordPage } from './pages/ResetPasswordPage';
-import { DashboardLayout } from './layouts/DashboardLayout';
-import { HomePage } from './pages/HomePage';
-import { ProtectedRoute } from './components/ProtectedRoute';
-import { SettingsPage } from './pages/SettingsPage';
-import { UsersPage } from './pages/UsersPage';
-import { RolesPage } from './pages/RolesPage';
-import { PermissionsPage } from './pages/PermissionsPage';
-import { AuditLogsPage } from './pages/AuditLogsPage';
-import { SystemLogsPage } from './pages/SystemLogsPage';
-import { ErrorLogsPage } from './pages/ErrorLogsPage';
-import { ConfigurationPage } from './pages/ConfigurationPage';
+import { useAuth } from '@/contexts/AuthContext';
+import { SignIn } from '@/pages/SignIn';
+import { SignUp } from '@/pages/SignUp';
+import { DashboardLayout } from '@/components/DashboardLayout';
+import { Dashboard } from '@/pages/Dashboard';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { Settings } from '@/pages/Settings';
+import { UserManagement } from '@/pages/UserManagement';
+import { Profile } from '@/pages/Profile';
+import { ConfigurationPage } from '@/pages/Settings';
 import CRM from '@/pages/CRM';
 import EmailCampaigns from '@/pages/EmailCampaigns';
 import { BulkCRMOperations } from '@/components/crm/bulk/BulkCRMOperations';
 
 export function AppRoutes() {
-  const { isLoggedIn } = useAuth();
+  const { user } = useAuth();
   const location = useLocation();
 
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegistrationPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/auth/signin" element={<SignIn />} />
+      <Route path="/auth/signup" element={<SignUp />} />
       
       <Route path="/" element={
         <ProtectedRoute>
           <DashboardLayout>
-            <HomePage />
+            <Dashboard />
           </DashboardLayout>
         </ProtectedRoute>
       } />
@@ -42,7 +35,7 @@ export function AppRoutes() {
       <Route path="/settings" element={
         <ProtectedRoute>
           <DashboardLayout>
-            <SettingsPage />
+            <Settings />
           </DashboardLayout>
         </ProtectedRoute>
       } />
@@ -50,47 +43,15 @@ export function AppRoutes() {
       <Route path="/users" element={
         <ProtectedRoute>
           <DashboardLayout>
-            <UsersPage />
+            <UserManagement />
           </DashboardLayout>
         </ProtectedRoute>
       } />
 
-      <Route path="/roles" element={
+      <Route path="/profile" element={
         <ProtectedRoute>
           <DashboardLayout>
-            <RolesPage />
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-
-      <Route path="/permissions" element={
-        <ProtectedRoute>
-          <DashboardLayout>
-            <PermissionsPage />
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-
-      <Route path="/audit-logs" element={
-        <ProtectedRoute>
-          <DashboardLayout>
-            <AuditLogsPage />
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-
-      <Route path="/system-logs" element={
-        <ProtectedRoute>
-          <DashboardLayout>
-            <SystemLogsPage />
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-
-      <Route path="/error-logs" element={
-        <ProtectedRoute>
-          <DashboardLayout>
-            <ErrorLogsPage />
+            <Profile />
           </DashboardLayout>
         </ProtectedRoute>
       } />
@@ -128,7 +89,7 @@ export function AppRoutes() {
       } />
 
       <Route path="*" element={
-        isLoggedIn ? (
+        user ? (
           <ProtectedRoute>
             <DashboardLayout>
               <div>
@@ -138,7 +99,7 @@ export function AppRoutes() {
             </DashboardLayout>
           </ProtectedRoute>
         ) : (
-          <LoginPage />
+          <SignIn />
         )
       } />
     </Routes>
