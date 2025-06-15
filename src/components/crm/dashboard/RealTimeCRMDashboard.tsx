@@ -97,7 +97,7 @@ export function RealTimeCRMDashboard() {
       </div>
 
       {/* Quick Stats Cards */}
-      <CRMStatsCards stats={crmStats} />
+      <CRMStatsCards />
 
       {/* Main Dashboard Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
