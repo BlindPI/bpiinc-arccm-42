@@ -29,27 +29,23 @@ export function LeadConversionModal({ isOpen, onClose, lead, onSuccess }: LeadCo
 
   const convertLeadMutation = useMutation({
     mutationFn: async (data: any) => {
-      // Convert lead to opportunity
       const opportunityData = {
         lead_id: lead.id,
         account_id: lead.account_id,
         contact_id: lead.contact_id,
         opportunity_name: data.opportunity_name,
-        opportunity_status: 'open',
+        opportunity_status: 'open' as const,
         estimated_value: parseFloat(data.estimated_value) || 0,
         close_date: data.close_date,
         stage: data.stage,
-        probability: 25, // Default for qualification stage
-        notes: data.notes,
-        created_at: new Date().toISOString()
+        probability: 25,
+        notes: data.notes
       };
 
       const opportunity = await CRMService.createOpportunity(opportunityData);
       
-      // Update lead status to converted
       await CRMService.updateLead(lead.id, { 
         lead_status: 'converted',
-        converted_at: new Date().toISOString(),
         converted_opportunity_id: opportunity.id
       });
 

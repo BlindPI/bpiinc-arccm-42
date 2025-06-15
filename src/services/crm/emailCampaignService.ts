@@ -61,27 +61,47 @@ export class EmailCampaignService {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      // Transform the data to match our interface
+      return (data || []).map(campaign => ({
+        ...campaign,
+        campaign_type: campaign.campaign_type as EmailCampaign['campaign_type'],
+        status: campaign.status as EmailCampaign['status'],
+        created_at: new Date(campaign.created_at),
+        updated_at: new Date(campaign.updated_at),
+        send_date: campaign.send_date ? new Date(campaign.send_date) : undefined
+      }));
     } catch (error) {
       console.error('Error fetching email campaigns:', error);
       return [];
     }
   }
 
-  static async createEmailCampaign(campaign: Partial<EmailCampaign>): Promise<EmailCampaign> {
+  static async createEmailCampaign(campaign: Omit<EmailCampaign, 'id' | 'created_at' | 'updated_at'>): Promise<EmailCampaign> {
     try {
+      const campaignData = {
+        ...campaign,
+        send_date: campaign.send_date?.toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
       const { data, error } = await supabase
         .from('email_campaigns')
-        .insert({
-          ...campaign,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
+        .insert(campaignData)
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      
+      return {
+        ...data,
+        campaign_type: data.campaign_type as EmailCampaign['campaign_type'],
+        status: data.status as EmailCampaign['status'],
+        created_at: new Date(data.created_at),
+        updated_at: new Date(data.updated_at),
+        send_date: data.send_date ? new Date(data.send_date) : undefined
+      };
     } catch (error) {
       console.error('Error creating email campaign:', error);
       throw error;
@@ -90,18 +110,29 @@ export class EmailCampaignService {
 
   static async updateEmailCampaign(id: string, updates: Partial<EmailCampaign>): Promise<EmailCampaign> {
     try {
+      const updateData = {
+        ...updates,
+        send_date: updates.send_date?.toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
       const { data, error } = await supabase
         .from('email_campaigns')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      
+      return {
+        ...data,
+        campaign_type: data.campaign_type as EmailCampaign['campaign_type'],
+        status: data.status as EmailCampaign['status'],
+        created_at: new Date(data.created_at),
+        updated_at: new Date(data.updated_at),
+        send_date: data.send_date ? new Date(data.send_date) : undefined
+      };
     } catch (error) {
       console.error('Error updating email campaign:', error);
       throw error;
@@ -130,26 +161,36 @@ export class EmailCampaignService {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      return (data || []).map(template => ({
+        ...template,
+        created_at: new Date(template.created_at)
+      }));
     } catch (error) {
       console.error('Error fetching campaign templates:', error);
       return [];
     }
   }
 
-  static async createCampaignTemplate(template: Partial<CampaignTemplate>): Promise<CampaignTemplate> {
+  static async createCampaignTemplate(template: Omit<CampaignTemplate, 'id' | 'created_at'>): Promise<CampaignTemplate> {
     try {
+      const templateData = {
+        ...template,
+        created_at: new Date().toISOString()
+      };
+
       const { data, error } = await supabase
         .from('email_templates')
-        .insert({
-          ...template,
-          created_at: new Date().toISOString()
-        })
+        .insert(templateData)
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      
+      return {
+        ...data,
+        created_at: new Date(data.created_at)
+      };
     } catch (error) {
       console.error('Error creating campaign template:', error);
       throw error;
@@ -174,7 +215,6 @@ export class EmailCampaignService {
 
   static async getCampaignPerformanceSummary(): Promise<any> {
     try {
-      // Mock data for now - in real implementation, this would calculate from actual data
       return {
         totalCampaigns: 24,
         activeCampaigns: 3,
@@ -191,13 +231,8 @@ export class EmailCampaignService {
 
   static async sendCampaign(campaignId: string): Promise<void> {
     try {
-      // Update campaign status to sending
       await this.updateEmailCampaign(campaignId, { status: 'sending' });
-      
-      // In a real implementation, this would trigger the email sending process
       console.log('Sending campaign:', campaignId);
-      
-      // Simulate sending delay and update status
       setTimeout(async () => {
         await this.updateEmailCampaign(campaignId, { status: 'sent' });
       }, 2000);
@@ -227,30 +262,26 @@ export class EmailCampaignService {
 
   static async duplicateCampaign(campaignId: string): Promise<EmailCampaign> {
     try {
-      const { data: originalCampaign, error } = await supabase
-        .from('email_campaigns')
-        .select('*')
-        .eq('id', campaignId)
-        .single();
-
-      if (error) throw error;
+      const campaigns = await this.getEmailCampaigns();
+      const originalCampaign = campaigns.find(c => c.id === campaignId);
+      
+      if (!originalCampaign) throw new Error('Campaign not found');
 
       const duplicatedCampaign = {
-        ...originalCampaign,
         campaign_name: `${originalCampaign.campaign_name} (Copy)`,
-        status: 'draft',
-        send_date: null,
-        total_recipients: 0,
-        delivered_count: 0,
-        opened_count: 0,
-        clicked_count: 0,
-        bounced_count: 0,
-        unsubscribed_count: 0
+        campaign_type: originalCampaign.campaign_type,
+        status: 'draft' as const,
+        subject_line: originalCampaign.subject_line,
+        content: originalCampaign.content,
+        html_content: originalCampaign.html_content,
+        sender_name: originalCampaign.sender_name,
+        sender_email: originalCampaign.sender_email,
+        reply_to_email: originalCampaign.reply_to_email,
+        target_audience: originalCampaign.target_audience,
+        created_by: originalCampaign.created_by,
+        tracking_enabled: originalCampaign.tracking_enabled,
+        automation_rules: originalCampaign.automation_rules
       };
-
-      delete duplicatedCampaign.id;
-      delete duplicatedCampaign.created_at;
-      delete duplicatedCampaign.updated_at;
 
       return await this.createEmailCampaign(duplicatedCampaign);
     } catch (error) {
@@ -261,13 +292,8 @@ export class EmailCampaignService {
 
   static async exportCampaignData(campaignIds: string[]): Promise<any> {
     try {
-      const { data, error } = await supabase
-        .from('email_campaigns')
-        .select('*')
-        .in('id', campaignIds);
-
-      if (error) throw error;
-      return data;
+      const campaigns = await this.getEmailCampaigns();
+      return campaigns.filter(c => campaignIds.includes(c.id));
     } catch (error) {
       console.error('Error exporting campaign data:', error);
       throw error;
@@ -276,7 +302,6 @@ export class EmailCampaignService {
 
   static async getDefaultEmailTemplates(): Promise<CampaignTemplate[]> {
     try {
-      // Return some default templates
       return [
         {
           id: 'default-1',
@@ -307,7 +332,6 @@ export class EmailCampaignService {
 
   static async getAutomationTriggers(): Promise<any[]> {
     try {
-      // Mock data for automation triggers
       return [
         {
           id: '1',

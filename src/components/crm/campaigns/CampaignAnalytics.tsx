@@ -11,8 +11,7 @@ export interface CampaignAnalyticsProps {
   };
 }
 
-export function CampaignAnalytics({ analytics }: CampaignAnalyticsProps) {
-  // Mock data for demonstration
+export function CampaignAnalytics({ analytics = {} }: CampaignAnalyticsProps) {
   const performanceData = analytics?.performanceData || [
     { name: 'Newsletter', sent: 1200, opened: 480, clicked: 96, converted: 12 },
     { name: 'Promotional', sent: 800, opened: 280, clicked: 45, converted: 8 },
@@ -29,7 +28,6 @@ export function CampaignAnalytics({ analytics }: CampaignAnalyticsProps) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Campaign Performance */}
         <Card>
           <CardHeader>
             <CardTitle>Campaign Performance</CardTitle>
@@ -50,7 +48,6 @@ export function CampaignAnalytics({ analytics }: CampaignAnalyticsProps) {
           </CardContent>
         </Card>
 
-        {/* Engagement Trends */}
         <Card>
           <CardHeader>
             <CardTitle>Engagement Trends</CardTitle>
@@ -71,7 +68,6 @@ export function CampaignAnalytics({ analytics }: CampaignAnalyticsProps) {
         </Card>
       </div>
 
-      {/* Summary Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-6">

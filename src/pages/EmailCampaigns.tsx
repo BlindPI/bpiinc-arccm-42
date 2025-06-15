@@ -91,7 +91,6 @@ export default function EmailCampaigns() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Email Campaigns</h1>
@@ -105,7 +104,6 @@ export default function EmailCampaigns() {
         </Button>
       </div>
 
-      {/* Performance Summary */}
       {performanceSummary && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
@@ -155,7 +153,6 @@ export default function EmailCampaigns() {
         </div>
       )}
 
-      {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
@@ -250,7 +247,7 @@ export default function EmailCampaigns() {
         </TabsContent>
 
         <TabsContent value="analytics">
-          <CampaignAnalytics analytics={{}} />
+          <CampaignAnalytics />
         </TabsContent>
 
         <TabsContent value="templates">
