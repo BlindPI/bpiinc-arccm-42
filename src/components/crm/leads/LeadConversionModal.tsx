@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -33,12 +32,13 @@ export function LeadConversionModal({ isOpen, onClose, lead, onSuccess }: LeadCo
       let contactId = lead.contact_id;
       if (!contactId) {
         const contact = await CRMService.createContact({
-          first_name: lead.first_name,
-          last_name: lead.last_name,
+          first_name: lead.first_name || '',
+          last_name: lead.last_name || '',
           email: lead.email,
           phone: lead.phone,
           title: lead.job_title,
-          account_id: lead.account_id
+          account_id: lead.account_id,
+          contact_status: 'active' as const
         });
         contactId = contact.id;
       }
@@ -48,7 +48,8 @@ export function LeadConversionModal({ isOpen, onClose, lead, onSuccess }: LeadCo
       if (!accountId && lead.company_name) {
         const account = await CRMService.createAccount({
           account_name: lead.company_name,
-          account_type: 'prospect'
+          account_type: 'prospect' as const,
+          account_status: 'active' as const
         });
         accountId = account.id;
       }
@@ -70,8 +71,7 @@ export function LeadConversionModal({ isOpen, onClose, lead, onSuccess }: LeadCo
       const opportunity = await CRMService.createOpportunity(opportunityData);
       
       await CRMService.updateLead(lead.id, { 
-        lead_status: 'converted',
-        converted_opportunity_id: opportunity.id
+        lead_status: 'converted'
       });
 
       return opportunity;
