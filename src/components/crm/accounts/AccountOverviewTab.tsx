@@ -157,9 +157,7 @@ export function AccountOverviewTab({ account }: AccountOverviewTabProps) {
                 <div className="w-2 h-2 bg-green-600 rounded-full mt-2"></div>
                 <div>
                   <p className="font-medium">Converted from Lead</p>
-                  <p className="text-sm text-gray-500">
-                    {account.lead_conversion_date ? new Date(account.lead_conversion_date).toLocaleDateString() : 'Date not available'}
-                  </p>
+                  <p className="text-sm text-gray-500">Conversion completed</p>
                 </div>
               </div>
             )}
