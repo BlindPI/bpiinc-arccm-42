@@ -9,60 +9,59 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CRMService } from '@/services/crm/crmService';
 import { toast } from 'sonner';
-import type { Lead } from '@/types/crm';
+import type { Contact } from '@/types/crm';
 
-interface CreateLeadModalProps {
+interface CreateContactModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  lead?: Lead | null;
+  contact?: Contact | null;
   onSuccess?: () => void;
 }
 
-export function CreateLeadModal({ open, onOpenChange, lead, onSuccess }: CreateLeadModalProps) {
+export function CreateContactModal({ open, onOpenChange, contact, onSuccess }: CreateContactModalProps) {
   const queryClient = useQueryClient();
-  const isEditing = !!lead;
+  const isEditing = !!contact;
 
   const [formData, setFormData] = useState({
-    first_name: lead?.first_name || '',
-    last_name: lead?.last_name || '',
-    email: lead?.email || '',
-    phone: lead?.phone || '',
-    company_name: lead?.company_name || '',
-    job_title: lead?.job_title || '',
-    lead_status: lead?.lead_status || 'new',
-    lead_source: lead?.lead_source || 'website',
-    lead_score: lead?.lead_score || 0,
-    notes: lead?.notes || ''
+    first_name: contact?.first_name || '',
+    last_name: contact?.last_name || '',
+    email: contact?.email || '',
+    phone: contact?.phone || '',
+    title: contact?.title || '',
+    department: contact?.department || '',
+    contact_status: contact?.contact_status || 'active',
+    preferred_contact_method: contact?.preferred_contact_method || 'email',
+    notes: contact?.notes || ''
   });
 
-  const { mutate: createLead, isPending: isCreating } = useMutation({
-    mutationFn: (data: Omit<Lead, 'id' | 'created_at' | 'updated_at'>) => 
-      CRMService.createLead(data),
+  const { mutate: createContact, isPending: isCreating } = useMutation({
+    mutationFn: (data: Omit<Contact, 'id' | 'created_at' | 'updated_at'>) => 
+      CRMService.createContact(data),
     onSuccess: () => {
-      toast.success(isEditing ? 'Lead updated successfully' : 'Lead created successfully');
-      queryClient.invalidateQueries({ queryKey: ['crm-leads'] });
+      toast.success('Contact created successfully');
+      queryClient.invalidateQueries({ queryKey: ['crm-contacts'] });
       onOpenChange(false);
       onSuccess?.();
       resetForm();
     },
     onError: (error) => {
-      toast.error('Failed to save lead');
-      console.error('Error saving lead:', error);
+      toast.error('Failed to create contact');
+      console.error('Error creating contact:', error);
     }
   });
 
-  const { mutate: updateLead, isPending: isUpdating } = useMutation({
-    mutationFn: (data: Partial<Lead>) => 
-      CRMService.updateLead(lead!.id, data),
+  const { mutate: updateContact, isPending: isUpdating } = useMutation({
+    mutationFn: (data: Partial<Contact>) => 
+      CRMService.updateContact(contact!.id, data),
     onSuccess: () => {
-      toast.success('Lead updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['crm-leads'] });
+      toast.success('Contact updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['crm-contacts'] });
       onOpenChange(false);
       onSuccess?.();
     },
     onError: (error) => {
-      toast.error('Failed to update lead');
-      console.error('Error updating lead:', error);
+      toast.error('Failed to update contact');
+      console.error('Error updating contact:', error);
     }
   });
 
@@ -72,11 +71,10 @@ export function CreateLeadModal({ open, onOpenChange, lead, onSuccess }: CreateL
       last_name: '',
       email: '',
       phone: '',
-      company_name: '',
-      job_title: '',
-      lead_status: 'new',
-      lead_source: 'website',
-      lead_score: 0,
+      title: '',
+      department: '',
+      contact_status: 'active',
+      preferred_contact_method: 'email',
       notes: ''
     });
   };
@@ -84,24 +82,24 @@ export function CreateLeadModal({ open, onOpenChange, lead, onSuccess }: CreateL
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.first_name.trim() || !formData.last_name.trim() || !formData.email.trim()) {
-      toast.error('Please fill in all required fields');
+    if (!formData.email.trim()) {
+      toast.error('Email is required');
       return;
     }
 
-    const leadData = {
+    const contactData = {
       ...formData,
       email: formData.email,
     };
 
     if (isEditing) {
-      updateLead(leadData);
+      updateContact(contactData);
     } else {
-      createLead(leadData);
+      createContact(contactData);
     }
   };
 
-  const handleChange = (field: keyof typeof formData, value: string | number) => {
+  const handleChange = (field: keyof typeof formData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -109,28 +107,26 @@ export function CreateLeadModal({ open, onOpenChange, lead, onSuccess }: CreateL
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Edit Lead' : 'Create New Lead'}</DialogTitle>
+          <DialogTitle>{isEditing ? 'Edit Contact' : 'Create New Contact'}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="first_name">First Name *</Label>
+              <Label htmlFor="first_name">First Name</Label>
               <Input
                 id="first_name"
                 value={formData.first_name}
                 onChange={(e) => handleChange('first_name', e.target.value)}
-                required
               />
             </div>
 
             <div>
-              <Label htmlFor="last_name">Last Name *</Label>
+              <Label htmlFor="last_name">Last Name</Label>
               <Input
                 id="last_name"
                 value={formData.last_name}
                 onChange={(e) => handleChange('last_name', e.target.value)}
-                required
               />
             </div>
 
@@ -155,53 +151,46 @@ export function CreateLeadModal({ open, onOpenChange, lead, onSuccess }: CreateL
             </div>
 
             <div>
-              <Label htmlFor="company_name">Company</Label>
+              <Label htmlFor="title">Title</Label>
               <Input
-                id="company_name"
-                value={formData.company_name}
-                onChange={(e) => handleChange('company_name', e.target.value)}
+                id="title"
+                value={formData.title}
+                onChange={(e) => handleChange('title', e.target.value)}
               />
             </div>
 
             <div>
-              <Label htmlFor="job_title">Job Title</Label>
+              <Label htmlFor="department">Department</Label>
               <Input
-                id="job_title"
-                value={formData.job_title}
-                onChange={(e) => handleChange('job_title', e.target.value)}
+                id="department"
+                value={formData.department}
+                onChange={(e) => handleChange('department', e.target.value)}
               />
             </div>
 
             <div>
-              <Label htmlFor="lead_status">Status</Label>
-              <Select value={formData.lead_status} onValueChange={(value) => handleChange('lead_status', value)}>
+              <Label htmlFor="contact_status">Status</Label>
+              <Select value={formData.contact_status} onValueChange={(value) => handleChange('contact_status', value)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="new">New</SelectItem>
-                  <SelectItem value="contacted">Contacted</SelectItem>
-                  <SelectItem value="qualified">Qualified</SelectItem>
-                  <SelectItem value="converted">Converted</SelectItem>
-                  <SelectItem value="lost">Lost</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <Label htmlFor="lead_source">Source</Label>
-              <Select value={formData.lead_source} onValueChange={(value) => handleChange('lead_source', value)}>
+              <Label htmlFor="preferred_contact_method">Preferred Contact Method</Label>
+              <Select value={formData.preferred_contact_method} onValueChange={(value) => handleChange('preferred_contact_method', value)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="website">Website</SelectItem>
-                  <SelectItem value="referral">Referral</SelectItem>
-                  <SelectItem value="cold_call">Cold Call</SelectItem>
                   <SelectItem value="email">Email</SelectItem>
-                  <SelectItem value="social_media">Social Media</SelectItem>
-                  <SelectItem value="trade_show">Trade Show</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  <SelectItem value="phone">Phone</SelectItem>
+                  <SelectItem value="mobile">Mobile</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -222,7 +211,7 @@ export function CreateLeadModal({ open, onOpenChange, lead, onSuccess }: CreateL
               Cancel
             </Button>
             <Button type="submit" disabled={isCreating || isUpdating}>
-              {isCreating || isUpdating ? 'Saving...' : isEditing ? 'Update Lead' : 'Create Lead'}
+              {isCreating || isUpdating ? 'Saving...' : isEditing ? 'Update Contact' : 'Create Contact'}
             </Button>
           </div>
         </form>
