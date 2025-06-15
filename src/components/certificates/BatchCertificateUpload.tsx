@@ -1,9 +1,55 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TemplateDownloadOptions } from './TemplateDownloadOptions';
 import { BatchUploadProvider } from './batch-upload/BatchCertificateContext';
 import { BatchUploadForm } from './batch-upload/BatchUploadForm';
+import { useState } from 'react';
+import { ProcessingStatus } from '@/types/batch-upload';
 
 export function BatchCertificateUpload() {
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+  const [issueDate, setIssueDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [isValidated, setIsValidated] = useState<boolean>(false);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
+
+  // Calculate expiry date based on issue date (default to 3 years)
+  const calculateExpiryDate = (issueDate: string) => {
+    const issue = new Date(issueDate);
+    const expiry = new Date(issue);
+    expiry.setFullYear(expiry.getFullYear() + 3);
+    return expiry.toISOString().split('T')[0];
+  };
+
+  const expiryDate = issueDate ? calculateExpiryDate(issueDate) : '';
+
+  const handleFileUpload = async (file: File) => {
+    setIsUploading(true);
+    setProcessingStatus({
+      total: 0,
+      processed: 0,
+      successful: 0,
+      failed: 0,
+      errors: []
+    });
+
+    try {
+      // File processing logic would go here
+      console.log('Processing file:', file.name);
+      
+      // Reset processing status after completion
+      setTimeout(() => {
+        setIsUploading(false);
+        setProcessingStatus(null);
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error processing file:', error);
+      setIsUploading(false);
+      setProcessingStatus(null);
+    }
+  };
+
   return (
     <BatchUploadProvider>
       <Card className="shadow-xl border-2 border-card card-gradient animate-fade-in w-full">
@@ -23,7 +69,18 @@ export function BatchCertificateUpload() {
         </CardHeader>
         
         <CardContent>
-          <BatchUploadForm />
+          <BatchUploadForm 
+            selectedCourseId={selectedCourseId}
+            setSelectedCourseId={setSelectedCourseId}
+            issueDate={issueDate}
+            setIssueDate={setIssueDate}
+            isValidated={isValidated}
+            setIsValidated={setIsValidated}
+            expiryDate={expiryDate}
+            isUploading={isUploading}
+            processingStatus={processingStatus}
+            onFileUpload={handleFileUpload}
+          />
         </CardContent>
       </Card>
     </BatchUploadProvider>
