@@ -35,6 +35,7 @@ export function LeadConversionModal({ isOpen, onClose, lead, onSuccess }: LeadCo
         account_id: lead.account_id,
         contact_id: lead.contact_id,
         opportunity_name: data.opportunity_name,
+        opportunity_status: 'open',
         estimated_value: parseFloat(data.estimated_value) || 0,
         close_date: data.close_date,
         stage: data.stage,
@@ -47,7 +48,7 @@ export function LeadConversionModal({ isOpen, onClose, lead, onSuccess }: LeadCo
       
       // Update lead status to converted
       await CRMService.updateLead(lead.id, { 
-        status: 'converted',
+        lead_status: 'converted',
         converted_at: new Date().toISOString(),
         converted_opportunity_id: opportunity.id
       });

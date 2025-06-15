@@ -1190,6 +1190,65 @@ export type Database = {
           },
         ]
       }
+      campaign_metrics: {
+        Row: {
+          bounce_rate: number | null
+          bounced_count: number | null
+          campaign_id: string | null
+          click_rate: number | null
+          clicked_count: number | null
+          created_at: string | null
+          delivered_count: number | null
+          id: string
+          open_rate: number | null
+          opened_count: number | null
+          sent_count: number | null
+          unsubscribe_rate: number | null
+          unsubscribed_count: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          bounce_rate?: number | null
+          bounced_count?: number | null
+          campaign_id?: string | null
+          click_rate?: number | null
+          clicked_count?: number | null
+          created_at?: string | null
+          delivered_count?: number | null
+          id?: string
+          open_rate?: number | null
+          opened_count?: number | null
+          sent_count?: number | null
+          unsubscribe_rate?: number | null
+          unsubscribed_count?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          bounce_rate?: number | null
+          bounced_count?: number | null
+          campaign_id?: string | null
+          click_rate?: number | null
+          clicked_count?: number | null
+          created_at?: string | null
+          delivered_count?: number | null
+          id?: string
+          open_rate?: number | null
+          opened_count?: number | null
+          sent_count?: number | null
+          unsubscribe_rate?: number | null
+          unsubscribed_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_metrics_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "email_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       certificate_audit_logs: {
         Row: {
           action: string
@@ -5249,6 +5308,120 @@ export type Database = {
           total_certificates?: number
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      email_campaigns: {
+        Row: {
+          automation_rules: Json | null
+          bounced_count: number | null
+          campaign_name: string
+          campaign_type: string
+          clicked_count: number | null
+          content: string
+          created_at: string | null
+          created_by: string | null
+          delivered_count: number | null
+          html_content: string | null
+          id: string
+          opened_count: number | null
+          reply_to_email: string | null
+          send_date: string | null
+          sender_email: string
+          sender_name: string
+          status: string
+          subject_line: string
+          target_audience: Json | null
+          total_recipients: number | null
+          tracking_enabled: boolean | null
+          unsubscribed_count: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          automation_rules?: Json | null
+          bounced_count?: number | null
+          campaign_name: string
+          campaign_type: string
+          clicked_count?: number | null
+          content: string
+          created_at?: string | null
+          created_by?: string | null
+          delivered_count?: number | null
+          html_content?: string | null
+          id?: string
+          opened_count?: number | null
+          reply_to_email?: string | null
+          send_date?: string | null
+          sender_email: string
+          sender_name: string
+          status?: string
+          subject_line: string
+          target_audience?: Json | null
+          total_recipients?: number | null
+          tracking_enabled?: boolean | null
+          unsubscribed_count?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          automation_rules?: Json | null
+          bounced_count?: number | null
+          campaign_name?: string
+          campaign_type?: string
+          clicked_count?: number | null
+          content?: string
+          created_at?: string | null
+          created_by?: string | null
+          delivered_count?: number | null
+          html_content?: string | null
+          id?: string
+          opened_count?: number | null
+          reply_to_email?: string | null
+          send_date?: string | null
+          sender_email?: string
+          sender_name?: string
+          status?: string
+          subject_line?: string
+          target_audience?: Json | null
+          total_recipients?: number | null
+          tracking_enabled?: boolean | null
+          unsubscribed_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      email_templates: {
+        Row: {
+          content: string
+          created_at: string | null
+          created_by: string | null
+          html_content: string | null
+          id: string
+          subject_line: string
+          template_name: string
+          template_type: string
+          variables: string[] | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          created_by?: string | null
+          html_content?: string | null
+          id?: string
+          subject_line: string
+          template_name: string
+          template_type: string
+          variables?: string[] | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          created_by?: string | null
+          html_content?: string | null
+          id?: string
+          subject_line?: string
+          template_name?: string
+          template_type?: string
+          variables?: string[] | null
         }
         Relationships: []
       }

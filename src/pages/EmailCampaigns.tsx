@@ -8,11 +8,9 @@ import {
   Plus, 
   Send, 
   Eye, 
-  BarChart3, 
   Mail,
   Users,
   TrendingUp,
-  Calendar
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { EmailCampaignService, type EmailCampaign } from '@/services/crm/emailCampaignService';
@@ -252,7 +250,7 @@ export default function EmailCampaigns() {
         </TabsContent>
 
         <TabsContent value="analytics">
-          <CampaignAnalytics />
+          <CampaignAnalytics analytics={{}} />
         </TabsContent>
 
         <TabsContent value="templates">
@@ -265,7 +263,7 @@ export default function EmailCampaigns() {
             </CardHeader>
             <CardContent>
               <div className="text-center py-8">
-                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <Mail className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="font-medium mb-2">Template management coming soon</h3>
                 <p className="text-muted-foreground">
                   Create and manage reusable email templates
