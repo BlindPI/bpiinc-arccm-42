@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TemplateDownloadOptions } from './TemplateDownloadOptions';
 import { BatchUploadProvider } from './batch-upload/BatchCertificateContext';
