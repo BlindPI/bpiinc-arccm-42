@@ -3,7 +3,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { SidebarProvider } from '@/components/ui/sidebar';
 import { AuthProvider } from '@/components/AuthProvider';
+import { LayoutRouter } from '@/components/LayoutRouter';
 import { AppRoutes } from './AppRoutes';
 import { PerformanceMonitor } from '@/services/performance/performanceMonitor';
 import { useEffect } from 'react';
@@ -58,7 +60,11 @@ function App() {
       <TooltipProvider>
         <Router>
           <AuthProvider>
-            <AppRoutes />
+            <SidebarProvider>
+              <LayoutRouter>
+                <AppRoutes />
+              </LayoutRouter>
+            </SidebarProvider>
             <Toaster position="top-right" />
           </AuthProvider>
         </Router>

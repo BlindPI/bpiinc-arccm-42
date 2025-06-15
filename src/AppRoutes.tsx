@@ -4,7 +4,6 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import SignIn from '@/pages/SignIn';
 import SignUp from '@/pages/SignUp';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import Dashboard from '@/pages/Dashboard';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import Settings from '@/pages/Settings';
@@ -25,77 +24,59 @@ export function AppRoutes() {
       
       <Route path="/" element={
         <ProtectedRoute>
-          <DashboardLayout>
-            <Dashboard />
-          </DashboardLayout>
+          <Dashboard />
         </ProtectedRoute>
       } />
 
       <Route path="/settings" element={
         <ProtectedRoute>
-          <DashboardLayout>
-            <Settings />
-          </DashboardLayout>
+          <Settings />
         </ProtectedRoute>
       } />
 
       <Route path="/users" element={
         <ProtectedRoute>
-          <DashboardLayout>
-            <UserManagement />
-          </DashboardLayout>
+          <UserManagement />
         </ProtectedRoute>
       } />
 
       <Route path="/profile" element={
         <ProtectedRoute>
-          <DashboardLayout>
-            <Profile />
-          </DashboardLayout>
+          <Profile />
         </ProtectedRoute>
       } />
 
       <Route path="/configuration" element={
         <ProtectedRoute>
-          <DashboardLayout>
-            <Settings />
-          </DashboardLayout>
+          <Settings />
         </ProtectedRoute>
       } />
 
       <Route path="/crm" element={
         <ProtectedRoute>
-          <DashboardLayout>
-            <CRM />
-          </DashboardLayout>
+          <CRM />
         </ProtectedRoute>
       } />
       
       <Route path="/email-campaigns" element={
         <ProtectedRoute>
-          <DashboardLayout>
-            <EmailCampaigns />
-          </DashboardLayout>
+          <EmailCampaigns />
         </ProtectedRoute>
       } />
       
       <Route path="/bulk-operations" element={
         <ProtectedRoute>
-          <DashboardLayout>
-            <BulkCRMOperations />
-          </DashboardLayout>
+          <BulkCRMOperations />
         </ProtectedRoute>
       } />
 
       <Route path="*" element={
         user ? (
           <ProtectedRoute>
-            <DashboardLayout>
-              <div>
-                <h2>No matching route</h2>
-                <span>{location.pathname}</span>
-              </div>
-            </DashboardLayout>
+            <div>
+              <h2>No matching route</h2>
+              <span>{location.pathname}</span>
+            </div>
           </ProtectedRoute>
         ) : (
           <SignIn />

@@ -1,7 +1,6 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
-import { SidebarProvider } from '@/components/ui/sidebar';
 import { DashboardLayout } from './DashboardLayout';
 import { PublicLayout } from './PublicLayout';
 import { AppSidebar } from './AppSidebar';
@@ -27,9 +26,9 @@ export function LayoutRouter({ children }: { children: React.ReactNode }) {
   }
   
   // Determine which layout to use based on route and auth status
-  const isAlwaysPublicPage = ALWAYS_PUBLIC_PAGES.includes(location.pathname);
-  const isMixedAccessPage = MIXED_ACCESS_PAGES.includes(location.pathname);
-  const isProtectedPage = PROTECTED_PAGES.includes(location.pathname);
+  const isAlwaysPublicPage = ALWAYS_PUBLIC_PAGES?.includes(location.pathname) || false;
+  const isMixedAccessPage = MIXED_ACCESS_PAGES?.includes(location.pathname) || false;
+  const isProtectedPage = PROTECTED_PAGES?.includes(location.pathname) || false;
   
   // Don't show sidebar on certain public pages for cleaner UX
   const hideSidebarPages = ["/landing", "/auth", "/auth/signin", "/auth/signup"];
@@ -47,12 +46,10 @@ export function LayoutRouter({ children }: { children: React.ReactNode }) {
   // For mixed access pages and protected pages, show with sidebar
   if (isMixedAccessPage || isProtectedPage || shouldShowSidebar) {
     return (
-      <SidebarProvider>
-        <div className="min-h-screen flex w-full bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30 animate-fade-in">
-          {user ? <AppSidebar /> : <PublicSidebar />}
-          {user ? <DashboardLayout>{children}</DashboardLayout> : <PublicLayout>{children}</PublicLayout>}
-        </div>
-      </SidebarProvider>
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30 animate-fade-in">
+        {user ? <AppSidebar /> : <PublicSidebar />}
+        {user ? <DashboardLayout>{children}</DashboardLayout> : <PublicLayout>{children}</PublicLayout>}
+      </div>
     );
   }
   
