@@ -19,7 +19,8 @@ import {
   Trash2,
   Phone,
   Mail,
-  Building
+  Building,
+  Users
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { CRMService } from '@/services/crm/crmService';

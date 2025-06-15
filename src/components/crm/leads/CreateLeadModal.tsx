@@ -1,382 +1,231 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { Button } from '@/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CRMService } from '@/services/crm/crmService';
 import { toast } from 'sonner';
-
-const leadSchema = z.object({
-  first_name: z.string().min(1, 'First name is required'),
-  last_name: z.string().min(1, 'Last name is required'),
-  email: z.string().email('Valid email is required'),
-  phone: z.string().optional(),
-  company_name: z.string().optional(),
-  job_title: z.string().optional(),
-  lead_status: z.enum(['new', 'contacted', 'qualified', 'converted', 'lost']),
-  lead_source: z.enum(['website', 'referral', 'cold_call', 'email', 'social_media', 'trade_show', 'other']),
-  lead_score: z.number().min(0).max(100),
-  notes: z.string().optional(),
-  training_urgency: z.enum(['immediate', 'within_month', 'within_quarter', 'planning']).optional(),
-  estimated_participant_count: z.number().optional(),
-  budget_range: z.string().optional(),
-});
-
-type LeadFormData = z.infer<typeof leadSchema>;
+import type { Lead, LeadStatus, LeadSource } from '@/types/crm';
 
 interface CreateLeadModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  lead?: any;
-  onSuccess: () => void;
+  lead?: Lead | null;
+  onSuccess?: () => void;
 }
 
 export function CreateLeadModal({ open, onOpenChange, lead, onSuccess }: CreateLeadModalProps) {
   const queryClient = useQueryClient();
+  const isEditing = !!lead;
 
-  const form = useForm<LeadFormData>({
-    resolver: zodResolver(leadSchema),
-    defaultValues: {
-      first_name: lead?.first_name || '',
-      last_name: lead?.last_name || '',
-      email: lead?.email || '',
-      phone: lead?.phone || '',
-      company_name: lead?.company_name || '',
-      job_title: lead?.job_title || '',
-      lead_status: lead?.lead_status || 'new',
-      lead_source: lead?.lead_source || 'website',
-      lead_score: lead?.lead_score || 25,
-      notes: lead?.notes || '',
-      training_urgency: lead?.training_urgency || 'planning',
-      estimated_participant_count: lead?.estimated_participant_count || undefined,
-      budget_range: lead?.budget_range || '',
-    },
+  const [formData, setFormData] = useState({
+    first_name: lead?.first_name || '',
+    last_name: lead?.last_name || '',
+    email: lead?.email || '',
+    phone: lead?.phone || '',
+    company_name: lead?.company_name || '',
+    job_title: lead?.job_title || '',
+    lead_status: lead?.lead_status || 'new' as LeadStatus,
+    lead_source: lead?.lead_source || 'website' as LeadSource,
+    lead_score: lead?.lead_score || 0,
+    notes: lead?.notes || ''
   });
 
-  const createMutation = useMutation({
-    mutationFn: (data: LeadFormData) => CRMService.createLead(data),
+  const { mutate: createLead, isPending: isCreating } = useMutation({
+    mutationFn: (data: Omit<Lead, 'id' | 'created_at' | 'updated_at'>) => 
+      CRMService.createLead(data),
     onSuccess: () => {
-      toast.success('Lead created successfully');
+      toast.success(isEditing ? 'Lead updated successfully' : 'Lead created successfully');
       queryClient.invalidateQueries({ queryKey: ['crm-leads'] });
-      onSuccess();
+      onOpenChange(false);
+      onSuccess?.();
+      resetForm();
     },
     onError: (error) => {
-      toast.error('Failed to create lead: ' + error.message);
+      toast.error('Failed to save lead');
+      console.error('Error saving lead:', error);
     }
   });
 
-  const updateMutation = useMutation({
-    mutationFn: (data: LeadFormData) => CRMService.updateLead(lead.id, data),
+  const { mutate: updateLead, isPending: isUpdating } = useMutation({
+    mutationFn: (data: Partial<Lead>) => 
+      CRMService.updateLead(lead!.id, data),
     onSuccess: () => {
       toast.success('Lead updated successfully');
       queryClient.invalidateQueries({ queryKey: ['crm-leads'] });
-      onSuccess();
+      onOpenChange(false);
+      onSuccess?.();
     },
     onError: (error) => {
-      toast.error('Failed to update lead: ' + error.message);
+      toast.error('Failed to update lead');
+      console.error('Error updating lead:', error);
     }
   });
 
-  const handleSubmit = (data: LeadFormData) => {
-    if (lead) {
-      updateMutation.mutate(data);
-    } else {
-      createMutation.mutate(data);
+  const resetForm = () => {
+    setFormData({
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone: '',
+      company_name: '',
+      job_title: '',
+      lead_status: 'new',
+      lead_source: 'website',
+      lead_score: 0,
+      notes: ''
+    });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.first_name.trim() || !formData.last_name.trim() || !formData.email.trim()) {
+      toast.error('Please fill in all required fields');
+      return;
     }
+
+    const leadData = {
+      ...formData,
+      email: formData.email, // Ensure email is always provided
+    };
+
+    if (isEditing) {
+      updateLead(leadData);
+    } else {
+      createLead(leadData);
+    }
+  };
+
+  const handleChange = (field: keyof typeof formData, value: string | number) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{lead ? 'Edit Lead' : 'Create New Lead'}</DialogTitle>
+          <DialogTitle>{isEditing ? 'Edit Lead' : 'Create New Lead'}</DialogTitle>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            {/* Personal Information */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="first_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>First Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="John" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="last_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Last Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Doe" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="first_name">First Name *</Label>
+              <Input
+                id="first_name"
+                value={formData.first_name}
+                onChange={(e) => handleChange('first_name', e.target.value)}
+                required
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="john.doe@company.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone</FormLabel>
-                    <FormControl>
-                      <Input placeholder="+1 (555) 123-4567" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            <div>
+              <Label htmlFor="last_name">Last Name *</Label>
+              <Input
+                id="last_name"
+                value={formData.last_name}
+                onChange={(e) => handleChange('last_name', e.target.value)}
+                required
               />
             </div>
 
-            {/* Company Information */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="company_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Company Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Acme Corporation" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="job_title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Job Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Safety Manager" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            <div>
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleChange('email', e.target.value)}
+                required
               />
             </div>
 
-            {/* Lead Classification */}
-            <div className="grid grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="lead_status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="new">New</SelectItem>
-                        <SelectItem value="contacted">Contacted</SelectItem>
-                        <SelectItem value="qualified">Qualified</SelectItem>
-                        <SelectItem value="converted">Converted</SelectItem>
-                        <SelectItem value="lost">Lost</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="lead_source"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Source</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select source" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="website">Website</SelectItem>
-                        <SelectItem value="referral">Referral</SelectItem>
-                        <SelectItem value="cold_call">Cold Call</SelectItem>
-                        <SelectItem value="email">Email</SelectItem>
-                        <SelectItem value="social_media">Social Media</SelectItem>
-                        <SelectItem value="trade_show">Trade Show</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="lead_score"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Lead Score</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        placeholder="25"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            <div>
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => handleChange('phone', e.target.value)}
               />
             </div>
 
-            {/* Training Details */}
-            <div className="grid grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="training_urgency"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Training Urgency</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select urgency" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="immediate">Immediate</SelectItem>
-                        <SelectItem value="within_month">Within Month</SelectItem>
-                        <SelectItem value="within_quarter">Within Quarter</SelectItem>
-                        <SelectItem value="planning">Planning</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="estimated_participant_count"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Estimated Participants</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="1"
-                        placeholder="25"
-                        {...field}
-                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="budget_range"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Budget Range</FormLabel>
-                    <FormControl>
-                      <Input placeholder="$5,000 - $10,000" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            <div>
+              <Label htmlFor="company_name">Company</Label>
+              <Input
+                id="company_name"
+                value={formData.company_name}
+                onChange={(e) => handleChange('company_name', e.target.value)}
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Additional notes about this lead..."
-                      rows={3}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+            <div>
+              <Label htmlFor="job_title">Job Title</Label>
+              <Input
+                id="job_title"
+                value={formData.job_title}
+                onChange={(e) => handleChange('job_title', e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="lead_status">Status</Label>
+              <Select value={formData.lead_status} onValueChange={(value) => handleChange('lead_status', value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">New</SelectItem>
+                  <SelectItem value="contacted">Contacted</SelectItem>
+                  <SelectItem value="qualified">Qualified</SelectItem>
+                  <SelectItem value="converted">Converted</SelectItem>
+                  <SelectItem value="lost">Lost</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="lead_source">Source</Label>
+              <Select value={formData.lead_source} onValueChange={(value) => handleChange('lead_source', value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="website">Website</SelectItem>
+                  <SelectItem value="referral">Referral</SelectItem>
+                  <SelectItem value="cold_call">Cold Call</SelectItem>
+                  <SelectItem value="email">Email</SelectItem>
+                  <SelectItem value="social_media">Social Media</SelectItem>
+                  <SelectItem value="trade_show">Trade Show</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea
+              id="notes"
+              value={formData.notes}
+              onChange={(e) => handleChange('notes', e.target.value)}
+              rows={3}
             />
+          </div>
 
-            <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={createMutation.isPending || updateMutation.isPending}
-              >
-                {createMutation.isPending || updateMutation.isPending 
-                  ? 'Saving...' 
-                  : lead ? 'Update Lead' : 'Create Lead'
-                }
-              </Button>
-            </div>
-          </form>
-        </Form>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isCreating || isUpdating}>
+              {isCreating || isUpdating ? 'Saving...' : isEditing ? 'Update Lead' : 'Create Lead'}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

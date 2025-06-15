@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
@@ -13,12 +12,13 @@ import {
   Calendar, 
   Target,
   Edit,
-  Convert,
   Star
 } from 'lucide-react';
 import { LeadOverviewTab } from './LeadOverviewTab';
 import { LeadActivitiesTab } from './LeadActivitiesTab';
 import { LeadNotesTab } from './LeadNotesTab';
+import { LeadConversionModal } from './LeadConversionModal';
+import { CreateLeadModal } from './CreateLeadModal';
 
 interface LeadDetailModalProps {
   open: boolean;
@@ -28,6 +28,8 @@ interface LeadDetailModalProps {
 
 export function LeadDetailModal({ open, onOpenChange, lead }: LeadDetailModalProps) {
   const [activeTab, setActiveTab] = useState('overview');
+  const [showConversionModal, setShowConversionModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   if (!lead) return null;
 
@@ -42,68 +44,95 @@ export function LeadDetailModal({ open, onOpenChange, lead }: LeadDetailModalPro
     }
   };
 
+  const canConvert = lead.lead_status !== 'converted' && lead.lead_status !== 'lost';
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="border-b pb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                <span className="text-lg font-medium text-blue-600">
-                  {lead.first_name?.charAt(0)}{lead.last_name?.charAt(0)}
-                </span>
-              </div>
-              
-              <div>
-                <DialogTitle className="text-xl font-semibold">
-                  {lead.first_name} {lead.last_name}
-                </DialogTitle>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge className={getStatusColor(lead.lead_status)}>
-                    {lead.lead_status}
-                  </Badge>
-                  <span className="text-sm text-gray-500">
-                    Score: {lead.lead_score}/100
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="border-b pb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                  <span className="text-lg font-medium text-blue-600">
+                    {lead.first_name?.charAt(0)}{lead.last_name?.charAt(0)}
                   </span>
                 </div>
+                
+                <div>
+                  <DialogTitle className="text-xl font-semibold">
+                    {lead.first_name} {lead.last_name}
+                  </DialogTitle>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge className={getStatusColor(lead.lead_status)}>
+                      {lead.lead_status}
+                    </Badge>
+                    <span className="text-sm text-gray-500">
+                      Score: {lead.lead_score}/100
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setShowEditModal(true)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+                {canConvert && (
+                  <Button size="sm" onClick={() => setShowConversionModal(true)}>
+                    <Target className="h-4 w-4 mr-2" />
+                    Convert
+                  </Button>
+                )}
               </div>
             </div>
-            
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-              <Button size="sm">
-                <Target className="h-4 w-4 mr-2" />
-                Convert
-              </Button>
-            </div>
-          </div>
-        </DialogHeader>
+          </DialogHeader>
 
-        <div className="mt-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="activities">Activities</TabsTrigger>
-              <TabsTrigger value="notes">Notes</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="overview" className="mt-6">
-              <LeadOverviewTab lead={lead} />
-            </TabsContent>
-            
-            <TabsContent value="activities" className="mt-6">
-              <LeadActivitiesTab leadId={lead.id} />
-            </TabsContent>
-            
-            <TabsContent value="notes" className="mt-6">
-              <LeadNotesTab leadId={lead.id} />
-            </TabsContent>
-          </Tabs>
-        </div>
-      </DialogContent>
-    </Dialog>
+          <div className="mt-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="activities">Activities</TabsTrigger>
+                <TabsTrigger value="notes">Notes</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="overview" className="mt-6">
+                <LeadOverviewTab lead={lead} />
+              </TabsContent>
+              
+              <TabsContent value="activities" className="mt-6">
+                <LeadActivitiesTab leadId={lead.id} />
+              </TabsContent>
+              
+              <TabsContent value="notes" className="mt-6">
+                <LeadNotesTab leadId={lead.id} />
+              </TabsContent>
+            </Tabs>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Conversion Modal */}
+      <LeadConversionModal
+        open={showConversionModal}
+        onOpenChange={setShowConversionModal}
+        lead={lead}
+        onSuccess={() => {
+          setShowConversionModal(false);
+          onOpenChange(false);
+        }}
+      />
+
+      {/* Edit Modal */}
+      <CreateLeadModal
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        lead={lead}
+        onSuccess={() => {
+          setShowEditModal(false);
+        }}
+      />
+    </>
   );
 }
