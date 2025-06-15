@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { CourseMatchDisplay } from './batch-upload/CourseMatchDisplay';
+import { useCourseData } from '@/hooks/useCourseData';
 
 interface RosterReviewProps {
   data: any[];
@@ -23,7 +24,13 @@ export function RosterReview({
   errorCount 
 }: RosterReviewProps) {
   const validRecords = data.filter(record => !record.validationErrors || record.validationErrors.length === 0);
+  const { data: courses = [] } = useCourseData();
   
+  // Handle course change (no-op for now since this is just display)
+  const handleCourseChange = (courseId: string) => {
+    console.log('Course changed to:', courseId);
+  };
+
   return (
     <div className="space-y-4">
       {errorCount > 0 && (
@@ -39,8 +46,21 @@ export function RosterReview({
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h4 className="text-sm font-medium text-blue-800 mb-2">Extracted Course Information</h4>
           <CourseMatchDisplay 
-            extractedCourse={extractedCourse}
-            courseMatch={data[0]?.courseMatch}
+            entry={{
+              firstAidLevel: extractedCourse.firstAidLevel,
+              cprLevel: extractedCourse.cprLevel,
+              length: extractedCourse.courseLength ? parseInt(extractedCourse.courseLength) : null,
+              issueDate: data[0]?.issueDate || null,
+              certifications: {}
+            }}
+            matchedCourse={data[0]?.courseMatch ? {
+              id: data[0].courseMatch.id,
+              name: data[0].courseMatch.name,
+              matchType: data[0].courseMatch.matchType,
+              certifications: data[0].courseMatch.certifications
+            } : undefined}
+            availableCourses={courses}
+            onCourseChange={handleCourseChange}
           />
         </div>
       )}
