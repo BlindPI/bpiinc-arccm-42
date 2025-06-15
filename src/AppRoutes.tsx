@@ -10,7 +10,6 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Settings } from '@/pages/Settings';
 import { UserManagement } from '@/pages/UserManagement';
 import { Profile } from '@/pages/Profile';
-import { ConfigurationPage } from '@/pages/Settings';
 import CRM from '@/pages/CRM';
 import EmailCampaigns from '@/pages/EmailCampaigns';
 import { BulkCRMOperations } from '@/components/crm/bulk/BulkCRMOperations';
@@ -59,7 +58,7 @@ export function AppRoutes() {
       <Route path="/configuration" element={
         <ProtectedRoute>
           <DashboardLayout>
-            <ConfigurationPage />
+            <Settings />
           </DashboardLayout>
         </ProtectedRoute>
       } />
