@@ -7,6 +7,15 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { AppRoutes } from "./AppRoutes.tsx";
 import "./index.css";
 
+// Import team diagnostics for debugging (development only)
+if (import.meta.env.DEV) {
+  import('./utils/runTeamDiagnostics').then(module => {
+    console.log('🔧 Team diagnostics loaded. Run runTeamDiagnostics() in console to test database connectivity.');
+  }).catch(err => {
+    console.warn('Could not load team diagnostics:', err);
+  });
+}
+
 const queryClient = new QueryClient();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

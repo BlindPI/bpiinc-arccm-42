@@ -12,19 +12,53 @@ export function useTeamMemberships() {
     queryKey: ['team-memberships', user?.id],
     queryFn: async () => {
       if (!user?.id) {
-        console.log('useTeamMemberships: No user ID available');
+        console.log('🔧 useTeamMemberships: No user ID available');
         return [];
       }
       
-      console.log('useTeamMemberships: Fetching teams for user ID:', user.id);
+      console.log('🔧 useTeamMemberships: Fetching teams for user ID:', user.id);
       
-      // Temporary fallback to prevent infinite recursion until RPC functions are available
-      // This returns empty array to prevent the RLS recursion issue
-      console.log('useTeamMemberships: Using safe fallback to prevent RLS recursion');
-      console.log('useTeamMemberships: Returning empty array until RLS policies are fully resolved');
-      return [];
+      try {
+        // Use the new RLS-safe function to get user memberships
+        const { data: memberships, error } = await supabase
+          .rpc('fetch_user_team_memberships', { p_user_id: user.id });
+
+        if (error) {
+          console.error('🔧 useTeamMemberships: RPC function failed:', error);
+          
+          // Fallback: Try direct query with limited fields to avoid recursion
+          try {
+            const { data: fallbackData, error: fallbackError } = await supabase
+              .from('team_members')
+              .select('id, team_id, role, status')
+              .eq('user_id', user.id);
+
+            if (fallbackError) {
+              console.error('🔧 useTeamMemberships: Fallback query also failed:', fallbackError);
+              return [];
+            }
+
+            console.log('🔧 useTeamMemberships: Fallback query successful:', fallbackData?.length || 0, 'memberships');
+            return fallbackData || [];
+          } catch (fallbackException) {
+            console.error('🔧 useTeamMemberships: All queries failed:', fallbackException);
+            return [];
+          }
+        }
+
+        console.log('🔧 useTeamMemberships: RPC function successful:', memberships?.length || 0, 'memberships');
+        return memberships || [];
+
+      } catch (exception) {
+        console.error('🔧 useTeamMemberships: Exception in query:', exception);
+        return [];
+      }
     },
-    enabled: !!user?.id
+    enabled: !!user?.id,
+    retry: (failureCount, error) => {
+      console.log(`🔧 useTeamMemberships: Query retry ${failureCount}:`, error);
+      return failureCount < 2; // Retry up to 2 times
+    },
   });
 
   // Set up real-time subscription
