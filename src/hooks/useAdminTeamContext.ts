@@ -124,6 +124,15 @@ export function useAdminTeamData() {
 
       console.log('🔧 ADMIN-TEAMS: Starting admin teams query...');
 
+      // DIAGNOSTIC: Run our diagnostic function first
+      try {
+        const { runSimpleTeamDiagnostics } = await import('@/utils/simpleTeamDiagnostics');
+        const diagnostics = await runSimpleTeamDiagnostics();
+        console.log('🔧 ADMIN-TEAMS: DIAGNOSTIC RESULTS:', diagnostics);
+      } catch (diagError) {
+        console.warn('🔧 ADMIN-TEAMS: Diagnostic failed:', diagError);
+      }
+
       // Use the new safe function first
       try {
         const { data: teamsData, error: safeError } = await supabase

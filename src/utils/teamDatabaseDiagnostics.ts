@@ -1,317 +1,134 @@
-// Team Database Diagnostics - Debug the current database issues
-// This script will help identify and validate the root causes of the team management errors
-
 import { supabase } from '@/integrations/supabase/client';
 
-interface DiagnosticResult {
-  test: string;
-  status: 'PASS' | 'FAIL' | 'WARNING';
-  message: string;
-  details?: any;
-}
+export async function diagnoseDatabaseTeamIssues() {
+  console.log('🔧 TEAM-DIAGNOSTICS: Starting comprehensive team database diagnostics...');
+  
+  const results = {
+    timestamp: new Date().toISOString(),
+    adminTeamFunction: null as any,
+    enterpriseTeamFunction: null as any,
+    directTeamsQuery: null as any,
+    statisticsFunction: null as any,
+    userContext: null as any,
+    errors: [] as string[]
+  };
 
-export async function runTeamDatabaseDiagnostics(): Promise<DiagnosticResult[]> {
-  const results: DiagnosticResult[] = [];
-
-  console.log('🔍 Starting Team Database Diagnostics...');
-
-  // Test 1: Check if providers table exists and has data
   try {
-    const { data: providers, error: providersError } = await supabase
-      .from('providers')
-      .select('id, name, provider_type, status')
-      .limit(5);
+    // Test user context
+    const { data: { user } } = await supabase.auth.getUser();
+    results.userContext = {
+      userId: user?.id,
+      email: user?.email,
+      role: user?.user_metadata?.role
+    };
+    console.log('🔧 TEAM-DIAGNOSTICS: User context:', results.userContext);
 
-    if (providersError) {
-      results.push({
-        test: 'Providers Table Access',
-        status: 'FAIL',
-        message: `Cannot access providers table: ${providersError.message}`,
-        details: providersError
-      });
-    } else {
-      results.push({
-        test: 'Providers Table Access',
-        status: 'PASS',
-        message: `Providers table accessible with ${providers?.length || 0} records`,
-        details: providers
-      });
+    // Test admin team function (get_teams_safe)
+    try {
+      console.log('🔧 TEAM-DIAGNOSTICS: Testing get_teams_safe function...');
+      const { data: adminData, error: adminError } = await supabase.rpc('get_teams_safe');
+      results.adminTeamFunction = {
+        success: !adminError,
+        error: adminError?.message,
+        dataCount: adminData?.length || 0,
+        sampleData: adminData?.slice(0, 2) || []
+      };
+      console.log('🔧 TEAM-DIAGNOSTICS: Admin function result:', results.adminTeamFunction);
+    } catch (error: any) {
+      results.adminTeamFunction = { success: false, error: error.message };
+      results.errors.push(`Admin function error: ${error.message}`);
     }
-  } catch (error) {
-    results.push({
-      test: 'Providers Table Access',
-      status: 'FAIL',
-      message: `Exception accessing providers: ${error}`,
-      details: error
-    });
+
+    // Test enterprise team function (get_enhanced_teams_data)
+    try {
+      console.log('🔧 TEAM-DIAGNOSTICS: Testing get_enhanced_teams_data function...');
+      const { data: enterpriseData, error: enterpriseError } = await supabase.rpc('get_enhanced_teams_data');
+      results.enterpriseTeamFunction = {
+        success: !enterpriseError,
+        error: enterpriseError?.message,
+        dataCount: enterpriseData?.length || 0,
+        sampleData: enterpriseData?.slice(0, 2) || []
+      };
+      console.log('🔧 TEAM-DIAGNOSTICS: Enterprise function result:', results.enterpriseTeamFunction);
+    } catch (error: any) {
+      results.enterpriseTeamFunction = { success: false, error: error.message };
+      results.errors.push(`Enterprise function error: ${error.message}`);
+    }
+
+    // Test direct teams table query
+    try {
+      console.log('🔧 TEAM-DIAGNOSTICS: Testing direct teams table query...');
+      const { data: directData, error: directError } = await supabase
+        .from('teams')
+        .select('id, name, status, team_type, created_at')
+        .limit(5);
+      results.directTeamsQuery = {
+        success: !directError,
+        error: directError?.message,
+        dataCount: directData?.length || 0,
+        sampleData: directData || []
+      };
+      console.log('🔧 TEAM-DIAGNOSTICS: Direct query result:', results.directTeamsQuery);
+    } catch (error: any) {
+      results.directTeamsQuery = { success: false, error: error.message };
+      results.errors.push(`Direct query error: ${error.message}`);
+    }
+
+    // Test statistics function
+    try {
+      console.log('🔧 TEAM-DIAGNOSTICS: Testing get_team_statistics_safe function...');
+      const { data: statsData, error: statsError } = await supabase.rpc('get_team_statistics_safe');
+      results.statisticsFunction = {
+        success: !statsError,
+        error: statsError?.message,
+        data: statsData
+      };
+      console.log('🔧 TEAM-DIAGNOSTICS: Statistics function result:', results.statisticsFunction);
+    } catch (error: any) {
+      results.statisticsFunction = { success: false, error: error.message };
+      results.errors.push(`Statistics function error: ${error.message}`);
+    }
+
+  } catch (error: any) {
+    results.errors.push(`General error: ${error.message}`);
+    console.error('🔧 TEAM-DIAGNOSTICS: General error:', error);
   }
 
-  // Test 2: Check teams table structure and foreign key relationship
-  try {
-    const { data: teams, error: teamsError } = await supabase
-      .from('teams')
-      .select('id, name, provider_id, status, team_type, performance_score')
-      .limit(5);
-
-    if (teamsError) {
-      results.push({
-        test: 'Teams Table Basic Access',
-        status: 'FAIL',
-        message: `Cannot access teams table: ${teamsError.message}`,
-        details: teamsError
-      });
-    } else {
-      results.push({
-        test: 'Teams Table Basic Access',
-        status: 'PASS',
-        message: `Teams table accessible with ${teams?.length || 0} records`,
-        details: teams
-      });
-    }
-  } catch (error) {
-    results.push({
-      test: 'Teams Table Basic Access',
-      status: 'FAIL',
-      message: `Exception accessing teams: ${error}`,
-      details: error
-    });
-  }
-
-  // Test 3: Test the problematic teams-providers join query
-  try {
-    const { data: teamsWithProviders, error: joinError } = await supabase
-      .from('teams')
-      .select(`
-        id,
-        name,
-        provider_id,
-        provider:providers(id, name, provider_type, status)
-      `)
-      .limit(3);
-
-    if (joinError) {
-      results.push({
-        test: 'Teams-Providers Join Query',
-        status: 'FAIL',
-        message: `Teams-providers join failed: ${joinError.message}`,
-        details: joinError
-      });
-    } else {
-      results.push({
-        test: 'Teams-Providers Join Query',
-        status: 'PASS',
-        message: `Teams-providers join successful with ${teamsWithProviders?.length || 0} records`,
-        details: teamsWithProviders
-      });
-    }
-  } catch (error) {
-    results.push({
-      test: 'Teams-Providers Join Query',
-      status: 'FAIL',
-      message: `Exception in teams-providers join: ${error}`,
-      details: error
-    });
-  }
-
-  // Test 4: Test team_members table access (check for RLS recursion)
-  try {
-    const { data: members, error: membersError } = await supabase
-      .from('team_members')
-      .select('id, team_id, user_id, role, status')
-      .limit(5);
-
-    if (membersError) {
-      results.push({
-        test: 'Team Members Table Access',
-        status: 'FAIL',
-        message: `Cannot access team_members: ${membersError.message}`,
-        details: membersError
-      });
-    } else {
-      results.push({
-        test: 'Team Members Table Access',
-        status: 'PASS',
-        message: `Team members accessible with ${members?.length || 0} records`,
-        details: members
-      });
-    }
-  } catch (error) {
-    results.push({
-      test: 'Team Members Table Access',
-      status: 'FAIL',
-      message: `Exception accessing team_members: ${error}`,
-      details: error
-    });
-  }
-
-  // Test 5: Test the complex admin query that's failing
-  try {
-    const { data: adminTeams, error: adminError } = await supabase
-      .from('teams')
-      .select(`
-        *,
-        location:locations(id, name, address, city, state),
-        provider:providers(id, name, provider_type, status),
-        team_members!inner(count)
-      `)
-      .limit(3);
-
-    if (adminError) {
-      results.push({
-        test: 'Admin Teams Complex Query',
-        status: 'FAIL',
-        message: `Admin teams query failed: ${adminError.message}`,
-        details: adminError
-      });
-    } else {
-      results.push({
-        test: 'Admin Teams Complex Query',
-        status: 'PASS',
-        message: `Admin teams query successful with ${adminTeams?.length || 0} records`,
-        details: adminTeams
-      });
-    }
-  } catch (error) {
-    results.push({
-      test: 'Admin Teams Complex Query',
-      status: 'FAIL',
-      message: `Exception in admin teams query: ${error}`,
-      details: error
-    });
-  }
-
-  // Test 6: Test team statistics query
-  try {
-    const { data: teamStats, error: statsError } = await supabase
-      .from('teams')
-      .select('status, team_type, performance_score')
-      .limit(10);
-
-    if (statsError) {
-      results.push({
-        test: 'Team Statistics Query',
-        status: 'FAIL',
-        message: `Team statistics query failed: ${statsError.message}`,
-        details: statsError
-      });
-    } else {
-      results.push({
-        test: 'Team Statistics Query',
-        status: 'PASS',
-        message: `Team statistics query successful with ${teamStats?.length || 0} records`,
-        details: teamStats
-      });
-    }
-  } catch (error) {
-    results.push({
-      test: 'Team Statistics Query',
-      status: 'FAIL',
-      message: `Exception in team statistics query: ${error}`,
-      details: error
-    });
-  }
-
-  // Test 7: Test the new RLS-safe functions
-  try {
-    const { data: userMemberships, error: membershipError } = await supabase
-      .rpc('fetch_user_team_memberships', { 
-        p_user_id: (await supabase.auth.getUser()).data.user?.id 
-      });
-
-    if (membershipError) {
-      results.push({
-        test: 'RLS-Safe User Memberships Function',
-        status: 'FAIL',
-        message: `User memberships function failed: ${membershipError.message}`,
-        details: membershipError
-      });
-    } else {
-      results.push({
-        test: 'RLS-Safe User Memberships Function',
-        status: 'PASS',
-        message: `User memberships function successful with ${userMemberships?.length || 0} records`,
-        details: userMemberships
-      });
-    }
-  } catch (error) {
-    results.push({
-      test: 'RLS-Safe User Memberships Function',
-      status: 'FAIL',
-      message: `Exception in user memberships function: ${error}`,
-      details: error
-    });
-  }
-
-  // Test 8: Check current user profile and permissions
-  try {
-    const { data: user } = await supabase.auth.getUser();
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, role, display_name, email')
-      .eq('id', user.user?.id)
-      .single();
-
-    if (profileError) {
-      results.push({
-        test: 'Current User Profile',
-        status: 'FAIL',
-        message: `Cannot access user profile: ${profileError.message}`,
-        details: profileError
-      });
-    } else {
-      results.push({
-        test: 'Current User Profile',
-        status: 'PASS',
-        message: `User profile accessible - Role: ${profile?.role}`,
-        details: profile
-      });
-    }
-  } catch (error) {
-    results.push({
-      test: 'Current User Profile',
-      status: 'FAIL',
-      message: `Exception accessing user profile: ${error}`,
-      details: error
-    });
-  }
-
-  console.log('🔍 Team Database Diagnostics Complete');
-  console.table(results.map(r => ({ 
-    Test: r.test, 
-    Status: r.status, 
-    Message: r.message 
-  })));
-
+  console.log('🔧 TEAM-DIAGNOSTICS: Complete diagnostic results:', results);
   return results;
 }
 
-// Helper function to run diagnostics and log results
-export async function logTeamDiagnostics() {
-  try {
-    const results = await runTeamDatabaseDiagnostics();
-    
-    const failedTests = results.filter(r => r.status === 'FAIL');
-    const passedTests = results.filter(r => r.status === 'PASS');
-    const warningTests = results.filter(r => r.status === 'WARNING');
+export async function testTeamDataConsistency() {
+  console.log('🔧 TEAM-CONSISTENCY: Testing data consistency between different methods...');
+  
+  const results = await diagnoseDatabaseTeamIssues();
+  
+  const analysis = {
+    functionsExist: {
+      adminFunction: results.adminTeamFunction?.success || false,
+      enterpriseFunction: results.enterpriseTeamFunction?.success || false,
+      statisticsFunction: results.statisticsFunction?.success || false
+    },
+    dataConsistency: {
+      adminCount: results.adminTeamFunction?.dataCount || 0,
+      enterpriseCount: results.enterpriseTeamFunction?.dataCount || 0,
+      directCount: results.directTeamsQuery?.dataCount || 0,
+      statisticsCount: results.statisticsFunction?.data?.[0]?.total_teams || 0
+    },
+    recommendation: ''
+  };
 
-    console.log(`\n📊 DIAGNOSTIC SUMMARY:`);
-    console.log(`✅ Passed: ${passedTests.length}`);
-    console.log(`❌ Failed: ${failedTests.length}`);
-    console.log(`⚠️  Warnings: ${warningTests.length}`);
-
-    if (failedTests.length > 0) {
-      console.log(`\n🚨 FAILED TESTS:`);
-      failedTests.forEach(test => {
-        console.log(`❌ ${test.test}: ${test.message}`);
-        if (test.details) {
-          console.log(`   Details:`, test.details);
-        }
-      });
-    }
-
-    return results;
-  } catch (error) {
-    console.error('🚨 Error running team diagnostics:', error);
-    return [];
+  // Analyze the results
+  if (!analysis.functionsExist.adminFunction && analysis.functionsExist.enterpriseFunction) {
+    analysis.recommendation = 'CRITICAL: Admin function (get_teams_safe) is failing while Enterprise function works. This explains why admin dashboard shows statistics but no teams.';
+  } else if (analysis.dataConsistency.statisticsCount > 0 && analysis.dataConsistency.adminCount === 0) {
+    analysis.recommendation = 'ISSUE: Statistics show teams exist but admin function returns empty. Likely RLS or permission issue.';
+  } else if (analysis.dataConsistency.enterpriseCount > analysis.dataConsistency.adminCount) {
+    analysis.recommendation = 'DISCREPANCY: Enterprise function returns more teams than admin function. Different access patterns or RLS policies.';
+  } else {
+    analysis.recommendation = 'DATA CONSISTENT: All functions return similar counts. Issue may be in UI layer.';
   }
+
+  console.log('🔧 TEAM-CONSISTENCY: Analysis complete:', analysis);
+  return { results, analysis };
 }
