@@ -70,7 +70,6 @@ export class UnifiedTeamService {
             .from('teams')
             .select(`
               *,
-              team_members!inner(count),
               locations(name, address)
             `));
           break;
@@ -81,7 +80,6 @@ export class UnifiedTeamService {
             .from('teams')
             .select(`
               *,
-              team_members!inner(count),
               locations(name, address)
             `)
             .eq('created_by', userId));
@@ -92,9 +90,8 @@ export class UnifiedTeamService {
           ({ data, error } = await supabase
             .from('team_members')
             .select(`
-              teams!inner(
+              teams(
                 *,
-                team_members!inner(count),
                 locations(name, address)
               )
             `)
@@ -153,14 +150,13 @@ export class UnifiedTeamService {
         })
         .select(`
           *,
-          team_members!inner(count),
           locations(name, address)
         `)
         .single();
 
       if (error) throw error;
 
-      return data as EnhancedTeam;
+      return data as unknown as EnhancedTeam;
     } catch (error) {
       console.error('Error creating team:', error);
       throw error;
@@ -179,14 +175,13 @@ export class UnifiedTeamService {
         .eq('id', teamId)
         .select(`
           *,
-          team_members!inner(count),
           locations(name, address)
         `)
         .single();
 
       if (error) throw error;
 
-      return data as EnhancedTeam;
+      return data as unknown as EnhancedTeam;
     } catch (error) {
       console.error('Error updating team:', error);
       throw error;
@@ -239,7 +234,7 @@ export class UnifiedTeamService {
         .from('team_members')
         .select(`
           *,
-          profiles!inner (
+          profiles (
             display_name,
             email,
             role
@@ -251,8 +246,9 @@ export class UnifiedTeamService {
 
       return (data || []).map(member => ({
         ...member,
+        joined_at: member.created_at || new Date().toISOString(),
         profile: member.profiles
-      })) as TeamMember[];
+      })) as unknown as TeamMember[];
     } catch (error) {
       console.error('Error fetching team members:', error);
       return [];
@@ -330,7 +326,10 @@ export class UnifiedTeamService {
     try {
       const { error } = await supabase.rpc('assign_provider_to_team', {
         p_team_id: teamId,
-        p_provider_id: parseInt(providerId)
+        p_provider_id: parseInt(providerId),
+        p_assignment_role: 'primary',
+        p_oversight_level: 'standard',
+        p_assigned_by: 'system'
       });
 
       if (error) throw error;
@@ -350,14 +349,13 @@ export class UnifiedTeamService {
         .from('teams')
         .select(`
           *,
-          team_members!inner(count),
           locations(name, address)
         `)
         .eq('created_by', providerId);
 
       if (error) throw error;
 
-      return data as EnhancedTeam[] || [];
+      return (data as unknown as EnhancedTeam[]) || [];
     } catch (error) {
       console.error('Error fetching provider teams:', error);
       return [];
@@ -501,7 +499,6 @@ export class UnifiedTeamService {
         .from('teams')
         .select(`
           *,
-          team_members!inner(count),
           locations(name, address)
         `);
 
@@ -527,7 +524,7 @@ export class UnifiedTeamService {
 
       if (error) throw error;
 
-      return data as EnhancedTeam[] || [];
+      return (data as unknown as EnhancedTeam[]) || [];
     } catch (error) {
       console.error('Error searching teams:', error);
       return [];
