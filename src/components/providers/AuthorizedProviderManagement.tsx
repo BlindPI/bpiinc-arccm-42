@@ -12,6 +12,7 @@ import { CreateProviderDialog } from './CreateProviderDialog';
 import { ProviderPerformanceView } from './ProviderPerformanceView';
 import { ProviderLocationDashboard } from './ProviderLocationDashboard';
 import { ProviderLocationAssignment } from './ProviderLocationAssignment';
+import { ProviderTeamManagement } from './ProviderTeamManagement';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function AuthorizedProviderManagement() {
@@ -196,11 +197,10 @@ export default function AuthorizedProviderManagement() {
                 </TabsContent>
                 
                 <TabsContent value="teams">
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Team management interface</p>
-                    <p className="text-sm">Provider-specific team operations will be available here</p>
-                  </div>
+                  <ProviderTeamManagement
+                    providerId={selectedProvider.id}
+                    providerName={selectedProvider.name}
+                  />
                 </TabsContent>
                 
                 <TabsContent value="performance">
