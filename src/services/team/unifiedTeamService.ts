@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { DatabaseUserRole } from '@/types/database-roles';
 import type { EnhancedTeam, TeamAnalytics } from '@/types/team-management';
+import { SafeTeamService } from './safeTeamService';
 
 // Re-export types for easier importing
 export type { EnhancedTeam, TeamAnalytics } from '@/types/team-management';
@@ -60,6 +61,7 @@ export class UnifiedTeamService {
    */
   static async getTeams(userRole: DatabaseUserRole, userId: string): Promise<EnhancedTeam[]> {
     try {
+      // First try the complex query approach
       let data, error;
 
       switch (userRole) {
@@ -105,14 +107,16 @@ export class UnifiedTeamService {
       }
 
       if (error) {
-        console.error('Error fetching teams:', error);
-        throw error;
+        console.error('Error fetching teams, falling back to safe method:', error);
+        // Fallback to safe method if RLS recursion occurs
+        return await SafeTeamService.getTeamsSafely(userRole, userId) as unknown as EnhancedTeam[];
       }
 
       return data || [];
     } catch (error) {
-      console.error('UnifiedTeamService.getTeams error:', error);
-      return [];
+      console.error('UnifiedTeamService.getTeams error, using safe fallback:', error);
+      // Fallback to safe method
+      return await SafeTeamService.getTeamsSafely(userRole, userId) as unknown as EnhancedTeam[];
     }
   }
 
@@ -154,12 +158,19 @@ export class UnifiedTeamService {
         `)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating team, trying safe method:', error);
+        // Fallback to safe method
+        const safeResult = await SafeTeamService.createTeamSafely(teamData);
+        return safeResult as unknown as EnhancedTeam;
+      }
 
       return data as unknown as EnhancedTeam;
     } catch (error) {
-      console.error('Error creating team:', error);
-      throw error;
+      console.error('Error creating team, using safe fallback:', error);
+      // Fallback to safe method
+      const safeResult = await SafeTeamService.createTeamSafely(teamData);
+      return safeResult as unknown as EnhancedTeam;
     }
   }
 
@@ -242,7 +253,11 @@ export class UnifiedTeamService {
         `)
         .eq('team_id', teamId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching team members, using safe method:', error);
+        // Fallback to safe method
+        return await SafeTeamService.getTeamMembersSafely(teamId) as unknown as TeamMember[];
+      }
 
       return (data || []).map(member => ({
         ...member,
@@ -250,8 +265,9 @@ export class UnifiedTeamService {
         profile: member.profiles
       })) as unknown as TeamMember[];
     } catch (error) {
-      console.error('Error fetching team members:', error);
-      return [];
+      console.error('Error fetching team members, using safe fallback:', error);
+      // Fallback to safe method
+      return await SafeTeamService.getTeamMembersSafely(teamId) as unknown as TeamMember[];
     }
   }
 
@@ -269,10 +285,16 @@ export class UnifiedTeamService {
           role: role
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error adding team member, using safe method:', error);
+        // Fallback to safe method
+        await SafeTeamService.addMemberSafely(teamId, userId, role);
+        return;
+      }
     } catch (error) {
-      console.error('Error adding team member:', error);
-      throw error;
+      console.error('Error adding team member, using safe fallback:', error);
+      // Fallback to safe method
+      await SafeTeamService.addMemberSafely(teamId, userId, role);
     }
   }
 
@@ -382,26 +404,33 @@ export class UnifiedTeamService {
         }));
       } else {
         // Get global team analytics - use basic queries if function doesn't exist
-        const { data: teamsData, error: teamsError } = await supabase
-          .from('teams')
-          .select('id, status');
-        
-        const { data: membersData, error: membersError } = await supabase
-          .from('team_members')
-          .select('id');
+        try {
+          const { data: teamsData, error: teamsError } = await supabase
+            .from('teams')
+            .select('id, status');
+          
+          const { data: membersData, error: membersError } = await supabase
+            .from('team_members')
+            .select('id');
 
-        if (teamsError || membersError) {
-          throw teamsError || membersError;
+          if (teamsError || membersError) {
+            console.error('Error fetching analytics, using safe method:', teamsError || membersError);
+            // Fallback to safe method
+            return await SafeTeamService.getAnalyticsSafely();
+          }
+
+          return {
+            totalTeams: teamsData?.length || 0,
+            totalMembers: membersData?.length || 0,
+            averagePerformance: 85, // Default placeholder
+            averageCompliance: 90, // Default placeholder
+            teamsByLocation: {},
+            performanceByTeamType: {}
+          };
+        } catch (analyticsError) {
+          console.error('Analytics query failed, using safe fallback:', analyticsError);
+          return await SafeTeamService.getAnalyticsSafely();
         }
-
-        return {
-          totalTeams: teamsData?.length || 0,
-          totalMembers: membersData?.length || 0,
-          averagePerformance: 85, // Default placeholder
-          averageCompliance: 90, // Default placeholder
-          teamsByLocation: {},
-          performanceByTeamType: {}
-        };
       }
 
       if (error) throw error;
