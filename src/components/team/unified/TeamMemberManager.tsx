@@ -7,8 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { UnifiedTeamService, TeamMember } from '@/services/team/unifiedTeamService';
-import { supabase } from '@/integrations/supabase/client';
+import { UnifiedTeamService, TeamMember, User } from '@/services/team/unifiedTeamService';
 import { toast } from 'sonner';
 import { 
   Users, 
@@ -34,13 +33,6 @@ interface TeamMemberManagerProps {
   teamId: string;
   teamName: string;
   canManageMembers: boolean;
-}
-
-interface User {
-  id: string;
-  display_name: string;
-  email: string;
-  role: string;
 }
 
 const MEMBER_ROLES = [
@@ -80,17 +72,8 @@ export function TeamMemberManager({ teamId, teamName, canManageMembers }: TeamMe
   // Fetch available users (not in team)
   const { data: availableUsers = [], isLoading: usersLoading } = useQuery({
     queryKey: ['available-users', teamId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, display_name, email, role')
-        .not('id', 'in', `(${members.map(m => m.user_id).join(',') || 'null'})`)
-        .order('display_name');
-      
-      if (error) throw error;
-      return data as User[];
-    },
-    enabled: showAddDialog && members.length > 0,
+    queryFn: () => UnifiedTeamService.getAvailableUsers(teamId),
+    enabled: showAddDialog,
   });
 
   // Add member mutation

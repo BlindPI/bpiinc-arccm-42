@@ -35,6 +35,13 @@ export interface TeamMember {
   };
 }
 
+export interface User {
+  id: string;
+  display_name: string;
+  email: string;
+  role: string;
+}
+
 export interface ComplianceMetrics {
   overallCompliance: number;
   certificationCompliance: number;
@@ -235,20 +242,22 @@ export class UnifiedTeamService {
    */
   static async addMember(teamId: string, userId: string, role: string = 'member'): Promise<void> {
     try {
-      const { error } = await supabase
-        .from('team_members')
-        .insert({
-          team_id: teamId,
-          user_id: userId,
-          role: role
+      // Use the new bypass RPC function that avoids RLS recursion
+      const { data, error } = await supabase
+        .rpc('add_team_member_bypass_rls', {
+          p_team_id: teamId,
+          p_user_id: userId,
+          p_role: role
         });
 
       if (error) {
-        console.error('Error adding team member, using safe method:', error);
+        console.error('Error adding team member with bypass function:', error);
         // Fallback to safe method
         await SafeTeamService.addMemberSafely(teamId, userId, role);
         return;
       }
+
+      console.log('Team member added successfully:', data);
     } catch (error) {
       console.error('Error adding team member, using safe fallback:', error);
       // Fallback to safe method
@@ -262,13 +271,19 @@ export class UnifiedTeamService {
    */
   static async removeMember(teamId: string, userId: string): Promise<void> {
     try {
-      const { error } = await supabase
-        .from('team_members')
-        .delete()
-        .eq('team_id', teamId)
-        .eq('user_id', userId);
+      // Use the new bypass RPC function that avoids RLS recursion
+      const { data, error } = await supabase
+        .rpc('remove_team_member_bypass_rls', {
+          p_team_id: teamId,
+          p_user_id: userId
+        });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error removing team member with bypass function:', error);
+        throw error;
+      }
+
+      console.log('Team member removed successfully');
     } catch (error) {
       console.error('Error removing team member:', error);
       throw error;
@@ -281,20 +296,51 @@ export class UnifiedTeamService {
    */
   static async bulkAddMembers(teamId: string, userIds: string[]): Promise<void> {
     try {
-      const membersToAdd = userIds.map(userId => ({
-        team_id: teamId,
-        user_id: userId,
-        role: 'member'
-      }));
+      // Use the new bypass RPC function that avoids RLS recursion
+      const { data, error } = await supabase
+        .rpc('bulk_add_team_members_bypass_rls', {
+          p_team_id: teamId,
+          p_user_ids: userIds,
+          p_role: 'member'
+        });
 
-      const { error } = await supabase
-        .from('team_members')
-        .insert(membersToAdd);
+      if (error) {
+        console.error('Error bulk adding members with bypass function:', error);
+        throw error;
+      }
 
-      if (error) throw error;
+      const result = data && data[0] ? data[0] : {};
+      console.log(`Bulk add completed: ${result.success_count || 0} successful, ${result.failed_users?.length || 0} failed`);
+      
+      if (result.failed_users && result.failed_users.length > 0) {
+        console.warn('Some users failed to be added:', result.failed_users, result.error_messages);
+      }
     } catch (error) {
       console.error('Error bulk adding members:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Get available users for team (not already members)
+   * Uses bypass function to avoid RLS issues
+   */
+  static async getAvailableUsers(teamId: string): Promise<User[]> {
+    try {
+      const { data, error } = await supabase.rpc('get_available_users_for_team_bypass_rls', {
+        p_team_id: teamId
+      });
+
+      if (error) {
+        console.error('Error fetching available users with bypass function:', error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching available users:', error);
+      // Fallback to SafeTeamService if RPC fails
+      return SafeTeamService.getAvailableUsers(teamId);
     }
   }
 

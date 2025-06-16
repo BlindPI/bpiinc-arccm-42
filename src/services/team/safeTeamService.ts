@@ -249,6 +249,35 @@ export class SafeTeamService {
       };
     }
   }
+
+  /**
+   * Get available users for team safely (not already members)
+   */
+  static async getAvailableUsers(teamId: string) {
+    try {
+      // First get current team members
+      const { data: currentMembers } = await supabase
+        .from('team_members')
+        .select('user_id')
+        .eq('team_id', teamId);
+
+      const memberIds = currentMembers?.map(m => m.user_id) || [];
+
+      // Then get all profiles excluding current members
+      const { data: availableUsers, error } = await supabase
+        .from('profiles')
+        .select('id, display_name, email, role')
+        .not('id', 'in', `(${memberIds.length > 0 ? memberIds.join(',') : 'null'})`)
+        .not('display_name', 'is', null)
+        .order('display_name');
+
+      if (error) throw error;
+      return availableUsers || [];
+    } catch (error) {
+      console.error('Error getting available users safely:', error);
+      return [];
+    }
+  }
 }
 
 export default SafeTeamService;
