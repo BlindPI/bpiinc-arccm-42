@@ -24,6 +24,19 @@ export interface EmailCampaign {
   unsubscribed_count?: number;
   automation_rules?: any;
   tracking_enabled: boolean;
+  // Additional compatibility fields
+  scheduled_date?: string;
+  sent_date?: string;
+  leads_generated?: number;
+  opportunities_created?: number;
+  revenue_attributed?: number;
+  geographic_targeting?: string[];
+  industry_targeting?: string[];
+  email_content?: string;
+  target_segments?: Record<string, any>;
+  personalization_fields?: Record<string, any>;
+  email_template_id?: string;
+  campaign_cost?: number;
 }
 
 export interface CampaignTemplate {
@@ -36,6 +49,9 @@ export interface CampaignTemplate {
   variables: string[];
   created_at: Date;
   created_by: string;
+  // Additional fields for compatibility
+  name?: string;
+  type?: string;
 }
 
 export interface CampaignMetrics {
@@ -53,12 +69,21 @@ export interface CampaignMetrics {
 }
 
 export class EmailCampaignService {
-  static async getEmailCampaigns(): Promise<EmailCampaign[]> {
+  static async getEmailCampaigns(filters?: { status?: string; campaign_type?: string }): Promise<EmailCampaign[]> {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('email_campaigns')
         .select('*')
         .order('created_at', { ascending: false });
+
+      if (filters?.status) {
+        query = query.eq('status', filters.status);
+      }
+      if (filters?.campaign_type) {
+        query = query.eq('campaign_type', filters.campaign_type);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       
@@ -113,7 +138,9 @@ export class EmailCampaignService {
       const updateData = {
         ...updates,
         send_date: updates.send_date?.toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        // Handle date conversion for created_at if present
+        created_at: updates.created_at instanceof Date ? updates.created_at.toISOString() : updates.created_at
       };
 
       const { data, error } = await supabase
@@ -290,10 +317,32 @@ export class EmailCampaignService {
     }
   }
 
-  static async exportCampaignData(campaignIds: string[]): Promise<any> {
+  static async exportCampaignData(campaignIds?: string[]): Promise<string> {
     try {
       const campaigns = await this.getEmailCampaigns();
-      return campaigns.filter(c => campaignIds.includes(c.id));
+      const filteredCampaigns = campaignIds ? campaigns.filter(c => campaignIds.includes(c.id)) : campaigns;
+      
+      // Convert to CSV format
+      const headers = ['Campaign Name', 'Type', 'Status', 'Recipients', 'Open Rate', 'Click Rate', 'Created Date'];
+      const csvRows = [headers.join(',')];
+      
+      filteredCampaigns.forEach(campaign => {
+        const openRate = campaign.delivered_count ? Math.round(((campaign.opened_count || 0) / campaign.delivered_count) * 100) : 0;
+        const clickRate = campaign.opened_count ? Math.round(((campaign.clicked_count || 0) / campaign.opened_count) * 100) : 0;
+        
+        const row = [
+          `"${campaign.campaign_name}"`,
+          campaign.campaign_type,
+          campaign.status,
+          campaign.total_recipients || 0,
+          `${openRate}%`,
+          `${clickRate}%`,
+          campaign.created_at.toLocaleDateString()
+        ];
+        csvRows.push(row.join(','));
+      });
+      
+      return csvRows.join('\n');
     } catch (error) {
       console.error('Error exporting campaign data:', error);
       throw error;

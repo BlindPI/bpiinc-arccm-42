@@ -221,12 +221,18 @@ export class CRMService {
   }
 
   // Account operations
-  static async getAccounts(): Promise<Account[]> {
+  static async getAccounts(filters?: { account_type?: string }): Promise<Account[]> {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('crm_accounts')
         .select('*')
         .order('created_at', { ascending: false });
+
+      if (filters?.account_type) {
+        query = query.eq('account_type', filters.account_type);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       return (data || []) as Account[];
@@ -416,6 +422,74 @@ export class CRMService {
         conversion_rate: 0,
         win_rate: 0,
         average_deal_size: 0
+      };
+    }
+  }
+
+  // Additional methods for dashboard and search functionality
+  static async getUpcomingTasks(): Promise<Activity[]> {
+    try {
+      const { data, error } = await supabase
+        .from('crm_activities')
+        .select('*')
+        .eq('completed', false)
+        .gte('due_date', new Date().toISOString())
+        .order('due_date', { ascending: true })
+        .limit(10);
+
+      if (error) throw error;
+      return (data || []) as Activity[];
+    } catch (error) {
+      console.error('Error fetching upcoming tasks:', error);
+      return [];
+    }
+  }
+
+  static async globalSearch(query: string): Promise<{
+    leads: Lead[];
+    opportunities: Opportunity[];
+    contacts: Contact[];
+    accounts: Account[];
+  }> {
+    try {
+      const searchTerm = `%${query.toLowerCase()}%`;
+      
+      const [leadsResult, opportunitiesResult, contactsResult, accountsResult] = await Promise.all([
+        supabase
+          .from('crm_leads')
+          .select('*')
+          .or(`first_name.ilike.${searchTerm},last_name.ilike.${searchTerm},email.ilike.${searchTerm},company_name.ilike.${searchTerm}`)
+          .limit(5),
+        supabase
+          .from('crm_opportunities')
+          .select('*')
+          .or(`opportunity_name.ilike.${searchTerm},account_name.ilike.${searchTerm},description.ilike.${searchTerm}`)
+          .limit(5),
+        supabase
+          .from('crm_contacts')
+          .select('*')
+          .or(`first_name.ilike.${searchTerm},last_name.ilike.${searchTerm},email.ilike.${searchTerm}`)
+          .limit(5),
+        supabase
+          .from('crm_accounts')
+          .select('*')
+          .or(`account_name.ilike.${searchTerm},industry.ilike.${searchTerm}`)
+          .limit(5)
+      ]);
+
+      return {
+        leads: (leadsResult.data || []) as Lead[],
+        opportunities: (opportunitiesResult.data || []) as Opportunity[],
+        contacts: (contactsResult.data || []) as Contact[],
+        accounts: (accountsResult.data || []) as Account[]
+      };
+    } catch (error) {
+      console.error('Error performing global search:', error);
+      return {
+        leads: [],
+        opportunities: [],
+        contacts: [],
+        accounts: []
       };
     }
   }

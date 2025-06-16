@@ -57,7 +57,24 @@ export function EmailCampaignBuilder({ campaignId, onClose }: EmailCampaignBuild
   });
 
   const createCampaignMutation = useMutation({
-    mutationFn: (data: Partial<EmailCampaign>) => EmailCampaignService.createEmailCampaign(data),
+    mutationFn: (data: Partial<EmailCampaign>) => {
+      // Ensure all required fields are present
+      const campaignData = {
+        campaign_name: data.campaign_name || '',
+        campaign_type: data.campaign_type || 'newsletter',
+        status: data.status || 'draft',
+        subject_line: data.subject_line || '',
+        content: data.content || '',
+        sender_name: data.sender_name || '',
+        sender_email: data.sender_email || '',
+        target_audience: data.target_audience || {},
+        created_by: 'current-user',
+        tracking_enabled: data.tracking_enabled ?? true,
+        ...data
+      } as Omit<EmailCampaign, 'id' | 'created_at' | 'updated_at'>;
+      
+      return EmailCampaignService.createEmailCampaign(campaignData);
+    },
     onSuccess: () => {
       toast.success('Campaign created successfully');
       queryClient.invalidateQueries({ queryKey: ['email-campaigns'] });

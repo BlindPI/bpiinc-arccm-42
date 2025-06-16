@@ -154,31 +154,40 @@ export interface CRMStats {
 export interface EmailCampaign {
   id: string;
   campaign_name: string;
-  campaign_type?: string;
-  status?: 'draft' | 'scheduled' | 'sending' | 'sent' | 'paused' | 'cancelled';
-  subject_line?: string;
-  email_content?: string;
-  target_audience?: string;
-  target_segments?: Record<string, any>;
-  personalization_fields?: Record<string, any>;
-  email_template_id?: string;
-  scheduled_date?: string;
-  sent_date?: string;
+  campaign_type: 'newsletter' | 'promotional' | 'drip' | 'event' | 'follow_up';
+  status: 'draft' | 'scheduled' | 'sending' | 'sent' | 'paused' | 'cancelled';
+  subject_line: string;
+  content: string;
+  html_content?: string;
+  sender_name: string;
+  sender_email: string;
+  reply_to_email?: string;
+  target_audience: any;
+  send_date?: Date;
+  created_at: Date;
+  updated_at: Date;
+  created_by: string;
   total_recipients?: number;
   delivered_count?: number;
   opened_count?: number;
   clicked_count?: number;
   bounced_count?: number;
   unsubscribed_count?: number;
+  automation_rules?: any;
+  tracking_enabled: boolean;
+  // Additional fields for compatibility
+  email_content?: string;
+  target_segments?: Record<string, any>;
+  personalization_fields?: Record<string, any>;
+  email_template_id?: string;
+  scheduled_date?: string;
+  sent_date?: string;
   leads_generated?: number;
   opportunities_created?: number;
   revenue_attributed?: number;
   campaign_cost?: number;
   geographic_targeting?: string[];
   industry_targeting?: string[];
-  created_at: string;
-  updated_at: string;
-  created_by?: string;
 }
 
 export interface EmailTemplate {
@@ -193,6 +202,21 @@ export interface EmailTemplate {
   created_by?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface CampaignTemplate {
+  id: string;
+  template_name: string;
+  template_type: string;
+  subject_line: string;
+  content: string;
+  html_content?: string;
+  variables: string[];
+  created_at: Date;
+  created_by: string;
+  // Additional fields for compatibility
+  name?: string;
+  type?: string;
 }
 
 export interface TargetAudience {

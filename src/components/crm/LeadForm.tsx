@@ -77,8 +77,9 @@ export const LeadForm: React.FC<LeadFormProps> = ({ lead, onSave, onCancel }) =>
     } else {
       createMutation.mutate({
         ...data,
+        email: data.email!, // Assert that email is present (required by form validation)
         lead_score: 0
-      });
+      } as Omit<Lead, 'id' | 'created_at' | 'updated_at'>);
     }
   };
 

@@ -327,10 +327,10 @@ export const CampaignManager: React.FC<CampaignManagerProps> = ({ className }) =
                   </div>
                 )}
 
-                {campaign.sent_date && (
+                {campaign.send_date && (
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Send className="mr-2 h-4 w-4" />
-                    Sent: {formatDate(campaign.sent_date)}
+                    Sent: {formatDate(campaign.send_date.toISOString())}
                   </div>
                 )}
 
@@ -443,8 +443,12 @@ const CampaignForm: React.FC<CampaignFormProps> = ({ campaign, onSubmit, isLoadi
     campaign_name: campaign?.campaign_name || '',
     campaign_type: campaign?.campaign_type || 'promotional',
     subject_line: campaign?.subject_line || '',
-    target_audience: campaign?.target_audience || '',
+    content: campaign?.content || '',
+    sender_name: campaign?.sender_name || '',
+    sender_email: campaign?.sender_email || '',
+    target_audience: campaign?.target_audience || {},
     status: campaign?.status || 'draft',
+    tracking_enabled: campaign?.tracking_enabled ?? true,
     scheduled_date: campaign?.scheduled_date || '',
     geographic_targeting: campaign?.geographic_targeting || [],
     industry_targeting: campaign?.industry_targeting || []
@@ -454,6 +458,9 @@ const CampaignForm: React.FC<CampaignFormProps> = ({ campaign, onSubmit, isLoadi
     e.preventDefault();
     onSubmit({
       ...formData,
+      campaign_type: formData.campaign_type as any,
+      status: formData.status as any,
+      created_by: campaign?.created_by || 'current-user',
       total_recipients: campaign?.total_recipients,
       delivered_count: campaign?.delivered_count,
       opened_count: campaign?.opened_count,
@@ -463,8 +470,8 @@ const CampaignForm: React.FC<CampaignFormProps> = ({ campaign, onSubmit, isLoadi
       leads_generated: campaign?.leads_generated,
       opportunities_created: campaign?.opportunities_created,
       revenue_attributed: campaign?.revenue_attributed,
-      sent_date: campaign?.sent_date,
-      created_by: campaign?.created_by
+      send_date: campaign?.send_date,
+      automation_rules: campaign?.automation_rules
     });
   };
 
@@ -491,11 +498,11 @@ const CampaignForm: React.FC<CampaignFormProps> = ({ campaign, onSubmit, isLoadi
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="welcome">Welcome</SelectItem>
-              <SelectItem value="nurture">Nurture</SelectItem>
-              <SelectItem value="promotional">Promotional</SelectItem>
-              <SelectItem value="follow_up">Follow-up</SelectItem>
               <SelectItem value="newsletter">Newsletter</SelectItem>
+              <SelectItem value="promotional">Promotional</SelectItem>
+              <SelectItem value="drip">Drip</SelectItem>
+              <SelectItem value="event">Event</SelectItem>
+              <SelectItem value="follow_up">Follow-up</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -513,14 +520,39 @@ const CampaignForm: React.FC<CampaignFormProps> = ({ campaign, onSubmit, isLoadi
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="target_audience">Target Audience Description</Label>
+        <Label htmlFor="content">Email Content</Label>
         <Textarea
-          id="target_audience"
-          value={formData.target_audience}
-          onChange={(e) => setFormData({ ...formData, target_audience: e.target.value })}
-          placeholder="Describe your target audience..."
-          rows={3}
+          id="content"
+          value={formData.content}
+          onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+          placeholder="Enter email content..."
+          rows={4}
+          required
         />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="sender_name">Sender Name</Label>
+          <Input
+            id="sender_name"
+            value={formData.sender_name}
+            onChange={(e) => setFormData({ ...formData, sender_name: e.target.value })}
+            placeholder="Enter sender name"
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="sender_email">Sender Email</Label>
+          <Input
+            id="sender_email"
+            type="email"
+            value={formData.sender_email}
+            onChange={(e) => setFormData({ ...formData, sender_email: e.target.value })}
+            placeholder="Enter sender email"
+            required
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

@@ -115,8 +115,8 @@ export function LeadDetailModal({ open, onOpenChange, lead }: LeadDetailModalPro
 
       {/* Conversion Modal */}
       <LeadConversionModal
-        open={showConversionModal}
-        onOpenChange={setShowConversionModal}
+        isOpen={showConversionModal}
+        onClose={() => setShowConversionModal(false)}
         lead={lead}
         onSuccess={() => {
           setShowConversionModal(false);

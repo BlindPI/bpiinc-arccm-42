@@ -115,8 +115,8 @@ export default function CampaignManagement() {
     return (
       <div className="flex-1 space-y-6 p-6">
         <EmailCampaignBuilder
-          onSave={handleCampaignSaved}
-          onCancel={handleCancelBuilder}
+          campaignId={selectedCampaignId}
+          onClose={handleCampaignSaved}
         />
       </div>
     );
@@ -208,17 +208,17 @@ export default function CampaignManagement() {
                     <Card key={index} className="hover:shadow-md transition-shadow cursor-pointer">
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between mb-4">
-                          <Badge variant="outline">{template.type || 'general'}</Badge>
+                          <Badge variant="outline">{template.template_type || 'general'}</Badge>
                           <Button variant="outline" size="sm">
                             <Eye className="h-4 w-4" />
                           </Button>
                         </div>
                         
-                        <h3 className="font-semibold mb-2">{template.name}</h3>
-                        <p className="text-sm text-muted-foreground mb-4">Welcome email template</p>
+                        <h3 className="font-semibold mb-2">{template.template_name}</h3>
+                        <p className="text-sm text-muted-foreground mb-4">{template.subject_line}</p>
                         
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>0 variables</span>
+                          <span>{template.variables?.length || 0} variables</span>
                           <Badge variant="default">Active</Badge>
                         </div>
                       </CardContent>
