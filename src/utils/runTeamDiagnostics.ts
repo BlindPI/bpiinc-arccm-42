@@ -1,7 +1,7 @@
 // Simple script to run team diagnostics and validate fixes
 // This can be imported and called from the browser console
 
-import { logTeamDiagnostics } from './teamDatabaseDiagnostics';
+import { diagnoseDatabaseTeamIssues, testTeamDataConsistency } from './teamDatabaseDiagnostics';
 
 // Export a function that can be called from the browser console
 export async function runDiagnostics() {
@@ -9,22 +9,31 @@ export async function runDiagnostics() {
   console.log('📋 This will test database connectivity, RLS policies, and query functionality');
   
   try {
-    const results = await logTeamDiagnostics();
+    const diagnosticResult = await testTeamDataConsistency();
     
     console.log('\n🎯 DIAGNOSIS COMPLETE');
     console.log('📊 Check the console output above for detailed results');
+    console.log('🔍 RECOMMENDATION:', diagnosticResult.analysis.recommendation);
     
-    const failedTests = results.filter(r => r.status === 'FAIL');
-    if (failedTests.length === 0) {
+    // Check for critical issues
+    const hasIssues = diagnosticResult.results.errors.length > 0 ||
+                     !diagnosticResult.analysis.functionsExist.adminFunction;
+    
+    if (!hasIssues) {
       console.log('✅ All tests passed! The team management system should be working correctly.');
     } else {
-      console.log(`❌ ${failedTests.length} tests failed. These issues need to be addressed:`);
-      failedTests.forEach(test => {
-        console.log(`   • ${test.test}: ${test.message}`);
-      });
+      console.log('❌ Issues detected that need to be addressed:');
+      if (diagnosticResult.results.errors.length > 0) {
+        diagnosticResult.results.errors.forEach(error => {
+          console.log(`   • ${error}`);
+        });
+      }
+      if (!diagnosticResult.analysis.functionsExist.adminFunction) {
+        console.log('   • Admin team function is not working properly');
+      }
     }
     
-    return results;
+    return diagnosticResult;
   } catch (error) {
     console.error('🚨 Failed to run diagnostics:', error);
     return [];

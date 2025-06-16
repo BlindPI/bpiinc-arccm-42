@@ -26,12 +26,12 @@ export async function diagnoseDatabaseTeamIssues() {
     // Test admin team function (get_teams_safe)
     try {
       console.log('🔧 TEAM-DIAGNOSTICS: Testing get_teams_safe function...');
-      const { data: adminData, error: adminError } = await supabase.rpc('get_teams_safe');
+      const { data: adminData, error: adminError } = await supabase.rpc('get_teams_safe' as any, { p_user_id: null });
       results.adminTeamFunction = {
         success: !adminError,
         error: adminError?.message,
-        dataCount: adminData?.length || 0,
-        sampleData: adminData?.slice(0, 2) || []
+        dataCount: Array.isArray(adminData) ? adminData.length : 0,
+        sampleData: Array.isArray(adminData) ? adminData.slice(0, 2) : []
       };
       console.log('🔧 TEAM-DIAGNOSTICS: Admin function result:', results.adminTeamFunction);
     } catch (error: any) {
@@ -42,12 +42,12 @@ export async function diagnoseDatabaseTeamIssues() {
     // Test enterprise team function (get_enhanced_teams_data)
     try {
       console.log('🔧 TEAM-DIAGNOSTICS: Testing get_enhanced_teams_data function...');
-      const { data: enterpriseData, error: enterpriseError } = await supabase.rpc('get_enhanced_teams_data');
+      const { data: enterpriseData, error: enterpriseError } = await supabase.rpc('get_enhanced_teams_data' as any);
       results.enterpriseTeamFunction = {
         success: !enterpriseError,
         error: enterpriseError?.message,
-        dataCount: enterpriseData?.length || 0,
-        sampleData: enterpriseData?.slice(0, 2) || []
+        dataCount: Array.isArray(enterpriseData) ? enterpriseData.length : 0,
+        sampleData: Array.isArray(enterpriseData) ? enterpriseData.slice(0, 2) : []
       };
       console.log('🔧 TEAM-DIAGNOSTICS: Enterprise function result:', results.enterpriseTeamFunction);
     } catch (error: any) {
@@ -77,7 +77,7 @@ export async function diagnoseDatabaseTeamIssues() {
     // Test statistics function
     try {
       console.log('🔧 TEAM-DIAGNOSTICS: Testing get_team_statistics_safe function...');
-      const { data: statsData, error: statsError } = await supabase.rpc('get_team_statistics_safe');
+      const { data: statsData, error: statsError } = await supabase.rpc('get_team_statistics_safe' as any);
       results.statisticsFunction = {
         success: !statsError,
         error: statsError?.message,
