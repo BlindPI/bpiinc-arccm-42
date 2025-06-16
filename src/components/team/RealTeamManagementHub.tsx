@@ -1,7 +1,9 @@
 
 import React from 'react';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useTeamContext } from '@/hooks/useTeamContext';
 import { RealEnterpriseTeamHub } from './RealEnterpriseTeamHub';
+import { AdminTeamOverviewDashboard } from '@/components/admin/AdminTeamOverviewDashboard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,6 +12,7 @@ import { Crown, Users, Shield, AlertTriangle } from 'lucide-react';
 
 export function RealTeamManagementHub() {
   const { permissions, role, isLoading } = useUserRole();
+  const { shouldUseAdminInterface, isSystemAdmin } = useTeamContext();
 
   if (isLoading) {
     return (
@@ -19,7 +22,12 @@ export function RealTeamManagementHub() {
     );
   }
 
-  // Check for enterprise access
+  // SA/AD users get the administrative interface for global oversight
+  if (shouldUseAdminInterface && isSystemAdmin) {
+    return <AdminTeamOverviewDashboard />;
+  }
+
+  // Check for enterprise access for non-admin users
   if (!permissions.hasEnterpriseAccess) {
     return (
       <div className="space-y-6">
@@ -54,7 +62,7 @@ export function RealTeamManagementHub() {
           <CardContent>
             <div className="space-y-4">
               <p className="text-amber-700">
-                You're currently using Professional Team Management. This mode provides 
+                You're currently using Professional Team Management. This mode provides
                 basic team collaboration features suitable for standard operations.
               </p>
               
@@ -128,7 +136,7 @@ export function RealTeamManagementHub() {
               
               <div className="text-center py-8">
                 <p className="text-muted-foreground">
-                  Professional team management features are being developed. 
+                  Professional team management features are being developed.
                   For full functionality, please use Enterprise Teams.
                 </p>
               </div>

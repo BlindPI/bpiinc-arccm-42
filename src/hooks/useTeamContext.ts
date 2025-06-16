@@ -15,6 +15,7 @@ export interface TeamContext {
   isTeamAdmin: boolean;
   canManageTeamNavigation: boolean;
   isSystemAdmin: boolean;
+  shouldUseAdminInterface: boolean;
 }
 
 export function useTeamContext(): TeamContext {
@@ -34,7 +35,8 @@ export function useTeamContext(): TeamContext {
         teamLocation: null,
         isTeamAdmin: false,
         canManageTeamNavigation: false,
-        isSystemAdmin: false
+        isSystemAdmin: false,
+        shouldUseAdminInterface: false
       };
     }
 
@@ -50,9 +52,12 @@ export function useTeamContext(): TeamContext {
     const isTeamAdmin = teamRole === 'ADMIN';
     const isSystemAdmin = ['SA', 'AD'].includes(profile.role);
     
-    // CRITICAL FIX: SA/AD users should NEVER be forced into team dashboard on Teams page
-    // Only use team dashboard for non-admin users, and only on the main dashboard
-    const shouldUseTeamDashboard = hasTeams && !isSystemAdmin && (!['SA', 'AD'].includes(profile.role) || isTeamAdmin);
+    // CRITICAL FIX: SA/AD users should use administrative interface, not team dashboard
+    // Only use team dashboard for regular team members and team admins
+    const shouldUseTeamDashboard = hasTeams && !isSystemAdmin;
+    
+    // SA/AD users should use the administrative interface for global oversight
+    const shouldUseAdminInterface = isSystemAdmin;
     
     // System admins and team admins can manage team navigation
     const canManageTeamNavigation = isTeamAdmin || isSystemAdmin;
@@ -63,6 +68,7 @@ export function useTeamContext(): TeamContext {
       teamRole,
       isTeamAdmin,
       shouldUseTeamDashboard,
+      shouldUseAdminInterface,
       canManageTeamNavigation,
       userRole: profile.role,
       isSystemAdmin
@@ -78,7 +84,8 @@ export function useTeamContext(): TeamContext {
       teamLocation: primaryTeam?.teams?.locations || null,
       isTeamAdmin,
       canManageTeamNavigation,
-      isSystemAdmin
+      isSystemAdmin,
+      shouldUseAdminInterface
     };
   }, [userTeams, user, profile, isLoading]);
 
