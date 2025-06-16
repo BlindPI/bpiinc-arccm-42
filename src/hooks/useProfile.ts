@@ -13,7 +13,8 @@ export function useProfile() {
     userId: user?.id || "none",
     authLoading,
     authReady,
-    hasUserProfile: !!user?.profile
+    hasUserProfile: !!user?.profile,
+    userProfileData: user?.profile ? { role: user.profile.role, email: user.profile.email } : null
   });
 
   const result = useQuery({

@@ -124,6 +124,7 @@ export function AppSidebar() {
 
   // Check if user has enterprise access
   const hasEnterpriseAccess = ['SA', 'AD', 'AP'].includes(profile?.role);
+  console.log(`🔧 SIDEBAR: Enterprise access check - Role: ${profile?.role}, HasAccess: ${hasEnterpriseAccess}`);
 
   // Filter navigation items using database-driven visibility and enterprise access
   const visibleItems = navigation.filter(item => {
