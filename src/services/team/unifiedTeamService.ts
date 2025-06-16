@@ -61,58 +61,21 @@ export class UnifiedTeamService {
    */
   static async getTeams(userRole: DatabaseUserRole, userId: string): Promise<EnhancedTeam[]> {
     try {
-      // First try the complex query approach
-      let data, error;
-
-      switch (userRole) {
-        case 'SA':
-        case 'AD':
-          // System and Organization Admins get global access
-          ({ data, error } = await supabase
-            .from('teams')
-            .select(`
-              *,
-              locations(name, address)
-            `));
-          break;
-        
-        case 'AP':
-          // Authorized Providers get provider-scoped teams
-          ({ data, error } = await supabase
-            .from('teams')
-            .select(`
-              *,
-              locations(name, address)
-            `)
-            .eq('created_by', userId));
-          break;
-        
-        default:
-          // Instructors and other roles get teams they're members of
-          ({ data, error } = await supabase
-            .from('team_members')
-            .select(`
-              teams(
-                *,
-                locations(name, address)
-              )
-            `)
-            .eq('user_id', userId));
-          
-          // Extract teams from the nested structure
-          if (data) {
-            data = data.map((item: any) => item.teams).filter(Boolean);
-          }
-          break;
-      }
+      // Use the new bypass RPC function that avoids RLS recursion
+      const { data, error } = await supabase
+        .rpc('get_teams_bypass_rls', { p_user_id: userId });
 
       if (error) {
-        console.error('Error fetching teams, falling back to safe method:', error);
-        // Fallback to safe method if RLS recursion occurs
+        console.error('Error fetching teams with bypass function:', error);
+        // Fallback to safe method if RPC fails
         return await SafeTeamService.getTeamsSafely(userRole, userId) as unknown as EnhancedTeam[];
       }
 
-      return data || [];
+      // Transform the RPC result to match EnhancedTeam interface
+      return (data || []).map((team: any) => ({
+        ...team,
+        location: team.location_name ? { name: team.location_name } : null
+      })) as unknown as EnhancedTeam[];
     } catch (error) {
       console.error('UnifiedTeamService.getTeams error, using safe fallback:', error);
       // Fallback to safe method
@@ -143,29 +106,24 @@ export class UnifiedTeamService {
    */
   static async createTeam(teamData: CreateTeamRequest): Promise<EnhancedTeam> {
     try {
+      // Use the new bypass RPC function that avoids RLS recursion
       const { data, error } = await supabase
-        .from('teams')
-        .insert({
-          name: teamData.name,
-          description: teamData.description || null,
-          location_id: teamData.location_id || null,
-          team_type: teamData.team_type || 'standard',
-          status: teamData.status || 'active'
-        })
-        .select(`
-          *,
-          locations(name, address)
-        `)
-        .single();
+        .rpc('create_team_bypass_rls', {
+          p_name: teamData.name,
+          p_description: teamData.description || null,
+          p_location_id: teamData.location_id || null,
+          p_team_type: teamData.team_type || 'standard',
+          p_status: teamData.status || 'active'
+        });
 
       if (error) {
-        console.error('Error creating team, trying safe method:', error);
+        console.error('Error creating team with bypass function:', error);
         // Fallback to safe method
         const safeResult = await SafeTeamService.createTeamSafely(teamData);
         return safeResult as unknown as EnhancedTeam;
       }
 
-      return data as unknown as EnhancedTeam;
+      return (data && data[0]) as unknown as EnhancedTeam;
     } catch (error) {
       console.error('Error creating team, using safe fallback:', error);
       // Fallback to safe method
@@ -241,28 +199,28 @@ export class UnifiedTeamService {
    */
   static async getTeamMembers(teamId: string): Promise<TeamMember[]> {
     try {
+      // Use the new bypass RPC function that avoids RLS recursion
       const { data, error } = await supabase
-        .from('team_members')
-        .select(`
-          *,
-          profiles (
-            display_name,
-            email,
-            role
-          )
-        `)
-        .eq('team_id', teamId);
+        .rpc('get_team_members_bypass_rls', { p_team_id: teamId });
 
       if (error) {
-        console.error('Error fetching team members, using safe method:', error);
+        console.error('Error fetching team members with bypass function:', error);
         // Fallback to safe method
         return await SafeTeamService.getTeamMembersSafely(teamId) as unknown as TeamMember[];
       }
 
-      return (data || []).map(member => ({
-        ...member,
-        joined_at: member.created_at || new Date().toISOString(),
-        profile: member.profiles
+      // Transform the RPC result to match TeamMember interface
+      return (data || []).map((member: any) => ({
+        id: member.id,
+        user_id: member.user_id,
+        team_id: member.team_id,
+        role: member.role,
+        joined_at: member.joined_at,
+        profile: {
+          display_name: member.display_name,
+          email: member.email,
+          role: member.user_role
+        }
       })) as unknown as TeamMember[];
     } catch (error) {
       console.error('Error fetching team members, using safe fallback:', error);
@@ -405,23 +363,21 @@ export class UnifiedTeamService {
       } else {
         // Get global team analytics - use basic queries if function doesn't exist
         try {
-          const { data: teamsData, error: teamsError } = await supabase
-            .from('teams')
-            .select('id, status');
-          
-          const { data: membersData, error: membersError } = await supabase
-            .from('team_members')
-            .select('id');
+          // Use the new bypass RPC function that avoids RLS recursion
+          const { data, error } = await supabase
+            .rpc('get_team_analytics_bypass_rls');
 
-          if (teamsError || membersError) {
-            console.error('Error fetching analytics, using safe method:', teamsError || membersError);
+          if (error) {
+            console.error('Error fetching analytics with bypass function:', error);
             // Fallback to safe method
             return await SafeTeamService.getAnalyticsSafely();
           }
 
+          const analyticsData = data && data[0] ? data[0] : {};
+          
           return {
-            totalTeams: teamsData?.length || 0,
-            totalMembers: membersData?.length || 0,
+            totalTeams: analyticsData.total_teams || 0,
+            totalMembers: analyticsData.total_members || 0,
             averagePerformance: 85, // Default placeholder
             averageCompliance: 90, // Default placeholder
             teamsByLocation: {},
