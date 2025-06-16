@@ -14,7 +14,7 @@ import EmailCampaigns from '@/pages/EmailCampaigns';
 import { BulkCRMOperations } from '@/components/crm/bulk/BulkCRMOperations';
 
 // Import all missing pages
-import Teams from '@/pages/Teams';
+import UnifiedTeams from '@/pages/UnifiedTeams';
 import EnhancedTeams from '@/pages/EnhancedTeams';
 import RoleManagement from '@/pages/RoleManagement';
 import Supervision from '@/pages/Supervision';
@@ -100,22 +100,23 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      {/* User Management Routes */}
+      {/* User Management Routes - UNIFIED TEAMS */}
       <Route path="/teams" element={
         <ProtectedRoute>
-          <Teams />
+          <UnifiedTeams />
         </ProtectedRoute>
       } />
 
+      {/* DEPRECATED: Legacy team routes - redirect to unified teams */}
       <Route path="/enhanced-teams" element={
         <ProtectedRoute>
-          <EnhancedTeams />
+          <UnifiedTeams />
         </ProtectedRoute>
       } />
 
       <Route path="/modern-teams" element={
         <ProtectedRoute>
-          <ModernTeams />
+          <UnifiedTeams />
         </ProtectedRoute>
       } />
 

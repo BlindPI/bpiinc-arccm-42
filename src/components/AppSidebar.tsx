@@ -55,9 +55,9 @@ const navigation = [
   // User Management Group
   { name: 'Users', href: '/users', icon: Users, group: 'User Management' },
   { name: 'Teams', href: '/teams', icon: UsersIcon, group: 'User Management' },
-  { name: 'Enterprise Teams', href: '/enhanced-teams', icon: Crown, group: 'User Management', enterpriseOnly: true },
   { name: 'Role Management', href: '/role-management', icon: Shield, group: 'User Management' },
   { name: 'Supervision', href: '/supervision', icon: UserCheck, group: 'User Management' },
+  { name: 'Authorized Providers', href: '/authorized-providers', icon: Building2, group: 'User Management' },
   
   // Training Management Group
   { name: 'Training Hub', href: '/training-hub', icon: BookOpen, group: 'Training Management' },

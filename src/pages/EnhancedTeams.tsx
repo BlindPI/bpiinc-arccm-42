@@ -20,8 +20,8 @@ export default function EnhancedTeams() {
     );
   }
 
-  // Access Control - Only SA, AD, AP roles can access Enterprise features
-  if (!permissions.hasEnterpriseAccess) {
+  // Access Control - Only users who can manage teams should access Enterprise features
+  if (!permissions.canManageTeams) {
     return (
       <div className="space-y-6">
         {/* Access Denied Header */}
@@ -54,14 +54,14 @@ export default function EnhancedTeams() {
           <CardContent>
             <div className="space-y-4">
               <p className="text-muted-foreground">
-                Enterprise team management features require elevated privileges. 
+                Enterprise team management features require team management privileges.
                 Your current role ({role}) does not have access to these features.
               </p>
               
               <div className="bg-muted/50 p-4 rounded-lg">
                 <h3 className="font-semibold mb-2 flex items-center gap-2">
                   <Shield className="h-4 w-4" />
-                  Required Roles for Enterprise Access:
+                  Required Roles for Team Management:
                 </h3>
                 <ul className="space-y-1 text-sm">
                   <li>• System Administrator (SA)</li>
