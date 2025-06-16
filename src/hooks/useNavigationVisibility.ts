@@ -23,34 +23,40 @@ const getEmergencyDefaultConfig = (role: string): NavigationVisibilityConfig => 
   if (role === 'SA') {
     // SA gets everything
     return {
-      'Dashboard': { 
-        enabled: true, 
-        items: { 
-          'Dashboard': true, 
-          'Profile': true 
-        } 
+      'Dashboard': {
+        enabled: true,
+        items: {
+          'Dashboard': true,
+          'Profile': true
+        }
       },
-      'User Management': { 
-        enabled: true, 
-        items: { 
-          'Users': true, 
+      'User Management': {
+        enabled: true,
+        items: {
+          'Users': true,
           'Teams': true,
           'Enterprise Teams': true,
           'Role Management': true,
           'Supervision': true
-        } 
+        }
       },
-      'Training Management': { 
-        enabled: true, 
-        items: { 
-          'Courses': true, 
-          'Course Scheduling': true, 
-          'Course Offerings': true, 
-          'Enrollments': true, 
-          'Enrollment Management': true, 
-          'Teaching Sessions': true, 
-          'Locations': true 
-        } 
+      'Provider Management': {
+        enabled: true,
+        items: {
+          'Provider Management': true
+        }
+      },
+      'Training Management': {
+        enabled: true,
+        items: {
+          'Courses': true,
+          'Course Scheduling': true,
+          'Course Offerings': true,
+          'Enrollments': true,
+          'Enrollment Management': true,
+          'Teaching Sessions': true,
+          'Locations': true
+        }
       },
       'Certificates': {
         enabled: true,
@@ -80,21 +86,21 @@ const getEmergencyDefaultConfig = (role: string): NavigationVisibilityConfig => 
           'Reports': true
         }
       },
-      'Compliance & Automation': { 
-        enabled: true, 
-        items: { 
-          'Automation': true, 
-          'Progression Path Builder': true 
-        } 
+      'Compliance & Automation': {
+        enabled: true,
+        items: {
+          'Automation': true,
+          'Progression Path Builder': true
+        }
       },
-      'System Administration': { 
-        enabled: true, 
-        items: { 
-          'Integrations': true, 
-          'Notifications': true, 
-          'System Monitoring': true, 
-          'Settings': true 
-        } 
+      'System Administration': {
+        enabled: true,
+        items: {
+          'Integrations': true,
+          'Notifications': true,
+          'System Monitoring': true,
+          'Settings': true
+        }
       }
     };
   }

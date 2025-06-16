@@ -1,12 +1,12 @@
 
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { 
-  LayoutDashboard, 
-  Users, 
-  FileText, 
-  GraduationCap, 
-  BarChart3, 
+import {
+  LayoutDashboard,
+  Users,
+  FileText,
+  GraduationCap,
+  BarChart3,
   Settings,
   Building
 } from 'lucide-react';

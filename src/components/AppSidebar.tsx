@@ -57,7 +57,9 @@ const navigation = [
   { name: 'Teams', href: '/teams', icon: UsersIcon, group: 'User Management' },
   { name: 'Role Management', href: '/role-management', icon: Shield, group: 'User Management' },
   { name: 'Supervision', href: '/supervision', icon: UserCheck, group: 'User Management' },
-  { name: 'Authorized Providers', href: '/authorized-providers', icon: Building2, group: 'User Management' },
+  
+  // Provider Management Group
+  { name: 'Provider Management', href: '/authorized-providers', icon: Building2, group: 'Provider Management' },
   
   // Training Management Group
   { name: 'Training Hub', href: '/training-hub', icon: BookOpen, group: 'Training Management' },

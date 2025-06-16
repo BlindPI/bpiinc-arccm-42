@@ -14,10 +14,11 @@ import { Loader2, Save, RotateCcw, Eye, EyeOff, AlertTriangle, CheckCircle, XCir
 import { toast } from 'sonner';
 import { ROLE_LABELS } from '@/lib/roles';
 
-// Navigation structure matching AppSidebar - UPDATED to include all implemented CRM components
+// Navigation structure matching AppSidebar - UPDATED to include all implemented CRM components and Provider Management
 const NAVIGATION_GROUPS = {
   'Dashboard': ['Dashboard', 'Profile'],
   'User Management': ['Users', 'Teams', 'Role Management', 'Supervision'],
+  'Provider Management': ['Provider Management'],
   'Training Management': ['Training Hub', 'Courses', 'Enrollments', 'Enrollment Management', 'Locations'],
   'Certificates': ['Certificates', 'Certificate Analytics', 'Rosters'],
   'CRM': [
@@ -118,6 +119,7 @@ export function SidebarNavigationControl() {
             'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } },
             'System Administration': { enabled: true, items: { 'Settings': true, 'System Monitoring': true, 'Integrations': true, 'Notifications': true } },
             'User Management': { enabled: true, items: { 'Users': true, 'Teams': true, 'Role Management': true, 'Supervision': true } },
+            'Provider Management': { enabled: true, items: { 'Provider Management': true } },
             'Training Management': { enabled: true, items: { 'Training Hub': true, 'Courses': true, 'Enrollments': true, 'Enrollment Management': true, 'Locations': true } },
             'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
             'CRM': { enabled: true, items: { 'CRM Dashboard': true, 'Account Management': true, 'Contact Management': true, 'Lead Management': true, 'Opportunities': true, 'Activities': true, 'Campaign Management': true, 'Analytics Dashboard': true, 'Revenue Analytics': true } },
@@ -126,6 +128,7 @@ export function SidebarNavigationControl() {
           } : role === 'AD' ? {
             'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } },
             'User Management': { enabled: true, items: { 'Users': true, 'Teams': true, 'Role Management': true, 'Supervision': true } },
+            'Provider Management': { enabled: true, items: { 'Provider Management': true } },
             'Training Management': { enabled: true, items: { 'Training Hub': true, 'Courses': true, 'Enrollments': true, 'Enrollment Management': true, 'Locations': true } },
             'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
             'CRM': { enabled: true, items: { 'CRM Dashboard': true, 'Account Management': true, 'Contact Management': true, 'Lead Management': true, 'Opportunities': true, 'Activities': true, 'Campaign Management': true, 'Analytics Dashboard': true, 'Revenue Analytics': true } },
