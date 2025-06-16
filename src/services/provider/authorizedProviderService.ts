@@ -11,7 +11,7 @@ export class AuthorizedProviderService {
     const { data, error } = await supabase
       .from('authorized_providers')
       .select('*')
-      .eq('id', parseInt(providerId, 10))
+      .eq('id', providerId)
       .single();
 
     if (error) {
@@ -20,7 +20,7 @@ export class AuthorizedProviderService {
     }
 
     return {
-      id: data.id.toString(), // Convert to string
+      id: data.id,
       name: data.name,
       provider_type: data.provider_type || 'training_provider',
       status: data.status || 'active',
@@ -45,7 +45,7 @@ export class AuthorizedProviderService {
     }
 
     return data.map(provider => ({
-      id: provider.id.toString(), // Convert to string
+      id: provider.id,
       name: provider.name,
       provider_type: provider.provider_type || 'training_provider',
       status: provider.status || 'active',
@@ -67,14 +67,14 @@ export class AuthorizedProviderService {
         approval_date: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
-      .eq('id', parseInt(providerId, 10))
+      .eq('id', providerId)
       .select()
       .single();
 
     if (error) throw error;
 
     return {
-      id: data.id.toString(), // Convert to string
+      id: data.id,
       name: data.name,
       provider_type: data.provider_type || 'training_provider',
       status: data.status || 'active',
@@ -97,8 +97,8 @@ export class AuthorizedProviderService {
     // For now, just update the team's provider_id
     const { error } = await supabase
       .from('teams')
-      .update({ 
-        provider_id: parseInt(providerId, 10), // Convert to number for database
+      .update({
+        provider_id: providerId, // Keep as UUID string
         updated_at: new Date().toISOString()
       })
       .eq('id', teamId);
