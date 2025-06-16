@@ -23,7 +23,9 @@ export function RealTeamManagementHub() {
   }
 
   // SA/AD users get the administrative interface for global oversight
+  // With fallback to Enterprise interface if admin interface fails
   if (shouldUseAdminInterface && isSystemAdmin) {
+    console.log('🔧 ADMIN-ROUTING: SA/AD user detected, using admin interface with Enterprise fallback');
     return <AdminTeamOverviewDashboard />;
   }
 

@@ -261,11 +261,23 @@ export function AdminTeamOverviewDashboard() {
   }
 
   if (teamsError) {
+    console.error('🔧 ADMIN-DASHBOARD: Teams error detected:', teamsError);
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
+        <div className="text-center space-y-4">
           <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-          <p className="text-red-600">Failed to load team data</p>
+          <div>
+            <p className="text-red-600 font-medium">Failed to load team data</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Database function issue detected. Using Enterprise Teams as fallback.
+            </p>
+          </div>
+          <Button
+            onClick={() => window.location.href = '/enhanced-teams'}
+            className="mt-4"
+          >
+            Switch to Enterprise Teams
+          </Button>
         </div>
       </div>
     );

@@ -135,8 +135,9 @@ export function useAdminTeamData() {
 
       // Use the new safe function first
       try {
+        console.log('🔧 ADMIN-TEAMS: Calling get_teams_safe function...');
         const { data: teamsData, error: safeError } = await supabase
-          .rpc('get_teams_safe');
+          .rpc('get_teams_safe', { p_user_id: null });
 
         if (safeError) {
           console.warn('🔧 ADMIN-TEAMS: Safe function failed, trying direct approach:', safeError);
@@ -233,6 +234,7 @@ export function useAdminTeamStatistics() {
 
       try {
         // Try the new safe function first
+        console.log('🔧 ADMIN-STATS: Calling get_team_statistics_safe function...');
         const { data: statsData, error: statsError } = await supabase
           .rpc('get_team_statistics_safe');
         
