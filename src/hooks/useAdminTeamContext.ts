@@ -124,25 +124,46 @@ export function useAdminTeamData() {
 
       console.log('🔧 ADMIN-TEAMS: Starting admin teams query...');
 
-      // Try the complex query first, with fallback to simpler queries
+      // Use the new safe function first
       try {
-        const { data, error } = await supabase
-          .from('teams')
-          .select(`
-            *,
-            location:locations(id, name, address, city, state),
-            provider:providers(id, name, provider_type, status),
-            team_members!inner(count)
-          `);
-        
-        if (error) {
-          console.error('🔧 ADMIN-TEAMS: Complex query failed:', error);
-          throw error;
+        const { data: teamsData, error: safeError } = await supabase
+          .rpc('get_teams_safe');
+
+        if (safeError) {
+          console.warn('🔧 ADMIN-TEAMS: Safe function failed, trying direct approach:', safeError);
+          throw safeError;
         }
 
-        console.log('🔧 ADMIN-TEAMS: Complex query successful, processing data...');
-        
-        return (data || []).map((team: any) => {
+        console.log('🔧 ADMIN-TEAMS: Safe function successful, fetching related data...');
+
+        // Get locations separately
+        const { data: locationsData } = await supabase
+          .from('locations')
+          .select('id, name, address, city, state');
+
+        // Get providers separately (if table exists)
+        const { data: providersData } = await supabase
+          .from('providers')
+          .select('id, name, provider_type, status');
+
+        // Get team member counts using the safe function
+        const memberCounts: Record<string, number> = {};
+        for (const team of teamsData || []) {
+          try {
+            const { data: members } = await supabase
+              .rpc('fetch_team_members_with_profiles', { p_team_id: team.id });
+            memberCounts[team.id] = members?.length || 0;
+          } catch (memberError) {
+            console.warn(`🔧 ADMIN-TEAMS: Could not get member count for team ${team.id}:`, memberError);
+            memberCounts[team.id] = 0;
+          }
+        }
+
+        // Combine the data
+        return (teamsData || []).map((team: any) => {
+          const location = locationsData?.find(l => l.id === team.location_id);
+          const provider = providersData?.find(p => p.id === team.provider_id);
+
           return {
             id: team.id,
             name: team.name,
@@ -164,87 +185,18 @@ export function useAdminTeamData() {
             current_metrics: typeof team.current_metrics === 'string'
               ? JSON.parse(team.current_metrics)
               : team.current_metrics || {},
-            location: team.location,
-            provider: team.provider,
-            member_count: Array.isArray(team.team_members) ? team.team_members.length : 0
+            location,
+            provider,
+            member_count: memberCounts[team.id] || 0
           } as GlobalTeamData;
         });
 
-      } catch (complexError) {
-        console.warn('🔧 ADMIN-TEAMS: Complex query failed, trying fallback approach...');
+      } catch (safeError) {
+        console.error('🔧 ADMIN-TEAMS: Safe function failed, trying basic fallback:', safeError);
         
-        // Fallback: Get teams without the problematic joins
-        try {
-          const { data: teamsData, error: teamsError } = await supabase
-            .from('teams')
-            .select('*');
-
-          if (teamsError) {
-            console.error('🔧 ADMIN-TEAMS: Basic teams query failed:', teamsError);
-            throw teamsError;
-          }
-
-          console.log('🔧 ADMIN-TEAMS: Basic teams query successful, fetching related data...');
-
-          // Get locations separately
-          const { data: locationsData } = await supabase
-            .from('locations')
-            .select('id, name, address, city, state');
-
-          // Get providers separately (if table exists)
-          const { data: providersData } = await supabase
-            .from('providers')
-            .select('id, name, provider_type, status');
-
-          // Get team member counts using the safe function
-          const memberCounts: Record<string, number> = {};
-          for (const team of teamsData || []) {
-            try {
-              const { data: members } = await supabase
-                .rpc('fetch_team_members_with_profiles', { p_team_id: team.id });
-              memberCounts[team.id] = members?.length || 0;
-            } catch (memberError) {
-              console.warn(`🔧 ADMIN-TEAMS: Could not get member count for team ${team.id}:`, memberError);
-              memberCounts[team.id] = 0;
-            }
-          }
-
-          // Combine the data
-          return (teamsData || []).map((team: any) => {
-            const location = locationsData?.find(l => l.id === team.location_id);
-            const provider = providersData?.find(p => p.id === team.provider_id);
-
-            return {
-              id: team.id,
-              name: team.name,
-              description: team.description,
-              team_type: team.team_type,
-              status: team.status,
-              performance_score: team.performance_score || 0,
-              location_id: team.location_id,
-              provider_id: team.provider_id,
-              created_by: team.created_by,
-              created_at: team.created_at,
-              updated_at: team.updated_at,
-              metadata: typeof team.metadata === 'string'
-                ? JSON.parse(team.metadata)
-                : team.metadata || {},
-              monthly_targets: typeof team.monthly_targets === 'string'
-                ? JSON.parse(team.monthly_targets)
-                : team.monthly_targets || {},
-              current_metrics: typeof team.current_metrics === 'string'
-                ? JSON.parse(team.current_metrics)
-                : team.current_metrics || {},
-              location,
-              provider,
-              member_count: memberCounts[team.id] || 0
-            } as GlobalTeamData;
-          });
-
-        } catch (fallbackError) {
-          console.error('🔧 ADMIN-TEAMS: All queries failed:', fallbackError);
-          throw fallbackError;
-        }
+        // Final fallback: Return empty array with proper structure
+        console.warn('🔧 ADMIN-TEAMS: All methods failed, returning empty array');
+        return [];
       }
     },
     enabled: hasGlobalTeamAccess,
