@@ -132,7 +132,7 @@ export function TeamEditForm({ team, onCancel, onSuccess }: TeamEditFormProps) {
     const updates: UpdateTeamRequest = {
       name: formData.name?.trim(),
       description: formData.description?.trim() || undefined,
-      location_id: formData.location_id || undefined,
+      location_id: formData.location_id === 'none' ? undefined : formData.location_id || undefined,
       team_type: formData.team_type,
       status: formData.status
     };
@@ -253,7 +253,7 @@ export function TeamEditForm({ team, onCancel, onSuccess }: TeamEditFormProps) {
                 <SelectValue placeholder={locationsLoading ? "Loading locations..." : "Select location (optional)"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No specific location</SelectItem>
+                <SelectItem value="none">No specific location</SelectItem>
                 {locations.map((location) => (
                   <SelectItem key={location.id} value={location.id}>
                     <div>

@@ -112,7 +112,7 @@ export function TeamCreateForm({ onCancel, onSuccess }: TeamCreateFormProps) {
       ...formData,
       name: formData.name.trim(),
       description: formData.description?.trim() || undefined,
-      location_id: formData.location_id || undefined
+      location_id: formData.location_id === 'none' ? undefined : formData.location_id || undefined
     };
 
     createTeamMutation.mutate(teamData);
@@ -220,7 +220,7 @@ export function TeamCreateForm({ onCancel, onSuccess }: TeamCreateFormProps) {
                 <SelectValue placeholder={locationsLoading ? "Loading locations..." : "Select location (optional)"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No specific location</SelectItem>
+                <SelectItem value="none">No specific location</SelectItem>
                 {locations.map((location) => (
                   <SelectItem key={location.id} value={location.id}>
                     <div>
