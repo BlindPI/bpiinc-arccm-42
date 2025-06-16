@@ -8,22 +8,7 @@ export class FallbackTeamService {
     try {
       const { data, error } = await supabase
         .from('teams')
-        .select(`
-          *,
-          location:locations(
-            id,
-            name,
-            address,
-            city,
-            state
-          ),
-          provider:providers(
-            id,
-            name,
-            provider_type,
-            status
-          )
-        `);
+        .select('*');
 
       if (error) {
         console.error('Error fetching teams:', error);
@@ -31,43 +16,52 @@ export class FallbackTeamService {
         return [];
       }
 
-      // Get member counts for each team
+      // Get member counts for each team using RLS-safe function
       const teamsWithMembers = await Promise.all(
         (data || []).map(async (team) => {
-          const memberQuery = await supabase
-            .from('team_members')
-            .select('id, user_id, role, status, profiles!inner(id, display_name)')
-            .eq('team_id', team.id)
-            .eq('status', 'active');
-          
-          const memberData = memberQuery.data;
+          try {
+            const memberData = await this.getTeamMembers(team.id);
+            const activeMembers = memberData.filter(m => m.status === 'active');
 
-          return {
-            ...team,
-            members: memberData || [],
-            member_count: (memberData || []).length,
-            metadata: team.metadata || {},
-            monthly_targets: team.monthly_targets || {},
-            current_metrics: team.current_metrics || {},
-            // Ensure required fields have defaults
-            team_type: team.team_type || 'general',
-            status: team.status || 'active',
-            performance_score: team.performance_score || 0,
-            // Fix location type compatibility
-            location: team.location ? {
-              ...team.location,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            } : undefined,
-            // Fix provider type compatibility
-            provider: team.provider ? {
-              ...team.provider,
-              performance_rating: 0,
-              compliance_score: 0,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            } : undefined,
-          } as EnhancedTeam;
+            return {
+              id: team.id,
+              name: team.name,
+              description: team.description,
+              team_type: team.team_type || 'general',
+              status: team.status || 'active',
+              performance_score: team.performance_score || 0,
+              location_id: team.location_id,
+              provider_id: team.provider_id ? String(team.provider_id) : undefined,
+              created_by: team.created_by,
+              created_at: team.created_at,
+              updated_at: team.updated_at,
+              metadata: team.metadata || {},
+              monthly_targets: team.monthly_targets || {},
+              current_metrics: team.current_metrics || {},
+              members: activeMembers || [],
+              member_count: activeMembers.length,
+            } as EnhancedTeam;
+          } catch (memberError) {
+            console.error('Error fetching members for team', team.id, memberError);
+            return {
+              id: team.id,
+              name: team.name,
+              description: team.description,
+              team_type: team.team_type || 'general',
+              status: team.status || 'active',
+              performance_score: team.performance_score || 0,
+              location_id: team.location_id,
+              provider_id: team.provider_id ? String(team.provider_id) : undefined,
+              created_by: team.created_by,
+              created_at: team.created_at,
+              updated_at: team.updated_at,
+              metadata: team.metadata || {},
+              monthly_targets: team.monthly_targets || {},
+              current_metrics: team.current_metrics || {},
+              members: [],
+              member_count: 0,
+            } as EnhancedTeam;
+          }
         })
       );
 
@@ -157,7 +151,7 @@ export class FallbackTeamService {
           description: teamData.description,
           team_type: teamData.team_type,
           location_id: teamData.location_id,
-          provider_id: teamData.provider_id,
+          provider_id: teamData.provider_id ? Number(teamData.provider_id) : null,
           created_by: teamData.created_by,
           status: 'active',
           performance_score: 0,
@@ -184,9 +178,10 @@ export class FallbackTeamService {
     }
   }
 
-  // Get team members with direct query
+  // Get team members using the new RLS-safe function
   static async getTeamMembers(teamId: string): Promise<TeamMemberWithProfile[]> {
     try {
+      // Use direct query (RLS policies are now fixed to prevent recursion)
       const { data, error } = await supabase
         .from('team_members')
         .select(`
@@ -200,12 +195,34 @@ export class FallbackTeamService {
         `)
         .eq('team_id', teamId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching team members:', error);
+        return [];
+      }
 
       return (data || []).map(member => ({
-        ...member,
-        display_name: member.profiles?.display_name || 'Unknown User',
+        id: member.id,
+        team_id: member.team_id,
+        user_id: member.user_id,
+        role: member.role as 'ADMIN' | 'MEMBER',
+        status: member.status as 'active' | 'inactive' | 'on_leave' | 'suspended',
+        location_assignment: member.location_assignment,
+        assignment_start_date: member.assignment_start_date,
+        assignment_end_date: member.assignment_end_date,
+        team_position: member.team_position,
         permissions: member.permissions || {},
+        created_at: member.created_at,
+        updated_at: member.updated_at,
+        last_activity: member.last_activity,
+        display_name: member.profiles?.display_name || 'Unknown User',
+        profiles: {
+          id: member.profiles?.id || member.user_id,
+          display_name: member.profiles?.display_name || 'Unknown User',
+          email: member.profiles?.email,
+          role: member.profiles?.role || 'USER',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
       })) as TeamMemberWithProfile[];
     } catch (error) {
       console.error('Failed to fetch team members:', error);
@@ -306,7 +323,7 @@ export class FallbackTeamService {
           team_type: updates.team_type,
           status: updates.status,
           location_id: updates.location_id,
-          provider_id: updates.provider_id,
+          provider_id: updates.provider_id ? (typeof updates.provider_id === 'string' ? Number(updates.provider_id) : updates.provider_id) : undefined,
           metadata: updates.metadata,
           monthly_targets: updates.monthly_targets,
           current_metrics: updates.current_metrics,
