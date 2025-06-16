@@ -1,6 +1,7 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
+import { SidebarProvider } from '@/components/ui/sidebar';
 import { DashboardLayout } from './DashboardLayout';
 import { PublicLayout } from './PublicLayout';
 import { AppSidebar } from './AppSidebar';
@@ -46,10 +47,12 @@ export function LayoutRouter({ children }: { children: React.ReactNode }) {
   // For mixed access pages and protected pages, show with sidebar
   if (isMixedAccessPage || isProtectedPage || shouldShowSidebar) {
     return (
-      <div className="min-h-screen flex w-full bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30 animate-fade-in">
-        {user ? <AppSidebar /> : <PublicSidebar />}
-        {user ? <DashboardLayout>{children}</DashboardLayout> : <PublicLayout>{children}</PublicLayout>}
-      </div>
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30 animate-fade-in">
+          {user ? <AppSidebar /> : <PublicSidebar />}
+          {user ? <DashboardLayout>{children}</DashboardLayout> : <PublicLayout>{children}</PublicLayout>}
+        </div>
+      </SidebarProvider>
     );
   }
   
