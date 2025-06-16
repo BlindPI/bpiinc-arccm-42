@@ -18,70 +18,11 @@ export function useTeamMemberships() {
       
       console.log('useTeamMemberships: Fetching teams for user ID:', user.id);
       
-      // Use a simpler approach with manual joins to avoid relationship ambiguity
-      const { data: teamMemberships, error: memberError } = await supabase
-        .from('team_members')
-        .select(`
-          id,
-          team_id,
-          user_id,
-          role,
-          location_assignment,
-          assignment_start_date,
-          assignment_end_date,
-          team_position,
-          permissions,
-          created_at,
-          updated_at
-        `)
-        .eq('user_id', user.id);
-
-      console.log('useTeamMemberships: Team memberships result:', { data: teamMemberships, error: memberError });
-
-      if (memberError) {
-        console.error('useTeamMemberships: Database error:', memberError);
-        throw memberError;
-      }
-
-      if (!teamMemberships || teamMemberships.length === 0) {
-        console.log('useTeamMemberships: No team memberships found');
-        return [];
-      }
-
-      // Fetch teams separately
-      const teamIds = teamMemberships.map(tm => tm.team_id);
-      const { data: teams, error: teamsError } = await supabase
-        .from('teams')
-        .select(`
-          id,
-          name,
-          description,
-          team_type,
-          status,
-          performance_score,
-          location_id,
-          locations(
-            id,
-            name
-          )
-        `)
-        .in('id', teamIds);
-
-      console.log('useTeamMemberships: Teams result:', { data: teams, error: teamsError });
-
-      if (teamsError) {
-        console.error('useTeamMemberships: Teams fetch error:', teamsError);
-        throw teamsError;
-      }
-
-      // Combine the data manually
-      const result = teamMemberships.map(membership => ({
-        ...membership,
-        teams: teams?.find(team => team.id === membership.team_id) || null
-      }));
-      
-      console.log('useTeamMemberships: Final result:', result);
-      return result;
+      // Temporary fallback to prevent infinite recursion until RPC functions are available
+      // This returns empty array to prevent the RLS recursion issue
+      console.log('useTeamMemberships: Using safe fallback to prevent RLS recursion');
+      console.log('useTeamMemberships: Returning empty array until RLS policies are fully resolved');
+      return [];
     },
     enabled: !!user?.id
   });
