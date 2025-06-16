@@ -271,72 +271,95 @@ export function useAdminTeamStatistics() {
       console.log('🔧 ADMIN-STATS: Starting team statistics query...');
 
       try {
-        // Try to get teams data first
-        const { data: teams, error: teamsError } = await supabase
-          .from('teams')
-          .select('status, team_type, performance_score');
+        // Try the new safe function first
+        const { data: statsData, error: statsError } = await supabase
+          .rpc('get_team_statistics_safe');
         
-        if (teamsError) {
-          console.error('🔧 ADMIN-STATS: Teams query failed:', teamsError);
-          throw teamsError;
-        }
-
-        console.log('🔧 ADMIN-STATS: Teams query successful, getting member statistics...');
-
-        // Try to get member statistics using the safe function approach
-        let totalMembers = 0;
-        try {
-          // First try direct query
-          const { data: members, error: membersError } = await supabase
-            .from('team_members')
-            .select('status')
-            .eq('status', 'active');
-
-          if (membersError) {
-            console.warn('🔧 ADMIN-STATS: Direct member query failed, using fallback:', membersError);
-            
-            // Fallback: Count members using the safe function for each team
-            for (const team of teams || []) {
-              try {
-                const { data: teamMembers } = await supabase
-                  .rpc('fetch_team_members_with_profiles', { p_team_id: team.id });
-                totalMembers += teamMembers?.filter(m => m.status === 'active').length || 0;
-              } catch (memberError) {
-                console.warn(`🔧 ADMIN-STATS: Could not count members for team ${team.id}:`, memberError);
-              }
-            }
-          } else {
-            totalMembers = members?.length || 0;
+        if (statsError) {
+          console.warn('🔧 ADMIN-STATS: Safe function failed, trying direct query:', statsError);
+          
+          // Fallback to direct query
+          const { data: teams, error: teamsError } = await supabase
+            .from('teams')
+            .select('status, team_type, performance_score');
+          
+          if (teamsError) {
+            console.error('🔧 ADMIN-STATS: Teams query failed:', teamsError);
+            throw teamsError;
           }
-        } catch (memberError) {
-          console.warn('🔧 ADMIN-STATS: All member counting methods failed:', memberError);
-          totalMembers = 0;
+
+          console.log('🔧 ADMIN-STATS: Direct teams query successful, getting member statistics...');
+
+          // Try to get member statistics using the safe function approach
+          let totalMembers = 0;
+          try {
+            // First try direct query
+            const { data: members, error: membersError } = await supabase
+              .from('team_members')
+              .select('status')
+              .eq('status', 'active');
+
+            if (membersError) {
+              console.warn('🔧 ADMIN-STATS: Direct member query failed, using fallback:', membersError);
+              
+              // Fallback: Count members using the safe function for each team
+              for (const team of teams || []) {
+                try {
+                  const { data: teamMembers } = await supabase
+                    .rpc('fetch_team_members_with_profiles', { p_team_id: team.id });
+                  totalMembers += teamMembers?.filter(m => m.status === 'active').length || 0;
+                } catch (memberError) {
+                  console.warn(`🔧 ADMIN-STATS: Could not count members for team ${team.id}:`, memberError);
+                }
+              }
+            } else {
+              totalMembers = members?.length || 0;
+            }
+          } catch (memberError) {
+            console.warn('🔧 ADMIN-STATS: All member counting methods failed:', memberError);
+            totalMembers = 0;
+          }
+
+          const teamsData = teams || [];
+          const totalTeams = teamsData.length;
+          const activeTeams = teamsData.filter(t => t.status === 'active').length;
+          const inactiveTeams = teamsData.filter(t => t.status === 'inactive').length;
+          const suspendedTeams = teamsData.filter(t => t.status === 'suspended').length;
+          
+          const averagePerformance = teamsData.length > 0
+            ? Math.round(teamsData.reduce((sum, team) => sum + (team.performance_score || 0), 0) / teamsData.length)
+            : 0;
+
+          const statistics = {
+            totalTeams,
+            totalMembers,
+            averagePerformance,
+            averageCompliance: 0, // Will be calculated when compliance data is available
+            teamsByLocation: {}, // Will be populated when location data is available
+            performanceByTeamType: {}, // Will be populated when needed
+            activeTeams,
+            inactiveTeams,
+            suspendedTeams
+          };
+
+          console.log('🔧 ADMIN-STATS: Statistics calculated successfully:', statistics);
+          return statistics;
+        } else {
+          // Safe function succeeded
+          console.log('🔧 ADMIN-STATS: Safe function successful:', statsData);
+          const stats = statsData[0] || {};
+          return {
+            totalTeams: Number(stats.total_teams) || 0,
+            totalMembers: 0, // Will be calculated separately
+            averagePerformance: Number(stats.average_performance) || 0,
+            averageCompliance: 0,
+            teamsByLocation: {},
+            performanceByTeamType: {},
+            activeTeams: Number(stats.active_teams) || 0,
+            inactiveTeams: Number(stats.inactive_teams) || 0,
+            suspendedTeams: Number(stats.suspended_teams) || 0
+          };
         }
-
-        const teamsData = teams || [];
-        const totalTeams = teamsData.length;
-        const activeTeams = teamsData.filter(t => t.status === 'active').length;
-        const inactiveTeams = teamsData.filter(t => t.status === 'inactive').length;
-        const suspendedTeams = teamsData.filter(t => t.status === 'suspended').length;
-        
-        const averagePerformance = teamsData.length > 0
-          ? Math.round(teamsData.reduce((sum, team) => sum + (team.performance_score || 0), 0) / teamsData.length)
-          : 0;
-
-        const statistics = {
-          totalTeams,
-          totalMembers,
-          averagePerformance,
-          averageCompliance: 0, // Will be calculated when compliance data is available
-          teamsByLocation: {}, // Will be populated when location data is available
-          performanceByTeamType: {}, // Will be populated when needed
-          activeTeams,
-          inactiveTeams,
-          suspendedTeams
-        };
-
-        console.log('🔧 ADMIN-STATS: Statistics calculated successfully:', statistics);
-        return statistics;
 
       } catch (error) {
         console.error('🔧 ADMIN-STATS: Statistics query failed completely:', error);
