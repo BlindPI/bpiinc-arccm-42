@@ -28,8 +28,7 @@ export interface TeamMember {
   role: string;
   joined_at: string;
   profile?: {
-    first_name: string;
-    last_name: string;
+    display_name: string;
     email: string;
     role: DatabaseUserRole;
   };
@@ -71,7 +70,7 @@ export class UnifiedTeamService {
             .from('teams')
             .select(`
               *,
-              team_members(count),
+              team_members!inner(count),
               locations(name, address)
             `));
           break;
@@ -82,7 +81,7 @@ export class UnifiedTeamService {
             .from('teams')
             .select(`
               *,
-              team_members(count),
+              team_members!inner(count),
               locations(name, address)
             `)
             .eq('created_by', userId));
@@ -93,9 +92,9 @@ export class UnifiedTeamService {
           ({ data, error } = await supabase
             .from('team_members')
             .select(`
-              teams(
+              teams!inner(
                 *,
-                team_members(count),
+                team_members!inner(count),
                 locations(name, address)
               )
             `)
@@ -154,7 +153,7 @@ export class UnifiedTeamService {
         })
         .select(`
           *,
-          team_members(count),
+          team_members!inner(count),
           locations(name, address)
         `)
         .single();
@@ -180,7 +179,7 @@ export class UnifiedTeamService {
         .eq('id', teamId)
         .select(`
           *,
-          team_members(count),
+          team_members!inner(count),
           locations(name, address)
         `)
         .single();
@@ -240,9 +239,8 @@ export class UnifiedTeamService {
         .from('team_members')
         .select(`
           *,
-          profiles:user_id (
-            first_name,
-            last_name,
+          profiles!inner (
+            display_name,
             email,
             role
           )
@@ -352,7 +350,7 @@ export class UnifiedTeamService {
         .from('teams')
         .select(`
           *,
-          team_members(count),
+          team_members!inner(count),
           locations(name, address)
         `)
         .eq('created_by', providerId);
@@ -503,7 +501,7 @@ export class UnifiedTeamService {
         .from('teams')
         .select(`
           *,
-          team_members(count),
+          team_members!inner(count),
           locations(name, address)
         `);
 
