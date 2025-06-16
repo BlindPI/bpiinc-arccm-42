@@ -41,6 +41,7 @@ import SystemMonitoring from '@/pages/SystemMonitoring';
 import CampaignManagement from '@/pages/CampaignManagement';
 import InstructorPerformance from '@/pages/InstructorPerformance';
 import AuthorizedProviders from '@/pages/AuthorizedProviders';
+import ModernTeams from '@/pages/ModernTeams';
 
 export function AppRoutes() {
   const { user } = useAuth();
@@ -109,6 +110,12 @@ export function AppRoutes() {
       <Route path="/enhanced-teams" element={
         <ProtectedRoute>
           <EnhancedTeams />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/modern-teams" element={
+        <ProtectedRoute>
+          <ModernTeams />
         </ProtectedRoute>
       } />
 

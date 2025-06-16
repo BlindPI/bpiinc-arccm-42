@@ -48,7 +48,7 @@ import { RealTimeTeamUpdates } from './RealTimeTeamUpdates';
 
 // Import services
 import { AdminTeamService } from '@/services/team/AdminTeamService';
-import { RealTeamService } from '@/services/team/realTeamService';
+import { FallbackTeamService } from '@/services/team/fallbackTeamService';
 import type { EnhancedTeam, TeamMemberWithProfile } from '@/types/team-management';
 
 interface ModernTeamDashboardProps {
@@ -72,7 +72,7 @@ export function ModernTeamDashboard({ userRole, userId }: ModernTeamDashboardPro
     queryKey: ['teams', 'enhanced'],
     queryFn: async () => {
       try {
-        const data = await RealTeamService.getEnhancedTeams();
+        const data = await FallbackTeamService.getEnhancedTeams();
         return data || [];
       } catch (error) {
         console.error('Failed to fetch teams:', error);
@@ -87,8 +87,8 @@ export function ModernTeamDashboard({ userRole, userId }: ModernTeamDashboardPro
     queryKey: ['users', 'available'],
     queryFn: async () => {
       try {
-        // This would be replaced with actual service call
-        return [];
+        const data = await FallbackTeamService.getAvailableUsers();
+        return data || [];
       } catch (error) {
         console.error('Failed to fetch available users:', error);
         return [];
