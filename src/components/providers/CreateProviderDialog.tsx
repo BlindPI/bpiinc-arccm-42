@@ -162,6 +162,28 @@ export function CreateProviderDialog({ open, onOpenChange, onProviderCreated }: 
             </div>
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="website">Website</Label>
+            <Input
+              id="website"
+              type="url"
+              value={formData.website}
+              onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+              placeholder="https://provider.com"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="address">Address</Label>
+            <Textarea
+              id="address"
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              placeholder="Provider's physical address"
+              rows={2}
+            />
+          </div>
+
           <div className="flex gap-2 pt-4">
             <Button
               type="button"

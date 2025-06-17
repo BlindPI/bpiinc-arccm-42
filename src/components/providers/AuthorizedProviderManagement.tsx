@@ -7,13 +7,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authorizedProviderService } from '@/services/provider/authorizedProviderService';
 import type { AuthorizedProvider } from '@/types/provider-management';
-import { Building2, MapPin, Users, TrendingUp, Plus, CheckCircle, XCircle } from 'lucide-react';
+import { Building2, MapPin, Users, TrendingUp, Plus, CheckCircle, XCircle, Target } from 'lucide-react';
 import { toast } from 'sonner';
 import { CreateProviderDialog } from './CreateProviderDialog';
 import { ProviderPerformanceView } from './ProviderPerformanceView';
 import { ProviderLocationDashboard } from './ProviderLocationDashboard';
 import { ProviderLocationAssignment } from './ProviderLocationAssignment';
 import { ProviderTeamManagement } from './ProviderTeamManagement';
+import { ThreeClickProviderWorkflow } from './ThreeClickProviderWorkflow';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function AuthorizedProviderManagement() {
@@ -21,6 +22,7 @@ export default function AuthorizedProviderManagement() {
   const queryClient = useQueryClient();
   const [selectedProvider, setSelectedProvider] = useState<AuthorizedProvider | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showWorkflow, setShowWorkflow] = useState(false);
 
   const { data: providers = [], isLoading } = useQuery({
     queryKey: ['authorized-providers'],
@@ -36,6 +38,18 @@ export default function AuthorizedProviderManagement() {
     },
     onError: (error) => {
       toast.error(`Failed to approve provider: ${error.message}`);
+    }
+  });
+
+  const rejectProviderMutation = useMutation({
+    mutationFn: ({ providerId, reason }: { providerId: string; reason?: string }) =>
+      authorizedProviderService.rejectProvider(providerId, user?.id || '', reason),
+    onSuccess: () => {
+      toast.success('Provider rejected successfully');
+      queryClient.invalidateQueries({ queryKey: ['authorized-providers'] });
+    },
+    onError: (error) => {
+      toast.error(`Failed to reject provider: ${error.message}`);
     }
   });
 
@@ -70,10 +84,19 @@ export default function AuthorizedProviderManagement() {
             Manage training providers, location assignments, and team operations
           </p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Provider
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowWorkflow(true)}
+          >
+            <Target className="h-4 w-4 mr-2" />
+            3-Click Setup
+          </Button>
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Provider
+          </Button>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -152,13 +175,18 @@ export default function AuthorizedProviderManagement() {
                   
                   {selectedProvider.status === 'PENDING' && (
                     <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         className="text-red-600 border-red-200 hover:bg-red-50"
+                        onClick={() => rejectProviderMutation.mutate({
+                          providerId: selectedProvider.id,
+                          reason: 'Manual rejection by administrator'
+                        })}
+                        disabled={rejectProviderMutation.isPending}
                       >
                         <XCircle className="h-4 w-4 mr-2" />
-                        Reject
+                        {rejectProviderMutation.isPending ? 'Rejecting...' : 'Reject'}
                       </Button>
                       <Button 
                         size="sm"
@@ -228,11 +256,38 @@ export default function AuthorizedProviderManagement() {
         </Card>
       </div>
 
-      <CreateProviderDialog 
+      <CreateProviderDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
         onProviderCreated={handleProviderCreated}
       />
+
+      {showWorkflow && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-background rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Quick Provider Setup</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowWorkflow(false)}
+              >
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="p-6">
+              <ThreeClickProviderWorkflow
+                onComplete={() => {
+                  setShowWorkflow(false);
+                  queryClient.invalidateQueries({ queryKey: ['authorized-providers'] });
+                  queryClient.invalidateQueries({ queryKey: ['teams'] });
+                  queryClient.invalidateQueries({ queryKey: ['locations'] });
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

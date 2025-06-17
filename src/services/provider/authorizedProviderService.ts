@@ -1,13 +1,9 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { Provider } from '@/types/team-management';
-
-export interface AuthorizedProvider extends Provider {
-  // Additional provider-specific properties if needed
-}
+import type { AuthorizedProvider } from '@/types/provider-management';
 
 export class AuthorizedProviderService {
-  async getProviderById(providerId: string): Promise<Provider | null> {
+  async getProviderById(providerId: string): Promise<AuthorizedProvider | null> {
     const { data, error } = await supabase
       .from('authorized_providers')
       .select('*')
@@ -23,17 +19,23 @@ export class AuthorizedProviderService {
       id: data.id,
       name: data.name,
       provider_type: data.provider_type || 'training_provider',
-      status: data.status || 'active',
+      status: data.status || 'PENDING',
       primary_location_id: data.primary_location_id,
       performance_rating: data.performance_rating || 0,
       compliance_score: data.compliance_score || 0,
       created_at: data.created_at,
       updated_at: data.updated_at,
-      description: data.description
+      description: data.description,
+      website: data.website,
+      contact_email: data.contact_email,
+      contact_phone: data.contact_phone,
+      address: data.address,
+      approved_by: data.approved_by,
+      approval_date: data.approval_date
     };
   }
 
-  async getAllProviders(): Promise<Provider[]> {
+  async getAllProviders(): Promise<AuthorizedProvider[]> {
     const { data, error } = await supabase
       .from('authorized_providers')
       .select('*')
@@ -48,21 +50,27 @@ export class AuthorizedProviderService {
       id: provider.id,
       name: provider.name,
       provider_type: provider.provider_type || 'training_provider',
-      status: provider.status || 'active',
+      status: provider.status || 'PENDING',
       primary_location_id: provider.primary_location_id,
       performance_rating: provider.performance_rating || 0,
       compliance_score: provider.compliance_score || 0,
       created_at: provider.created_at,
       updated_at: provider.updated_at,
-      description: provider.description
+      description: provider.description,
+      website: provider.website,
+      contact_email: provider.contact_email,
+      contact_phone: provider.contact_phone,
+      address: provider.address,
+      approved_by: provider.approved_by,
+      approval_date: provider.approval_date
     }));
   }
 
-  async approveProvider(providerId: string, approverId: string): Promise<Provider> {
+  async approveProvider(providerId: string, approverId: string): Promise<AuthorizedProvider> {
     const { data, error } = await supabase
       .from('authorized_providers')
       .update({
-        status: 'active',
+        status: 'APPROVED',
         approved_by: approverId,
         approval_date: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -77,13 +85,19 @@ export class AuthorizedProviderService {
       id: data.id,
       name: data.name,
       provider_type: data.provider_type || 'training_provider',
-      status: data.status || 'active',
+      status: data.status || 'APPROVED',
       primary_location_id: data.primary_location_id,
       performance_rating: data.performance_rating || 0,
       compliance_score: data.compliance_score || 0,
       created_at: data.created_at,
       updated_at: data.updated_at,
-      description: data.description
+      description: data.description,
+      website: data.website,
+      contact_email: data.contact_email,
+      contact_phone: data.contact_phone,
+      address: data.address,
+      approved_by: data.approved_by,
+      approval_date: data.approval_date
     };
   }
 
@@ -106,6 +120,42 @@ export class AuthorizedProviderService {
     if (error) throw error;
 
     return `${providerId}-${teamId}`;
+  }
+
+  async rejectProvider(providerId: string, rejectedBy: string, reason?: string): Promise<AuthorizedProvider> {
+    const { data, error } = await supabase
+      .from('authorized_providers')
+      .update({
+        status: 'REJECTED',
+        rejected_by: rejectedBy,
+        rejection_date: new Date().toISOString(),
+        rejection_reason: reason,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', providerId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      id: data.id,
+      name: data.name,
+      provider_type: data.provider_type || 'training_provider',
+      status: data.status || 'REJECTED',
+      primary_location_id: data.primary_location_id,
+      performance_rating: data.performance_rating || 0,
+      compliance_score: data.compliance_score || 0,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      description: data.description,
+      website: data.website,
+      contact_email: data.contact_email,
+      contact_phone: data.contact_phone,
+      address: data.address,
+      approved_by: data.approved_by,
+      approval_date: data.approval_date
+    };
   }
 }
 
