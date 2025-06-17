@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,11 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { UnifiedProviderService } from '@/services/provider/unifiedProviderService';
 import type { ProviderTeamAssignment, AssignProviderToTeamRequest, TeamFilters } from '@/types/provider-management';
-import { 
-  Users, 
-  Plus, 
-  Building2, 
-  MapPin, 
+import { isValidUUID, getUUIDErrorMessage } from '@/utils/uuidValidation';
+import {
+  Users,
+  Plus,
+  Building2,
+  MapPin,
   Calendar,
   TrendingUp,
   Award,
@@ -23,7 +24,8 @@ import {
   Eye,
   Edit,
   Trash2,
-  Search
+  Search,
+  AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -39,6 +41,18 @@ export function ProviderTeamManagement({ providerId, providerName }: ProviderTea
   const [selectedAssignment, setSelectedAssignment] = useState<ProviderTeamAssignment | null>(null);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  // Validate provider ID on component mount
+  useEffect(() => {
+    if (!isValidUUID(providerId)) {
+      const errorMsg = getUUIDErrorMessage(providerId, 'Provider ID');
+      setValidationError(errorMsg);
+      toast.error(errorMsg);
+    } else {
+      setValidationError(null);
+    }
+  }, [providerId]);
 
   // Assignment form state
   const [selectedTeam, setSelectedTeam] = useState('');
@@ -47,22 +61,30 @@ export function ProviderTeamManagement({ providerId, providerName }: ProviderTea
   const [assignmentType, setAssignmentType] = useState<'ongoing' | 'project_based' | 'temporary'>('ongoing');
   const [endDate, setEndDate] = useState('');
 
-  // Fetch provider team assignments
-  const { data: assignments = [], isLoading: assignmentsLoading } = useQuery({
+  // Fetch provider team assignments (only if provider ID is valid)
+  const { data: assignments = [], isLoading: assignmentsLoading, error: assignmentsError } = useQuery({
     queryKey: ['provider-team-assignments', providerId],
-    queryFn: () => UnifiedProviderService.getProviderAssignments(providerId)
+    queryFn: () => UnifiedProviderService.getProviderAssignments(providerId),
+    enabled: isValidUUID(providerId),
+    retry: (failureCount, error) => {
+      // Don't retry if it's a UUID validation error
+      if (error?.message?.includes('UUID')) return false;
+      return failureCount < 3;
+    }
   });
 
   // Fetch available teams for assignment
   const { data: teamsResponse } = useQuery({
     queryKey: ['available-teams', providerId],
-    queryFn: () => UnifiedProviderService.getTeams()
+    queryFn: () => UnifiedProviderService.getTeams(),
+    enabled: isValidUUID(providerId)
   });
 
   // Fetch provider analytics
   const { data: analyticsResponse } = useQuery({
     queryKey: ['provider-team-analytics', providerId],
-    queryFn: () => UnifiedProviderService.getProviderAnalytics(providerId)
+    queryFn: () => UnifiedProviderService.getProviderAnalytics(providerId),
+    enabled: isValidUUID(providerId)
   });
 
   // Extract data from responses
@@ -122,6 +144,18 @@ export function ProviderTeamManagement({ providerId, providerName }: ProviderTea
       toast.error('Please select a team');
       return;
     }
+    
+    // Validate UUIDs before assignment
+    if (!isValidUUID(providerId)) {
+      toast.error('Invalid provider ID format');
+      return;
+    }
+    
+    if (!isValidUUID(selectedTeam)) {
+      toast.error('Invalid team ID format');
+      return;
+    }
+    
     assignTeamMutation.mutate();
   };
 
@@ -150,10 +184,51 @@ export function ProviderTeamManagement({ providerId, providerName }: ProviderTea
     assignment.location_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Show validation error if provider ID is invalid
+  if (validationError) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md">
+          <CardContent className="p-6 text-center">
+            <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-red-500" />
+            <h3 className="text-lg font-medium mb-2 text-red-700">Invalid Provider ID</h3>
+            <p className="text-gray-600 mb-4">{validationError}</p>
+            <p className="text-sm text-gray-500">
+              Please ensure you're using a valid UUID format for the provider ID.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (assignmentsLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // Show error if assignments failed to load
+  if (assignmentsError) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md">
+          <CardContent className="p-6 text-center">
+            <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-red-500" />
+            <h3 className="text-lg font-medium mb-2 text-red-700">Failed to Load Assignments</h3>
+            <p className="text-gray-600 mb-4">
+              {assignmentsError?.message || 'Unable to fetch provider team assignments'}
+            </p>
+            <Button
+              onClick={() => queryClient.invalidateQueries({ queryKey: ['provider-team-assignments', providerId] })}
+              variant="outline"
+            >
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
