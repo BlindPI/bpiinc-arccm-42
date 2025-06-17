@@ -146,15 +146,15 @@ export function ProviderPerformanceView({ providerId }: ProviderPerformanceViewP
 
   const { provider, totalCertificates, totalCourses, teams } = providerData;
   const totalMembers = teams.reduce((sum: number, team: any) => sum + team.memberCount, 0);
-  const avgTeamPerformance = teams.length > 0 
+  const avgTeamPerformance = teams.length > 0
     ? Math.round(teams.reduce((sum: number, team: any) => sum + (team.performance_score || 0), 0) / teams.length)
     : 0;
 
   const teamPerformanceData = teams.map((team: any) => ({
     name: team.name.length > 15 ? team.name.substring(0, 15) + '...' : team.name,
     score: team.performance_score || 0,
-    members: team.memberCount,
-    certificates: team.certificateCount
+    members: team.memberCount || 0,
+    certificates: team.certificateCount || 0
   }));
 
   return (

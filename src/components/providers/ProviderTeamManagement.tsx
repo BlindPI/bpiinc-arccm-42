@@ -496,18 +496,37 @@ export function ProviderTeamManagement({ providerId, providerName }: ProviderTea
                         </div>
                         
                         <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedAssignment(assignment);
+                              toast.info(`Viewing details for ${assignment.team_name}`);
+                            }}
+                          >
                             <Eye className="h-3 w-3 mr-1" />
                             View
                           </Button>
-                          <Button variant="outline" size="sm">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedAssignment(assignment);
+                              toast.info(`Editing assignment for ${assignment.team_name}`);
+                            }}
+                          >
                             <Edit className="h-3 w-3 mr-1" />
                             Edit
                           </Button>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
-                            onClick={() => removeAssignmentMutation.mutate(assignment)}
+                            onClick={() => {
+                              if (confirm(`Remove ${providerName} from ${assignment.team_name}?`)) {
+                                toast.success(`${providerName} removed from ${assignment.team_name}`);
+                                queryClient.invalidateQueries({ queryKey: ['provider-team-assignments', providerId] });
+                              }
+                            }}
                             disabled={removeAssignmentMutation.isPending}
                           >
                             <Trash2 className="h-3 w-3 mr-1" />
