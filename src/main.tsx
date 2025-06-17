@@ -21,6 +21,13 @@ if (import.meta.env.DEV) {
   }).catch(err => {
     console.warn('Could not load database schema diagnostics:', err);
   });
+
+  // Import provider certificate diagnostics
+  import('./utils/simpleProviderDebug.js').then(module => {
+    console.log('🔍 Provider certificate diagnostics loaded. Run debugProviderCertificates() in console to test provider setup.');
+  }).catch(err => {
+    console.warn('Could not load provider certificate diagnostics:', err);
+  });
 }
 
 const queryClient = new QueryClient();
