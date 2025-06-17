@@ -30,6 +30,7 @@ export function TeamAssignmentTab({ providerId, assignments, onAssignmentChange 
   const queryClient = useQueryClient();
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<any>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
 
   // Fetch available teams for assignment
   const { data: availableTeams = [] } = useQuery({
@@ -65,6 +66,83 @@ export function TeamAssignmentTab({ providerId, assignments, onAssignmentChange 
       
       return data || [];
     }
+  });
+
+  // Fetch detailed team member information for diagnostics
+  const { data: teamMembersData, isLoading: isLoadingMembers } = useQuery({
+    queryKey: ['team-members-detailed', selectedTeamId],
+    queryFn: async () => {
+      if (!selectedTeamId) return null;
+      
+      console.log('DEBUG - Fetching team members for team:', selectedTeamId);
+      
+      // Try multiple approaches to get team member data
+      const approaches = [
+        // Approach 1: Direct team_members query with profiles
+        async () => {
+          const { data, error } = await supabase
+            .from('team_members')
+            .select(`
+              id,
+              user_id,
+              role,
+              status,
+              assignment_start_date,
+              assignment_end_date,
+              team_position,
+              permissions,
+              last_activity,
+              profiles:user_id (
+                id,
+                display_name,
+                email,
+                role,
+                created_at
+              )
+            `)
+            .eq('team_id', selectedTeamId)
+            .eq('status', 'active');
+          
+          console.log('DEBUG - Approach 1 (direct query) result:', { data, error });
+          return { approach: 'direct', data, error };
+        },
+        
+        // Approach 2: Use existing RLS bypass function
+        async () => {
+          const { data, error } = await supabase
+            .rpc('get_team_members_bypass_rls', { p_team_id: selectedTeamId });
+          
+          console.log('DEBUG - Approach 2 (RLS bypass) result:', { data, error });
+          return { approach: 'rls_bypass', data, error };
+        },
+        
+        // Approach 3: Use alternative function
+        async () => {
+          const { data, error } = await supabase
+            .rpc('fetch_team_members_with_profiles', { p_team_id: selectedTeamId });
+          
+          console.log('DEBUG - Approach 3 (fetch function) result:', { data, error });
+          return { approach: 'fetch_function', data, error };
+        }
+      ];
+      
+      // Try each approach and return the first successful one
+      for (const approach of approaches) {
+        try {
+          const result = await approach();
+          if (result.data && !result.error) {
+            console.log('DEBUG - Successful approach:', result.approach);
+            return result.data;
+          }
+        } catch (err) {
+          console.log('DEBUG - Approach failed:', err);
+        }
+      }
+      
+      console.log('DEBUG - All approaches failed, returning empty array');
+      return [];
+    },
+    enabled: !!selectedTeamId
   });
 
   // Assign provider to team mutation
@@ -303,6 +381,48 @@ export function TeamAssignmentTab({ providerId, assignments, onAssignmentChange 
                         Since {new Date(assignment.start_date).toLocaleDateString()}
                       </p>
                     </div>
+                    
+                    {/* DEBUG: Log assignment data structure */}
+                    {console.log('DEBUG - Assignment data:', assignment)}
+                    
+                    {/* Missing View Details Button - IDENTIFIED ISSUE #1 */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        console.log('DEBUG - View Details clicked for team:', assignment.team_name);
+                        console.log('DEBUG - Team ID:', assignment.team_id);
+                        console.log('DEBUG - Available assignment data:', Object.keys(assignment));
+                        console.log('DEBUG - Full assignment object:', assignment);
+                        
+                        // Set selected team to trigger member data fetching
+                        setSelectedTeamId(assignment.team_id);
+                        
+                        // Log current team members data state
+                        console.log('DEBUG - Current team members data:', teamMembersData);
+                        console.log('DEBUG - Is loading members:', isLoadingMembers);
+                        
+                        toast.info(`Fetching team details for ${assignment.team_name}...`);
+                      }}
+                    >
+                      <Users className="h-4 w-4 mr-1" />
+                      View Details
+                    </Button>
+                    
+                    {/* Missing Edit Assignment Button - IDENTIFIED ISSUE #2 */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        console.log('DEBUG - Edit Assignment clicked for team:', assignment.team_name);
+                        // TODO: Implement edit assignment functionality
+                        toast.error('Edit Assignment functionality not implemented yet');
+                      }}
+                    >
+                      <Edit className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                    
                     <Button
                       variant="ghost"
                       size="sm"
@@ -333,6 +453,59 @@ export function TeamAssignmentTab({ providerId, assignments, onAssignmentChange 
             Assign to Team
           </Button>
         </div>
+      )}
+
+      {/* DEBUG: Team Member Details Section */}
+      {selectedTeamId && (
+        <Card className="mt-6 border-blue-200 bg-blue-50">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Team Member Details (DEBUG)
+              {isLoadingMembers && <span className="text-sm text-muted-foreground">Loading...</span>}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="text-sm">
+                <p><strong>Selected Team ID:</strong> {selectedTeamId}</p>
+                <p><strong>Loading State:</strong> {isLoadingMembers ? 'Loading...' : 'Loaded'}</p>
+                <p><strong>Data Available:</strong> {teamMembersData ? 'Yes' : 'No'}</p>
+                {teamMembersData && (
+                  <p><strong>Member Count:</strong> {Array.isArray(teamMembersData) ? teamMembersData.length : 'Not an array'}</p>
+                )}
+              </div>
+              
+              {teamMembersData && (
+                <div className="space-y-2">
+                  <h4 className="font-medium">Team Members Data:</h4>
+                  <pre className="bg-white p-3 rounded border text-xs overflow-auto max-h-60">
+                    {JSON.stringify(teamMembersData, null, 2)}
+                  </pre>
+                </div>
+              )}
+              
+              {!isLoadingMembers && !teamMembersData && (
+                <div className="text-center py-4 text-muted-foreground">
+                  <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No team member data available</p>
+                  <p className="text-xs">Check console for detailed error logs</p>
+                </div>
+              )}
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectedTeamId(null);
+                  console.log('DEBUG - Cleared selected team');
+                }}
+              >
+                Close Debug View
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
