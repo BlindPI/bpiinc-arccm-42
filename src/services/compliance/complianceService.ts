@@ -376,7 +376,7 @@ export class ComplianceService {
   }
 
   // Helper function to calculate metric score
-  private static calculateMetricScore(record: UserComplianceRecord): number {
+  static calculateMetricScore(record: UserComplianceRecord): number {
     switch (record.compliance_status) {
       case 'compliant':
         return 100;
