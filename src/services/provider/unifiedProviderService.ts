@@ -1,6 +1,6 @@
 // Unified Provider Service - Enterprise Grade Implementation
-// Phase 3: Service Layer Fixes with TypeScript Error Resolution
-// Comprehensive provider management with fallback methods
+// Phase 4: UUID Standardization - Comprehensive UUID handling
+// Removes all integer conversion logic and ensures UUID consistency
 
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -22,6 +22,12 @@ import {
   ApiResponse,
   PaginatedResponse
 } from '@/types/provider-management';
+import {
+  isValidUUID,
+  validateUUID,
+  getUUIDErrorMessage,
+  validateUUIDWithResult
+} from '@/utils/uuidValidation';
 
 /**
  * Unified Provider Service - Enterprise Grade
@@ -74,7 +80,7 @@ export class UnifiedProviderService {
           created_at,
           updated_at
         `)
-        .eq('provider_id', parseInt(providerId) || 0);
+        .eq('provider_id', providerId);
 
       // Calculate performance metrics
       const performance_metrics: ProviderPerformanceMetrics = {
@@ -91,7 +97,7 @@ export class UnifiedProviderService {
         team_type: team.team_type,
         status: team.status,
         location_id: team.location_id,
-        provider_id: team.provider_id?.toString() || providerId,
+        provider_id: team.provider_id || providerId,
         performance_score: team.performance_score,
         monthly_targets: team.monthly_targets as Record<string, any>,
         current_metrics: team.current_metrics as Record<string, any>,
@@ -147,10 +153,11 @@ export class UnifiedProviderService {
           query = query.eq('location_id', filters.location_id);
         }
         if (filters.provider_id) {
-          // Convert string to number for database query
-          const providerIdNum = parseInt(filters.provider_id);
-          if (!isNaN(providerIdNum)) {
-            query = query.eq('provider_id', providerIdNum);
+          // Validate UUID format before querying
+          if (isValidUUID(filters.provider_id)) {
+            query = query.eq('provider_id', filters.provider_id);
+          } else {
+            console.warn('Invalid provider_id UUID format in filters:', filters.provider_id);
           }
         }
         if (filters.search) {
@@ -174,7 +181,7 @@ export class UnifiedProviderService {
         team_type: team.team_type,
         status: team.status,
         location_id: team.location_id,
-        provider_id: team.provider_id?.toString(),
+        provider_id: team.provider_id,
         performance_score: team.performance_score,
         monthly_targets: team.monthly_targets as Record<string, any>,
         current_metrics: team.current_metrics as Record<string, any>,
@@ -207,10 +214,10 @@ export class UnifiedProviderService {
    */
   static async getProviderAssignments(providerId: string): Promise<ProviderTeamAssignmentDetailed[]> {
     try {
-      // Convert providerId to number for database query
-      const providerIdNum = parseInt(providerId);
-      if (isNaN(providerIdNum)) {
-        console.error('Invalid provider ID:', providerId);
+      // Validate UUID format
+      const validation = validateUUIDWithResult(providerId, 'Provider ID');
+      if (!validation.isValid) {
+        console.error('getProviderAssignments:', validation.error);
         return [];
       }
 
@@ -236,16 +243,21 @@ export class UnifiedProviderService {
             location:locations(name)
           )
         `)
-        .eq('provider_id', providerIdNum);
+        .eq('provider_id', providerId);
 
-      if (error || !assignments) {
+      if (error) {
         console.error('Error fetching assignments:', error);
+        return [];
+      }
+
+      if (!assignments || assignments.length === 0) {
+        console.info(`No assignments found for provider ${providerId}`);
         return [];
       }
 
       return assignments.map((assignment: any) => ({
         id: assignment.id,
-        provider_id: providerId, // Keep as string for consistency
+        provider_id: providerId,
         team_id: assignment.team_id,
         assignment_role: assignment.assignment_role,
         oversight_level: assignment.oversight_level,
@@ -386,12 +398,20 @@ export class UnifiedProviderService {
         end_date
       } = request;
 
-      // Convert providerId to number for database operations
-      const providerIdNum = parseInt(providerId);
-      if (isNaN(providerIdNum)) {
+      // Validate UUID formats
+      const providerValidation = validateUUIDWithResult(providerId, 'Provider ID');
+      if (!providerValidation.isValid) {
         return {
           data: null,
-          error: 'Invalid provider ID format'
+          error: providerValidation.error
+        };
+      }
+
+      const teamValidation = validateUUIDWithResult(teamId, 'Team ID');
+      if (!teamValidation.isValid) {
+        return {
+          data: null,
+          error: teamValidation.error
         };
       }
 
@@ -399,7 +419,7 @@ export class UnifiedProviderService {
       const { data: existing } = await supabase
         .from('provider_team_assignments')
         .select('id')
-        .eq('provider_id', providerIdNum)
+        .eq('provider_id', providerId)
         .eq('team_id', teamId)
         .eq('status', 'active')
         .single();
@@ -416,7 +436,7 @@ export class UnifiedProviderService {
       const { data, error } = await supabase
         .from('provider_team_assignments')
         .insert({
-          provider_id: providerIdNum,
+          provider_id: providerId,
           team_id: teamId,
           assignment_role,
           oversight_level,
@@ -431,7 +451,7 @@ export class UnifiedProviderService {
       if (assignment_role === 'primary') {
         await supabase
           .from('teams')
-          .update({ provider_id: providerIdNum })
+          .update({ provider_id: providerId })
           .eq('id', teamId);
       }
 
@@ -478,7 +498,7 @@ export class UnifiedProviderService {
       // Convert provider_id to string for consistency
       return {
         id: data.id,
-        provider_id: data.provider_id?.toString() || '',
+        provider_id: data.provider_id || '',
         team_id: data.team_id,
         assignment_role: data.assignment_role,
         oversight_level: data.oversight_level,

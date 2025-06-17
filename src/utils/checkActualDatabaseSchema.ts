@@ -86,8 +86,22 @@ export async function checkActualDatabaseSchema() {
 
     // Test the problematic functions
     console.log('6. Testing get_provider_location_kpis function...');
+    // Get a real provider ID from the database instead of using hardcoded integer
+    const { data: providers } = await supabase
+      .from('authorized_providers')
+      .select('id')
+      .limit(1);
+    
+    if (!providers || providers.length === 0) {
+      console.log('No providers found in database - skipping KPI test');
+      return;
+    }
+    
+    const providerId = providers[0].id;
+    console.log('Testing with provider ID:', providerId);
+    
     const { data: kpisData, error: kpisError } = await supabase
-      .rpc('get_provider_location_kpis', { p_provider_id: 245 });
+      .rpc('get_provider_location_kpis', { p_provider_id: providerId });
 
     if (kpisError) {
       console.error('❌ get_provider_location_kpis error:', kpisError);
@@ -97,7 +111,7 @@ export async function checkActualDatabaseSchema() {
 
     console.log('7. Testing get_provider_location_teams function...');
     const { data: teamsKpiData, error: teamsKpiError } = await supabase
-      .rpc('get_provider_location_teams', { p_provider_id: 245 });
+      .rpc('get_provider_location_teams', { p_provider_id: providerId });
 
     if (teamsKpiError) {
       console.error('❌ get_provider_location_teams error:', teamsKpiError);

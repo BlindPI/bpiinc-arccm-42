@@ -1,9 +1,16 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import type { AuthorizedProvider } from '@/types/provider-management';
+import { isValidUUID, validateUUID, getUUIDErrorMessage } from '@/utils/uuidValidation';
 
 export class AuthorizedProviderService {
   async getProviderById(providerId: string): Promise<AuthorizedProvider | null> {
+    // Validate UUID format
+    if (!isValidUUID(providerId)) {
+      console.error(getUUIDErrorMessage(providerId, 'getProviderById'));
+      return null;
+    }
+
     const { data, error } = await supabase
       .from('authorized_providers')
       .select('*')
@@ -67,6 +74,10 @@ export class AuthorizedProviderService {
   }
 
   async approveProvider(providerId: string, approverId: string): Promise<AuthorizedProvider> {
+    // Validate UUID formats
+    validateUUID(providerId, 'Provider ID');
+    validateUUID(approverId, 'Approver ID');
+
     const { data, error } = await supabase
       .from('authorized_providers')
       .update({
@@ -102,17 +113,21 @@ export class AuthorizedProviderService {
   }
 
   async assignProviderToTeam(
-    providerId: string, 
-    teamId: string, 
+    providerId: string,
+    teamId: string,
     assignmentRole: string = 'provider',
     oversightLevel: string = 'monitor'
   ): Promise<string> {
+    // Validate UUID formats
+    validateUUID(providerId, 'Provider ID');
+    validateUUID(teamId, 'Team ID');
+
     // This would typically use a provider_team_assignments table
     // For now, just update the team's provider_id
     const { error } = await supabase
       .from('teams')
       .update({
-        provider_id: providerId, // Keep as UUID string
+        provider_id: providerId, // UUID string
         updated_at: new Date().toISOString()
       })
       .eq('id', teamId);
@@ -123,6 +138,10 @@ export class AuthorizedProviderService {
   }
 
   async rejectProvider(providerId: string, rejectedBy: string, reason?: string): Promise<AuthorizedProvider> {
+    // Validate UUID formats
+    validateUUID(providerId, 'Provider ID');
+    validateUUID(rejectedBy, 'Rejected By ID');
+
     const { data, error } = await supabase
       .from('authorized_providers')
       .update({
