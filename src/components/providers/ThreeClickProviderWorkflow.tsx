@@ -140,7 +140,7 @@ export function ThreeClickProviderWorkflow({ onComplete }: ThreeClickProviderWor
 
   const assignAPUserMutation = useMutation({
     mutationFn: async ({ apUserId, locationId }: { apUserId: string; locationId: string }) => {
-      return await apUserService.assignAPUserAsProvider(apUserId, locationId, user?.id || '');
+      return await apUserService.assignAPUserToLocation(apUserId, locationId, 'provider');
     }
   });
 

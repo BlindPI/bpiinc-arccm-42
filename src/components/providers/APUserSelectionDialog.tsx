@@ -59,7 +59,7 @@ export function APUserSelectionDialog({ open, onOpenChange, onProviderCreated }:
 
   const assignAPUserMutation = useMutation({
     mutationFn: async ({ apUserId, locationId }: { apUserId: string; locationId: string }) => {
-      return await apUserService.assignAPUserAsProvider(apUserId, locationId, user?.id || '');
+      return await apUserService.assignAPUserToLocation(apUserId, locationId, 'provider');
     },
     onSuccess: () => {
       toast.success('AP User assigned as Authorized Provider successfully!');
