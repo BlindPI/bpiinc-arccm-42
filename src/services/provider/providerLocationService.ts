@@ -21,11 +21,9 @@ export interface ProviderLocationTeam {
 export class ProviderLocationService {
   static async getProviderLocationKPIs(providerId: string): Promise<ProviderLocationKPIs> {
     try {
-      // Convert string to number since the RPC function expects an integer
-      const providerIdNumber = parseInt(providerId);
-      
+      // Pass UUID directly since the RPC function expects a UUID
       const { data, error } = await supabase.rpc('get_provider_location_kpis', {
-        p_provider_id: providerIdNumber
+        p_provider_id: providerId
       });
 
       if (error) throw error;
@@ -49,11 +47,9 @@ export class ProviderLocationService {
 
   static async getProviderLocationTeams(providerId: string): Promise<ProviderLocationTeam[]> {
     try {
-      // Convert string to number since the RPC function expects an integer
-      const providerIdNumber = parseInt(providerId);
-      
+      // Pass UUID directly since the RPC function expects a UUID
       const { data, error } = await supabase.rpc('get_provider_location_teams', {
-        p_provider_id: providerIdNumber
+        p_provider_id: providerId
       });
 
       if (error) throw error;
@@ -77,13 +73,11 @@ export class ProviderLocationService {
     locationId: string
   ): Promise<void> {
     try {
-      // Convert string to number since the authorized_providers.id is a number
-      const providerIdNumber = parseInt(providerId);
-      
+      // Use UUID directly since authorized_providers.id is a UUID
       const { error } = await supabase
         .from('authorized_providers')
         .update({ primary_location_id: locationId })
-        .eq('id', providerIdNumber);
+        .eq('id', providerId);
 
       if (error) throw error;
     } catch (error) {
