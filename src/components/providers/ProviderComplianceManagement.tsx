@@ -3,12 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ComplianceService } from '@/services/compliance/complianceService';
 import type { ComplianceMetric, UserComplianceRecord, ComplianceAction } from '@/services/compliance/complianceService';
-import { CheckCircle, XCircle, AlertTriangle, Award, Calendar, Plus, Edit, Settings } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Award, Calendar, Plus, Edit, Settings, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
@@ -24,6 +25,27 @@ export function ProviderComplianceManagement({ providerId }: ProviderComplianceM
   const [showMetricDialog, setShowMetricDialog] = useState(false);
   const [showActionDialog, setShowActionDialog] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<UserComplianceRecord | null>(null);
+  
+  // Form states for dialogs
+  const [newMetric, setNewMetric] = useState({
+    name: '',
+    description: '',
+    category: 'certification',
+    required_for_roles: [] as string[],
+    measurement_type: 'boolean' as const,
+    weight: 1
+  });
+  
+  const [newAction, setNewAction] = useState({
+    title: '',
+    description: '',
+    priority: 'medium' as const,
+    due_date: '',
+    metric_id: ''
+  });
+  
+  const [updateStatus, setUpdateStatus] = useState('');
+  const [updateNotes, setUpdateNotes] = useState('');
 
   // Fetch compliance data
   const { data: complianceSummary } = useQuery({
@@ -53,47 +75,127 @@ export function ProviderComplianceManagement({ providerId }: ProviderComplianceM
   });
 
   // Mutations
+  const createMetricMutation = useMutation({
+    mutationFn: (metric: Partial<ComplianceMetric>) => {
+      console.log('🔥 Creating compliance metric:', metric);
+      return ComplianceService.upsertComplianceMetric(metric);
+    },
+    onSuccess: () => {
+      console.log('✅ Compliance metric created successfully');
+      toast.success('Compliance metric created successfully');
+      queryClient.invalidateQueries({ queryKey: ['compliance-metrics'] });
+      setShowMetricDialog(false);
+      setNewMetric({
+        name: '',
+        description: '',
+        category: 'certification',
+        required_for_roles: [],
+        measurement_type: 'boolean',
+        weight: 1
+      });
+    },
+    onError: (error) => {
+      console.error('❌ Failed to create compliance metric:', error);
+      toast.error(`Failed to create compliance metric: ${error.message}`);
+    }
+  });
+
   const updateRecordMutation = useMutation({
     mutationFn: ({ metricId, value, status, notes }: {
       metricId: string;
       value: any;
       status: 'compliant' | 'non_compliant' | 'warning' | 'pending';
       notes?: string;
-    }) => ComplianceService.updateComplianceRecord(providerId, metricId, value, status, notes),
+    }) => {
+      console.log('🔥 Updating compliance record:', { metricId, value, status, notes });
+      return ComplianceService.updateComplianceRecord(providerId, metricId, value, status, notes);
+    },
     onSuccess: () => {
+      console.log('✅ Compliance record updated successfully');
       toast.success('Compliance record updated successfully');
       queryClient.invalidateQueries({ queryKey: ['compliance-summary', providerId] });
       queryClient.invalidateQueries({ queryKey: ['compliance-records', providerId] });
       queryClient.invalidateQueries({ queryKey: ['compliance-audit-log', providerId] });
+      setSelectedRecord(null);
     },
     onError: (error) => {
+      console.error('❌ Failed to update compliance record:', error);
       toast.error(`Failed to update compliance record: ${error.message}`);
     }
   });
 
   const createActionMutation = useMutation({
-    mutationFn: (action: Partial<ComplianceAction>) => ComplianceService.createComplianceAction(action),
+    mutationFn: (action: Partial<ComplianceAction>) => {
+      console.log('🔥 Creating compliance action:', action);
+      return ComplianceService.createComplianceAction({
+        ...action,
+        user_id: providerId
+      });
+    },
     onSuccess: () => {
+      console.log('✅ Compliance action created successfully');
       toast.success('Compliance action created successfully');
       queryClient.invalidateQueries({ queryKey: ['compliance-actions', providerId] });
       setShowActionDialog(false);
+      setNewAction({
+        title: '',
+        description: '',
+        priority: 'medium',
+        due_date: '',
+        metric_id: ''
+      });
     },
     onError: (error) => {
+      console.error('❌ Failed to create compliance action:', error);
       toast.error(`Failed to create compliance action: ${error.message}`);
     }
   });
 
   const updateActionMutation = useMutation({
-    mutationFn: ({ actionId, status }: { actionId: string; status: string }) =>
-      ComplianceService.updateComplianceActionStatus(actionId, status as any),
+    mutationFn: ({ actionId, status }: { actionId: string; status: string }) => {
+      console.log('🔥 Updating action status:', { actionId, status });
+      return ComplianceService.updateComplianceActionStatus(actionId, status as any);
+    },
     onSuccess: () => {
+      console.log('✅ Action status updated successfully');
       toast.success('Action status updated successfully');
       queryClient.invalidateQueries({ queryKey: ['compliance-actions', providerId] });
     },
     onError: (error) => {
+      console.error('❌ Failed to update action:', error);
       toast.error(`Failed to update action: ${error.message}`);
     }
   });
+
+  // Form handlers
+  const handleCreateMetric = () => {
+    if (!newMetric.name.trim()) {
+      toast.error('Metric name is required');
+      return;
+    }
+    createMetricMutation.mutate(newMetric);
+  };
+
+  const handleCreateAction = () => {
+    if (!newAction.title.trim()) {
+      toast.error('Action title is required');
+      return;
+    }
+    createActionMutation.mutate(newAction);
+  };
+
+  const handleUpdateRecord = () => {
+    if (!selectedRecord || !updateStatus) {
+      toast.error('Please select a status');
+      return;
+    }
+    updateRecordMutation.mutate({
+      metricId: selectedRecord.metric_id,
+      value: { status: updateStatus, updated_by: profile?.display_name },
+      status: updateStatus as any,
+      notes: updateNotes || `Status updated to ${updateStatus} by ${profile?.display_name || 'admin'}`
+    });
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -338,10 +440,209 @@ export function ProviderComplianceManagement({ providerId }: ProviderComplianceM
         </CardContent>
       </Card>
 
+      {/* Add Metric Dialog */}
+      <Dialog open={showMetricDialog} onOpenChange={setShowMetricDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Compliance Metric</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Metric Name</label>
+              <Input
+                value={newMetric.name}
+                onChange={(e) => setNewMetric({ ...newMetric, name: e.target.value })}
+                placeholder="e.g., CPR Certification"
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium mb-2 block">Description</label>
+              <Textarea
+                value={newMetric.description}
+                onChange={(e) => setNewMetric({ ...newMetric, description: e.target.value })}
+                placeholder="Describe the compliance requirement..."
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium mb-2 block">Category</label>
+              <Select
+                value={newMetric.category}
+                onValueChange={(value) => setNewMetric({ ...newMetric, category: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="certification">Certification</SelectItem>
+                  <SelectItem value="training">Training</SelectItem>
+                  <SelectItem value="safety">Safety</SelectItem>
+                  <SelectItem value="documentation">Documentation</SelectItem>
+                  <SelectItem value="equipment">Equipment</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium mb-2 block">Required for Roles</label>
+              <div className="grid grid-cols-2 gap-2">
+                {['AP', 'IN', 'TM', 'ST'].map((role) => (
+                  <div key={role} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={role}
+                      checked={newMetric.required_for_roles.includes(role)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setNewMetric({
+                            ...newMetric,
+                            required_for_roles: [...newMetric.required_for_roles, role]
+                          });
+                        } else {
+                          setNewMetric({
+                            ...newMetric,
+                            required_for_roles: newMetric.required_for_roles.filter(r => r !== role)
+                          });
+                        }
+                      }}
+                    />
+                    <label htmlFor={role} className="text-sm">{role}</label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium mb-2 block">Weight (1-5)</label>
+              <Input
+                type="number"
+                min="1"
+                max="5"
+                value={newMetric.weight}
+                onChange={(e) => setNewMetric({ ...newMetric, weight: parseInt(e.target.value) || 1 })}
+              />
+            </div>
+            
+            <div className="flex gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowMetricDialog(false)}
+                className="flex-1"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateMetric}
+                disabled={createMetricMutation.isPending}
+                className="flex-1"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {createMetricMutation.isPending ? 'Creating...' : 'Create Metric'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Action Dialog */}
+      <Dialog open={showActionDialog} onOpenChange={setShowActionDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Compliance Action</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Action Title</label>
+              <Input
+                value={newAction.title}
+                onChange={(e) => setNewAction({ ...newAction, title: e.target.value })}
+                placeholder="e.g., Update Training Records"
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium mb-2 block">Description</label>
+              <Textarea
+                value={newAction.description}
+                onChange={(e) => setNewAction({ ...newAction, description: e.target.value })}
+                placeholder="Describe what needs to be done..."
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium mb-2 block">Priority</label>
+              <Select
+                value={newAction.priority}
+                onValueChange={(value) => setNewAction({ ...newAction, priority: value as any })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium mb-2 block">Due Date</label>
+              <Input
+                type="date"
+                value={newAction.due_date}
+                onChange={(e) => setNewAction({ ...newAction, due_date: e.target.value })}
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium mb-2 block">Related Metric</label>
+              <Select
+                value={newAction.metric_id}
+                onValueChange={(value) => setNewAction({ ...newAction, metric_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a metric (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {complianceMetrics.map((metric) => (
+                    <SelectItem key={metric.id} value={metric.id}>
+                      {metric.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowActionDialog(false)}
+                className="flex-1"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateAction}
+                disabled={createActionMutation.isPending}
+                className="flex-1"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {createActionMutation.isPending ? 'Creating...' : 'Create Action'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Update Record Dialog */}
       {selectedRecord && (
         <Dialog open={!!selectedRecord} onOpenChange={() => setSelectedRecord(null)}>
-          <DialogContent>
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Update Compliance Record</DialogTitle>
             </DialogHeader>
@@ -349,24 +650,24 @@ export function ProviderComplianceManagement({ providerId }: ProviderComplianceM
               <div>
                 <label className="text-sm font-medium">Metric</label>
                 <p className="text-sm text-muted-foreground">{selectedRecord.compliance_metrics?.name}</p>
+                <p className="text-xs text-muted-foreground">Category: {selectedRecord.compliance_metrics?.category}</p>
               </div>
               
               <div>
-                <label className="text-sm font-medium mb-2 block">Compliance Status</label>
-                <Select 
-                  defaultValue={selectedRecord.compliance_status}
-                  onValueChange={(value) => {
-                    updateRecordMutation.mutate({
-                      metricId: selectedRecord.metric_id,
-                      value: { status: value },
-                      status: value as any,
-                      notes: `Status updated to ${value} by ${profile?.display_name || 'admin'}`
-                    });
-                    setSelectedRecord(null);
-                  }}
+                <label className="text-sm font-medium mb-2 block">Current Status</label>
+                <Badge variant={getStatusColor(selectedRecord.compliance_status)}>
+                  {selectedRecord.compliance_status.replace('_', ' ')}
+                </Badge>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium mb-2 block">New Status</label>
+                <Select
+                  value={updateStatus}
+                  onValueChange={setUpdateStatus}
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select new status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="compliant">Compliant</SelectItem>
@@ -375,6 +676,38 @@ export function ProviderComplianceManagement({ providerId }: ProviderComplianceM
                     <SelectItem value="pending">Pending</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium mb-2 block">Notes</label>
+                <Textarea
+                  value={updateNotes}
+                  onChange={(e) => setUpdateNotes(e.target.value)}
+                  placeholder="Add notes about this update..."
+                />
+              </div>
+              
+              <div className="flex gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedRecord(null);
+                    setUpdateStatus('');
+                    setUpdateNotes('');
+                  }}
+                  className="flex-1"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleUpdateRecord}
+                  disabled={updateRecordMutation.isPending || !updateStatus}
+                  className="flex-1"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {updateRecordMutation.isPending ? 'Updating...' : 'Update Record'}
+                </Button>
               </div>
             </div>
           </DialogContent>
