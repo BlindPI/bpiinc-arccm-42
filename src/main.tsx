@@ -14,6 +14,13 @@ if (import.meta.env.DEV) {
   }).catch(err => {
     console.warn('Could not load team diagnostics:', err);
   });
+
+  // Import database schema diagnostics
+  import('./utils/debugDatabaseSchema.js').then(module => {
+    console.log('🔍 Database schema diagnostics loaded. Run debugDatabaseSchema() in console to test schema.');
+  }).catch(err => {
+    console.warn('Could not load database schema diagnostics:', err);
+  });
 }
 
 const queryClient = new QueryClient();
