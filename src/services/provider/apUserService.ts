@@ -171,7 +171,7 @@ export class APUserService {
 
       // Create the assignment record
       const { data: assignment, error: assignmentError } = await supabase
-        .from('ap_user_location_assignments')
+        .from('ap_user_location_assignments' as any)
         .insert({
           ap_user_id: apUserId,
           location_id: locationId,
@@ -207,7 +207,7 @@ export class APUserService {
       if (providerError) {
         // If provider creation fails, clean up the assignment
         await supabase
-          .from('ap_user_location_assignments')
+          .from('ap_user_location_assignments' as any)
           .delete()
           .eq('id', assignment.id);
         throw providerError;
@@ -251,7 +251,7 @@ export class APUserService {
    */
   async removeAPUserFromLocation(apUserId: string, locationId: string): Promise<void> {
     const { error } = await supabase
-      .from('ap_user_location_assignments')
+      .from('ap_user_location_assignments' as any)
       .update({ status: 'inactive', updated_at: new Date().toISOString() })
       .eq('ap_user_id', apUserId)
       .eq('location_id', locationId);

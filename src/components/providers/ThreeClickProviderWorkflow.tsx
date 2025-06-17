@@ -107,8 +107,7 @@ export function ThreeClickProviderWorkflow({ onComplete }: ThreeClickProviderWor
 
   // Step 2: AP User Selection
   const [providerForm, setProviderForm] = useState({
-    selectedAPUserId: '',
-    selectedExistingProviderId: ''
+    selectedAPUserId: ''
   });
 
   // Step 3: Team Creation
@@ -199,33 +198,45 @@ export function ThreeClickProviderWorkflow({ onComplete }: ThreeClickProviderWor
 
   const handleStep2Complete = async () => {
     try {
-      let providerData;
-      
-      if (providerForm.selectedProviderId) {
-        // Use existing provider
-        providerData = providers.find(p => p.id === providerForm.selectedProviderId);
-      } else if (providerForm.newProviderName) {
-        // Create new provider
-        providerData = await createProviderMutation.mutateAsync({
-          name: providerForm.newProviderName,
-          provider_type: providerForm.newProviderType,
-          contact_email: providerForm.newProviderEmail,
-          contact_phone: providerForm.newProviderPhone
-        });
-        queryClient.invalidateQueries({ queryKey: ['authorized-providers'] });
-      } else {
-        toast.error('Please select or create a provider');
+      if (!providerForm.selectedAPUserId) {
+        toast.error('Please select an AP user');
         return;
       }
 
+      if (!workflow.step1.data?.id) {
+        toast.error('Location data is missing');
+        return;
+      }
+
+      // Assign AP user to location
+      const assignmentId = await assignAPUserMutation.mutateAsync({
+        apUserId: providerForm.selectedAPUserId,
+        locationId: workflow.step1.data.id
+      });
+
+      // Get the AP user data for the workflow
+      const selectedAPUser = apUsers.find(user => user.id === providerForm.selectedAPUserId);
+      
       setWorkflow(prev => ({
         ...prev,
-        step2: { ...prev.step2, completed: true, data: providerData },
+        step2: {
+          ...prev.step2,
+          completed: true,
+          data: {
+            id: assignmentId,
+            name: selectedAPUser?.display_name || 'Unknown User',
+            ap_user_id: providerForm.selectedAPUserId
+          }
+        },
         currentStep: 3
       }));
-      toast.success('Provider assigned successfully!');
+      
+      queryClient.invalidateQueries({ queryKey: ['authorized-providers'] });
+      queryClient.invalidateQueries({ queryKey: ['ap-user-assignments'] });
+      toast.success('AP user assigned successfully!');
     } catch (error) {
-      toast.error('Failed to process provider');
+      console.error('Error assigning AP user:', error);
+      toast.error('Failed to assign AP user');
     }
   };
 
@@ -328,85 +339,71 @@ export function ThreeClickProviderWorkflow({ onComplete }: ThreeClickProviderWor
     </div>
   );
 
-  const renderStep2 = () => (
-    <div className="space-y-4">
-      <div className="space-y-3">
-        <Label>Select Existing Provider</Label>
-        <Select
-          value={providerForm.selectedProviderId}
-          onValueChange={(value) => setProviderForm(prev => ({ 
-            ...prev, 
-            selectedProviderId: value,
-            newProviderName: '' // Clear new provider form
-          }))}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Choose a provider" />
-          </SelectTrigger>
-          <SelectContent>
-            {providers.map((provider) => (
-              <SelectItem key={provider.id} value={provider.id}>
-                {provider.name} ({provider.provider_type})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+  const renderStep2 = () => {
+    // Get available AP users for the selected location
+    const selectedLocationId = workflow.step1.data?.id;
+    const { data: availableAPUsers = [] } = useQuery({
+      queryKey: ['available-ap-users', selectedLocationId],
+      queryFn: () => selectedLocationId ? apUserService.getAvailableAPUsersForLocation(selectedLocationId) : Promise.resolve([]),
+      enabled: !!selectedLocationId
+    });
 
-      <div className="text-center text-sm text-muted-foreground">
-        — OR —
-      </div>
-
-      <div className="space-y-3">
-        <Label>Create New Provider</Label>
-        <Input
-          placeholder="Provider name"
-          value={providerForm.newProviderName}
-          onChange={(e) => setProviderForm(prev => ({ 
-            ...prev, 
-            newProviderName: e.target.value,
-            selectedProviderId: '' // Clear selection
-          }))}
-        />
-        <Select
-          value={providerForm.newProviderType}
-          onValueChange={(value) => setProviderForm(prev => ({ ...prev, newProviderType: value }))}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Provider type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="training_provider">Training Provider</SelectItem>
-            <SelectItem value="certification_body">Certification Body</SelectItem>
-            <SelectItem value="assessment_center">Assessment Center</SelectItem>
-            <SelectItem value="training_partner">Training Partner</SelectItem>
-          </SelectContent>
-        </Select>
-        <div className="grid grid-cols-2 gap-2">
-          <Input
-            placeholder="Contact email"
-            type="email"
-            value={providerForm.newProviderEmail}
-            onChange={(e) => setProviderForm(prev => ({ ...prev, newProviderEmail: e.target.value }))}
-          />
-          <Input
-            placeholder="Contact phone"
-            value={providerForm.newProviderPhone}
-            onChange={(e) => setProviderForm(prev => ({ ...prev, newProviderPhone: e.target.value }))}
-          />
+    return (
+      <div className="space-y-4">
+        <div className="space-y-3">
+          <Label>Select AP User to Assign as Provider</Label>
+          <Select
+            value={providerForm.selectedAPUserId}
+            onValueChange={(value) => setProviderForm(prev => ({
+              ...prev,
+              selectedAPUserId: value
+            }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose an AP user" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableAPUsers.map((user) => (
+                <SelectItem key={user.id} value={user.id}>
+                  {user.display_name} ({user.email})
+                  {user.organization && ` - ${user.organization}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {availableAPUsers.length === 0 && selectedLocationId && (
+            <p className="text-sm text-muted-foreground">
+              No available AP users for this location. All AP users may already be assigned.
+            </p>
+          )}
         </div>
-      </div>
 
-      <Button 
-        onClick={handleStep2Complete}
-        disabled={!providerForm.selectedProviderId && !providerForm.newProviderName}
-        className="w-full"
-      >
-        Continue to Team Creation
-        <ArrowRight className="h-4 w-4 ml-2" />
-      </Button>
-    </div>
-  );
+        {existingProviders.length > 0 && (
+          <div className="bg-muted p-3 rounded-lg">
+            <h4 className="text-sm font-medium mb-2">Existing Providers at this Location:</h4>
+            <div className="space-y-1">
+              {existingProviders
+                .filter(p => p.primary_location_id === selectedLocationId)
+                .map(provider => (
+                  <div key={provider.id} className="text-xs text-muted-foreground">
+                    • {provider.name} ({provider.status})
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
+        <Button
+          onClick={handleStep2Complete}
+          disabled={!providerForm.selectedAPUserId}
+          className="w-full"
+        >
+          Continue to Team Creation
+          <ArrowRight className="h-4 w-4 ml-2" />
+        </Button>
+      </div>
+    );
+  };
 
   const renderStep3 = () => (
     <div className="space-y-4">
