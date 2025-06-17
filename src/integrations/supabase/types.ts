@@ -697,27 +697,92 @@ export type Database = {
           address: string | null
           approval_date: string | null
           approved_by: string | null
+          compliance_score: number | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          performance_rating: number | null
+          primary_location_id: string | null
+          provider_type: string | null
+          status: string | null
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          approval_date?: string | null
+          approved_by?: string | null
+          compliance_score?: number | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          performance_rating?: number | null
+          primary_location_id?: string | null
+          provider_type?: string | null
+          status?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          approval_date?: string | null
+          approved_by?: string | null
+          compliance_score?: number | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          performance_rating?: number | null
+          primary_location_id?: string | null
+          provider_type?: string | null
+          status?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "authorized_providers_primary_location_id_fkey"
+            columns: ["primary_location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      authorized_providers_backup: {
+        Row: {
+          address: string | null
+          approval_date: string | null
+          approved_by: string | null
           certification_levels: Json | null
           compliance_score: number | null
           contact_email: string | null
           contact_phone: string | null
           contract_end_date: string | null
           contract_start_date: string | null
-          created_at: string
+          created_at: string | null
           description: string | null
-          id: number
+          id: number | null
           logo_url: string | null
           metadata: Json | null
-          name: string
+          name: string | null
           performance_rating: number | null
           primary_location_id: string | null
-          provider_name: string
+          provider_name: string | null
           provider_team_id: string | null
           provider_type: string | null
-          provider_url: string
+          provider_url: string | null
           specializations: Json | null
           status: string | null
-          updated_at: string
+          updated_at: string | null
           user_id: string | null
           website: string | null
         }
@@ -731,21 +796,21 @@ export type Database = {
           contact_phone?: string | null
           contract_end_date?: string | null
           contract_start_date?: string | null
-          created_at?: string
+          created_at?: string | null
           description?: string | null
-          id?: number
+          id?: number | null
           logo_url?: string | null
           metadata?: Json | null
-          name: string
+          name?: string | null
           performance_rating?: number | null
           primary_location_id?: string | null
-          provider_name: string
+          provider_name?: string | null
           provider_team_id?: string | null
           provider_type?: string | null
-          provider_url: string
+          provider_url?: string | null
           specializations?: Json | null
           status?: string | null
-          updated_at?: string
+          updated_at?: string | null
           user_id?: string | null
           website?: string | null
         }
@@ -759,40 +824,25 @@ export type Database = {
           contact_phone?: string | null
           contract_end_date?: string | null
           contract_start_date?: string | null
-          created_at?: string
+          created_at?: string | null
           description?: string | null
-          id?: number
+          id?: number | null
           logo_url?: string | null
           metadata?: Json | null
-          name?: string
+          name?: string | null
           performance_rating?: number | null
           primary_location_id?: string | null
-          provider_name?: string
+          provider_name?: string | null
           provider_team_id?: string | null
           provider_type?: string | null
-          provider_url?: string
+          provider_url?: string | null
           specializations?: Json | null
           status?: string | null
-          updated_at?: string
+          updated_at?: string | null
           user_id?: string | null
           website?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "authorized_providers_primary_location_id_fkey"
-            columns: ["primary_location_id"]
-            isOneToOne: true
-            referencedRelation: "locations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "authorized_providers_provider_team_id_fkey"
-            columns: ["provider_team_id"]
-            isOneToOne: false
-            referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       automation_executions: {
         Row: {
@@ -5609,13 +5659,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "enterprise_compliance_metrics_provider_id_fkey"
-            columns: ["provider_id"]
-            isOneToOne: false
-            referencedRelation: "authorized_providers"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "enterprise_compliance_metrics_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
@@ -5886,15 +5929,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "instructors_provider_id_fkey"
-            columns: ["provider_id"]
-            isOneToOne: false
-            referencedRelation: "authorized_providers"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       location_email_templates: {
         Row: {
@@ -7156,13 +7191,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "provider_navigation_configs_provider_id_fkey"
-            columns: ["provider_id"]
-            isOneToOne: true
-            referencedRelation: "authorized_providers"
-            referencedColumns: ["id"]
-          },
         ]
       }
       provider_performance: {
@@ -7214,13 +7242,6 @@ export type Database = {
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "locations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "provider_performance_provider_id_fkey"
-            columns: ["provider_id"]
-            isOneToOne: false
-            referencedRelation: "authorized_providers"
             referencedColumns: ["id"]
           },
           {
@@ -7292,13 +7313,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fk_provider_team_assignments_provider_id"
-            columns: ["provider_id"]
-            isOneToOne: false
-            referencedRelation: "authorized_providers"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "fk_provider_team_assignments_team_id"
             columns: ["team_id"]
             isOneToOne: false
@@ -7327,17 +7341,167 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "provider_team_assignments_provider_id_fkey"
-            columns: ["provider_id"]
-            isOneToOne: false
-            referencedRelation: "authorized_providers"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "provider_team_assignments_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_team_performance: {
+        Row: {
+          average_satisfaction_score: number | null
+          certifications_issued: number | null
+          completion_rate: number | null
+          compliance_score: number | null
+          courses_delivered: number | null
+          created_at: string | null
+          id: string
+          measurement_period: string
+          provider_id: string | null
+          team_id: string | null
+        }
+        Insert: {
+          average_satisfaction_score?: number | null
+          certifications_issued?: number | null
+          completion_rate?: number | null
+          compliance_score?: number | null
+          courses_delivered?: number | null
+          created_at?: string | null
+          id?: string
+          measurement_period: string
+          provider_id?: string | null
+          team_id?: string | null
+        }
+        Update: {
+          average_satisfaction_score?: number | null
+          certifications_issued?: number | null
+          completion_rate?: number | null
+          compliance_score?: number | null
+          courses_delivered?: number | null
+          created_at?: string | null
+          id?: string
+          measurement_period?: string
+          provider_id?: string | null
+          team_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_team_performance_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_team_performance_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_training_capabilities: {
+        Row: {
+          certification_types: string[] | null
+          course_category: string
+          created_at: string | null
+          equipment_requirements: Json | null
+          id: string
+          location_restrictions: string[] | null
+          max_team_size: number | null
+          provider_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          certification_types?: string[] | null
+          course_category: string
+          created_at?: string | null
+          equipment_requirements?: Json | null
+          id?: string
+          location_restrictions?: string[] | null
+          max_team_size?: number | null
+          provider_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          certification_types?: string[] | null
+          course_category?: string
+          created_at?: string | null
+          equipment_requirements?: Json | null
+          id?: string
+          location_restrictions?: string[] | null
+          max_team_size?: number | null
+          provider_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_training_capabilities_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      providers: {
+        Row: {
+          address: string | null
+          compliance_score: number | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          performance_rating: number | null
+          primary_location_id: string | null
+          provider_type: string | null
+          status: string | null
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          compliance_score?: number | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          performance_rating?: number | null
+          primary_location_id?: string | null
+          provider_type?: string | null
+          status?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          compliance_score?: number | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          performance_rating?: number | null
+          primary_location_id?: string | null
+          provider_type?: string | null
+          status?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "providers_primary_location_id_fkey"
+            columns: ["primary_location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
             referencedColumns: ["id"]
           },
         ]
@@ -10443,13 +10607,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fk_teams_provider_id"
-            columns: ["provider_id"]
-            isOneToOne: false
-            referencedRelation: "authorized_providers"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "teams_archived_by_fkey"
             columns: ["archived_by"]
             isOneToOne: false
@@ -10482,13 +10639,6 @@ export type Database = {
             columns: ["parent_team_id"]
             isOneToOne: false
             referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "teams_provider_id_fkey"
-            columns: ["provider_id"]
-            isOneToOne: false
-            referencedRelation: "authorized_providers"
             referencedColumns: ["id"]
           },
           {
@@ -11480,18 +11630,45 @@ export type Database = {
       }
     }
     Functions: {
+      add_team_member_bypass_rls: {
+        Args: { p_team_id: string; p_user_id: string; p_role?: string }
+        Returns: {
+          id: string
+          user_id: string
+          team_id: string
+          role: string
+          created_at: string
+        }[]
+      }
       assign_lead_intelligent: {
         Args: { p_lead_id: string; p_assignment_criteria?: Json }
         Returns: string
       }
       assign_provider_to_team: {
-        Args: {
-          p_provider_id: number
-          p_team_id: string
-          p_assignment_role: string
-          p_oversight_level: string
-          p_assigned_by: string
-        }
+        Args:
+          | {
+              p_provider_id: number
+              p_team_id: string
+              p_assignment_role: string
+              p_oversight_level: string
+              p_assigned_by: string
+            }
+          | {
+              p_provider_id: number
+              p_team_id: string
+              p_assignment_role: string
+              p_oversight_level: string
+              p_assigned_by: string
+            }
+          | {
+              p_provider_id: string
+              p_team_id: string
+              p_assignment_role: string
+              p_oversight_level: string
+              p_assignment_type?: string
+              p_end_date?: string
+              p_assigned_by?: string
+            }
         Returns: string
       }
       auto_assign_lead: {
@@ -11506,6 +11683,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: {
           configuration_data: Json
+        }[]
+      }
+      bulk_add_team_members_bypass_rls: {
+        Args: { p_team_id: string; p_user_ids: string[]; p_role?: string }
+        Returns: {
+          success_count: number
+          failed_users: string[]
+          error_messages: string[]
         }[]
       }
       calculate_analytics_warehouse_metrics: {
@@ -11589,6 +11774,10 @@ export type Database = {
           conflict_end: string
         }[]
       }
+      check_team_admin_status: {
+        Args: { p_user_id: string; p_team_id: string }
+        Returns: boolean
+      }
       check_workflow_slas: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -11608,6 +11797,23 @@ export type Database = {
         Returns: {
           success: boolean
           message: string
+        }[]
+      }
+      create_team_bypass_rls: {
+        Args: {
+          p_name: string
+          p_description?: string
+          p_location_id?: string
+          p_team_type?: string
+          p_status?: string
+        }
+        Returns: {
+          id: string
+          name: string
+          description: string
+          team_type: string
+          status: string
+          created_at: string
         }[]
       }
       create_user_from_invitation: {
@@ -11630,6 +11836,43 @@ export type Database = {
         Args: { p_workflow_id: string; p_lead_id: string }
         Returns: string
       }
+      fetch_team_members_with_profiles: {
+        Args: { p_team_id: string }
+        Returns: {
+          id: string
+          team_id: string
+          user_id: string
+          role: string
+          status: string
+          location_assignment: string
+          assignment_start_date: string
+          assignment_end_date: string
+          team_position: string
+          permissions: Json
+          created_at: string
+          updated_at: string
+          display_name: string
+          email: string
+          user_role: string
+        }[]
+      }
+      fetch_user_team_memberships: {
+        Args: { p_user_id: string }
+        Returns: {
+          id: string
+          team_id: string
+          user_id: string
+          role: string
+          status: string
+          location_assignment: string
+          assignment_start_date: string
+          assignment_end_date: string
+          team_position: string
+          permissions: Json
+          created_at: string
+          updated_at: string
+        }[]
+      }
       fix_roster_certificate_counts: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -11646,9 +11889,28 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_admin_team_statistics: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      get_admin_teams_overview: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          team_data: Json
+        }[]
+      }
       get_auth_user_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_available_users_for_team_bypass_rls: {
+        Args: { p_team_id: string }
+        Returns: {
+          id: string
+          display_name: string
+          email: string
+          role: string
+        }[]
       }
       get_backend_function_status: {
         Args: Record<PropertyKey, never>
@@ -11763,7 +12025,7 @@ export type Database = {
         Returns: Json
       }
       get_provider_location_kpis: {
-        Args: { p_provider_id: number }
+        Args: { p_provider_id: number } | { p_provider_id: number }
         Returns: {
           total_instructors: number
           active_instructors: number
@@ -11774,7 +12036,7 @@ export type Database = {
         }[]
       }
       get_provider_location_teams: {
-        Args: { p_provider_id: number }
+        Args: { p_provider_id: number } | { p_provider_id: number }
         Returns: {
           team_id: string
           team_name: string
@@ -11785,7 +12047,7 @@ export type Database = {
         }[]
       }
       get_provider_team_assignments: {
-        Args: { p_provider_id: number }
+        Args: { p_provider_id: number } | { p_provider_id: string }
         Returns: {
           id: string
           provider_id: number
@@ -11822,6 +12084,15 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      get_team_analytics_bypass_rls: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          total_teams: number
+          total_members: number
+          active_teams: number
+          inactive_teams: number
+        }[]
+      }
       get_team_analytics_summary: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -11834,6 +12105,19 @@ export type Database = {
         Args: { p_team_id: string }
         Returns: Json
       }
+      get_team_members_bypass_rls: {
+        Args: { p_team_id: string }
+        Returns: {
+          id: string
+          user_id: string
+          team_id: string
+          role: string
+          joined_at: string
+          display_name: string
+          email: string
+          user_role: string
+        }[]
+      }
       get_team_performance_summary: {
         Args: { p_team_id: string; p_period?: string }
         Returns: {
@@ -11844,6 +12128,16 @@ export type Database = {
           avg_satisfaction: number
           compliance_score: number
           performance_trend: number
+        }[]
+      }
+      get_team_statistics_safe: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          total_teams: number
+          active_teams: number
+          inactive_teams: number
+          suspended_teams: number
+          average_performance: number
         }[]
       }
       get_team_workflows: {
@@ -11862,6 +12156,38 @@ export type Database = {
           completed_at: string
         }[]
       }
+      get_teams_bypass_rls: {
+        Args: { p_user_id?: string }
+        Returns: {
+          id: string
+          name: string
+          description: string
+          team_type: string
+          status: string
+          created_at: string
+          member_count: number
+          location_name: string
+        }[]
+      }
+      get_teams_safe: {
+        Args: { p_user_id?: string }
+        Returns: {
+          id: string
+          name: string
+          description: string
+          team_type: string
+          status: string
+          performance_score: number
+          location_id: string
+          provider_id: string
+          created_by: string
+          created_at: string
+          updated_at: string
+          metadata: Json
+          monthly_targets: Json
+          current_metrics: Json
+        }[]
+      }
       get_top_certificate_courses: {
         Args: { limit_count?: number }
         Returns: {
@@ -11873,9 +12199,21 @@ export type Database = {
         Args: { user_id: string }
         Returns: string
       }
+      get_user_role_direct: {
+        Args: { user_uuid: string }
+        Returns: string
+      }
+      get_user_team_ids_direct: {
+        Args: { user_uuid: string }
+        Returns: string[]
+      }
       get_workflow_statistics: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      has_admin_team_access: {
+        Args: { user_id: string }
+        Returns: boolean
       }
       initialize_all_integrations: {
         Args: Record<PropertyKey, never>
@@ -11905,12 +12243,20 @@ export type Database = {
         Args: { p_tags: string[] }
         Returns: number
       }
-      is_team_admin: {
-        Args: { team_uuid: string; user_uuid: string }
+      is_admin_user: {
+        Args: { user_uuid: string }
+        Returns: boolean
+      }
+      is_team_admin_direct: {
+        Args: { user_uuid: string; team_uuid: string }
         Returns: boolean
       }
       is_team_member: {
         Args: { team_uuid: string; user_uuid: string }
+        Returns: boolean
+      }
+      is_team_member_direct: {
+        Args: { user_uuid: string; team_uuid: string }
         Returns: boolean
       }
       log_certificate_action: {
@@ -11946,6 +12292,10 @@ export type Database = {
         Args: { p_user_id: string; p_page_path: string }
         Returns: undefined
       }
+      normalize_team_member_role: {
+        Args: { input_role: string }
+        Returns: string
+      }
       process_background_job: {
         Args: { p_job_id: string }
         Returns: boolean
@@ -11953,6 +12303,19 @@ export type Database = {
       qualify_lead_automatically: {
         Args: { p_lead_id: string }
         Returns: boolean
+      }
+      record_provider_team_performance: {
+        Args: {
+          p_provider_id: string
+          p_team_id: string
+          p_measurement_period: string
+          p_courses_delivered?: number
+          p_certifications_issued?: number
+          p_average_satisfaction_score?: number
+          p_completion_rate?: number
+          p_compliance_score?: number
+        }
+        Returns: string
       }
       refresh_all_revenue_analytics: {
         Args: Record<PropertyKey, never>
@@ -11965,6 +12328,10 @@ export type Database = {
       refresh_crm_analytics: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      remove_team_member_bypass_rls: {
+        Args: { p_team_id: string; p_user_id: string }
+        Returns: boolean
       }
       safe_backfill_certificate_data: {
         Args: Record<PropertyKey, never>
@@ -12003,6 +12370,16 @@ export type Database = {
       update_realtime_metrics: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      update_team_member_role_bypass_rls: {
+        Args: { p_team_id: string; p_user_id: string; p_new_role: string }
+        Returns: {
+          id: string
+          user_id: string
+          team_id: string
+          role: string
+          updated_at: string
+        }[]
       }
       update_team_performance_scores: {
         Args: Record<PropertyKey, never>
