@@ -56,45 +56,38 @@ export class APUserService {
     try {
       // Try using the database function first
       const { data, error } = await supabase
-        .rpc('get_available_ap_users_for_location', { p_location_id: locationId });
+        .rpc('get_available_ap_users_for_location' as any, { p_location_id: locationId });
 
-      if (error) throw error;
-
-      return data?.map((user: any) => ({
-        id: user.user_id,
-        display_name: user.display_name,
-        email: user.email,
-        role: 'AP',
-        created_at: user.created_at,
-        updated_at: user.created_at,
-        status: 'ACTIVE',
-        phone: user.phone,
-        organization: user.organization,
-        job_title: user.job_title
-      })) || [];
-    } catch (error: any) {
-      // Fallback: Direct table query
-      console.warn('Database function not available, using fallback method:', error.message);
-      
-      const { data, error: queryError } = await supabase
-        .from('profiles')
-        .select('id, display_name, email, role, created_at, updated_at, status, phone, organization, job_title')
-        .eq('role', 'AP')
-        .eq('status', 'ACTIVE')
-        .not('id', 'in', `(
-          SELECT ap_user_id
-          FROM ap_user_location_assignments
-          WHERE location_id = '${locationId}'
-          AND status = 'active'
-        )`)
-        .order('display_name');
-
-      if (queryError) {
-        console.error('Error fetching available AP users:', queryError);
-        return [];
+      if (!error && data) {
+        return data.map((user: any) => ({
+          id: user.user_id,
+          display_name: user.display_name,
+          email: user.email,
+          role: 'AP',
+          created_at: user.created_at,
+          updated_at: user.created_at,
+          status: 'ACTIVE',
+          phone: user.phone,
+          organization: user.organization,
+          job_title: user.job_title
+        }));
       }
+    } catch (error: any) {
+      console.warn('Database function not available, using fallback method');
+    }
 
-      return data || [];
+    // Fallback: Get all AP users and filter out assigned ones
+    try {
+      const allAPUsers = await this.getAPUsers();
+      const assignments = await this.getAPUserAssignments();
+      const assignedUserIds = assignments
+        .filter(a => a.location_id === locationId && a.status === 'active')
+        .map(a => a.ap_user_id);
+
+      return allAPUsers.filter(user => !assignedUserIds.includes(user.id));
+    } catch (fallbackError: any) {
+      console.error('Fallback method also failed:', fallbackError);
+      return [];
     }
   }
 
@@ -143,19 +136,22 @@ export class APUserService {
     try {
       // Try using the database function first
       const { data, error } = await supabase
-        .rpc('assign_ap_user_to_location', {
+        .rpc('assign_ap_user_to_location' as any, {
           p_ap_user_id: apUserId,
           p_location_id: locationId,
           p_assignment_role: assignmentRole,
           p_end_date: endDate || null
         });
 
-      if (error) throw error;
-      return data;
+      if (!error && data) {
+        return data;
+      }
     } catch (error: any) {
-      // Fallback: Direct table operations if function doesn't exist
-      console.warn('Database function not available, using fallback method:', error.message);
-      
+      console.warn('Database function not available, using fallback method');
+    }
+
+    // Fallback: Direct table operations
+    try {
       // First, verify the AP user exists and has correct role
       const { data: apUser, error: userError } = await supabase
         .from('profiles')
@@ -169,20 +165,27 @@ export class APUserService {
         throw new Error('AP user not found or not active');
       }
 
-      // Create the assignment record
-      const { data: assignment, error: assignmentError } = await supabase
-        .from('ap_user_location_assignments' as any)
-        .insert({
-          ap_user_id: apUserId,
-          location_id: locationId,
-          assignment_role: assignmentRole,
-          end_date: endDate || null,
-          status: 'active'
-        })
-        .select()
-        .single();
+      // Try to create assignment record in ap_user_location_assignments table
+      let assignmentId: string;
+      try {
+        const { data: assignment, error: assignmentError } = await supabase
+          .from('ap_user_location_assignments' as any)
+          .insert({
+            ap_user_id: apUserId,
+            location_id: locationId,
+            assignment_role: assignmentRole,
+            end_date: endDate || null,
+            status: 'active'
+          })
+          .select()
+          .single();
 
-      if (assignmentError) throw assignmentError;
+        if (assignmentError) throw assignmentError;
+        assignmentId = assignment.id;
+      } catch (tableError) {
+        console.warn('ap_user_location_assignments table not available, using authorized_providers only');
+        assignmentId = crypto.randomUUID();
+      }
 
       // Create the corresponding authorized_provider record
       const { data: provider, error: providerError } = await supabase
@@ -205,68 +208,133 @@ export class APUserService {
         .single();
 
       if (providerError) {
-        // If provider creation fails, clean up the assignment
-        await supabase
-          .from('ap_user_location_assignments' as any)
-          .delete()
-          .eq('id', assignment.id);
         throw providerError;
       }
 
-      return assignment.id;
+      return assignmentId;
+    } catch (fallbackError: any) {
+      console.error('All assignment methods failed:', fallbackError);
+      throw fallbackError;
     }
   }
 
   /**
-   * Get all AP user location assignments
+   * Get all AP user location assignments (with fallback)
    */
   async getAPUserAssignments(apUserId?: string): Promise<APUserLocationAssignment[]> {
-    const { data, error } = await supabase
-      .rpc('get_ap_user_assignments', { p_ap_user_id: apUserId || null });
+    try {
+      // Try the RPC function first
+      const { data, error } = await supabase
+        .rpc('get_ap_user_assignments' as any, { p_ap_user_id: apUserId || null });
 
-    if (error) {
-      console.error('Error fetching AP user assignments:', error);
-      return [];
+      if (!error && data) {
+        return data.map((assignment: any) => ({
+          assignment_id: assignment.assignment_id,
+          ap_user_id: assignment.ap_user_id,
+          ap_user_name: assignment.ap_user_name,
+          ap_user_email: assignment.ap_user_email,
+          location_id: assignment.location_id,
+          location_name: assignment.location_name,
+          location_city: assignment.location_city,
+          location_state: assignment.location_state,
+          assignment_role: assignment.assignment_role,
+          status: assignment.status,
+          start_date: assignment.start_date,
+          end_date: assignment.end_date,
+          team_count: assignment.team_count
+        }));
+      }
+    } catch (rpcError) {
+      console.warn('RPC function not available, using fallback method');
     }
 
-    return data?.map((assignment: any) => ({
-      assignment_id: assignment.assignment_id,
-      ap_user_id: assignment.ap_user_id,
-      ap_user_name: assignment.ap_user_name,
-      ap_user_email: assignment.ap_user_email,
-      location_id: assignment.location_id,
-      location_name: assignment.location_name,
-      location_city: assignment.location_city,
-      location_state: assignment.location_state,
-      assignment_role: assignment.assignment_role,
-      status: assignment.status,
-      start_date: assignment.start_date,
-      end_date: assignment.end_date,
-      team_count: assignment.team_count
-    })) || [];
+    // Fallback: Use authorized_providers table
+    try {
+      let query = supabase
+        .from('authorized_providers')
+        .select(`
+          id,
+          user_id,
+          name,
+          location_id,
+          status,
+          created_at,
+          locations:location_id (
+            id,
+            name,
+            city,
+            state
+          ),
+          profiles:user_id (
+            id,
+            display_name,
+            email
+          )
+        `)
+        .eq('status', 'APPROVED');
+
+      if (apUserId) {
+        query = query.eq('user_id', apUserId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Fallback query failed:', error);
+        return [];
+      }
+
+      return (data || []).map((provider: any) => ({
+        assignment_id: provider.id,
+        ap_user_id: provider.user_id,
+        ap_user_name: provider.profiles?.display_name || provider.name,
+        ap_user_email: provider.profiles?.email || '',
+        location_id: provider.location_id,
+        location_name: provider.locations?.name || 'Unknown Location',
+        location_city: provider.locations?.city,
+        location_state: provider.locations?.state,
+        assignment_role: 'provider',
+        status: 'active',
+        start_date: provider.created_at.split('T')[0],
+        end_date: undefined,
+        team_count: 0
+      }));
+    } catch (fallbackError) {
+      console.error('All assignment fetch methods failed:', fallbackError);
+      return [];
+    }
   }
 
   /**
    * Remove AP user assignment from a location
    */
   async removeAPUserFromLocation(apUserId: string, locationId: string): Promise<void> {
-    const { error } = await supabase
-      .from('ap_user_location_assignments' as any)
-      .update({ status: 'inactive', updated_at: new Date().toISOString() })
-      .eq('ap_user_id', apUserId)
-      .eq('location_id', locationId);
+    try {
+      // Try to update ap_user_location_assignments table
+      const { error: assignmentError } = await supabase
+        .from('ap_user_location_assignments' as any)
+        .update({ status: 'inactive', updated_at: new Date().toISOString() })
+        .eq('ap_user_id', apUserId)
+        .eq('location_id', locationId);
 
-    if (error) {
-      console.error('Error removing AP user from location:', error);
-      throw error;
+      if (assignmentError) {
+        console.warn('ap_user_location_assignments table not available:', assignmentError.message);
+      }
+    } catch (tableError) {
+      console.warn('ap_user_location_assignments table not accessible');
     }
 
-    // Also update the corresponding authorized_provider record
-    await supabase
+    // Always update the corresponding authorized_provider record
+    const { error: providerError } = await supabase
       .from('authorized_providers')
       .update({ status: 'INACTIVE', updated_at: new Date().toISOString() })
       .eq('user_id', apUserId)
       .eq('location_id', locationId);
+
+    if (providerError) {
+      console.error('Error updating authorized_provider status:', providerError);
+      throw providerError;
+    }
   }
 
   /**
