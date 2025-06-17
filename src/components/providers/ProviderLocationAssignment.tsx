@@ -50,7 +50,12 @@ export const ProviderLocationAssignment: React.FC<ProviderLocationAssignmentProp
   });
 
   const assignLocationMutation = useMutation({
-    mutationFn: () => ProviderLocationService.assignProviderToLocation(provider.id.toString(), selectedLocation),
+    mutationFn: () => {
+      console.log('🔥 FIXED Location Assignment - provider.id:', provider.id, 'type:', typeof provider.id);
+      console.log('🔥 FIXED Location Assignment - selectedLocation:', selectedLocation, 'type:', typeof selectedLocation);
+      // FIXED: Use UUID directly instead of converting to string
+      return ProviderLocationService.assignProviderToLocation(provider.id, selectedLocation);
+    },
     onSuccess: () => {
       toast.success('Location assigned successfully! Provider team has been created.');
       queryClient.invalidateQueries({ queryKey: ['authorized-providers'] });

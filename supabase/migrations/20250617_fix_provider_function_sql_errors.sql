@@ -1,17 +1,11 @@
--- Create missing provider location functions for certificate visibility
--- This fixes the Provider Management interface not showing certificates
-
--- =============================================================================
--- Drop existing functions if they exist
--- =============================================================================
+-- Fix SQL errors in provider location functions
 
 DROP FUNCTION IF EXISTS get_provider_location_kpis(UUID);
 DROP FUNCTION IF EXISTS get_provider_location_teams(UUID);
-DROP FUNCTION IF EXISTS get_provider_certificates_detailed(UUID);
 
 -- =============================================================================
--- Function: get_provider_location_kpis
--- Purpose: Get KPIs for a provider including certificate counts using team-based logic
+-- Function: get_provider_location_kpis (FIXED)
+-- Purpose: Get KPIs for a provider including certificate counts
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION get_provider_location_kpis(p_provider_id UUID)
@@ -31,10 +25,10 @@ BEGIN
         COALESCE(instructor_counts.total_instructors, 0) as total_instructors,
         COALESCE(instructor_counts.active_instructors, 0) as active_instructors,
         
-        -- Count courses from teams assigned to this provider
+        -- Count courses from teams assigned to this provider (FIXED: removed c.location_id reference)
         COALESCE(course_counts.total_courses, 0) as total_courses,
         
-        -- Count certificates using TEAM-BASED logic (same as team dashboard)
+        -- Count certificates using location-based logic
         COALESCE(cert_counts.certificates_issued, 0) as certificates_issued,
         
         -- Get provider compliance and performance scores
@@ -58,28 +52,28 @@ BEGIN
         GROUP BY pta.provider_id
     ) instructor_counts ON ap.id = instructor_counts.provider_id
     
-    -- Get course counts from assigned teams
+    -- Get course counts from assigned teams (FIXED: simplified query)
     LEFT JOIN (
         SELECT 
             pta.provider_id,
-            COUNT(DISTINCT c.id) as total_courses
+            COUNT(DISTINCT co.id) as total_courses
         FROM public.provider_team_assignments pta
         JOIN public.teams t ON pta.team_id = t.id
-        LEFT JOIN public.courses c ON t.location_id = c.location_id
+        LEFT JOIN public.course_offerings co ON t.location_id = co.location_id
         WHERE pta.status = 'active'
         GROUP BY pta.provider_id
     ) course_counts ON ap.id = course_counts.provider_id
     
-    -- Get certificate counts using LOCATION-BASED logic (certificates table has location_id, not team_id)
+    -- Get certificate counts using location-based logic
     LEFT JOIN (
-        SELECT
+        SELECT 
             pta.provider_id,
             COUNT(DISTINCT cert.id) as certificates_issued
         FROM public.provider_team_assignments pta
         JOIN public.teams t ON pta.team_id = t.id
-        LEFT JOIN public.certificates cert ON t.location_id = cert.location_id  -- Use location_id from both tables
+        LEFT JOIN public.certificates cert ON t.location_id = cert.location_id
         WHERE pta.status = 'active'
-        AND cert.status = 'ACTIVE'  -- Certificate status is 'ACTIVE', not 'issued'
+        AND cert.status = 'ACTIVE'
         GROUP BY pta.provider_id
     ) cert_counts ON ap.id = cert_counts.provider_id
     
@@ -88,7 +82,7 @@ END;
 $$;
 
 -- =============================================================================
--- Function: get_provider_location_teams
+-- Function: get_provider_location_teams (FIXED)
 -- Purpose: Get teams assigned to a provider with member counts
 -- =============================================================================
 
@@ -110,18 +104,18 @@ BEGIN
         t.description as team_description,
         l.name as location_name,
         COALESCE(member_counts.member_count, 0) as member_count,
-        COALESCE(t.performance_score, 0) as performance_score
+        COALESCE(t.performance_score::INTEGER, 0) as performance_score
     
     FROM public.provider_team_assignments pta
     JOIN public.teams t ON pta.team_id = t.id
     LEFT JOIN public.locations l ON t.location_id = l.id
     LEFT JOIN (
         SELECT 
-            team_id,
+            tm.team_id,  -- FIXED: fully qualified column name
             COUNT(*) as member_count
-        FROM public.team_members
-        WHERE status = 'active'
-        GROUP BY team_id
+        FROM public.team_members tm
+        WHERE tm.status = 'active'
+        GROUP BY tm.team_id
     ) member_counts ON t.id = member_counts.team_id
     
     WHERE pta.provider_id = p_provider_id
@@ -133,68 +127,12 @@ END;
 $$;
 
 -- =============================================================================
--- Function: get_provider_certificates_detailed
--- Purpose: Get detailed certificate list for a provider (for debugging)
--- =============================================================================
-
-CREATE OR REPLACE FUNCTION get_provider_certificates_detailed(p_provider_id UUID)
-RETURNS TABLE (
-    certificate_id UUID,
-    certificate_number VARCHAR(255),
-    user_name VARCHAR(255),
-    user_email VARCHAR(255),
-    team_name VARCHAR(255),
-    location_name VARCHAR(255),
-    course_name VARCHAR(255),
-    issue_date DATE,
-    expiry_date DATE,
-    status VARCHAR(50)
-)
-LANGUAGE plpgsql SECURITY DEFINER AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-        cert.id as certificate_id,
-        cert.certificate_number,
-        p.display_name as user_name,
-        p.email as user_email,
-        t.name as team_name,
-        l.name as location_name,
-        cert.course_name,
-        cert.issue_date,
-        cert.expiry_date,
-        cert.status
-    
-    FROM public.provider_team_assignments pta
-    JOIN public.teams t ON pta.team_id = t.id
-    LEFT JOIN public.certificates cert ON t.location_id = cert.location_id  -- Location-based lookup
-    LEFT JOIN public.profiles p ON cert.user_id = p.id
-    LEFT JOIN public.locations l ON t.location_id = l.id
-    
-    WHERE pta.provider_id = p_provider_id
-    AND pta.status = 'active'
-    AND cert.id IS NOT NULL
-    AND cert.status = 'ACTIVE'
-    
-    ORDER BY cert.issue_date DESC;
-END;
-$$;
-
--- =============================================================================
 -- Grant permissions
 -- =============================================================================
 
 GRANT EXECUTE ON FUNCTION get_provider_location_kpis(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_provider_location_teams(UUID) TO authenticated;
-GRANT EXECUTE ON FUNCTION get_provider_certificates_detailed(UUID) TO authenticated;
 
--- =============================================================================
--- Create indexes for performance
--- =============================================================================
-
-CREATE INDEX IF NOT EXISTS idx_certificates_location_id_status ON public.certificates(location_id, status);
-CREATE INDEX IF NOT EXISTS idx_provider_team_assignments_provider_status ON public.provider_team_assignments(provider_id, status);
-
-RAISE NOTICE 'Provider location functions created successfully!';
-RAISE NOTICE 'Key fix: Certificate queries now use team_id instead of location_id';
-RAISE NOTICE 'This should resolve Kevin Geem certificate visibility issue';
+RAISE NOTICE 'Fixed provider location functions - SQL errors resolved!';
+RAISE NOTICE 'Error 1: Removed invalid c.location_id reference, using course_offerings table';
+RAISE NOTICE 'Error 2: Fixed ambiguous team_id reference with full qualification';

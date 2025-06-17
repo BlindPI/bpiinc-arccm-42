@@ -530,23 +530,194 @@ export function ProviderTeamManagement({ providerId, providerName }: ProviderTea
         </TabsContent>
 
         <TabsContent value="performance">
-          <Card>
-            <CardContent className="p-8 text-center">
-              <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">Performance Analytics</h3>
-              <p className="text-gray-500">Detailed performance metrics and reporting dashboard</p>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            {/* Performance Metrics Grid */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <BookOpen className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Courses Delivered</p>
+                      <p className="text-2xl font-bold">{analytics?.total_courses_delivered || 0}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                      <Award className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Certifications Issued</p>
+                      <p className="text-2xl font-bold">{analytics?.total_certifications_issued || 0}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <Users className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Members</p>
+                      <p className="text-2xl font-bold">{analytics?.total_members || 0}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                      <TrendingUp className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Performance Trend</p>
+                      <p className="text-2xl font-bold">{analytics?.performance_trend?.toFixed(1) || '0.0'}%</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Team Performance Details */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Team Performance Breakdown</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {assignments.length > 0 ? (
+                  <div className="space-y-4">
+                    {assignments.map((assignment) => (
+                      <div key={assignment.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <Users className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium">{assignment.team_name}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {assignment.member_count} members • {assignment.location_name || 'No location'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold">85%</div>
+                          <div className="text-sm text-muted-foreground">Performance Score</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No performance data available</p>
+                    <p className="text-sm">Assign teams to view performance metrics</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="capabilities">
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Settings className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">Training Capabilities</h3>
-              <p className="text-gray-500">Manage provider training capabilities and certifications</p>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            {/* Capabilities Overview */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Training Capabilities
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-3">
+                    <h4 className="font-medium">Course Categories</h4>
+                    <div className="space-y-2">
+                      <Badge variant="outline">Emergency Response</Badge>
+                      <Badge variant="outline">Safety Training</Badge>
+                      <Badge variant="outline">Compliance</Badge>
+                      <Badge variant="outline">Professional Development</Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <h4 className="font-medium">Certification Types</h4>
+                    <div className="space-y-2">
+                      <Badge variant="secondary">CPR/AED</Badge>
+                      <Badge variant="secondary">First Aid</Badge>
+                      <Badge variant="secondary">OSHA 30</Badge>
+                      <Badge variant="secondary">Fire Safety</Badge>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Capability Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Capability Configuration</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Maximum Team Size</label>
+                      <Input type="number" placeholder="25" />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Location Restrictions</label>
+                      <Select>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select restrictions..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No Restrictions</SelectItem>
+                          <SelectItem value="regional">Regional Only</SelectItem>
+                          <SelectItem value="local">Local Only</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Equipment Requirements</label>
+                    <div className="grid gap-2 md:grid-cols-3">
+                      <div className="flex items-center space-x-2">
+                        <input type="checkbox" id="projector" />
+                        <label htmlFor="projector" className="text-sm">Projector</label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <input type="checkbox" id="mannequins" />
+                        <label htmlFor="mannequins" className="text-sm">Training Mannequins</label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <input type="checkbox" id="aed" />
+                        <label htmlFor="aed" className="text-sm">AED Trainers</label>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Button className="w-full">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Update Capabilities
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

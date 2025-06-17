@@ -16,10 +16,13 @@ export function ProviderPerformanceView({ providerId }: ProviderPerformanceViewP
   const { data: providerData, isLoading } = useQuery({
     queryKey: ['provider-performance', providerId],
     queryFn: async () => {
-      // Convert string providerId to number for the database query
-      const providerIdNum = parseInt(providerId, 10);
+      // DEBUG: Log the providerId and its type
+      console.log('🔥 FIXED ProviderPerformanceView - providerId:', providerId, 'type:', typeof providerId);
       
-      // Get provider details
+      // FIXED: Use UUID string directly instead of converting to integer
+      // OLD BROKEN CODE: const providerIdNum = parseInt(providerId, 10);
+      
+      // Get provider details using UUID string
       const { data: provider, error: providerError } = await supabase
         .from('authorized_providers')
         .select(`
@@ -28,10 +31,13 @@ export function ProviderPerformanceView({ providerId }: ProviderPerformanceViewP
           performance_rating,
           compliance_score
         `)
-        .eq('id', providerIdNum)
+        .eq('id', providerId) // Use UUID string directly
         .single();
 
-      if (providerError) throw providerError;
+      if (providerError) {
+        console.error('Provider query error:', providerError);
+        throw providerError;
+      }
 
       // Get teams for this provider
       const { data: teams, error: teamsError } = await supabase
@@ -41,7 +47,7 @@ export function ProviderPerformanceView({ providerId }: ProviderPerformanceViewP
           name,
           performance_score
         `)
-        .eq('provider_id', providerIdNum);
+        .eq('provider_id', providerId);
 
       if (teamsError) throw teamsError;
 
