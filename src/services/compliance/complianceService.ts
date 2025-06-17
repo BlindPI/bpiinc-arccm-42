@@ -59,6 +59,41 @@ export interface ComplianceSummary {
   overdue_actions: number;
 }
 
+export interface ComplianceDocument {
+  id: string;
+  user_id: string;
+  metric_id: string;
+  file_name: string;
+  file_path: string;
+  file_type: string;
+  file_size: number;
+  upload_date: string;
+  expiry_date?: string;
+  verification_status: 'pending' | 'approved' | 'rejected' | 'expired';
+  verified_by?: string;
+  verified_at?: string;
+  verification_notes?: string;
+  rejection_reason?: string;
+  is_current: boolean;
+  created_at: string;
+  updated_at: string;
+  compliance_metrics?: ComplianceMetric;
+}
+
+export interface DocumentRequirement {
+  id: string;
+  metric_id: string;
+  document_type: string;
+  required_file_types: string[];
+  max_file_size_mb: number;
+  requires_expiry_date: boolean;
+  auto_expire_days?: number;
+  description: string;
+  example_files?: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 export class ComplianceService {
   // Get all compliance metrics
   static async getComplianceMetrics(): Promise<ComplianceMetric[]> {
@@ -353,5 +388,183 @@ export class ComplianceService {
       default:
         return 50;
     }
+  }
+
+  // Document Management Methods
+
+  // Get document requirements for a metric
+  static async getDocumentRequirements(metricId: string): Promise<DocumentRequirement | null> {
+    const { data, error } = await supabase
+      .from('compliance_document_requirements')
+      .select('*')
+      .eq('metric_id', metricId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error; // Ignore "not found" errors
+    return data;
+  }
+
+  // Get user's compliance documents
+  static async getUserComplianceDocuments(userId: string, metricId?: string): Promise<ComplianceDocument[]> {
+    let query = supabase
+      .from('compliance_documents')
+      .select(`
+        *,
+        compliance_metrics (
+          id,
+          name,
+          category
+        )
+      `)
+      .eq('user_id', userId)
+      .order('upload_date', { ascending: false });
+
+    if (metricId) {
+      query = query.eq('metric_id', metricId);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  }
+
+  // Upload compliance document
+  static async uploadComplianceDocument(
+    userId: string,
+    metricId: string,
+    file: File,
+    expiryDate?: string
+  ): Promise<string> {
+    try {
+      // First upload file to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}/${metricId}/${Date.now()}.${fileExt}`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('compliance-documents')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Then record in database
+      const { data, error } = await supabase.rpc('upload_compliance_document', {
+        p_user_id: userId,
+        p_metric_id: metricId,
+        p_file_name: file.name,
+        p_file_path: uploadData.path,
+        p_file_type: fileExt || 'unknown',
+        p_file_size: file.size,
+        p_expiry_date: expiryDate || null
+      });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error uploading compliance document:', error);
+      throw error;
+    }
+  }
+
+  // Verify compliance document (SA/AD only)
+  static async verifyComplianceDocument(
+    documentId: string,
+    verificationStatus: 'approved' | 'rejected',
+    notes?: string,
+    rejectionReason?: string
+  ): Promise<void> {
+    const { error } = await supabase.rpc('verify_compliance_document', {
+      p_document_id: documentId,
+      p_verification_status: verificationStatus,
+      p_verification_notes: notes || null,
+      p_rejection_reason: rejectionReason || null
+    });
+
+    if (error) throw error;
+  }
+
+  // Download compliance document
+  static async downloadComplianceDocument(filePath: string): Promise<Blob> {
+    const { data, error } = await supabase.storage
+      .from('compliance-documents')
+      .download(filePath);
+
+    if (error) throw error;
+    return data;
+  }
+
+  // Get document download URL
+  static async getDocumentDownloadUrl(filePath: string): Promise<string> {
+    const { data } = await supabase.storage
+      .from('compliance-documents')
+      .createSignedUrl(filePath, 3600); // 1 hour expiry
+
+    return data?.signedUrl || '';
+  }
+
+  // Check for expired documents
+  static async checkExpiredDocuments(): Promise<number> {
+    const { data, error } = await supabase.rpc('check_expired_compliance_documents');
+    if (error) throw error;
+    return data || 0;
+  }
+
+  // Get compliance documents for verification (SA/AD only)
+  static async getDocumentsForVerification(): Promise<ComplianceDocument[]> {
+    const { data, error } = await supabase
+      .from('compliance_documents')
+      .select(`
+        *,
+        compliance_metrics (
+          id,
+          name,
+          category
+        ),
+        profiles!compliance_documents_user_id_fkey (
+          id,
+          display_name,
+          email
+        )
+      `)
+      .eq('verification_status', 'pending')
+      .eq('is_current', true)
+      .order('upload_date', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  // Create document requirement (SA/AD only)
+  static async createDocumentRequirement(requirement: Partial<DocumentRequirement>): Promise<DocumentRequirement> {
+    const { data, error } = await supabase
+      .from('compliance_document_requirements')
+      .insert({
+        ...requirement,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  // Update document requirement (SA/AD only)
+  static async updateDocumentRequirement(
+    requirementId: string,
+    updates: Partial<DocumentRequirement>
+  ): Promise<DocumentRequirement> {
+    const { data, error } = await supabase
+      .from('compliance_document_requirements')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', requirementId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 }

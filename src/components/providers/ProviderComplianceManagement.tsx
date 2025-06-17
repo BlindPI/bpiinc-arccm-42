@@ -8,8 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ComplianceService } from '@/services/compliance/complianceService';
-import type { ComplianceMetric, UserComplianceRecord, ComplianceAction } from '@/services/compliance/complianceService';
-import { CheckCircle, XCircle, AlertTriangle, Award, Calendar, Plus, Edit, Settings, Save, X } from 'lucide-react';
+import type { ComplianceMetric, UserComplianceRecord, ComplianceAction, ComplianceDocument, DocumentRequirement } from '@/services/compliance/complianceService';
+import { CheckCircle, XCircle, AlertTriangle, Award, Calendar, Plus, Edit, Settings, Save, X, Upload, Download, FileText, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
@@ -24,7 +24,10 @@ export function ProviderComplianceManagement({ providerId }: ProviderComplianceM
   const queryClient = useQueryClient();
   const [showMetricDialog, setShowMetricDialog] = useState(false);
   const [showActionDialog, setShowActionDialog] = useState(false);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [showDocumentsDialog, setShowDocumentsDialog] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<UserComplianceRecord | null>(null);
+  const [selectedMetricForUpload, setSelectedMetricForUpload] = useState<string>('');
   
   // Form states for dialogs
   const [newMetric, setNewMetric] = useState({
@@ -46,6 +49,11 @@ export function ProviderComplianceManagement({ providerId }: ProviderComplianceM
   
   const [updateStatus, setUpdateStatus] = useState('');
   const [updateNotes, setUpdateNotes] = useState('');
+  
+  // Document upload form state
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadExpiryDate, setUploadExpiryDate] = useState('');
+  const [uploadNotes, setUploadNotes] = useState('');
 
   // Fetch compliance data
   const { data: complianceSummary } = useQuery({
@@ -72,6 +80,17 @@ export function ProviderComplianceManagement({ providerId }: ProviderComplianceM
   const { data: auditLog = [] } = useQuery({
     queryKey: ['compliance-audit-log', providerId],
     queryFn: () => ComplianceService.getComplianceAuditLog(providerId)
+  });
+
+  const { data: complianceDocuments = [] } = useQuery({
+    queryKey: ['compliance-documents', providerId],
+    queryFn: () => ComplianceService.getUserComplianceDocuments(providerId)
+  });
+
+  const { data: documentsForVerification = [] } = useQuery({
+    queryKey: ['documents-for-verification'],
+    queryFn: () => ComplianceService.getDocumentsForVerification(),
+    enabled: isAdmin
   });
 
   // Mutations
@@ -167,6 +186,55 @@ export function ProviderComplianceManagement({ providerId }: ProviderComplianceM
     }
   });
 
+  const uploadDocumentMutation = useMutation({
+    mutationFn: ({ file, metricId, expiryDate }: { file: File; metricId: string; expiryDate?: string }) => {
+      console.log('🔥 Uploading compliance document:', { fileName: file.name, metricId, expiryDate });
+      return ComplianceService.uploadComplianceDocument(providerId, metricId, file, expiryDate);
+    },
+    onSuccess: () => {
+      console.log('✅ Document uploaded successfully');
+      toast.success('Document uploaded successfully and is pending verification');
+      queryClient.invalidateQueries({ queryKey: ['compliance-documents', providerId] });
+      queryClient.invalidateQueries({ queryKey: ['compliance-records', providerId] });
+      queryClient.invalidateQueries({ queryKey: ['compliance-summary', providerId] });
+      queryClient.invalidateQueries({ queryKey: ['documents-for-verification'] });
+      setShowUploadDialog(false);
+      setUploadFile(null);
+      setUploadExpiryDate('');
+      setUploadNotes('');
+      setSelectedMetricForUpload('');
+    },
+    onError: (error) => {
+      console.error('❌ Failed to upload document:', error);
+      toast.error(`Failed to upload document: ${error.message}`);
+    }
+  });
+
+  const verifyDocumentMutation = useMutation({
+    mutationFn: ({ documentId, status, notes, rejectionReason }: {
+      documentId: string;
+      status: 'approved' | 'rejected';
+      notes?: string;
+      rejectionReason?: string;
+    }) => {
+      console.log('🔥 Verifying document:', { documentId, status, notes });
+      return ComplianceService.verifyComplianceDocument(documentId, status, notes, rejectionReason);
+    },
+    onSuccess: () => {
+      console.log('✅ Document verified successfully');
+      toast.success('Document verification completed');
+      queryClient.invalidateQueries({ queryKey: ['compliance-documents', providerId] });
+      queryClient.invalidateQueries({ queryKey: ['compliance-records', providerId] });
+      queryClient.invalidateQueries({ queryKey: ['compliance-summary', providerId] });
+      queryClient.invalidateQueries({ queryKey: ['documents-for-verification'] });
+      queryClient.invalidateQueries({ queryKey: ['compliance-audit-log', providerId] });
+    },
+    onError: (error) => {
+      console.error('❌ Failed to verify document:', error);
+      toast.error(`Failed to verify document: ${error.message}`);
+    }
+  });
+
   // Form handlers
   const handleCreateMetric = () => {
     if (!newMetric.name.trim()) {
@@ -195,6 +263,48 @@ export function ProviderComplianceManagement({ providerId }: ProviderComplianceM
       status: updateStatus as any,
       notes: updateNotes || `Status updated to ${updateStatus} by ${profile?.display_name || 'admin'}`
     });
+  };
+
+  const handleUploadDocument = () => {
+    if (!uploadFile || !selectedMetricForUpload) {
+      toast.error('Please select a file and metric');
+      return;
+    }
+    uploadDocumentMutation.mutate({
+      file: uploadFile,
+      metricId: selectedMetricForUpload,
+      expiryDate: uploadExpiryDate || undefined
+    });
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('File size must be less than 10MB');
+        return;
+      }
+      
+      // Validate file type
+      const allowedTypes = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'];
+      const fileExt = file.name.split('.').pop()?.toLowerCase();
+      if (!fileExt || !allowedTypes.includes(fileExt)) {
+        toast.error('File type not allowed. Please upload PDF, JPG, PNG, DOC, or DOCX files.');
+        return;
+      }
+      
+      setUploadFile(file);
+    }
+  };
+
+  const handleDownloadDocument = async (document: ComplianceDocument) => {
+    try {
+      const url = await ComplianceService.getDocumentDownloadUrl(document.file_path);
+      window.open(url, '_blank');
+    } catch (error) {
+      toast.error('Failed to download document');
+    }
   };
 
   const getStatusColor = (status: string) => {
