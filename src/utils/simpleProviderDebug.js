@@ -6,7 +6,7 @@ window.debugProviderCertificates = async function() {
   
   try {
     // Import supabase client
-    const { supabase } = await import('/src/integrations/supabase/client.js');
+    const { supabase } = await import('../integrations/supabase/client.ts');
     
     // 1. Find Kevin Geem in authorized_providers
     console.log('1. Looking for Kevin Geem in authorized_providers...');
