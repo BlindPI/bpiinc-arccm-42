@@ -47,7 +47,15 @@ import { useNavigationVisibility } from '@/hooks/useNavigationVisibility';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileSidebar } from './MobileSidebar';
 
-const navigation = [
+interface NavigationItem {
+  name: string;
+  href: string;
+  icon: any;
+  group: string;
+  enterpriseOnly?: boolean;
+}
+
+const navigation: NavigationItem[] = [
   // Dashboard Group
   { name: 'Dashboard', href: '/', icon: LayoutDashboard, group: 'Dashboard' },
   { name: 'Profile', href: '/profile', icon: User, group: 'Dashboard' },
@@ -59,7 +67,7 @@ const navigation = [
   { name: 'Supervision', href: '/supervision', icon: UserCheck, group: 'User Management' },
   
   // Provider Management Group
-  { name: 'Provider Management', href: '/authorized-providers', icon: Building2, group: 'Provider Management' },
+  { name: 'Provider Management', href: '/authorized-providers', icon: Building2, group: 'Provider Management', enterpriseOnly: true },
   
   // Training Management Group
   { name: 'Training Hub', href: '/training-hub', icon: BookOpen, group: 'Training Management' },
