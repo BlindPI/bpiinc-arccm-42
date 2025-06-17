@@ -10,22 +10,24 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { 
-  MapPin, 
-  Building2, 
-  Users, 
-  CheckCircle, 
-  ArrowRight, 
+import {
+  MapPin,
+  Building2,
+  Users,
+  CheckCircle,
+  ArrowRight,
   Plus,
-  Target
+  Target,
+  UserCheck
 } from 'lucide-react';
-import type { 
-  ProviderManagementWorkflow, 
+import type {
+  ProviderManagementWorkflow,
   WorkflowStep,
   Location,
   AuthorizedProvider,
-  Team 
+  Team
 } from '@/types/provider-management';
+import { apUserService, type APUser } from '@/services/provider/apUserService';
 
 interface ThreeClickProviderWorkflowProps {
   onComplete?: () => void;
@@ -45,8 +47,8 @@ export function ThreeClickProviderWorkflow({ onComplete }: ThreeClickProviderWor
     },
     step2: {
       step: 2,
-      title: "Assign Provider",
-      description: "Select or create an authorized provider",
+      title: "Select Authorized Provider",
+      description: "Choose an AP user to assign as the authorized provider",
       completed: false,
       data: null
     },
@@ -74,8 +76,14 @@ export function ThreeClickProviderWorkflow({ onComplete }: ThreeClickProviderWor
     }
   });
 
-  // Fetch providers
-  const { data: providers = [] } = useQuery({
+  // Fetch AP users
+  const { data: apUsers = [] } = useQuery({
+    queryKey: ['ap-users'],
+    queryFn: () => apUserService.getAPUsers()
+  });
+
+  // Fetch existing authorized providers (for display only)
+  const { data: existingProviders = [] } = useQuery({
     queryKey: ['authorized-providers'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -97,13 +105,10 @@ export function ThreeClickProviderWorkflow({ onComplete }: ThreeClickProviderWor
     newLocationAddress: ''
   });
 
-  // Step 2: Provider Selection/Creation
+  // Step 2: AP User Selection
   const [providerForm, setProviderForm] = useState({
-    selectedProviderId: '',
-    newProviderName: '',
-    newProviderType: 'training_provider',
-    newProviderEmail: '',
-    newProviderPhone: ''
+    selectedAPUserId: '',
+    selectedExistingProviderId: ''
   });
 
   // Step 3: Team Creation
@@ -133,28 +138,9 @@ export function ThreeClickProviderWorkflow({ onComplete }: ThreeClickProviderWor
     }
   });
 
-  const createProviderMutation = useMutation({
-    mutationFn: async (providerData: any) => {
-      const { data, error } = await supabase
-        .from('authorized_providers')
-        .insert({
-          name: providerData.name,
-          provider_name: providerData.name,
-          provider_url: '',
-          provider_type: providerData.provider_type,
-          contact_email: providerData.contact_email,
-          contact_phone: providerData.contact_phone,
-          status: 'APPROVED',
-          performance_rating: 0,
-          compliance_score: 0,
-          user_id: user?.id,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
+  const assignAPUserMutation = useMutation({
+    mutationFn: async ({ apUserId, locationId }: { apUserId: string; locationId: string }) => {
+      return await apUserService.assignAPUserAsProvider(apUserId, locationId, user?.id || '');
     }
   });
 

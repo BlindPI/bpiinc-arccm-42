@@ -15,14 +15,18 @@ import { ProviderLocationDashboard } from './ProviderLocationDashboard';
 import { ProviderLocationAssignment } from './ProviderLocationAssignment';
 import { ProviderTeamManagement } from './ProviderTeamManagement';
 import { ThreeClickProviderWorkflow } from './ThreeClickProviderWorkflow';
+import { APUserSelectionDialog } from './APUserSelectionDialog';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
 
 export default function AuthorizedProviderManagement() {
   const { user } = useAuth();
+  const { data: profile } = useProfile();
   const queryClient = useQueryClient();
   const [selectedProvider, setSelectedProvider] = useState<AuthorizedProvider | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showWorkflow, setShowWorkflow] = useState(false);
+  const [showAPUserDialog, setShowAPUserDialog] = useState(false);
 
   const { data: providers = [], isLoading } = useQuery({
     queryKey: ['authorized-providers'],
@@ -92,10 +96,23 @@ export default function AuthorizedProviderManagement() {
             <Target className="h-4 w-4 mr-2" />
             3-Click Setup
           </Button>
-          <Button onClick={() => setShowCreateDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Provider
-          </Button>
+          {/* SA/AD can assign AP users as providers */}
+          {['SA', 'AD'].includes(profile?.role || '') && (
+            <Button onClick={() => setShowAPUserDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Assign AP User
+            </Button>
+          )}
+          {/* Only show Add Provider Details for AP users */}
+          {profile?.role === 'AP' && (
+            <Button
+              variant="outline"
+              onClick={() => setShowCreateDialog(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Provider Details
+            </Button>
+          )}
         </div>
       </header>
 
@@ -288,6 +305,12 @@ export default function AuthorizedProviderManagement() {
           </div>
         </div>
       )}
+
+      <APUserSelectionDialog
+        open={showAPUserDialog}
+        onOpenChange={setShowAPUserDialog}
+        onProviderCreated={handleProviderCreated}
+      />
     </div>
   );
 }
