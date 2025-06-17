@@ -6,18 +6,34 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { 
-  Users, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  MapPin, 
+import {
+  Users,
+  Plus,
+  Edit,
+  Trash2,
+  MapPin,
   Calendar,
   Target,
-  AlertCircle
+  AlertCircle,
+  Eye,
+  Settings,
+  Award,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Mail,
+  Phone,
+  User,
+  TrendingUp,
+  Activity,
+  BookOpen,
+  Shield
 } from 'lucide-react';
 
 interface TeamAssignmentTabProps {
@@ -31,6 +47,9 @@ export function TeamAssignmentTab({ providerId, assignments, onAssignmentChange 
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<any>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [showTeamDetailsModal, setShowTeamDetailsModal] = useState(false);
+  const [showEditAssignmentModal, setShowEditAssignmentModal] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
 
   // Fetch available teams for assignment
   const { data: availableTeams = [] } = useQuery({
@@ -68,17 +87,17 @@ export function TeamAssignmentTab({ providerId, assignments, onAssignmentChange 
     }
   });
 
-  // Fetch detailed team member information for diagnostics
+  // Fetch detailed team member information with comprehensive roster metrics
   const { data: teamMembersData, isLoading: isLoadingMembers } = useQuery({
     queryKey: ['team-members-detailed', selectedTeamId],
     queryFn: async () => {
       if (!selectedTeamId) return null;
       
-      console.log('DEBUG - Fetching team members for team:', selectedTeamId);
+      console.log('DEBUG - Fetching comprehensive team data for team:', selectedTeamId);
       
       // Try multiple approaches to get team member data
       const approaches = [
-        // Approach 1: Direct team_members query with profiles
+        // Approach 1: Direct team_members query with profiles and enhanced data
         async () => {
           const { data, error } = await supabase
             .from('team_members')
@@ -97,7 +116,8 @@ export function TeamAssignmentTab({ providerId, assignments, onAssignmentChange 
                 display_name,
                 email,
                 role,
-                created_at
+                created_at,
+                updated_at
               )
             `)
             .eq('team_id', selectedTeamId)
@@ -143,6 +163,55 @@ export function TeamAssignmentTab({ providerId, assignments, onAssignmentChange 
       return [];
     },
     enabled: !!selectedTeamId
+  });
+
+  // Fetch enhanced roster metrics for the selected team
+  const { data: rosterMetrics, isLoading: isLoadingMetrics } = useQuery({
+    queryKey: ['roster-metrics', selectedTeamId],
+    queryFn: async () => {
+      if (!selectedTeamId) return null;
+      
+      try {
+        // Fetch certificates for team members
+        const { data: certificates } = await supabase
+          .from('certificates')
+          .select('id, status, created_at, user_id')
+          .in('user_id', teamMembersData?.map((m: any) => m.user_id) || []);
+        
+        // Fetch enrollments for team members
+        const { data: enrollments } = await supabase
+          .from('enrollments')
+          .select('id, status, created_at, user_id, progress')
+          .in('user_id', teamMembersData?.map((m: any) => m.user_id) || []);
+        
+        // Calculate metrics
+        const totalMembers = teamMembersData?.length || 0;
+        const activeCertificates = certificates?.filter(c => c.status === 'active').length || 0;
+        const completedEnrollments = enrollments?.filter(e => e.status === 'completed').length || 0;
+        const inProgressEnrollments = enrollments?.filter(e => e.status === 'in_progress').length || 0;
+        
+        return {
+          totalMembers,
+          activeCertificates,
+          completedEnrollments,
+          inProgressEnrollments,
+          certificationRate: totalMembers > 0 ? (activeCertificates / totalMembers) * 100 : 0,
+          completionRate: enrollments?.length > 0 ? (completedEnrollments / enrollments.length) * 100 : 0,
+          averageProgress: enrollments?.length > 0 ?
+            enrollments.reduce((sum, e) => sum + (e.progress || 0), 0) / enrollments.length : 0,
+          recentActivity: teamMembersData?.filter((m: any) => {
+            const lastActivity = new Date(m.last_activity || m.assignment_start_date);
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            return lastActivity > thirtyDaysAgo;
+          }).length || 0
+        };
+      } catch (error) {
+        console.error('Error fetching roster metrics:', error);
+        return null;
+      }
+    },
+    enabled: !!selectedTeamId && !!teamMembersData
   });
 
   // Assign provider to team mutation
@@ -382,44 +451,32 @@ export function TeamAssignmentTab({ providerId, assignments, onAssignmentChange 
                       </p>
                     </div>
                     
-                    {/* DEBUG: Log assignment data structure */}
-                    {console.log('DEBUG - Assignment data:', assignment)}
-                    
-                    {/* Missing View Details Button - IDENTIFIED ISSUE #1 */}
+                    {/* View Team Details Button */}
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        console.log('DEBUG - View Details clicked for team:', assignment.team_name);
-                        console.log('DEBUG - Team ID:', assignment.team_id);
-                        console.log('DEBUG - Available assignment data:', Object.keys(assignment));
-                        console.log('DEBUG - Full assignment object:', assignment);
-                        
-                        // Set selected team to trigger member data fetching
+                        setSelectedAssignment(assignment);
                         setSelectedTeamId(assignment.team_id);
-                        
-                        // Log current team members data state
-                        console.log('DEBUG - Current team members data:', teamMembersData);
-                        console.log('DEBUG - Is loading members:', isLoadingMembers);
-                        
-                        toast.info(`Fetching team details for ${assignment.team_name}...`);
+                        setShowTeamDetailsModal(true);
+                        toast.info(`Loading team details for ${assignment.team_name}...`);
                       }}
                     >
-                      <Users className="h-4 w-4 mr-1" />
+                      <Eye className="h-4 w-4 mr-1" />
                       View Details
                     </Button>
                     
-                    {/* Missing Edit Assignment Button - IDENTIFIED ISSUE #2 */}
+                    {/* Edit Assignment Button */}
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        console.log('DEBUG - Edit Assignment clicked for team:', assignment.team_name);
-                        // TODO: Implement edit assignment functionality
-                        toast.error('Edit Assignment functionality not implemented yet');
+                        setSelectedAssignment(assignment);
+                        setEditingAssignment(assignment);
+                        setShowEditAssignmentModal(true);
                       }}
                     >
-                      <Edit className="h-4 w-4 mr-1" />
+                      <Settings className="h-4 w-4 mr-1" />
                       Edit
                     </Button>
                     
@@ -455,58 +512,274 @@ export function TeamAssignmentTab({ providerId, assignments, onAssignmentChange 
         </div>
       )}
 
-      {/* DEBUG: Team Member Details Section */}
-      {selectedTeamId && (
-        <Card className="mt-6 border-blue-200 bg-blue-50">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
+      {/* Team Details Modal */}
+      <Dialog open={showTeamDetailsModal} onOpenChange={setShowTeamDetailsModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Team Member Details (DEBUG)
-              {isLoadingMembers && <span className="text-sm text-muted-foreground">Loading...</span>}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="text-sm">
-                <p><strong>Selected Team ID:</strong> {selectedTeamId}</p>
-                <p><strong>Loading State:</strong> {isLoadingMembers ? 'Loading...' : 'Loaded'}</p>
-                <p><strong>Data Available:</strong> {teamMembersData ? 'Yes' : 'No'}</p>
-                {teamMembersData && (
-                  <p><strong>Member Count:</strong> {Array.isArray(teamMembersData) ? teamMembersData.length : 'Not an array'}</p>
+              {selectedAssignment?.team_name} - Team Details
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedAssignment && (
+            <Tabs defaultValue="overview" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="members">Team Members</TabsTrigger>
+                <TabsTrigger value="metrics">Roster Metrics</TabsTrigger>
+              </TabsList>
+              
+              {/* Overview Tab */}
+              <TabsContent value="overview" className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium">Team Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{selectedAssignment.location_name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Target className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{selectedAssignment.member_count} members</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">Since {new Date(selectedAssignment.start_date).toLocaleDateString()}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium">Assignment Details</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Role:</span>
+                        <Badge variant="secondary">{selectedAssignment.assignment_role}</Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Oversight:</span>
+                        <Badge variant="outline">{selectedAssignment.oversight_level}</Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Performance:</span>
+                        <span className="text-sm font-medium">{selectedAssignment.performance_score || 0}/5.0</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+              
+              {/* Team Members Tab */}
+              <TabsContent value="members" className="space-y-4">
+                {isLoadingMembers ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p className="text-sm text-muted-foreground mt-2">Loading team members...</p>
+                  </div>
+                ) : teamMembersData && teamMembersData.length > 0 ? (
+                  <div className="space-y-3">
+                    {teamMembersData.map((member: any) => (
+                      <Card key={member.id}>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                                <User className="h-4 w-4 text-primary" />
+                              </div>
+                              <div>
+                                <h4 className="font-medium">{member.profiles?.display_name || member.display_name || 'Unknown User'}</h4>
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Badge variant="outline" className="text-xs">{member.role}</Badge>
+                                  {member.team_position && (
+                                    <span>• {member.team_position}</span>
+                                  )}
+                                  {member.profiles?.email && (
+                                    <span>• {member.profiles.email}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right text-sm">
+                              <p className="text-muted-foreground">
+                                Since {new Date(member.assignment_start_date).toLocaleDateString()}
+                              </p>
+                              {member.last_activity && (
+                                <p className="text-xs text-muted-foreground">
+                                  Last active: {new Date(member.last_activity).toLocaleDateString()}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <h3 className="text-lg font-medium mb-2">No Team Members</h3>
+                    <p className="text-sm">No active team members found for this team.</p>
+                  </div>
                 )}
+              </TabsContent>
+              
+              {/* Roster Metrics Tab */}
+              <TabsContent value="metrics" className="space-y-4">
+                {isLoadingMetrics ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p className="text-sm text-muted-foreground mt-2">Loading roster metrics...</p>
+                  </div>
+                ) : rosterMetrics ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                          <Award className="h-4 w-4" />
+                          Certification Metrics
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">Certification Rate</span>
+                          <span className="font-medium">{rosterMetrics.certificationRate.toFixed(1)}%</span>
+                        </div>
+                        <Progress value={rosterMetrics.certificationRate} className="h-2" />
+                        <div className="text-xs text-muted-foreground">
+                          {rosterMetrics.activeCertificates} of {rosterMetrics.totalMembers} members certified
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                          <BookOpen className="h-4 w-4" />
+                          Training Progress
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">Completion Rate</span>
+                          <span className="font-medium">{rosterMetrics.completionRate.toFixed(1)}%</span>
+                        </div>
+                        <Progress value={rosterMetrics.completionRate} className="h-2" />
+                        <div className="text-xs text-muted-foreground">
+                          {rosterMetrics.completedEnrollments} completed, {rosterMetrics.inProgressEnrollments} in progress
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                          <Activity className="h-4 w-4" />
+                          Team Activity
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">Recent Activity</span>
+                          <span className="font-medium">{rosterMetrics.recentActivity} members</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Active in the last 30 days
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4" />
+                          Average Progress
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">Overall Progress</span>
+                          <span className="font-medium">{rosterMetrics.averageProgress.toFixed(1)}%</span>
+                        </div>
+                        <Progress value={rosterMetrics.averageProgress} className="h-2" />
+                      </CardContent>
+                    </Card>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <h3 className="text-lg font-medium mb-2">No Metrics Available</h3>
+                    <p className="text-sm">Unable to load roster metrics for this team.</p>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Assignment Modal */}
+      <Dialog open={showEditAssignmentModal} onOpenChange={setShowEditAssignmentModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Assignment</DialogTitle>
+          </DialogHeader>
+          {editingAssignment && (
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              toast.info('Edit assignment functionality coming soon!');
+              setShowEditAssignmentModal(false);
+            }} className="space-y-4">
+              <div>
+                <Label htmlFor="editRole">Assignment Role</Label>
+                <Select name="editRole" defaultValue={editingAssignment.assignment_role}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="primary_trainer">Primary Trainer</SelectItem>
+                    <SelectItem value="support_trainer">Support Trainer</SelectItem>
+                    <SelectItem value="supervisor">Supervisor</SelectItem>
+                    <SelectItem value="coordinator">Coordinator</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              
-              {teamMembersData && (
-                <div className="space-y-2">
-                  <h4 className="font-medium">Team Members Data:</h4>
-                  <pre className="bg-white p-3 rounded border text-xs overflow-auto max-h-60">
-                    {JSON.stringify(teamMembersData, null, 2)}
-                  </pre>
-                </div>
-              )}
-              
-              {!isLoadingMembers && !teamMembersData && (
-                <div className="text-center py-4 text-muted-foreground">
-                  <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No team member data available</p>
-                  <p className="text-xs">Check console for detailed error logs</p>
-                </div>
-              )}
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSelectedTeamId(null);
-                  console.log('DEBUG - Cleared selected team');
-                }}
-              >
-                Close Debug View
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+
+              <div>
+                <Label htmlFor="editOversight">Oversight Level</Label>
+                <Select name="editOversight" defaultValue={editingAssignment.oversight_level}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monitor">Monitor</SelectItem>
+                    <SelectItem value="manage">Manage</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button type="submit" className="flex-1">
+                  Save Changes
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowEditAssignmentModal(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
