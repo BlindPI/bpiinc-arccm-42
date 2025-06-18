@@ -18,20 +18,23 @@ export class CampaignDiagnostics {
         campaign_metrics: tableChecks[2].status === 'fulfilled' ? 'EXISTS' : 'MISSING'
       });
 
-      // Check table schemas
-      const schemaQueries = [
-        "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'email_campaigns' ORDER BY ordinal_position",
-        "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'email_templates' ORDER BY ordinal_position",
-        "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'campaign_metrics' ORDER BY ordinal_position"
+      // Check table accessibility directly
+      const tableTests = [
+        { name: 'email_campaigns', table: 'email_campaigns' as const },
+        { name: 'email_templates', table: 'email_templates' as const },
+        { name: 'campaign_metrics', table: 'campaign_metrics' as const }
       ];
 
-      for (const query of schemaQueries) {
-        const { data, error } = await supabase.rpc('exec_sql', { sql: query });
-        if (error) {
-          console.error('❌ Schema query failed:', error);
-        } else {
-          const tableName = query.match(/table_name = '(\w+)'/)?.[1];
-          console.log(`📋 ${tableName} schema:`, data);
+      for (const test of tableTests) {
+        try {
+          const { data: testData, error } = await supabase.from(test.table).select('*').limit(1);
+          if (error) {
+            console.error(`❌ ${test.name} query failed:`, error);
+          } else {
+            console.log(`📋 ${test.name} accessible:`, testData !== null);
+          }
+        } catch (accessErr) {
+          console.error(`❌ ${test.name} not accessible:`, accessErr);
         }
       }
 

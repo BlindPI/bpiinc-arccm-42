@@ -25,6 +25,7 @@ import { CampaignAnalytics } from '@/components/crm/campaigns/CampaignAnalytics'
 import { CampaignSettingsDialog } from '@/components/crm/campaigns/CampaignSettingsDialog';
 import { useQuery } from '@tanstack/react-query';
 import { EmailCampaignService } from '@/services/crm/emailCampaignService';
+import '@/utils/testCampaignDiagnostics';
 
 interface QuickStat {
   title: string;
@@ -213,7 +214,15 @@ export default function CampaignManagement() {
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between mb-4">
                           <Badge variant="outline">{template.template_type || 'general'}</Badge>
-                          <Button variant="outline" size="sm">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              // Use this template to create a new campaign
+                              setSelectedCampaignId(undefined);
+                              setShowCampaignBuilder(true);
+                            }}
+                          >
                             <Eye className="h-4 w-4" />
                           </Button>
                         </div>
@@ -305,8 +314,9 @@ export default function CampaignManagement() {
                   <Button
                     className="w-full"
                     onClick={() => {
-                      // Navigate to automation page
-                      window.location.href = '/automation';
+                      // Create a new automation workflow
+                      setSelectedCampaignId(undefined);
+                      setShowCampaignBuilder(true);
                     }}
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -335,7 +345,9 @@ export default function CampaignManagement() {
                     Start testing different subject lines and content to improve your campaigns.
                   </p>
                   <Button onClick={() => {
-                    alert('A/B Testing functionality will be available in the next update. For now, you can create multiple campaign variations manually.');
+                    // Create a new campaign with A/B testing setup
+                    setSelectedCampaignId(undefined);
+                    setShowCampaignBuilder(true);
                   }}>
                     <Plus className="h-4 w-4 mr-2" />
                     Create A/B Test

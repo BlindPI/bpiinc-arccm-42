@@ -244,7 +244,7 @@ export class EmailCampaignService {
 
   static async getCampaignPerformanceSummary(): Promise<any> {
     try {
-      // Get all campaigns
+      // Get all campaigns from database
       const campaigns = await this.getEmailCampaigns();
       
       if (!campaigns || campaigns.length === 0) {
@@ -257,7 +257,9 @@ export class EmailCampaignService {
           totalRevenue: 0,
           avg_open_rate: 0,
           total_recipients: 0,
-          total_revenue: 0
+          total_revenue: 0,
+          performanceData: [],
+          engagementData: []
         };
       }
 
@@ -293,6 +295,57 @@ export class EmailCampaignService {
       const averageClickRate = totalOpened > 0 ?
         (totalClicked / totalOpened) * 100 : 0;
 
+      // Build performance data by campaign type
+      const performanceByType = campaigns.reduce((acc, campaign) => {
+        const type = campaign.campaign_type;
+        if (!acc[type]) {
+          acc[type] = {
+            name: type,
+            sent: 0,
+            opened: 0,
+            clicked: 0,
+            converted: 0
+          };
+        }
+        acc[type].sent += campaign.total_recipients || 0;
+        acc[type].opened += campaign.opened_count || 0;
+        acc[type].clicked += campaign.clicked_count || 0;
+        if (campaign.status === 'sent') acc[type].converted += 1;
+        return acc;
+      }, {} as Record<string, any>);
+
+      const performanceData = Object.values(performanceByType);
+
+      // Build engagement data by month (last 6 months)
+      const monthlyData = campaigns.reduce((acc, campaign) => {
+        const month = campaign.created_at.toISOString().substring(0, 7); // YYYY-MM
+        if (!acc[month]) {
+          acc[month] = {
+            date: month,
+            totalDelivered: 0,
+            totalOpened: 0,
+            totalClicked: 0
+          };
+        }
+        acc[month].totalDelivered += campaign.delivered_count || 0;
+        acc[month].totalOpened += campaign.opened_count || 0;
+        acc[month].totalClicked += campaign.clicked_count || 0;
+        return acc;
+      }, {} as Record<string, any>);
+
+      const engagementData = Object.values(monthlyData)
+        .map((month: any) => ({
+          date: month.date,
+          openRate: month.totalDelivered > 0 ?
+            Math.round((month.totalOpened / month.totalDelivered) * 100 * 10) / 10 : 0,
+          clickRate: month.totalOpened > 0 ?
+            Math.round((month.totalClicked / month.totalOpened) * 100 * 10) / 10 : 0
+        }))
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .slice(-6); // Last 6 months
+
+      console.log('📊 Generated performance data:', { performanceData, engagementData });
+
       return {
         totalCampaigns,
         activeCampaigns,
@@ -303,7 +356,10 @@ export class EmailCampaignService {
         // Additional fields for compatibility
         avg_open_rate: Math.round(averageOpenRate * 10) / 10,
         total_recipients: totalRecipients,
-        total_revenue: totalRevenue
+        total_revenue: totalRevenue,
+        // Enhanced analytics data
+        performanceData,
+        engagementData
       };
     } catch (error) {
       console.error('Error fetching campaign performance summary:', error);
@@ -316,7 +372,9 @@ export class EmailCampaignService {
         totalRevenue: 0,
         avg_open_rate: 0,
         total_recipients: 0,
-        total_revenue: 0
+        total_revenue: 0,
+        performanceData: [],
+        engagementData: []
       };
     }
   }
