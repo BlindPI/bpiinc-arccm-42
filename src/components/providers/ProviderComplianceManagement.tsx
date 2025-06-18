@@ -6,10 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { useProfile } from '@/hooks/useProfile';
-import { 
-  Shield, 
-  AlertTriangle, 
-  CheckCircle, 
+import { supabase } from '@/integrations/supabase/client';
+import { ComplianceService } from '@/services/compliance/complianceService';
+import {
+  Shield,
+  AlertTriangle,
+  CheckCircle,
   Clock,
   FileText,
   TrendingUp,
@@ -23,6 +25,67 @@ export function ProviderComplianceManagement() {
 
   // Initialize isAdmin after profile is loaded to prevent initialization errors
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
+
+  // Debug compliance system
+  useEffect(() => {
+    async function debugCompliance() {
+      console.log('🔍 DEBUGGING COMPLIANCE SYSTEM');
+      console.log('================================');
+
+      try {
+        // 1. Check if compliance tables exist
+        console.log('1. Checking if compliance tables exist...');
+        const { data: tables, error: tablesError } = await supabase
+          .from('information_schema.tables')
+          .select('table_name')
+          .eq('table_schema', 'public')
+          .like('table_name', '%compliance%');
+
+        if (tablesError) {
+          console.error('❌ Error checking tables:', tablesError);
+        } else {
+          console.log('✅ Compliance tables found:', tables?.map(t => t.table_name));
+        }
+
+        // 2. Check if compliance metrics exist
+        console.log('\n2. Checking compliance metrics...');
+        const metrics = await ComplianceService.getComplianceMetrics();
+        console.log('✅ Compliance metrics count:', metrics.length);
+        console.log('📊 Sample metrics:', metrics.slice(0, 3).map(m => ({ name: m.name, category: m.category })));
+
+        // 3. Check current user
+        console.log('\n3. Current user profile:', profile);
+
+        if (profile?.id) {
+          // 4. Check user's compliance records
+          console.log('\n4. Checking user compliance records...');
+          const records = await ComplianceService.getUserComplianceRecords(profile.id);
+          console.log('📋 User compliance records count:', records.length);
+          
+          // 5. Check user compliance summary
+          console.log('\n5. Checking user compliance summary...');
+          const summary = await ComplianceService.getUserComplianceSummary(profile.id);
+          console.log('📈 Compliance summary:', summary);
+        }
+
+      } catch (error) {
+        console.error('❌ Error during compliance system debug:', error);
+        
+        // Check if it's a table not found error
+        if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+          console.log('🚨 DIAGNOSIS: Compliance tables do not exist in database');
+          console.log('💡 SOLUTION: Run the compliance migration');
+        }
+      }
+
+      console.log('\n================================');
+      console.log('🔍 COMPLIANCE DEBUG COMPLETE');
+    }
+
+    if (profile && isAdmin) {
+      debugCompliance();
+    }
+  }, [profile, isAdmin]);
 
   if (profileLoading) {
     return (
