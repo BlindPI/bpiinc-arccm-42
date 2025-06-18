@@ -37,9 +37,9 @@ import {
   Sparkles
 } from 'lucide-react';
 import { EnhancedEmailCampaignService } from '@/services/email/enhancedEmailCampaignService';
+import { EmailCampaignService } from '@/services/crm/emailCampaignService';
 import { ResendEmailService } from '@/services/email/resendEmailService';
 import { UnifiedCRMService } from '@/services/crm/unifiedCRMService';
-import { toast } from 'sonner';
 
 interface EmailWorkflow {
   id: string;
@@ -108,6 +108,45 @@ export function ProfessionalEmailWorkflows() {
   const { data: recentLeads = [] } = useQuery({
     queryKey: ['recent-leads'],
     queryFn: () => UnifiedCRMService.getLeads({ limit: 20 })
+  });
+
+  // Fetch real email campaign metrics
+  const { data: campaignMetrics } = useQuery({
+    queryKey: ['email-campaign-metrics'],
+    queryFn: async () => {
+      try {
+        const campaigns = await EmailCampaignService.getEmailCampaigns();
+        const today = new Date().toDateString();
+        
+        // Calculate real metrics from campaigns
+        const todaysCampaigns = campaigns.filter(c =>
+          c.created_at && new Date(c.created_at).toDateString() === today
+        );
+        
+        const totalSent = campaigns.reduce((sum, c) => sum + (c.sent_count || 0), 0);
+        const totalOpened = campaigns.reduce((sum, c) => sum + (c.opened_count || 0), 0);
+        const totalDelivered = campaigns.reduce((sum, c) => sum + (c.delivered_count || 0), 0);
+        
+        const openRate = totalDelivered > 0 ? Math.round((totalOpened / totalDelivered) * 100) : 0;
+        const automationSuccess = campaigns.length > 0 ?
+          Math.round((campaigns.filter(c => c.status === 'sent').length / campaigns.length) * 100) : 0;
+
+        return {
+          emailsSentToday: todaysCampaigns.reduce((sum, c) => sum + (c.sent_count || 0), 0),
+          openRate,
+          automationSuccess,
+          totalCampaigns: campaigns.length
+        };
+      } catch (error) {
+        console.error('Error fetching campaign metrics:', error);
+        return {
+          emailsSentToday: 0,
+          openRate: 0,
+          automationSuccess: 0,
+          totalCampaigns: 0
+        };
+      }
+    }
   });
 
   // Execute workflow mutation
@@ -369,9 +408,9 @@ export function ProfessionalEmailWorkflows() {
                 <Mail className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">24</div>
+                <div className="text-2xl font-bold">{campaignMetrics?.emailsSentToday || 0}</div>
                 <p className="text-xs text-muted-foreground">
-                  +12% from yesterday
+                  Real-time data from campaigns
                 </p>
               </CardContent>
             </Card>
@@ -382,9 +421,9 @@ export function ProfessionalEmailWorkflows() {
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">68%</div>
+                <div className="text-2xl font-bold">{campaignMetrics?.openRate || 0}%</div>
                 <p className="text-xs text-muted-foreground">
-                  Above industry average
+                  Calculated from real campaigns
                 </p>
               </CardContent>
             </Card>
@@ -395,9 +434,9 @@ export function ProfessionalEmailWorkflows() {
                 <CheckCircle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">95%</div>
+                <div className="text-2xl font-bold">{campaignMetrics?.automationSuccess || 0}%</div>
                 <p className="text-xs text-muted-foreground">
-                  Workflows executing successfully
+                  Based on campaign completion rates
                 </p>
               </CardContent>
             </Card>

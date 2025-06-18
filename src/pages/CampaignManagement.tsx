@@ -236,7 +236,11 @@ export default function CampaignManagement() {
               </div>
               
               <div className="mt-6 text-center">
-                <Button>
+                <Button onClick={() => {
+                  // Create a new template campaign
+                  setSelectedCampaignId(undefined);
+                  setShowCampaignBuilder(true);
+                }}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create New Template
                 </Button>
@@ -260,32 +264,47 @@ export default function CampaignManagement() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {[
-                    { name: 'Welcome Series', status: 'Active', triggers: 3, emails: 5 },
-                    { name: 'Lead Nurturing', status: 'Active', triggers: 2, emails: 8 },
-                    { name: 'Follow-up Sequence', status: 'Draft', triggers: 1, emails: 3 }
-                  ].map((workflow, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 rounded-lg border">
-                      <div>
-                        <h4 className="font-medium">{workflow.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {workflow.triggers} triggers • {workflow.emails} emails
-                        </p>
+                  {recentCampaigns && recentCampaigns.length > 0 ? (
+                    recentCampaigns.slice(0, 3).map((campaign) => (
+                      <div key={campaign.id} className="flex items-center justify-between p-4 rounded-lg border">
+                        <div>
+                          <h4 className="font-medium">{campaign.campaign_name}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            {campaign.campaign_type} • {campaign.total_recipients || 0} recipients
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge variant={campaign.status === 'sent' ? 'default' : 'secondary'}>
+                            {campaign.status}
+                          </Badge>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedCampaignId(campaign.id);
+                              setShowCampaignBuilder(true);
+                            }}
+                          >
+                            Edit
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <Badge variant={workflow.status === 'Active' ? 'default' : 'secondary'}>
-                          {workflow.status}
-                        </Badge>
-                        <Button variant="outline" size="sm">
-                          Edit
-                        </Button>
-                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>No campaigns found. Create your first campaign to get started.</p>
                     </div>
-                  ))}
+                  )}
                 </div>
                 
                 <div className="mt-6">
-                  <Button className="w-full">
+                  <Button
+                    className="w-full"
+                    onClick={() => {
+                      // Navigate to automation page
+                      window.location.href = '/automation';
+                    }}
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Create Automation
                   </Button>
@@ -311,7 +330,9 @@ export default function CampaignManagement() {
                   <p className="text-muted-foreground mb-4">
                     Start testing different subject lines and content to improve your campaigns.
                   </p>
-                  <Button>
+                  <Button onClick={() => {
+                    alert('A/B Testing functionality will be available in the next update. For now, you can create multiple campaign variations manually.');
+                  }}>
                     <Plus className="h-4 w-4 mr-2" />
                     Create A/B Test
                   </Button>
@@ -332,34 +353,17 @@ export default function CampaignManagement() {
             <CardContent>
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium">Default From Name</label>
-                  <input 
-                    type="text" 
-                    className="w-full mt-1 px-3 py-2 border rounded-md" 
-                    placeholder="Your Company Name"
-                  />
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium">Default From Email</label>
-                  <input 
-                    type="email" 
-                    className="w-full mt-1 px-3 py-2 border rounded-md" 
-                    placeholder="noreply@yourcompany.com"
-                  />
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium">Default Reply-To Email</label>
-                  <input 
-                    type="email" 
-                    className="w-full mt-1 px-3 py-2 border rounded-md" 
-                    placeholder="support@yourcompany.com"
-                  />
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Campaign settings are managed through the dedicated settings dialog.
+                    Click the Settings button in the header to configure your default campaign settings.
+                  </p>
                 </div>
                 
                 <div className="pt-4">
-                  <Button>Save Settings</Button>
+                  <Button onClick={handleOpenSettings}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Open Campaign Settings
+                  </Button>
                 </div>
               </div>
             </CardContent>

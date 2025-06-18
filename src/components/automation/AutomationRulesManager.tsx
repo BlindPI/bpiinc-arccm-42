@@ -26,6 +26,7 @@ interface RuleFormData {
 
 export const AutomationRulesManager: React.FC = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedRule, setSelectedRule] = useState<AutomationRule | null>(null);
   const [formData, setFormData] = useState<RuleFormData>({
     name: '',
@@ -56,7 +57,7 @@ export const AutomationRulesManager: React.FC = () => {
   const createRuleMutation = useMutation({
     mutationFn: (ruleData: RuleFormData) => AutomationService.createRule({
       ...ruleData,
-      created_by: 'current-user-id' // This should come from auth context
+      created_by: '00000000-0000-0000-0000-000000000000' // Default system UUID
     }),
     onSuccess: () => {
       toast.success('Automation rule created successfully');
@@ -73,8 +74,14 @@ export const AutomationRulesManager: React.FC = () => {
     mutationFn: ({ id, updates }: { id: string; updates: Partial<AutomationRule> }) =>
       AutomationService.updateRule(id, updates),
     onSuccess: () => {
-      toast.success('Rule updated successfully');
+      console.log('✅ Rule updated successfully');
+      setIsEditDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ['automation-rules'] });
+      resetForm();
+    },
+    onError: (error: any) => {
+      console.error('❌ Failed to update rule:', error);
+      alert('Failed to update rule: ' + error.message);
     }
   });
 
@@ -112,7 +119,29 @@ export const AutomationRulesManager: React.FC = () => {
       return;
     }
 
-    createRuleMutation.mutate(formData);
+    if (selectedRule) {
+      // Update existing rule
+      updateRuleMutation.mutate({
+        id: selectedRule.id,
+        updates: formData
+      });
+    } else {
+      // Create new rule
+      createRuleMutation.mutate(formData);
+    }
+  };
+
+  const handleEditRule = (rule: AutomationRule) => {
+    setSelectedRule(rule);
+    setFormData({
+      name: rule.name,
+      description: rule.description,
+      rule_type: rule.rule_type,
+      trigger_conditions: rule.trigger_conditions,
+      actions: rule.actions,
+      is_active: rule.is_active
+    });
+    setIsEditDialogOpen(true);
   };
 
   const handleToggleActive = (rule: AutomationRule) => {
@@ -310,6 +339,14 @@ export const AutomationRulesManager: React.FC = () => {
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={() => handleEditRule(rule)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => handleExecuteRule(rule.id)}
                     disabled={!rule.is_active}
                   >
@@ -339,6 +376,72 @@ export const AutomationRulesManager: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Rule Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Automation Rule</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-name">Rule Name</Label>
+              <Input
+                id="edit-name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Enter rule name"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Describe what this rule does"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="edit-rule_type">Rule Type</Label>
+              <Select
+                value={formData.rule_type}
+                onValueChange={(value: any) => setFormData({ ...formData, rule_type: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="notification">Notification</SelectItem>
+                  <SelectItem value="progression">Progression</SelectItem>
+                  <SelectItem value="compliance">Compliance</SelectItem>
+                  <SelectItem value="certificate">Certificate</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="edit-is_active"
+                checked={formData.is_active}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+              />
+              <Label htmlFor="edit-is_active">Active</Label>
+            </div>
+            
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmit} disabled={updateRuleMutation.isPending}>
+                {updateRuleMutation.isPending ? 'Updating...' : 'Update Rule'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

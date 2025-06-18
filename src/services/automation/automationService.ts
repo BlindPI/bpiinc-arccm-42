@@ -8,7 +8,9 @@ export class AutomationService {
       .from('automation_rules')
       .insert({
         ...rule,
-        execution_count: 0
+        execution_count: 0,
+        // Ensure created_by is a valid UUID or use a default system UUID
+        created_by: rule.created_by || '00000000-0000-0000-0000-000000000000'
       })
       .select()
       .single();

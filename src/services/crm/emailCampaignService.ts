@@ -108,7 +108,9 @@ export class EmailCampaignService {
         ...campaign,
         send_date: campaign.send_date?.toISOString(),
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        // Ensure created_by is a valid UUID or use a default system UUID
+        created_by: campaign.created_by || '00000000-0000-0000-0000-000000000000'
       };
 
       const { data, error } = await supabase
