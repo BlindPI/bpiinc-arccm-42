@@ -81,6 +81,7 @@ const navigation = [
   { name: 'Lead Management', href: '/crm/leads', icon: UserPlus, group: 'CRM' },
   { name: 'Opportunities', href: '/crm/opportunities', icon: Target, group: 'CRM' },
   { name: 'Activities', href: '/crm/activities', icon: Activity, group: 'CRM' },
+  { name: 'Email Workflows', href: '/crm/email-workflows', icon: Mail, group: 'CRM' },
   { name: 'Campaign Management', href: '/crm/campaigns', icon: Mail, group: 'CRM' },
   { name: 'Analytics Dashboard', href: '/crm/analytics', icon: BarChart3, group: 'CRM' },
   { name: 'Revenue Analytics', href: '/crm/revenue', icon: DollarSign, group: 'CRM' },

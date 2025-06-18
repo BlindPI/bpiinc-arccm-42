@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import { EnhancedCRMService } from '@/services/crm/enhancedCRMService';
 import { CRMLeadService } from '@/services/crm/crmLeadService';
+import { EnhancedEmailCampaignService } from '@/services/email/enhancedEmailCampaignService';
+import { ResendEmailService } from '@/services/email/resendEmailService';
 import { toast } from 'sonner';
 
 interface LeadDetailViewProps {

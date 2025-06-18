@@ -85,6 +85,7 @@ const navigation: NavigationItem[] = [
   { name: 'CRM Dashboard', href: '/crm', icon: Briefcase, group: 'CRM' },
   { name: 'Lead Management', href: '/crm/leads', icon: UserPlus, group: 'CRM' },
   { name: 'Opportunities', href: '/crm/opportunities', icon: Target, group: 'CRM' },
+  { name: 'Email Workflows', href: '/crm/email-workflows', icon: Mail, group: 'CRM' },
   { name: 'Revenue Analytics', href: '/crm/revenue', icon: DollarSign, group: 'CRM' },
   
   // Analytics & Reports Group
