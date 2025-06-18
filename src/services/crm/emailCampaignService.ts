@@ -242,17 +242,80 @@ export class EmailCampaignService {
 
   static async getCampaignPerformanceSummary(): Promise<any> {
     try {
+      // Get all campaigns
+      const campaigns = await this.getEmailCampaigns();
+      
+      if (!campaigns || campaigns.length === 0) {
+        return {
+          totalCampaigns: 0,
+          activeCampaigns: 0,
+          totalRecipients: 0,
+          averageOpenRate: 0,
+          averageClickRate: 0,
+          totalRevenue: 0,
+          avg_open_rate: 0,
+          total_recipients: 0,
+          total_revenue: 0
+        };
+      }
+
+      // Calculate real metrics from database
+      const totalCampaigns = campaigns.length;
+      const activeCampaigns = campaigns.filter(c =>
+        c.status === 'sending' || c.status === 'scheduled'
+      ).length;
+      
+      const totalRecipients = campaigns.reduce((sum, c) =>
+        sum + (c.total_recipients || 0), 0
+      );
+      
+      const totalDelivered = campaigns.reduce((sum, c) =>
+        sum + (c.delivered_count || 0), 0
+      );
+      
+      const totalOpened = campaigns.reduce((sum, c) =>
+        sum + (c.opened_count || 0), 0
+      );
+      
+      const totalClicked = campaigns.reduce((sum, c) =>
+        sum + (c.clicked_count || 0), 0
+      );
+      
+      const totalRevenue = campaigns.reduce((sum, c) =>
+        sum + (c.revenue_attributed || 0), 0
+      );
+
+      const averageOpenRate = totalDelivered > 0 ?
+        (totalOpened / totalDelivered) * 100 : 0;
+      
+      const averageClickRate = totalOpened > 0 ?
+        (totalClicked / totalOpened) * 100 : 0;
+
       return {
-        totalCampaigns: 24,
-        activeCampaigns: 3,
-        totalRecipients: 15420,
-        averageOpenRate: 22.5,
-        averageClickRate: 3.8,
-        totalRevenue: 45600
+        totalCampaigns,
+        activeCampaigns,
+        totalRecipients,
+        averageOpenRate: Math.round(averageOpenRate * 10) / 10,
+        averageClickRate: Math.round(averageClickRate * 10) / 10,
+        totalRevenue,
+        // Additional fields for compatibility
+        avg_open_rate: Math.round(averageOpenRate * 10) / 10,
+        total_recipients: totalRecipients,
+        total_revenue: totalRevenue
       };
     } catch (error) {
       console.error('Error fetching campaign performance summary:', error);
-      return null;
+      return {
+        totalCampaigns: 0,
+        activeCampaigns: 0,
+        totalRecipients: 0,
+        averageOpenRate: 0,
+        averageClickRate: 0,
+        totalRevenue: 0,
+        avg_open_rate: 0,
+        total_recipients: 0,
+        total_revenue: 0
+      };
     }
   }
 

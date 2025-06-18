@@ -36,11 +36,39 @@ export function CampaignSettingsDialog({ open, onOpenChange }: CampaignSettingsD
     timeZoneHandling: 'sender'
   });
 
-  const handleSave = () => {
-    // Here you would typically save to your backend
-    console.log('Saving campaign settings:', settings);
-    toast.success('Campaign settings saved successfully');
-    onOpenChange(false);
+  const handleSave = async () => {
+    try {
+      // Save settings to database using Supabase
+      const { data, error } = await supabase
+        .from('campaign_settings')
+        .upsert({
+          id: 'default', // Use a default settings record
+          default_from_name: settings.defaultFromName,
+          default_from_email: settings.defaultFromEmail,
+          default_reply_to: settings.defaultReplyTo,
+          enable_tracking: settings.enableTracking,
+          enable_auto_unsubscribe: settings.enableAutoUnsubscribe,
+          send_time_optimization: settings.sendTimeOptimization,
+          max_send_rate: settings.maxSendRate,
+          timezone_handling: settings.timeZoneHandling,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'id'
+        });
+
+      if (error) {
+        console.error('Error saving campaign settings:', error);
+        alert('Failed to save campaign settings: ' + error.message);
+        return;
+      }
+
+      console.log('✅ Campaign settings saved successfully to database:', data);
+      alert('Campaign settings saved successfully!');
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error saving campaign settings:', error);
+      alert('Failed to save campaign settings: ' + (error as Error).message);
+    }
   };
 
   const handleChange = (field: string, value: any) => {

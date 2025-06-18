@@ -38,6 +38,7 @@ import CampaignManagement from '@/pages/CampaignManagement';
 import InstructorPerformance from '@/pages/InstructorPerformance';
 import AuthorizedProviders from '@/pages/AuthorizedProviders';
 import ModernTeams from '@/pages/ModernTeams';
+import CRMDiagnostics from '@/pages/CRMDiagnostics';
 
 export function AppRoutes() {
   const { user } = useAuth();
@@ -177,6 +178,12 @@ export function AppRoutes() {
       <Route path="/crm/revenue" element={
         <ProtectedRoute>
           <RevenueAnalytics />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/crm/diagnostics" element={
+        <ProtectedRoute>
+          <CRMDiagnostics />
         </ProtectedRoute>
       } />
 
