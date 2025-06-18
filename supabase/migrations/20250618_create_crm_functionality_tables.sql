@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS email_campaigns (
   send_date TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  created_by UUID REFERENCES auth.users(id),
+  created_by UUID,
   total_recipients INTEGER DEFAULT 0,
   delivered_count INTEGER DEFAULT 0,
   opened_count INTEGER DEFAULT 0,
@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS email_templates (
   html_content TEXT,
   variables TEXT[] DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  created_by UUID REFERENCES auth.users(id)
+  created_by UUID
 );
 
 -- Campaign Metrics Table (if not exists)
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS automation_rules (
   last_executed TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  created_by UUID REFERENCES auth.users(id)
+  created_by UUID
 );
 
 -- Automation Executions Table (if not exists)
@@ -122,9 +122,9 @@ ON CONFLICT (id) DO NOTHING;
 -- Insert some default email templates
 INSERT INTO email_templates (template_name, template_type, subject_line, content, variables, created_by)
 VALUES
-  ('Welcome Email', 'welcome', 'Welcome to {{company_name}}!', 'Thank you for joining us, {{first_name}}!', ARRAY['company_name', 'first_name'], '00000000-0000-0000-0000-000000000000'),
-  ('Newsletter', 'newsletter', 'Monthly Newsletter - {{month}}', 'Here are the latest updates...', ARRAY['month'], '00000000-0000-0000-0000-000000000000'),
-  ('Training Promotion', 'promotional', 'New Training Program: {{program_name}}', 'We are excited to announce our new training program...', ARRAY['program_name', 'start_date'], '00000000-0000-0000-0000-000000000000')
+  ('Welcome Email', 'welcome', 'Welcome to {{company_name}}!', 'Thank you for joining us, {{first_name}}!', ARRAY['company_name', 'first_name'], NULL),
+  ('Newsletter', 'newsletter', 'Monthly Newsletter - {{month}}', 'Here are the latest updates...', ARRAY['month'], NULL),
+  ('Training Promotion', 'promotional', 'New Training Program: {{program_name}}', 'We are excited to announce our new training program...', ARRAY['program_name', 'start_date'], NULL)
 ON CONFLICT DO NOTHING;
 
 -- Create indexes for better performance

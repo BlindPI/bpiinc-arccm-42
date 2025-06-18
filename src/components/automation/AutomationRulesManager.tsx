@@ -57,7 +57,7 @@ export const AutomationRulesManager: React.FC = () => {
   const createRuleMutation = useMutation({
     mutationFn: (ruleData: RuleFormData) => AutomationService.createRule({
       ...ruleData,
-      created_by: '00000000-0000-0000-0000-000000000000' // Default system UUID
+      created_by: null // System-created rule
     }),
     onSuccess: () => {
       toast.success('Automation rule created successfully');
