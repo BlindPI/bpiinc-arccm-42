@@ -10,6 +10,7 @@ import Settings from '@/pages/Settings';
 import UserManagement from '@/pages/UserManagement';
 import Profile from '@/pages/Profile';
 import CRM from '@/pages/CRM';
+import Phase4CRM from '@/pages/Phase4CRM';
 import EmailCampaigns from '@/pages/EmailCampaigns';
 import { BulkCRMOperations } from '@/components/crm/bulk/BulkCRMOperations';
 
@@ -183,6 +184,12 @@ export function AppRoutes() {
       } />
 
       {/* CRM Routes */}
+      <Route path="/crm/phase4" element={
+        <ProtectedRoute>
+          <Phase4CRM />
+        </ProtectedRoute>
+      } />
+
       <Route path="/crm/leads" element={
         <ProtectedRoute>
           <LeadsManagement />
