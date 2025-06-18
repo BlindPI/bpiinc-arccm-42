@@ -38,6 +38,10 @@ import { OpportunityPipeline } from '@/components/crm/OpportunityPipeline';
 import { ContactsTable } from '@/components/crm/contacts/ContactsTable';
 import { ActivitiesTable } from '@/components/crm/ActivitiesTable';
 import { CreateLeadModal } from '@/components/crm/leads/CreateLeadModal';
+import { AccountsTable } from '@/components/crm/accounts/AccountsTable';
+import { ProfessionalEmailWorkflows } from '@/components/crm/email/ProfessionalEmailWorkflows';
+import { ProfessionalEmailCampaignManager } from '@/components/crm/email/ProfessionalEmailCampaignManager';
+import { RevenueMetricsDashboard } from '@/components/crm/RevenueMetricsDashboard';
 
 interface DashboardMetrics {
   totalLeads: number;
@@ -296,12 +300,15 @@ export function Phase4CRMDashboard() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="leads">Leads</TabsTrigger>
           <TabsTrigger value="opportunities">Opportunities</TabsTrigger>
           <TabsTrigger value="contacts">Contacts</TabsTrigger>
+          <TabsTrigger value="accounts">Accounts</TabsTrigger>
           <TabsTrigger value="activities">Activities</TabsTrigger>
+          <TabsTrigger value="emails">Email Workflows</TabsTrigger>
+          <TabsTrigger value="revenue">Revenue</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -442,6 +449,20 @@ export function Phase4CRMDashboard() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="accounts">
+          <Card>
+            <CardHeader>
+              <CardTitle>Account Management</CardTitle>
+              <CardDescription>
+                Manage your customer and prospect accounts
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AccountsTable />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="activities">
           <Card>
             <CardHeader>
@@ -452,6 +473,48 @@ export function Phase4CRMDashboard() {
             </CardHeader>
             <CardContent>
               <ActivitiesTable />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="emails">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Professional Email Workflows</CardTitle>
+                <CardDescription>
+                  Automated email workflows with professional templates
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ProfessionalEmailWorkflows />
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Email Campaign Management</CardTitle>
+                <CardDescription>
+                  Create and manage professional email campaigns
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ProfessionalEmailCampaignManager />
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="revenue">
+          <Card>
+            <CardHeader>
+              <CardTitle>Revenue Analytics</CardTitle>
+              <CardDescription>
+                Comprehensive revenue tracking and forecasting
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RevenueMetricsDashboard />
             </CardContent>
           </Card>
         </TabsContent>

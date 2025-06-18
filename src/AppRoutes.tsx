@@ -9,10 +9,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import Settings from '@/pages/Settings';
 import UserManagement from '@/pages/UserManagement';
 import Profile from '@/pages/Profile';
-import CRM from '@/pages/CRM';
 import Phase4CRM from '@/pages/Phase4CRM';
-import EmailCampaigns from '@/pages/EmailCampaigns';
-import { BulkCRMOperations } from '@/components/crm/bulk/BulkCRMOperations';
 
 // Import all missing pages
 import UnifiedTeams from '@/pages/UnifiedTeams';
@@ -27,8 +24,6 @@ import Locations from '@/pages/Locations';
 import Certifications from '@/pages/Certifications';
 import CertificateAnalytics from '@/pages/CertificateAnalytics';
 import Rosters from '@/pages/Rosters';
-import LeadsManagement from '@/pages/LeadsManagement';
-import OpportunitiesManagement from '@/pages/OpportunitiesManagement';
 import RevenueAnalytics from '@/pages/RevenueAnalytics';
 import Analytics from '@/pages/Analytics';
 import ExecutiveDashboard from '@/pages/ExecutiveDashboard';
@@ -85,21 +80,10 @@ export function AppRoutes() {
 
       <Route path="/crm" element={
         <ProtectedRoute>
-          <CRM />
+          <Phase4CRM />
         </ProtectedRoute>
       } />
       
-      <Route path="/email-campaigns" element={
-        <ProtectedRoute>
-          <EmailCampaigns />
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/bulk-operations" element={
-        <ProtectedRoute>
-          <BulkCRMOperations />
-        </ProtectedRoute>
-      } />
 
       {/* User Management Routes - UNIFIED TEAMS */}
       <Route path="/teams" element={
@@ -183,34 +167,16 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      {/* CRM Routes */}
-      <Route path="/crm/phase4" element={
+      {/* CRM Routes - Phase 4 Unified */}
+      <Route path="/crm/campaigns" element={
         <ProtectedRoute>
-          <Phase4CRM />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/crm/leads" element={
-        <ProtectedRoute>
-          <LeadsManagement />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/crm/opportunities" element={
-        <ProtectedRoute>
-          <OpportunitiesManagement />
+          <CampaignManagement />
         </ProtectedRoute>
       } />
 
       <Route path="/crm/revenue" element={
         <ProtectedRoute>
           <RevenueAnalytics />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/campaign-management" element={
-        <ProtectedRoute>
-          <CampaignManagement />
         </ProtectedRoute>
       } />
 

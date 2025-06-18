@@ -22,16 +22,9 @@ const NAVIGATION_GROUPS = {
   'Training Management': ['Training Hub', 'Courses', 'Enrollments', 'Enrollment Management', 'Locations'],
   'Certificates': ['Certificates', 'Certificate Analytics', 'Rosters'],
   'CRM': [
-    'CRM Dashboard',
     'Phase 4 CRM Dashboard',
-    'Account Management',
-    'Contact Management',
-    'Lead Management',
-    'Opportunities',
-    'Activities',
     'Email Workflows',
     'Campaign Management',
-    'Analytics Dashboard',
     'Revenue Analytics'
   ],
   'Analytics & Reports': ['Analytics', 'Executive Dashboard', 'Report Scheduler', 'Reports'],
@@ -124,7 +117,7 @@ export function SidebarNavigationControl() {
             'Provider Management': { enabled: true, items: { 'Provider Management': true } },
             'Training Management': { enabled: true, items: { 'Training Hub': true, 'Courses': true, 'Enrollments': true, 'Enrollment Management': true, 'Locations': true } },
             'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
-            'CRM': { enabled: true, items: { 'CRM Dashboard': true, 'Phase 4 CRM Dashboard': true, 'Account Management': true, 'Contact Management': true, 'Lead Management': true, 'Opportunities': true, 'Activities': true, 'Email Workflows': true, 'Campaign Management': true, 'Analytics Dashboard': true, 'Revenue Analytics': true } },
+            'CRM': { enabled: true, items: { 'Phase 4 CRM Dashboard': true, 'Email Workflows': true, 'Campaign Management': true, 'Revenue Analytics': true } },
             'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Executive Dashboard': true, 'Report Scheduler': true, 'Reports': true } },
             'Compliance & Automation': { enabled: true, items: { 'Automation': true, 'Progression Path Builder': true } }
           } : role === 'AD' ? {
@@ -133,14 +126,14 @@ export function SidebarNavigationControl() {
             'Provider Management': { enabled: true, items: { 'Provider Management': true } },
             'Training Management': { enabled: true, items: { 'Training Hub': true, 'Courses': true, 'Enrollments': true, 'Enrollment Management': true, 'Locations': true } },
             'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
-            'CRM': { enabled: true, items: { 'CRM Dashboard': true, 'Phase 4 CRM Dashboard': true, 'Account Management': true, 'Contact Management': true, 'Lead Management': true, 'Opportunities': true, 'Activities': true, 'Email Workflows': true, 'Campaign Management': true, 'Analytics Dashboard': true, 'Revenue Analytics': true } },
+            'CRM': { enabled: true, items: { 'Phase 4 CRM Dashboard': true, 'Email Workflows': true, 'Campaign Management': true, 'Revenue Analytics': true } },
             'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Executive Dashboard': true, 'Report Scheduler': true, 'Reports': true } }
           } : role === 'TM' ? {
             'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } },
             'User Management': { enabled: true, items: { 'Teams': true, 'Supervision': true } },
             'Training Management': { enabled: true, items: { 'Training Hub': true, 'Courses': true, 'Enrollments': true, 'Enrollment Management': true, 'Locations': true } },
             'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
-            'CRM': { enabled: true, items: { 'CRM Dashboard': true, 'Phase 4 CRM Dashboard': true, 'Account Management': true, 'Contact Management': true, 'Lead Management': true, 'Opportunities': true, 'Activities': true, 'Email Workflows': true, 'Campaign Management': true } },
+            'CRM': { enabled: true, items: { 'Phase 4 CRM Dashboard': true, 'Email Workflows': true, 'Campaign Management': true } },
             'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Reports': true } }
           } : {
             'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } }

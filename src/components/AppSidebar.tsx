@@ -81,12 +81,10 @@ const navigation: NavigationItem[] = [
   { name: 'Certificate Analytics', href: '/certificate-analytics', icon: Award, group: 'Certificates' },
   { name: 'Rosters', href: '/rosters', icon: ClipboardList, group: 'Certificates' },
   
-  // CRM Group
-  { name: 'CRM Dashboard', href: '/crm', icon: Briefcase, group: 'CRM' },
-  { name: 'Phase 4 CRM Dashboard', href: '/crm/phase4', icon: Activity, group: 'CRM' },
-  { name: 'Lead Management', href: '/crm/leads', icon: UserPlus, group: 'CRM' },
-  { name: 'Opportunities', href: '/crm/opportunities', icon: Target, group: 'CRM' },
+  // CRM Group - Phase 4 Unified
+  { name: 'Phase 4 CRM Dashboard', href: '/crm', icon: Activity, group: 'CRM' },
   { name: 'Email Workflows', href: '/crm/email-workflows', icon: Mail, group: 'CRM' },
+  { name: 'Campaign Management', href: '/crm/campaigns', icon: Target, group: 'CRM' },
   { name: 'Revenue Analytics', href: '/crm/revenue', icon: DollarSign, group: 'CRM' },
   
   // Analytics & Reports Group
