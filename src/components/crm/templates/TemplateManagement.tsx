@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { EmailCampaignService, CampaignTemplate } from '@/services/crm/emailCampaignService';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 interface TemplateFormData {
@@ -32,6 +33,7 @@ interface TemplateFormData {
 }
 
 export function TemplateManagement() {
+  const { user } = useAuth();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
@@ -45,7 +47,7 @@ export function TemplateManagement() {
     content: '',
     html_content: '',
     variables: [],
-    created_by: 'system'
+    created_by: user?.id || ''
   });
 
   const queryClient = useQueryClient();
@@ -110,12 +112,14 @@ export function TemplateManagement() {
       content: '',
       html_content: '',
       variables: [],
-      created_by: 'system'
+      created_by: user?.id || ''
     });
   };
 
   const handleCreateTemplate = () => {
     console.log('🐛 TEMPLATE-CREATION-DEBUG: Creating template with data:', formData);
+    console.log('🐛 TEMPLATE-CREATION-DEBUG: Current user:', user);
+    console.log('🐛 TEMPLATE-CREATION-DEBUG: User ID:', user?.id);
     
     const templateData: Omit<CampaignTemplate, 'id' | 'created_at'> = {
       template_name: formData.template_name,
@@ -124,9 +128,10 @@ export function TemplateManagement() {
       content: formData.content,
       html_content: formData.html_content,
       variables: formData.variables,
-      created_by: formData.created_by
+      created_by: user?.id || formData.created_by
     };
     
+    console.log('🐛 TEMPLATE-CREATION-DEBUG: Final template data being sent:', templateData);
     createTemplateMutation.mutate(templateData);
   };
 
@@ -170,7 +175,7 @@ export function TemplateManagement() {
       content: template.content,
       html_content: template.html_content || '',
       variables: template.variables || [],
-      created_by: 'system'
+      created_by: user?.id || ''
     });
     setShowCreateDialog(true);
   };

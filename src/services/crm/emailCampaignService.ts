@@ -205,8 +205,13 @@ export class EmailCampaignService {
     try {
       const templateData = {
         ...template,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        // Handle created_by - use null if empty string or invalid UUID
+        created_by: template.created_by && template.created_by.trim() !== '' ? template.created_by : null
       };
+
+      console.log('🐛 SERVICE-DEBUG: Template data being inserted:', templateData);
+      console.log('🐛 SERVICE-DEBUG: created_by value:', templateData.created_by, 'type:', typeof templateData.created_by);
 
       const { data, error } = await supabase
         .from('email_templates')
@@ -214,7 +219,12 @@ export class EmailCampaignService {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('🐛 SERVICE-DEBUG: Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('🐛 SERVICE-DEBUG: Template created successfully:', data);
       
       return {
         ...data,
