@@ -20,9 +20,9 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { CampaignDashboard } from '@/components/crm/campaigns/CampaignDashboard';
-import { EmailCampaignBuilder } from '@/components/crm/campaigns/EmailCampaignBuilder';
 import { CampaignAnalytics } from '@/components/crm/campaigns/CampaignAnalytics';
 import { CampaignSettingsDialog } from '@/components/crm/campaigns/CampaignSettingsDialog';
+import { TemplatePreviewDialog } from '@/components/crm/campaigns/TemplatePreviewDialog';
 import { useQuery } from '@tanstack/react-query';
 import { EmailCampaignService } from '@/services/crm/emailCampaignService';
 import '@/utils/testCampaignDiagnostics';
@@ -38,9 +38,8 @@ interface QuickStat {
 
 export default function CampaignManagement() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [showCampaignBuilder, setShowCampaignBuilder] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string | undefined>();
+  const [previewTemplate, setPreviewTemplate] = useState<any>(null);
 
   // Fetch performance summary for quick stats
   const { data: performanceSummary } = useQuery({
@@ -95,33 +94,13 @@ export default function CampaignManagement() {
   ];
 
   const handleCreateCampaign = () => {
-    setShowCampaignBuilder(true);
-    setSelectedCampaignId(undefined);
-  };
-
-  const handleCampaignSaved = () => {
-    setShowCampaignBuilder(false);
-    setActiveTab('dashboard');
-  };
-
-  const handleCancelBuilder = () => {
-    setShowCampaignBuilder(false);
+    // Redirect to the professional email campaign workflow
+    window.location.href = '/dashboard?tab=email-campaigns';
   };
 
   const handleOpenSettings = () => {
     setShowSettings(true);
   };
-
-  if (showCampaignBuilder) {
-    return (
-      <div className="flex-1 space-y-6 p-6">
-        <EmailCampaignBuilder
-          campaignId={selectedCampaignId}
-          onClose={handleCampaignSaved}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="flex-1 space-y-6 p-6">
@@ -218,9 +197,8 @@ export default function CampaignManagement() {
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              // Use this template to create a new campaign
-                              setSelectedCampaignId(undefined);
-                              setShowCampaignBuilder(true);
+                              // Show template preview
+                              setPreviewTemplate(template);
                             }}
                           >
                             <Eye className="h-4 w-4" />
@@ -250,9 +228,8 @@ export default function CampaignManagement() {
               
               <div className="mt-6 text-center">
                 <Button onClick={() => {
-                  // Create a new template campaign
-                  setSelectedCampaignId(undefined);
-                  setShowCampaignBuilder(true);
+                  // Redirect to professional email campaign workflow
+                  window.location.href = '/dashboard?tab=email-campaigns';
                 }}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create New Template
@@ -314,9 +291,8 @@ export default function CampaignManagement() {
                   <Button
                     className="w-full"
                     onClick={() => {
-                      // Create a new automation workflow
-                      setSelectedCampaignId(undefined);
-                      setShowCampaignBuilder(true);
+                      // Redirect to professional email campaign workflow
+                      window.location.href = '/dashboard?tab=email-campaigns';
                     }}
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -345,9 +321,8 @@ export default function CampaignManagement() {
                     Start testing different subject lines and content to improve your campaigns.
                   </p>
                   <Button onClick={() => {
-                    // Create a new campaign with A/B testing setup
-                    setSelectedCampaignId(undefined);
-                    setShowCampaignBuilder(true);
+                    // Redirect to professional email campaign workflow
+                    window.location.href = '/dashboard?tab=email-campaigns';
                   }}>
                     <Plus className="h-4 w-4 mr-2" />
                     Create A/B Test
@@ -390,6 +365,12 @@ export default function CampaignManagement() {
       <CampaignSettingsDialog
         open={showSettings}
         onOpenChange={setShowSettings}
+      />
+
+      <TemplatePreviewDialog
+        template={previewTemplate}
+        open={!!previewTemplate}
+        onOpenChange={(open) => !open && setPreviewTemplate(null)}
       />
     </div>
   );
