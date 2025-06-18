@@ -6,15 +6,23 @@ import { DashboardLayout } from './DashboardLayout';
 import { PublicLayout } from './PublicLayout';
 import { AppSidebar } from './AppSidebar';
 import { PublicSidebar } from './PublicSidebar';
+import { ErrorBoundary } from './ErrorBoundary';
 import { Loader2 } from 'lucide-react';
 import { ALWAYS_PUBLIC_PAGES, MIXED_ACCESS_PAGES, PROTECTED_PAGES } from '@/config/routes';
 
 export function LayoutRouter({ children }: { children: React.ReactNode }) {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, authReady } = useAuth();
   const location = useLocation();
   
+  console.log('🔍 LayoutRouter: Rendering with state:', {
+    user: !!user,
+    authLoading,
+    authReady,
+    pathname: location.pathname
+  });
+  
   // Show loading state if auth is still initializing
-  if (authLoading) {
+  if (authLoading || !authReady) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30">
         <div className="text-center animate-fade-in">
@@ -38,28 +46,34 @@ export function LayoutRouter({ children }: { children: React.ReactNode }) {
   // Force public layout for always public pages (landing, auth, etc.) - no sidebar
   if (isAlwaysPublicPage) {
     return (
-      <div className="animate-fade-in">
-        <PublicLayout>{children}</PublicLayout>
-      </div>
+      <ErrorBoundary>
+        <div className="animate-fade-in">
+          <PublicLayout>{children}</PublicLayout>
+        </div>
+      </ErrorBoundary>
     );
   }
   
   // For mixed access pages and protected pages, show with sidebar
   if (isMixedAccessPage || isProtectedPage || shouldShowSidebar) {
     return (
-      <SidebarProvider>
-        <div className="min-h-screen flex w-full bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30 animate-fade-in">
-          {user ? <AppSidebar /> : <PublicSidebar />}
-          {user ? <DashboardLayout>{children}</DashboardLayout> : <PublicLayout>{children}</PublicLayout>}
-        </div>
-      </SidebarProvider>
+      <ErrorBoundary>
+        <SidebarProvider>
+          <div className="min-h-screen flex w-full bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30 animate-fade-in">
+            {user ? <AppSidebar /> : <PublicSidebar />}
+            {user ? <DashboardLayout>{children}</DashboardLayout> : <PublicLayout>{children}</PublicLayout>}
+          </div>
+        </SidebarProvider>
+      </ErrorBoundary>
     );
   }
   
   // Default to public layout for any other pages
   return (
-    <div className="animate-fade-in">
-      <PublicLayout>{children}</PublicLayout>
-    </div>
+    <ErrorBoundary>
+      <div className="animate-fade-in">
+        <PublicLayout>{children}</PublicLayout>
+      </div>
+    </ErrorBoundary>
   );
 }

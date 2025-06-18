@@ -30,56 +30,13 @@ export const useAuthInit = () => {
 
     const initializeAuth = async () => {
       try {
-        console.log('🔍 DEBUG: useAuthInit - Setting up auth state listener');
-        
-        // Set up auth state change listener
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
-            console.log('🔍 DEBUG: useAuthInit - Auth state change:', event, session?.user?.id || 'No user');
-            
-            if (!mounted) return;
-
-            setSession(session);
-            
-            if (session?.user) {
-              try {
-                const userWithProfile = await getUserWithProfile(session.user);
-                if (mounted) {
-                  setUser(userWithProfile);
-                }
-              } catch (error) {
-                console.error('🔍 DEBUG: useAuthInit - Error getting user profile:', error);
-                if (mounted) {
-                  setUser({
-                    id: session.user.id,
-                    email: session.user.email,
-                    role: 'IT',
-                    display_name: session.user.email?.split('@')[0] || 'User',
-                    created_at: session.user.created_at,
-                    last_sign_in_at: session.user.last_sign_in_at
-                  });
-                }
-              }
-            } else {
-              if (mounted) {
-                setUser(null);
-              }
-            }
-            
-            if (mounted) {
-              setLoading(false);
-              setAuthReady(true);
-            }
-          }
-        );
-
         console.log('🔍 DEBUG: useAuthInit - Getting initial session');
         
-        // Get initial session
-        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        // Get initial session first
+        const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
         
-        if (error) {
-          console.error('🔍 DEBUG: useAuthInit - Error getting session:', error);
+        if (sessionError) {
+          console.error('🔍 DEBUG: useAuthInit - Error getting session:', sessionError);
           if (mounted) {
             setLoading(false);
             setAuthReady(true);
@@ -112,6 +69,43 @@ export const useAuthInit = () => {
           setLoading(false);
           setAuthReady(true);
         }
+
+        console.log('🔍 DEBUG: useAuthInit - Setting up auth state listener');
+        
+        // Set up auth state change listener after initial session
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            console.log('🔍 DEBUG: useAuthInit - Auth state change:', event, session?.user?.id || 'No user');
+            
+            if (!mounted) return;
+
+            setSession(session);
+            
+            if (session?.user) {
+              try {
+                const userWithProfile = await getUserWithProfile(session.user);
+                setUser(userWithProfile);
+              } catch (error) {
+                console.error('🔍 DEBUG: useAuthInit - Error getting user profile:', error);
+                setUser({
+                  id: session.user.id,
+                  email: session.user.email,
+                  role: 'IT',
+                  display_name: session.user.email?.split('@')[0] || 'User',
+                  created_at: session.user.created_at,
+                  last_sign_in_at: session.user.last_sign_in_at
+                });
+              }
+            } else {
+              setUser(null);
+            }
+            
+            if (!authReady) {
+              setLoading(false);
+              setAuthReady(true);
+            }
+          }
+        );
 
         // Cleanup function
         return () => {

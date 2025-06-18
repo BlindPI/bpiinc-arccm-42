@@ -1,2 +1,3 @@
 
-export { AuthProvider, useAuth } from '@/hooks/useAuth';
+// Re-export from the main AuthContext to maintain compatibility
+export { AuthProvider, useAuth } from '@/contexts/AuthContext';
