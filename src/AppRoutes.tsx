@@ -39,6 +39,7 @@ import InstructorPerformance from '@/pages/InstructorPerformance';
 import AuthorizedProviders from '@/pages/AuthorizedProviders';
 import ModernTeams from '@/pages/ModernTeams';
 import CRMDiagnostics from '@/pages/CRMDiagnostics';
+import EmailWorkflowsPage from '@/app/crm/email-workflows/page';
 
 export function AppRoutes() {
   const { user } = useAuth();
@@ -178,6 +179,12 @@ export function AppRoutes() {
       <Route path="/crm/revenue" element={
         <ProtectedRoute>
           <RevenueAnalytics />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/crm/email-workflows" element={
+        <ProtectedRoute>
+          <EmailWorkflowsPage />
         </ProtectedRoute>
       } />
 

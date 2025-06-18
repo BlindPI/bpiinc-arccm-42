@@ -505,13 +505,13 @@ export function ProfessionalEmailWorkflows() {
                   <SelectValue placeholder="Choose a contact or lead" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="" disabled>Recent Contacts</SelectItem>
+                  <SelectItem value="contacts-header" disabled>Recent Contacts</SelectItem>
                   {recentContacts.map((contact) => (
                     <SelectItem key={contact.id} value={contact.id}>
                       {contact.first_name} {contact.last_name} ({contact.email})
                     </SelectItem>
                   ))}
-                  <SelectItem value="" disabled>Recent Leads</SelectItem>
+                  <SelectItem value="leads-header" disabled>Recent Leads</SelectItem>
                   {recentLeads.map((lead) => (
                     <SelectItem key={lead.id} value={lead.id}>
                       {lead.first_name} {lead.last_name} ({lead.email})

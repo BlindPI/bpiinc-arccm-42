@@ -187,7 +187,11 @@ export default function CampaignManagement() {
         </TabsContent>
 
         <TabsContent value="analytics">
-          <CampaignAnalytics analytics={performanceSummary || {}} />
+          <CampaignAnalytics analytics={(() => {
+            // DEBUG: Log what we're passing to CampaignAnalytics
+            console.log('🔍 CampaignManagement passing performanceSummary to analytics:', performanceSummary);
+            return performanceSummary || {};
+          })()} />
         </TabsContent>
 
         <TabsContent value="templates" className="space-y-6">

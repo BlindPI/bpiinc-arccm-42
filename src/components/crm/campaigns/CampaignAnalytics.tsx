@@ -12,6 +12,11 @@ export interface CampaignAnalyticsProps {
 }
 
 export function CampaignAnalytics({ analytics = {} }: CampaignAnalyticsProps) {
+  // DEBUG: Log what analytics data we're receiving
+  console.log('🔍 CampaignAnalytics received analytics:', analytics);
+  console.log('🔍 Analytics performanceData:', analytics?.performanceData);
+  console.log('🔍 Analytics engagementData:', analytics?.engagementData);
+
   const performanceData = analytics?.performanceData || [
     { name: 'Newsletter', sent: 1200, opened: 480, clicked: 96, converted: 12 },
     { name: 'Promotional', sent: 800, opened: 280, clicked: 45, converted: 8 },
@@ -24,6 +29,11 @@ export function CampaignAnalytics({ analytics = {} }: CampaignAnalyticsProps) {
     { date: '2024-03', openRate: 23.8, clickRate: 3.9 },
     { date: '2024-04', openRate: 26.2, clickRate: 4.5 },
   ];
+
+  // DEBUG: Log what data we're actually using
+  console.log('🔍 Using performanceData:', performanceData);
+  console.log('🔍 Using engagementData:', engagementData);
+  console.log('🔍 Is using mock data?', !analytics?.performanceData && !analytics?.engagementData);
 
   return (
     <div className="space-y-6">
