@@ -8,6 +8,9 @@ import { Progress } from '@/components/ui/progress';
 import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { ComplianceService } from '@/services/compliance/complianceService';
+import { CreateComplianceMetricDialog } from './compliance/CreateComplianceMetricDialog';
+import { UpdateComplianceRecordDialog } from './compliance/UpdateComplianceRecordDialog';
+import { AssignComplianceMetricDialog } from './compliance/AssignComplianceMetricDialog';
 import {
   Shield,
   AlertTriangle,
@@ -34,61 +37,61 @@ export function ProviderComplianceManagement() {
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
 
   // Load real compliance data
-  useEffect(() => {
-    async function loadComplianceData() {
-      if (!isAdmin || !profile) return;
+  const loadComplianceData = async () => {
+    if (!isAdmin || !profile) return;
 
-      setComplianceData(prev => ({ ...prev, loading: true, error: null }));
+    setComplianceData(prev => ({ ...prev, loading: true, error: null }));
 
-      try {
-        // Load all compliance data
-        const [metrics, allRecords] = await Promise.all([
-          ComplianceService.getComplianceMetrics(),
-          ComplianceService.getAllComplianceRecords()
-        ]);
+    try {
+      // Load all compliance data
+      const [metrics, allRecords] = await Promise.all([
+        ComplianceService.getComplianceMetrics(),
+        ComplianceService.getAllComplianceRecords()
+      ]);
 
-        // Calculate summary statistics from real data
-        const totalProviders = new Set(allRecords.map(r => r.user_id)).size;
-        const compliantCount = allRecords.filter(r => r.compliance_status === 'compliant').length;
-        const pendingCount = allRecords.filter(r => r.compliance_status === 'pending').length;
-        const nonCompliantCount = allRecords.filter(r => r.compliance_status === 'non_compliant').length;
-        
-        // Calculate overall score
-        const totalRecords = allRecords.length;
-        const overallScore = totalRecords > 0
-          ? Math.round((compliantCount / totalRecords) * 100)
-          : 0;
+      // Calculate summary statistics from real data
+      const totalProviders = new Set(allRecords.map(r => r.user_id)).size;
+      const compliantCount = allRecords.filter(r => r.compliance_status === 'compliant').length;
+      const pendingCount = allRecords.filter(r => r.compliance_status === 'pending').length;
+      const nonCompliantCount = allRecords.filter(r => r.compliance_status === 'non_compliant').length;
+      
+      // Calculate overall score
+      const totalRecords = allRecords.length;
+      const overallScore = totalRecords > 0
+        ? Math.round((compliantCount / totalRecords) * 100)
+        : 0;
 
-        setComplianceData({
-          metrics,
-          allRecords,
-          summary: {
-            totalProviders,
-            compliantCount,
-            pendingCount,
-            nonCompliantCount,
-            overallScore
-          },
-          loading: false,
-          error: null
-        });
+      setComplianceData({
+        metrics,
+        allRecords,
+        summary: {
+          totalProviders,
+          compliantCount,
+          pendingCount,
+          nonCompliantCount,
+          overallScore
+        },
+        loading: false,
+        error: null
+      });
 
-        console.log('✅ Loaded real compliance data:', {
-          metrics: metrics.length,
-          records: allRecords.length,
-          providers: totalProviders
-        });
+      console.log('✅ Loaded real compliance data:', {
+        metrics: metrics.length,
+        records: allRecords.length,
+        providers: totalProviders
+      });
 
-      } catch (error) {
-        console.error('❌ Error loading compliance data:', error);
-        setComplianceData(prev => ({
-          ...prev,
-          loading: false,
-          error: error.message
-        }));
-      }
+    } catch (error) {
+      console.error('❌ Error loading compliance data:', error);
+      setComplianceData(prev => ({
+        ...prev,
+        loading: false,
+        error: error.message
+      }));
     }
+  };
 
+  useEffect(() => {
     loadComplianceData();
   }, [profile, isAdmin]);
 
@@ -128,10 +131,14 @@ export function ProviderComplianceManagement() {
           <h2 className="text-2xl font-bold">Provider Compliance Management</h2>
           <p className="text-muted-foreground">Monitor and manage compliance across authorized providers</p>
         </div>
-        <Badge variant="outline" className="flex items-center gap-2">
-          <Shield className="h-4 w-4" />
-          Compliance Officer
-        </Badge>
+        <div className="flex items-center gap-2">
+          <CreateComplianceMetricDialog onMetricCreated={loadComplianceData} />
+          <AssignComplianceMetricDialog onAssignmentCreated={loadComplianceData} />
+          <Badge variant="outline" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            Compliance Officer
+          </Badge>
+        </div>
       </div>
 
       {/* Compliance Overview Cards - Real Data */}
@@ -308,9 +315,7 @@ export function ProviderComplianceManagement() {
             <TabsContent value="audits" className="space-y-4">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-medium">Compliance Audit Management</h3>
-                <Button onClick={() => console.log('Schedule audit functionality')}>
-                  Schedule New Audit
-                </Button>
+                <AssignComplianceMetricDialog onAssignmentCreated={loadComplianceData} />
               </div>
               
               <div className="grid gap-4">
@@ -338,9 +343,13 @@ export function ProviderComplianceManagement() {
                                 <span>Last Checked: {new Date(record.last_checked_at || record.updated_at).toLocaleDateString()}</span>
                               </div>
                             </div>
-                            <Button variant="outline" size="sm">
-                              Review
-                            </Button>
+                            {metric && (
+                              <UpdateComplianceRecordDialog
+                                record={record}
+                                metric={metric}
+                                onRecordUpdated={loadComplianceData}
+                              />
+                            )}
                           </div>
                         </CardContent>
                       </Card>
@@ -351,8 +360,9 @@ export function ProviderComplianceManagement() {
                     <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <h3 className="text-lg font-medium mb-2">No Audit Records</h3>
                     <p className="text-muted-foreground mb-4">
-                      No compliance records found. Start by creating compliance metrics.
+                      No compliance records found. Start by assigning compliance metrics to users.
                     </p>
+                    <AssignComplianceMetricDialog onAssignmentCreated={loadComplianceData} />
                   </div>
                 )}
               </div>
@@ -361,9 +371,7 @@ export function ProviderComplianceManagement() {
             <TabsContent value="certifications" className="space-y-4">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-medium">Certification Tracking</h3>
-                <Button onClick={() => console.log('Add certification functionality')}>
-                  Add Certification
-                </Button>
+                <CreateComplianceMetricDialog onMetricCreated={loadComplianceData} />
               </div>
               
               <div className="grid gap-4">
@@ -419,7 +427,17 @@ export function ProviderComplianceManagement() {
             <TabsContent value="reports" className="space-y-4">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-medium">Compliance Reports</h3>
-                <Button onClick={() => console.log('Generate report functionality')}>
+                <Button onClick={() => {
+                  const reportData = {
+                    timestamp: new Date().toISOString(),
+                    summary: complianceData.summary,
+                    metrics: complianceData.metrics.length,
+                    records: complianceData.allRecords.length,
+                    categories: Object.keys(complianceData.metrics.reduce((acc, m) => ({ ...acc, [m.category]: true }), {}))
+                  };
+                  console.log('📊 Compliance Report Generated:', reportData);
+                  // In a real implementation, this would download a CSV/PDF report
+                }}>
                   Generate Report
                 </Button>
               </div>
