@@ -23,6 +23,7 @@ import { CampaignDashboard } from '@/components/crm/campaigns/CampaignDashboard'
 import { CampaignAnalytics } from '@/components/crm/campaigns/CampaignAnalytics';
 import { CampaignSettingsDialog } from '@/components/crm/campaigns/CampaignSettingsDialog';
 import { TemplatePreviewDialog } from '@/components/crm/campaigns/TemplatePreviewDialog';
+import { TemplateManagement } from '@/components/crm/templates/TemplateManagement';
 import { useQuery } from '@tanstack/react-query';
 import { EmailCampaignService } from '@/services/crm/emailCampaignService';
 import '@/utils/testCampaignDiagnostics';
@@ -40,6 +41,8 @@ export default function CampaignManagement() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showSettings, setShowSettings] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<any>(null);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
+  const [showCampaignBuilder, setShowCampaignBuilder] = useState(false);
 
   // Fetch performance summary for quick stats
   const { data: performanceSummary } = useQuery({
@@ -94,8 +97,11 @@ export default function CampaignManagement() {
   ];
 
   const handleCreateCampaign = () => {
-    // Redirect to the professional email campaign workflow
-    window.location.href = '/dashboard?tab=email-campaigns';
+    // DEBUG: Log the action
+    console.log('🐛 TEMPLATE-CREATION-DEBUG: Switching to templates tab for campaign creation');
+    
+    // Switch to templates tab instead of broken redirect
+    setActiveTab('templates');
   };
 
   const handleOpenSettings = () => {
@@ -175,68 +181,7 @@ export default function CampaignManagement() {
         </TabsContent>
 
         <TabsContent value="templates" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Mail className="h-5 w-5" />
-                Email Templates
-              </CardTitle>
-              <CardDescription>
-                Manage and create email templates for your campaigns
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {emailTemplates && emailTemplates.length > 0 ? (
-                  emailTemplates.map((template, index) => (
-                    <Card key={index} className="hover:shadow-md transition-shadow cursor-pointer">
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <Badge variant="outline">{template.template_type || 'general'}</Badge>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              // Show template preview
-                              setPreviewTemplate(template);
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        
-                        <h3 className="font-semibold mb-2">{template.template_name}</h3>
-                        <p className="text-sm text-muted-foreground mb-4">{template.subject_line}</p>
-                        
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>{template.variables?.length || 0} variables</span>
-                          <Badge variant="default">Active</Badge>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                ) : (
-                  <div className="col-span-full text-center py-8">
-                    <Mail className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                    <h3 className="text-lg font-medium mb-2">No Templates Yet</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Create your first email template to get started.
-                    </p>
-                  </div>
-                )}
-              </div>
-              
-              <div className="mt-6 text-center">
-                <Button onClick={() => {
-                  // Redirect to professional email campaign workflow
-                  window.location.href = '/dashboard?tab=email-campaigns';
-                }}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create New Template
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <TemplateManagement />
         </TabsContent>
 
         <TabsContent value="automation" className="space-y-6">
@@ -321,8 +266,8 @@ export default function CampaignManagement() {
                     Start testing different subject lines and content to improve your campaigns.
                   </p>
                   <Button onClick={() => {
-                    // Redirect to professional email campaign workflow
-                    window.location.href = '/dashboard?tab=email-campaigns';
+                    // Switch to templates tab for A/B test creation
+                    setActiveTab('templates');
                   }}>
                     <Plus className="h-4 w-4 mr-2" />
                     Create A/B Test

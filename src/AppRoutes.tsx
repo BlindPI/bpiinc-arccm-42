@@ -56,6 +56,12 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
 
+      <Route path="/dashboard" element={
+        <ProtectedRoute>
+          <Dashboard />
+        </ProtectedRoute>
+      } />
+
       <Route path="/settings" element={
         <ProtectedRoute>
           <Settings />
@@ -270,6 +276,11 @@ export function AppRoutes() {
             <div>
               <h2>No matching route</h2>
               <span>{location.pathname}</span>
+              {/* DEBUG: Log routing issue */}
+              {(() => {
+                console.log('🐛 ROUTING-DEBUG: No matching route found for:', location.pathname, 'Search params:', location.search);
+                return null;
+              })()}
             </div>
           </ProtectedRoute>
         ) : (

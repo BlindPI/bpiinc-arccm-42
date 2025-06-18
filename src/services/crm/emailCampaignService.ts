@@ -226,6 +226,47 @@ export class EmailCampaignService {
     }
   }
 
+  static async updateCampaignTemplate(id: string, updates: Partial<CampaignTemplate>): Promise<CampaignTemplate> {
+    try {
+      const updateData = {
+        ...updates,
+        // Handle date conversion if present
+        created_at: updates.created_at instanceof Date ? updates.created_at.toISOString() : updates.created_at
+      };
+
+      const { data, error } = await supabase
+        .from('email_templates')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      return {
+        ...data,
+        created_at: new Date(data.created_at)
+      };
+    } catch (error) {
+      console.error('Error updating campaign template:', error);
+      throw error;
+    }
+  }
+
+  static async deleteCampaignTemplate(id: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('email_templates')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting campaign template:', error);
+      throw error;
+    }
+  }
+
   static async getCampaignMetrics(campaignId: string): Promise<CampaignMetrics> {
     try {
       const { data, error } = await supabase
