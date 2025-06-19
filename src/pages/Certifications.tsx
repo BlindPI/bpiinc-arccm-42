@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Award, History, Archive, Plus, FileCheck, Upload, AlertTriangle } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { EnhancedPendingRequestsView } from "@/components/certificates/enhanced-requests/EnhancedPendingRequestsView";
+import { CertificateRequestsContainer } from "@/components/certificates/CertificateRequestsContainer";
 import { EnhancedCertificatesView } from "@/components/certificates/enhanced-views/EnhancedCertificatesView";
 import { EnhancedRostersView } from "@/components/certificates/enhanced-views/EnhancedRostersView";
 import { EnhancedArchivedView } from "@/components/certificates/enhanced-views/EnhancedArchivedView";
@@ -108,7 +108,7 @@ export default function Certifications() {
             </TabsContent>
           
             <TabsContent value="requests" className="mt-6 space-y-6">
-              <EnhancedPendingRequestsView />
+              <CertificateRequestsContainer />
             </TabsContent>
             
             <TabsContent value="certificates" className="mt-6">
