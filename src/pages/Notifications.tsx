@@ -18,77 +18,118 @@ import {
 } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { useCertificateNotificationsList, useCertificateNotificationCount } from '@/hooks/useCertificateNotifications';
+import { useCertificateNotificationsList, useCertificateNotificationCount, useMarkCertificateNotificationAsRead } from '@/hooks/useCertificateNotifications';
 import { SimpleCertificateNotificationService } from '@/services/notifications/simpleCertificateNotificationService';
+import { createTestNotifications, clearTestNotifications } from '@/utils/testNotificationSystem';
+import { toast } from 'sonner';
 
 export default function Notifications() {
   const { data: profile } = useProfile();
   const [filter, setFilter] = useState<'all' | 'unread' | 'important'>('all');
   
-  // Add logging to validate our diagnosis
+  // Use real certificate notifications
   const { data: realNotifications = [], isLoading } = useCertificateNotificationsList();
   const { data: realUnreadCount = 0 } = useCertificateNotificationCount();
+  const markAsRead = useMarkCertificateNotificationAsRead();
   
   useEffect(() => {
-    console.log('🔍 NOTIFICATION DIAGNOSIS:');
-    console.log('📊 Mock notifications count:', mockNotifications.length);
-    console.log('📊 Real certificate notifications count:', realNotifications.length);
-    console.log('📊 Mock unread count:', mockNotifications.filter(n => !n.read).length);
-    console.log('📊 Real unread count:', realUnreadCount);
-    console.log('📋 Real notifications data:', realNotifications);
+    console.log('✅ NOTIFICATION SYSTEM FIXED:');
+    console.log('📊 Certificate notifications count:', realNotifications.length);
+    console.log('📊 Unread count:', realUnreadCount);
+    console.log('📋 Notifications data:', realNotifications);
     console.log('👤 Current user profile:', profile);
     
-    if (realNotifications.length === 0 && mockNotifications.length > 0) {
-      console.log('❌ PROBLEM CONFIRMED: Using mock data instead of real certificate notifications');
-    }
-    
-    if (realNotifications.length > 0) {
-      console.log('✅ Real certificate notifications found - system is working');
+    if (realNotifications.length === 0) {
+      console.log('ℹ️ No certificate notifications yet - this is normal for new users');
+    } else {
+      console.log('✅ Certificate notifications loaded successfully');
     }
   }, [realNotifications, realUnreadCount, profile]);
 
-  const mockNotifications = [
-    {
-      id: '1',
-      title: 'Certificate Request Approved',
-      message: 'Your CPR Level C certificate request has been approved.',
-      type: 'success',
-      category: 'CERTIFICATE',
-      read: false,
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      priority: 'HIGH'
-    },
-    {
-      id: '2',
-      title: 'Course Schedule Updated',
-      message: 'The schedule for First Aid Basic course has been updated.',
-      type: 'info',
-      category: 'COURSE',
-      read: false,
-      timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-      priority: 'NORMAL'
-    },
-    {
-      id: '3',
-      title: 'Compliance Check Required',
-      message: 'Your annual compliance check is due in 7 days.',
-      type: 'warning',
-      category: 'COMPLIANCE',
-      read: true,
-      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-      priority: 'HIGH'
-    },
-    {
-      id: '4',
-      title: 'New User Registration',
-      message: 'John Doe has registered and requires role assignment.',
-      type: 'info',
-      category: 'USER',
-      read: true,
-      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      priority: 'NORMAL'
+  // Use real certificate notifications instead of mock data
+  const notifications = realNotifications.map(notification => ({
+    id: notification.id,
+    title: notification.title,
+    message: notification.message,
+    type: getNotificationTypeFromCertificateType(notification.notification_type),
+    category: 'CERTIFICATE',
+    read: !!notification.read_at,
+    timestamp: notification.created_at,
+    priority: getPriorityFromCertificateType(notification.notification_type)
+  }));
+  
+  // Helper functions to map certificate notification types to UI types
+  function getNotificationTypeFromCertificateType(type: string): string {
+    switch (type) {
+      case 'batch_approved':
+      case 'certificate_approved':
+        return 'success';
+      case 'batch_rejected':
+      case 'certificate_rejected':
+        return 'warning';
+      case 'batch_submitted':
+        return 'info';
+      default:
+        return 'info';
     }
-  ];
+  
+  function getPriorityFromCertificateType(type: string): string {
+    switch (type) {
+      case 'batch_approved':
+      case 'certificate_approved':
+      case 'batch_rejected':
+      case 'certificate_rejected':
+        return 'HIGH';
+      case 'batch_submitted':
+        return 'NORMAL';
+      default:
+        return 'NORMAL';
+    }
+  }
+
+  // Handle marking notification as read
+  const handleMarkAsRead = async (notificationId: string) => {
+    try {
+      await markAsRead.mutateAsync(notificationId);
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
+  };
+  
+  // Handle marking all notifications as read
+  const handleMarkAllAsRead = async () => {
+    try {
+      const unreadNotifications = notifications.filter(n => !n.read);
+      await Promise.all(
+        unreadNotifications.map(notification =>
+          markAsRead.mutateAsync(notification.id)
+        )
+      );
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+    }
+  };
+
+  // Test functions for demonstration
+  const handleCreateTestNotifications = async () => {
+    try {
+      await createTestNotifications();
+      toast.success('Test notifications created successfully!');
+    } catch (error) {
+      toast.error('Failed to create test notifications');
+      console.error(error);
+    }
+  };
+
+  const handleClearNotifications = async () => {
+    try {
+      await clearTestNotifications();
+      toast.success('All notifications cleared!');
+    } catch (error) {
+      toast.error('Failed to clear notifications');
+      console.error(error);
+    }
+  };
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -99,13 +140,13 @@ export default function Notifications() {
     }
   };
 
-  const filteredNotifications = mockNotifications.filter(notification => {
+  const filteredNotifications = notifications.filter(notification => {
     if (filter === 'unread') return !notification.read;
     if (filter === 'important') return notification.priority === 'HIGH';
     return true;
   });
 
-  const unreadCount = mockNotifications.filter(n => !n.read).length;
+  const unreadCount = realUnreadCount;
 
   return (
     <div className="space-y-6">
@@ -115,11 +156,21 @@ export default function Notifications() {
         subtitle="Stay updated with system alerts and messages"
         actions={
           <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleCreateTestNotifications}>
+              Add Test Data
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleClearNotifications}>
+              Clear All
+            </Button>
             <Button variant="outline">
               <Settings className="h-4 w-4 mr-2" />
               Preferences
             </Button>
-            <Button variant="outline">
+            <Button
+              variant="outline"
+              onClick={handleMarkAllAsRead}
+              disabled={unreadCount === 0}
+            >
               <Check className="h-4 w-4 mr-2" />
               Mark All Read
             </Button>
@@ -135,7 +186,7 @@ export default function Notifications() {
               <Bell className="h-5 w-5 text-blue-600" />
               <span className="font-medium">Total</span>
             </div>
-            <div className="text-2xl font-bold mt-2">{mockNotifications.length}</div>
+            <div className="text-2xl font-bold mt-2">{notifications.length}</div>
           </CardContent>
         </Card>
 
@@ -156,7 +207,7 @@ export default function Notifications() {
               <span className="font-medium">Important</span>
             </div>
             <div className="text-2xl font-bold mt-2">
-              {mockNotifications.filter(n => n.priority === 'HIGH').length}
+              {notifications.filter(n => n.priority === 'HIGH').length}
             </div>
           </CardContent>
         </Card>
@@ -168,7 +219,7 @@ export default function Notifications() {
               <span className="font-medium">Read</span>
             </div>
             <div className="text-2xl font-bold mt-2">
-              {mockNotifications.filter(n => n.read).length}
+              {notifications.filter(n => n.read).length}
             </div>
           </CardContent>
         </Card>
@@ -205,8 +256,29 @@ export default function Notifications() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {filteredNotifications.map((notification) => (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <span className="ml-2 text-muted-foreground">Loading notifications...</span>
+            </div>
+          ) : filteredNotifications.length === 0 ? (
+            <div className="text-center py-8">
+              <Bell className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {filter === 'unread' ? 'No Unread Notifications' :
+                 filter === 'important' ? 'No Important Notifications' :
+                 'No Notifications'}
+              </h3>
+              <p className="text-gray-500">
+                {notifications.length === 0
+                  ? "You'll receive notifications here when there are certificate updates."
+                  : "All caught up! No notifications match your current filter."
+                }
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredNotifications.map((notification) => (
               <div
                 key={notification.id}
                 className={`flex items-start gap-4 p-4 border rounded-lg ${
@@ -237,17 +309,20 @@ export default function Notifications() {
                 </div>
                 <div className="flex gap-1">
                   {!notification.read && (
-                    <Button variant="ghost" size="sm">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleMarkAsRead(notification.id)}
+                      title="Mark as read"
+                    >
                       <Check className="h-4 w-4" />
                     </Button>
                   )}
-                  <Button variant="ghost" size="sm">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
                 </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
