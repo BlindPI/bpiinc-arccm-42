@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,10 +18,34 @@ import {
 } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { useCertificateNotificationsList, useCertificateNotificationCount } from '@/hooks/useCertificateNotifications';
+import { SimpleCertificateNotificationService } from '@/services/notifications/simpleCertificateNotificationService';
 
 export default function Notifications() {
   const { data: profile } = useProfile();
   const [filter, setFilter] = useState<'all' | 'unread' | 'important'>('all');
+  
+  // Add logging to validate our diagnosis
+  const { data: realNotifications = [], isLoading } = useCertificateNotificationsList();
+  const { data: realUnreadCount = 0 } = useCertificateNotificationCount();
+  
+  useEffect(() => {
+    console.log('🔍 NOTIFICATION DIAGNOSIS:');
+    console.log('📊 Mock notifications count:', mockNotifications.length);
+    console.log('📊 Real certificate notifications count:', realNotifications.length);
+    console.log('📊 Mock unread count:', mockNotifications.filter(n => !n.read).length);
+    console.log('📊 Real unread count:', realUnreadCount);
+    console.log('📋 Real notifications data:', realNotifications);
+    console.log('👤 Current user profile:', profile);
+    
+    if (realNotifications.length === 0 && mockNotifications.length > 0) {
+      console.log('❌ PROBLEM CONFIRMED: Using mock data instead of real certificate notifications');
+    }
+    
+    if (realNotifications.length > 0) {
+      console.log('✅ Real certificate notifications found - system is working');
+    }
+  }, [realNotifications, realUnreadCount, profile]);
 
   const mockNotifications = [
     {
