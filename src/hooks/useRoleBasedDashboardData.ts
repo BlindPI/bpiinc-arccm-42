@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from './useProfile';
@@ -34,9 +33,20 @@ export function useRoleBasedDashboardData(): RoleBasedDashboardData {
   const userId = user?.id;
   const primaryTeam = teamMemberships[0]; // Use first team as primary
 
+  console.log('🔍 useRoleBasedDashboardData - Debug Info:', {
+    userId,
+    userRole,
+    teamMemberships: teamMemberships.length,
+    primaryTeam: primaryTeam ? {
+      team_id: primaryTeam.team_id,
+      role: primaryTeam.role
+    } : 'None'
+  });
+
   // Determine access levels based on role
   const canViewSystemMetrics = userRole ? ['SA', 'AD'].includes(userRole) : false;
-  const canViewTeamMetrics = !!primaryTeam && !canViewSystemMetrics;
+  const isAPUser = userRole === 'AP';
+  const canViewTeamMetrics = (!!primaryTeam && !canViewSystemMetrics) || isAPUser;
 
   // Get metrics based on role and access level
   const { data: metrics, isLoading: metricsLoading, error: metricsError } = useQuery({
@@ -49,6 +59,11 @@ export function useRoleBasedDashboardData(): RoleBasedDashboardData {
       // System admins get global metrics
       if (canViewSystemMetrics) {
         return DashboardDataService.getSystemAdminMetrics();
+      }
+
+      // AP users get location-based metrics
+      if (isAPUser) {
+        return DashboardDataService.getAPUserMetrics(userId);
       }
 
       // Team members get team-scoped metrics
@@ -80,12 +95,45 @@ export function useRoleBasedDashboardData(): RoleBasedDashboardData {
       return DashboardDataService.getRecentActivities(
         userId, 
         userRole, 
-        canViewTeamMetrics ? primaryTeam?.team_id : undefined
+        canViewTeamMetrics && !isAPUser ? primaryTeam?.team_id : undefined
       );
     },
     enabled: !!userId && !!userRole,
     refetchInterval: 10 * 60 * 1000 // Refetch every 10 minutes
   });
+
+  // For AP users, create a team context based on their location
+  const getTeamContext = () => {
+    if (isAPUser && metrics) {
+      return {
+        teamId: 'ap-location', // Placeholder ID for AP users
+        teamName: metrics.locationName || 'Location Dashboard',
+        locationName: metrics.locationName || 'No Location',
+        locationCity: metrics.locationCity,
+        locationState: metrics.locationState,
+        locationAddress: metrics.locationAddress,
+        apUserName: metrics.apUserName,
+        apUserEmail: metrics.apUserEmail,
+        apUserPhone: metrics.apUserPhone
+      };
+    }
+    
+    if (primaryTeam && metrics) {
+      return {
+        teamId: primaryTeam.team_id,
+        teamName: metrics.locationName || 'Unknown Team',
+        locationName: metrics.locationName || 'No Location',
+        locationCity: metrics.locationCity,
+        locationState: metrics.locationState,
+        locationAddress: metrics.locationAddress,
+        apUserName: metrics.apUserName,
+        apUserEmail: metrics.apUserEmail,
+        apUserPhone: metrics.apUserPhone
+      };
+    }
+    
+    return undefined;
+  };
 
   return {
     metrics: metrics || {},
@@ -93,17 +141,7 @@ export function useRoleBasedDashboardData(): RoleBasedDashboardData {
     isLoading: metricsLoading || activitiesLoading,
     error: metricsError?.message || null,
     canViewSystemMetrics,
-    canViewTeamMetrics,
-    teamContext: primaryTeam && metrics ? {
-      teamId: primaryTeam.team_id,
-      teamName: primaryTeam.team_name || 'Unknown Team',
-      locationName: metrics.locationName || 'No Location',
-      locationCity: metrics.locationCity,
-      locationState: metrics.locationState,
-      locationAddress: metrics.locationAddress,
-      apUserName: metrics.apUserName,
-      apUserEmail: metrics.apUserEmail,
-      apUserPhone: metrics.apUserPhone
-    } : undefined
+    canViewTeamMetrics: canViewTeamMetrics || isAPUser,
+    teamContext: getTeamContext()
   };
 }

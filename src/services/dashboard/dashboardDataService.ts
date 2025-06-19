@@ -1,23 +1,31 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface DashboardMetrics {
+  // System metrics
   totalUsers?: number;
   activeCourses?: number;
   totalCertificates?: number;
   pendingRequests?: number;
+  
+  // Team metrics
   teamSize?: number;
   locationName?: string;
-  locationAddress?: string;
   locationCity?: string;
   locationState?: string;
+  locationAddress?: string;
+  
+  // AP user info
   apUserName?: string;
   apUserEmail?: string;
   apUserPhone?: string;
+  
+  // Instructor metrics
   upcomingClasses?: number;
   studentsTaught?: number;
   certificationsIssued?: number;
   teachingHours?: number;
+  
+  // Student metrics
   activeCertifications?: number;
   expiringSoon?: number;
   complianceIssues?: number;
@@ -85,20 +93,172 @@ export class DashboardDataService {
   }
 
   /**
+   * Get metrics for AP users based on their location assignments
+   */
+  static async getAPUserMetrics(userId: string): Promise<DashboardMetrics> {
+    try {
+      // Check if user is an AP user
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role, display_name, email, phone')
+        .eq('id', userId)
+        .single();
+      
+      if (profileError || profile?.role !== 'AP') {
+        throw new Error('User is not an AP user');
+      }
+      
+      // Get AP user's location assignments
+      const { data: assignments, error: assignmentsError } = await supabase
+        .from('ap_user_location_assignments')
+        .select(`
+          location_id,
+          status,
+          locations (
+            id,
+            name,
+            city,
+            state,
+            address
+          )
+        `)
+        .eq('ap_user_id', userId);
+      
+      if (assignmentsError) throw assignmentsError;
+      
+      // Filter for active assignments only
+      const activeAssignments = assignments?.filter(a => a.status === 'active') || [];
+      
+      if (activeAssignments.length === 0) {
+        console.log(`AP user ${userId} has no active location assignments`);
+        return {
+          locationName: 'No Location Assigned',
+          totalCertificates: 0,
+          activeCourses: 0,
+          apUserName: profile.display_name,
+          apUserEmail: profile.email,
+          apUserPhone: profile.phone
+        };
+      }
+      
+      // Use the first active location assignment
+      const primaryLocation = activeAssignments[0].locations;
+      
+      if (!primaryLocation || !primaryLocation.id) {
+        console.error(`Invalid location data for AP user ${userId}:`, activeAssignments[0]);
+        return {
+          locationName: 'Invalid Location Data',
+          totalCertificates: 0,
+          activeCourses: 0,
+          apUserName: profile.display_name,
+          apUserEmail: profile.email,
+          apUserPhone: profile.phone
+        };
+      }
+      
+      console.log(`AP user ${userId} primary location:`, primaryLocation.id);
+      
+      // Get certificates for this location
+      const { count: totalCertificates, error: certsError } = await supabase
+        .from('certificates')
+        .select('*', { count: 'exact', head: true })
+        .eq('location_id', primaryLocation.id);
+      
+      if (certsError) {
+        console.error(`Error fetching certificates for location ${primaryLocation.id}:`, certsError);
+        throw certsError;
+      }
+      
+      // Get teams for this location
+      const { data: teams, error: teamsError } = await supabase
+        .from('teams')
+        .select('id')
+        .eq('location_id', primaryLocation.id)
+        .eq('status', 'active');
+      
+      if (teamsError) {
+        console.error(`Error fetching teams for location ${primaryLocation.id}:`, teamsError);
+        throw teamsError;
+      }
+      
+      // Get team members count
+      let teamSize = 0;
+      if (teams && teams.length > 0) {
+        const teamIds = teams.map(t => t.id);
+        console.log(`Found ${teamIds.length} teams for location ${primaryLocation.id}:`, teamIds);
+        
+        const { count: memberCount, error: memberError } = await supabase
+          .from('team_members')
+          .select('*', { count: 'exact', head: true })
+          .in('team_id', teamIds)
+          .eq('status', 'active');
+        
+        if (!memberError) {
+          teamSize = memberCount || 0;
+        } else {
+          console.error(`Error fetching team members for teams:`, memberError);
+        }
+      }
+      
+      // Get active courses for this location
+      const { count: activeCourses, error: coursesError } = await supabase
+        .from('course_offerings')
+        .select('*', { count: 'exact', head: true })
+        .eq('location_id', primaryLocation.id)
+        .eq('status', 'SCHEDULED');
+      
+      if (coursesError) {
+        console.error(`Error fetching courses for location ${primaryLocation.id}:`, coursesError);
+        throw coursesError;
+      }
+      
+      return {
+        teamSize,
+        locationName: primaryLocation.name,
+        locationCity: primaryLocation.city,
+        locationState: primaryLocation.state,
+        locationAddress: primaryLocation.address,
+        totalCertificates: totalCertificates || 0,
+        activeCourses: activeCourses || 0,
+        apUserName: profile.display_name,
+        apUserEmail: profile.email,
+        apUserPhone: profile.phone
+      };
+    } catch (error) {
+      console.error('Error fetching AP user metrics:', error);
+      return {
+        teamSize: 0,
+        locationName: 'Error loading location',
+        totalCertificates: 0,
+        activeCourses: 0
+      };
+    }
+  }
+
+  /**
    * Get metrics for team-scoped users (team members only see their team data)
    */
   static async getTeamScopedMetrics(teamId: string, userId: string): Promise<DashboardMetrics> {
     try {
+      console.log(`Getting team-scoped metrics for team ${teamId}, user ${userId}`);
+      
       // Verify user is a member of this team
       const { data: membership, error: membershipError } = await supabase
         .from('team_members')
-        .select('role')
+        .select('role, status')
         .eq('team_id', teamId)
-        .eq('user_id', userId)
-        .single();
+        .eq('user_id', userId);
 
-      if (membershipError || !membership) {
-        throw new Error('Access denied: User not a member of this team');
+      if (membershipError) {
+        console.error(`Error verifying team membership:`, membershipError);
+        throw membershipError;
+      }
+      
+      // Check if user is an active member of this team
+      const activeMembership = membership?.find(m => m.status === 'active');
+      if (!activeMembership) {
+        console.error(`User ${userId} is not an active member of team ${teamId}`);
+        throw new Error('Access denied: User not an active member of this team');
       }
 
       // Get team info with expanded location and provider data
@@ -109,6 +269,7 @@ export class DashboardDataService {
           name,
           location_id,
           provider_id,
+          status,
           locations (
             id,
             name,
@@ -132,49 +293,98 @@ export class DashboardDataService {
         .eq('id', teamId)
         .single();
 
-      if (teamError) throw teamError;
+      if (teamError) {
+        console.error(`Error fetching team data:`, teamError);
+        throw teamError;
+      }
+      
+      if (team.status !== 'active') {
+        console.warn(`Team ${teamId} is not active (status: ${team.status})`);
+      }
+      
+      if (!team.location_id) {
+        console.warn(`Team ${teamId} has no location_id`);
+      }
 
       // Get team size
-      const { count: teamSize } = await supabase
+      const { count: teamSize, error: teamSizeError } = await supabase
         .from('team_members')
         .select('*', { count: 'exact', head: true })
-        .eq('team_id', teamId);
+        .eq('team_id', teamId)
+        .eq('status', 'active');
+        
+      if (teamSizeError) {
+        console.error(`Error fetching team size:`, teamSizeError);
+      }
 
       // Get location-specific certificates if location exists
       let totalCertificates = 0;
       if (team.location_id) {
-        const { count } = await supabase
+        const { count, error: certCountError } = await supabase
           .from('certificates')
           .select('*', { count: 'exact', head: true })
           .eq('location_id', team.location_id);
-        totalCertificates = count || 0;
+          
+        if (certCountError) {
+          console.error(`Error fetching certificate count:`, certCountError);
+        } else {
+          totalCertificates = count || 0;
+          console.log(`Found ${totalCertificates} certificates for location ${team.location_id}`);
+        }
       }
 
       // Get location-specific courses
       let activeCourses = 0;
       if (team.location_id) {
-        const { count } = await supabase
+        const { count, error: courseCountError } = await supabase
           .from('course_offerings')
           .select('*', { count: 'exact', head: true })
           .eq('location_id', team.location_id)
           .eq('status', 'SCHEDULED');
-        activeCourses = count || 0;
+          
+        if (courseCountError) {
+          console.error(`Error fetching course count:`, courseCountError);
+        } else {
+          activeCourses = count || 0;
+        }
       }
 
       // Extract AP user contact details
-      const apUser = team.authorized_providers ? {
-        name: team.authorized_providers.profiles?.display_name || team.authorized_providers.name,
-        email: team.authorized_providers.profiles?.email || team.authorized_providers.contact_email,
-        phone: team.authorized_providers.profiles?.phone || team.authorized_providers.contact_phone
-      } : null;
+      let apUser = null;
+      if (team.authorized_providers) {
+        // Check if provider has a linked user profile
+        if (team.authorized_providers.user_id && team.authorized_providers.profiles) {
+          apUser = {
+            name: team.authorized_providers.profiles.display_name,
+            email: team.authorized_providers.profiles.email,
+            phone: team.authorized_providers.profiles.phone
+          };
+          console.log(`Found AP user profile for provider ${team.provider_id}`);
+        } else {
+          // Fall back to provider contact info
+          apUser = {
+            name: team.authorized_providers.name,
+            email: team.authorized_providers.contact_email,
+            phone: team.authorized_providers.contact_phone
+          };
+          console.log(`Using provider contact info for provider ${team.provider_id}`);
+        }
+      } else if (team.provider_id) {
+        console.warn(`Provider ${team.provider_id} exists but data could not be loaded`);
+      }
 
       // Prepare location data
-      const location = team.locations ? {
-        name: team.locations.name,
-        address: team.locations.address,
-        city: team.locations.city,
-        state: team.locations.state
-      } : null;
+      let location = null;
+      if (team.locations) {
+        location = {
+          name: team.locations.name,
+          address: team.locations.address,
+          city: team.locations.city,
+          state: team.locations.state
+        };
+      } else if (team.location_id) {
+        console.warn(`Location ${team.location_id} exists but data could not be loaded`);
+      }
 
       return {
         teamSize: teamSize || 0,
@@ -335,6 +545,7 @@ export class DashboardDataService {
    */
   static async getRecentActivities(userId: string, userRole: string, teamId?: string): Promise<RecentActivity[]> {
     try {
+      console.log(`Getting recent activities for user ${userId}, role ${userRole}, team ${teamId || 'none'}`);
       const activities: RecentActivity[] = [];
 
       if (['SA', 'AD'].includes(userRole)) {
@@ -345,34 +556,90 @@ export class DashboardDataService {
           .order('created_at', { ascending: false })
           .limit(10);
 
-        if (!error && auditLogs) {
+        if (error) {
+          console.error('Error fetching audit logs:', error);
+        } else if (auditLogs) {
           activities.push(...auditLogs.map(log => ({
             id: log.id,
             type: 'system',
             description: log.action,
             timestamp: log.created_at
           })));
+          console.log(`Found ${auditLogs.length} audit logs for admin user`);
+        }
+      } else if (userRole === 'AP') {
+        // AP users see activities for their locations
+        const { data: apLocations, error: locError } = await supabase
+          .from('ap_user_location_assignments')
+          .select('location_id, status')
+          .eq('ap_user_id', userId);
+          
+        if (locError) {
+          console.error('Error fetching AP location assignments:', locError);
+          return activities;
+        }
+        
+        // Filter for active assignments only
+        const activeLocations = apLocations?.filter(loc => loc.status === 'active') || [];
+          
+        if (activeLocations.length > 0) {
+          const locationIds = activeLocations.map(loc => loc.location_id);
+          console.log(`AP user has ${locationIds.length} active locations:`, locationIds);
+          
+          const { data: certActivities, error } = await supabase
+            .from('certificates')
+            .select('id, course_name, created_at, recipient_name, location_id')
+            .in('location_id', locationIds)
+            .order('created_at', { ascending: false })
+            .limit(10);
+            
+          if (error) {
+            console.error('Error fetching certificate activities:', error);
+          } else if (certActivities) {
+            activities.push(...certActivities.map(cert => ({
+              id: cert.id,
+              type: 'certificate',
+              description: `Certificate issued for ${cert.course_name}`,
+              timestamp: cert.created_at,
+              user_name: cert.recipient_name
+            })));
+            console.log(`Found ${certActivities.length} certificate activities for AP user locations`);
+          }
+        } else {
+          console.warn(`AP user ${userId} has no active location assignments`);
         }
       } else if (teamId) {
-        // Team members see team-specific activities only
+        // Team members see team-specific activities
         // First get the team's location_id
         const { data: teamData, error: teamError } = await supabase
           .from('teams')
-          .select('location_id')
+          .select('location_id, name')
           .eq('id', teamId)
           .single();
           
-        if (teamError) throw teamError;
+        if (teamError) {
+          console.error('Error fetching team data:', teamError);
+          return activities;
+        }
+        
+        if (!teamData.location_id) {
+          console.warn(`Team ${teamId} has no location_id`);
+          return activities;
+        }
+        
+        console.log(`Team ${teamId} (${teamData.name}) has location_id: ${teamData.location_id}`);
         
         // Then use the location_id to filter certificates
         const { data: teamActivities, error } = await supabase
           .from('certificates')
-          .select('id, course_name, created_at, recipient_name')
+          .select('id, course_name, created_at, recipient_name, location_id')
           .eq('location_id', teamData.location_id)
           .order('created_at', { ascending: false })
-          .limit(5);
+          .limit(10);
 
-        if (!error && teamActivities) {
+        if (error) {
+          console.error('Error fetching team certificate activities:', error);
+        } else if (teamActivities) {
           activities.push(...teamActivities.map(cert => ({
             id: cert.id,
             type: 'certificate',
@@ -380,6 +647,7 @@ export class DashboardDataService {
             timestamp: cert.created_at,
             user_name: cert.recipient_name
           })));
+          console.log(`Found ${teamActivities.length} certificate activities for team location ${teamData.location_id}`);
         }
       } else {
         // Individual user activities
@@ -388,15 +656,18 @@ export class DashboardDataService {
           .select('id, course_name, created_at')
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
-          .limit(5);
+          .limit(10);
 
-        if (!error && userActivities) {
+        if (error) {
+          console.error('Error fetching user certificate activities:', error);
+        } else if (userActivities) {
           activities.push(...userActivities.map(cert => ({
             id: cert.id,
             type: 'certificate',
             description: `Received certificate for ${cert.course_name}`,
             timestamp: cert.created_at
           })));
+          console.log(`Found ${userActivities.length} certificate activities for user ${userId}`);
         }
       }
 
