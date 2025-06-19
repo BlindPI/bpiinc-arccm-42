@@ -8,6 +8,7 @@ import { useCourseData } from '@/hooks/useCourseData';
 import { addMonths, format } from 'date-fns';
 import { generateRosterId } from '@/types/batch-upload';
 import { createRoster } from '@/services/rosterService';
+import { SimpleCertificateNotificationService } from '@/services/notifications/simpleCertificateNotificationService';
 
 export function useBatchSubmission() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -203,40 +204,19 @@ export function useBatchSubmission() {
       toast.success(`Successfully submitted ${successCount} certificate requests for review`);
       
       try {
-        // Get all admin users to notify them
-        const adminUsers = await getAdminUsers();
-        
-        console.log(`Sending notifications to ${adminUsers.length} administrators`);
-        
-        // Send notification to each administrator individually
-        for (const admin of adminUsers) {
-          try {
-            await supabase.functions.invoke('send-notification', {
-              body: {
-                userId: admin.id,
-                type: 'CERTIFICATE_REQUEST',
-                title: 'Batch Certificate Request',
-                message: `A batch of ${successCount} certificate requests has been submitted by ${user.email} and is awaiting review. Roster ID: ${rosterName}`,
-                priority: 'HIGH',
-                category: 'CERTIFICATE'
-              }
-            });
-            console.log(`Notification sent to admin: ${admin.email}`);
-          } catch (notificationError) {
-            console.error(`Error sending notification to admin ${admin.email}:`, notificationError);
-          }
-        }
+        // Notify administrators about the batch submission
+        await SimpleCertificateNotificationService.notifyAdminsOfBatchSubmission(
+          batchId,
+          profile?.display_name || user.email || 'User',
+          successCount
+        );
 
-        // Also send a system-level notification
-        await supabase.functions.invoke('send-notification', {
-          body: {
-            type: 'CERTIFICATE_REQUEST',
-            title: 'Batch Certificate Request',
-            message: `A batch of ${successCount} certificate requests has been submitted and is awaiting review. Roster ID: ${rosterName}`,
-            priority: 'HIGH',
-            category: 'CERTIFICATE'
-          }
-        });
+        // Notify the submitter
+        await SimpleCertificateNotificationService.notifyBatchSubmitted(
+          user.id,
+          batchId,
+          successCount
+        );
         
       } catch (notificationError) {
         console.error('Error sending batch notifications:', notificationError);

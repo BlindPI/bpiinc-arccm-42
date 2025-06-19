@@ -23,6 +23,7 @@ import { CertificateFilters as CertificateFiltersComponent } from '@/components/
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmailCertificateForm } from '@/components/certificates/EmailCertificateForm';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface EnhancedCertificatesTableProps {
   certificates: Certificate[] | undefined;
@@ -48,6 +49,7 @@ export function EnhancedCertificatesTable({
   onResetFilters,
   batches
 }: EnhancedCertificatesTableProps) {
+  const queryClient = useQueryClient();
   const {
     deletingCertificateId,
     setDeletingCertificateId,
@@ -99,6 +101,15 @@ export function EnhancedCertificatesTable({
   const handleEmailCertificate = (certificate: Certificate) => {
     setSelectedCertificateForEmail(certificate);
     setEmailDialogOpen(true);
+  };
+
+  // Handle closing email dialog and refresh data
+  const handleEmailDialogClose = () => {
+    setEmailDialogOpen(false);
+    setSelectedCertificateForEmail(null);
+    // Refresh certificate data to show updated email status
+    queryClient.invalidateQueries({ queryKey: ['certificates'] });
+    queryClient.invalidateQueries({ queryKey: ['certificate-stats'] });
   };
 
   // Get email status badge
@@ -358,20 +369,20 @@ export function EnhancedCertificatesTable({
       </Table>
 
       {/* Email Certificate Dialog */}
-      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+      <Dialog open={emailDialogOpen} onOpenChange={handleEmailDialogClose}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {selectedCertificateForEmail?.is_batch_emailed || selectedCertificateForEmail?.email_status === 'SENT' 
-                ? 'Resend Certificate' 
+              {selectedCertificateForEmail?.is_batch_emailed || selectedCertificateForEmail?.email_status === 'SENT'
+                ? 'Resend Certificate'
                 : 'Email Certificate'
               }
             </DialogTitle>
           </DialogHeader>
           {selectedCertificateForEmail && (
-            <EmailCertificateForm 
-              certificate={selectedCertificateForEmail} 
-              onClose={() => setEmailDialogOpen(false)} 
+            <EmailCertificateForm
+              certificate={selectedCertificateForEmail}
+              onClose={handleEmailDialogClose}
             />
           )}
         </DialogContent>

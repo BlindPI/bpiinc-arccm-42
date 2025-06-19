@@ -31,11 +31,12 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Parse request body
-    const { 
+    const {
       certificateId,
       recipientEmail,
       message,
-      templateId
+      templateId,
+      allowEmailOverride = false
     } = await req.json();
 
     if (!certificateId) {
@@ -64,6 +65,28 @@ serve(async (req) => {
     }
 
     console.log("Certificate found:", certificate.id);
+
+    // SECURITY: Validate email recipient matches certificate or is explicitly allowed
+    const storedEmail = certificate.recipient_email;
+    const isEmailOverride = recipientEmail !== storedEmail;
+    
+    if (isEmailOverride) {
+      console.log(`Email override detected: stored=${storedEmail}, requested=${recipientEmail}`);
+      
+      // If email override is not explicitly allowed, reject the request
+      if (!allowEmailOverride) {
+        throw new Error(`Email override not allowed. Certificate is registered to ${storedEmail || 'no email'}, but email requested for ${recipientEmail}`);
+      }
+      
+      // Log the override for audit purposes
+      console.log(`AUDIT: Email override approved for certificate ${certificateId}: ${storedEmail} -> ${recipientEmail}`);
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(recipientEmail)) {
+      throw new Error(`Invalid email format: ${recipientEmail}`);
+    }
 
     // Fetch email template
     let emailTemplate;
@@ -229,13 +252,17 @@ serve(async (req) => {
       // Don't throw here as email was sent successfully
     }
 
-    // Log the email sending in the audit log
+    // Log the email sending in the audit log with detailed information
+    const auditReason = isEmailOverride
+      ? `Email override: sent to ${recipientEmail} (original: ${storedEmail || 'none'})`
+      : `Sent to ${recipientEmail}`;
+      
     const { error: logError } = await supabase
       .from('certificate_audit_logs')
       .insert({
         certificate_id: certificateId,
         action: 'EMAILED',
-        reason: `Sent to ${recipientEmail}`,
+        reason: auditReason,
         email_recipient: recipientEmail,
         email_template_id: templateId
       });

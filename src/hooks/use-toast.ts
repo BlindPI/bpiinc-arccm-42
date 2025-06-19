@@ -30,3 +30,14 @@ export function useToast() {
 
   return { toast, toasts };
 }
+
+// Export the toast function directly for compatibility
+export const toast = (toastData: { title: string; description?: string; variant?: 'default' | 'destructive' }) => {
+  console.log(`🍞 Toast: ${toastData.title}`, toastData.description);
+  
+  if (toastData.variant === 'destructive') {
+    console.error(`❌ Error: ${toastData.title}`, toastData.description);
+  } else {
+    console.log(`✅ Success: ${toastData.title}`, toastData.description);
+  }
+};

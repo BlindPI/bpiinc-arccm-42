@@ -6,6 +6,7 @@ export interface SingleEmailParams {
   certificateId: string;
   recipientEmail: string;
   message?: string;
+  allowEmailOverride?: boolean;
 }
 
 export interface BatchEmailParams {
@@ -21,7 +22,8 @@ export class EmailService {
   static async sendSingleCertificateEmail({
     certificateId,
     recipientEmail,
-    message
+    message,
+    allowEmailOverride = false
   }: SingleEmailParams) {
     try {
       console.log('Sending single certificate email via batch function:', {
@@ -42,12 +44,13 @@ export class EmailService {
 
       if (batchError) throw batchError;
 
-      // Call the batch email function with single certificate
-      const { data, error } = await supabase.functions.invoke('send-batch-certificate-emails', {
+      // For single emails, use the individual email function for better validation
+      const { data, error } = await supabase.functions.invoke('send-certificate-email', {
         body: {
-          certificateIds: [certificateId],
-          batchId: batchRecord.id,
-          customMessage: message
+          certificateId,
+          recipientEmail,
+          message,
+          allowEmailOverride
         }
       });
 

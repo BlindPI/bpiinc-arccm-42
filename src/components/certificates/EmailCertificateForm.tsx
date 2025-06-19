@@ -5,14 +5,15 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2, Mail, AlertCircle, MapPin, User, Edit3 } from 'lucide-react';
+import { Loader2, Mail, AlertCircle, MapPin, User, Edit3, CheckCircle, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProfile } from '@/hooks/useProfile';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { EmailService } from '@/services/emailService';
 import { Card, CardContent } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 
 interface EmailCertificateFormProps {
   certificate: any;
@@ -21,10 +22,14 @@ interface EmailCertificateFormProps {
 
 export function EmailCertificateForm({ certificate, onClose }: EmailCertificateFormProps) {
   const { data: profile } = useProfile();
+  const queryClient = useQueryClient();
   const [emailMode, setEmailMode] = useState<'original' | 'custom'>('original');
   const [customEmail, setCustomEmail] = useState('');
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [currentStep, setCurrentStep] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const originalEmail = certificate.recipient_email;
@@ -65,6 +70,21 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
       return false;
     }
 
+    // Additional validation for custom emails
+    if (emailMode === 'custom') {
+      if (!customEmail.trim()) {
+        setError('Please enter a custom email address');
+        return false;
+      }
+      
+      // Basic email format validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(customEmail)) {
+        setError('Please enter a valid email address format');
+        return false;
+      }
+    }
+
     return true;
   };
 
@@ -72,10 +92,21 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
     if (!validateEmail()) return;
 
     setIsSending(true);
+    setIsSuccess(false);
     setError(null);
+    setProgress(0);
 
     try {
       const emailToSend = getEmailToSend();
+      
+      // Step 1: Validating
+      setCurrentStep('Validating email address...');
+      setProgress(20);
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Step 2: Preparing
+      setCurrentStep('Preparing certificate email...');
+      setProgress(40);
       
       console.log('Sending certificate email using unified service...', {
         certificateId: certificate.id,
@@ -83,16 +114,21 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
         emailMode
       });
 
+      // Step 3: Sending
+      setCurrentStep('Sending email...');
+      setProgress(60);
+
       await EmailService.sendSingleCertificateEmail({
         certificateId: certificate.id,
         recipientEmail: emailToSend,
-        message: message || undefined
+        message: message || undefined,
+        allowEmailOverride: emailMode === 'custom'
       });
 
-      console.log('Email sent successfully via unified service');
-      toast.success(`Certificate sent successfully to ${emailToSend}`);
-      onClose();
-      
+      // Step 4: Logging
+      setCurrentStep('Updating records...');
+      setProgress(80);
+
       // Log this action
       try {
         await supabase
@@ -107,11 +143,37 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
       } catch (logError) {
         console.error('Error logging certificate email:', logError);
       }
+
+      // Step 5: Complete
+      setCurrentStep('Email sent successfully!');
+      setProgress(100);
+      setIsSuccess(true);
+
+      console.log('Email sent successfully via unified service');
+      toast.success(`Certificate sent successfully to ${emailToSend}`, {
+        duration: 4000,
+        description: `The certificate for ${certificate.recipient_name} has been delivered.`
+      });
+
+      // Invalidate queries to update counts and status
+      queryClient.invalidateQueries({ queryKey: ['certificates'] });
+      queryClient.invalidateQueries({ queryKey: ['certificate-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['roster-email-status'] });
+      
+      // Close after showing success animation
+      setTimeout(() => {
+        onClose();
+      }, 2000);
+      
     } catch (error) {
       console.error('Error sending certificate email:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to send certificate. Please try again.';
       setError(errorMessage);
-      toast.error(errorMessage);
+      setCurrentStep('');
+      setProgress(0);
+      toast.error(errorMessage, {
+        description: 'Please check the email address and try again.'
+      });
     } finally {
       setIsSending(false);
     }
@@ -138,6 +200,37 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
       <p className="text-sm text-muted-foreground">
         Send the certificate to the recipient. Choose whether to use the email on file or send to a different address.
       </p>
+
+      {/* Progress Indicator */}
+      {isSending && (
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <Send className="h-5 w-5 text-blue-600 animate-pulse" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-blue-900">Sending Certificate Email</p>
+                <p className="text-xs text-blue-700">{currentStep}</p>
+              </div>
+            </div>
+            <Progress value={progress} className="h-2" />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Success Animation */}
+      {isSuccess && (
+        <Card className="bg-green-50 border-green-200 animate-in slide-in-from-top-2 duration-500">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="h-5 w-5 text-green-600 animate-in zoom-in-50 duration-300" />
+              <div>
+                <p className="text-sm font-medium text-green-900">Email Sent Successfully!</p>
+                <p className="text-xs text-green-700">Certificate delivered to {getEmailToSend()}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {error && (
         <Alert variant="destructive">
@@ -214,6 +307,15 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
                       This is the same as the original email address
                     </p>
                   )}
+                  {customEmail && customEmail !== originalEmail && (
+                    <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                      <p className="text-yellow-800 font-medium">⚠️ Email Override Warning</p>
+                      <p className="text-yellow-700 mt-1">
+                        This will send the certificate to <strong>{customEmail}</strong> instead of the registered recipient email.
+                        Make sure this is the correct recipient to avoid sending certificates to wrong people.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -258,19 +360,24 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
       )}
       
       <div className="flex justify-end gap-2 mt-6">
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           onClick={onClose}
-          disabled={isSending}
+          disabled={isSending && !isSuccess}
         >
-          Cancel
+          {isSuccess ? 'Close' : 'Cancel'}
         </Button>
-        <Button 
+        <Button
           onClick={handleSendEmail}
-          disabled={isSending || !isFormValid()}
+          disabled={isSending || !isFormValid() || isSuccess}
           className="flex items-center gap-2"
         >
-          {isSending ? (
+          {isSuccess ? (
+            <>
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              Email Sent
+            </>
+          ) : isSending ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
               Sending...

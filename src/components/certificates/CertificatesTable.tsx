@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { 
+import {
   Table,
   TableBody,
   TableCaption,
@@ -19,10 +19,10 @@ import { DeleteCertificateDialog } from './DeleteCertificateDialog';
 import { useCertificateOperations } from '@/hooks/useCertificateOperations';
 import { useProfile } from '@/hooks/useProfile';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
@@ -31,6 +31,7 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmailCertificateForm } from './EmailCertificateForm';
 import { CertificatePreviewModal } from './CertificatePreviewModal';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface CertificatesTableProps {
   certificates: any[];
@@ -47,6 +48,7 @@ export function CertificatesTable({
 }: CertificatesTableProps) {
   const isMobile = useIsMobile();
   const { data: profile } = useProfile();
+  const queryClient = useQueryClient();
   const [selectedCertificates, setSelectedCertificates] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
@@ -113,6 +115,15 @@ export function CertificatesTable({
   const handleEmailCertificate = (cert: any) => {
     setSelectedCertificateForEmail(cert);
     setEmailDialogOpen(true);
+  };
+
+  // Handle closing email dialog and refresh data
+  const handleEmailDialogClose = () => {
+    setEmailDialogOpen(false);
+    setSelectedCertificateForEmail(null);
+    // Refresh certificate data to show updated email status
+    queryClient.invalidateQueries({ queryKey: ['certificates'] });
+    queryClient.invalidateQueries({ queryKey: ['certificate-stats'] });
   };
 
   // Handle bulk email sending
@@ -461,20 +472,20 @@ export function CertificatesTable({
       />
 
       {/* Email Certificate Dialog */}
-      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+      <Dialog open={emailDialogOpen} onOpenChange={handleEmailDialogClose}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {selectedCertificateForEmail?.is_batch_emailed || selectedCertificateForEmail?.email_status === 'SENT' 
-                ? 'Resend Certificate' 
+              {selectedCertificateForEmail?.is_batch_emailed || selectedCertificateForEmail?.email_status === 'SENT'
+                ? 'Resend Certificate'
                 : 'Email Certificate'
               }
             </DialogTitle>
           </DialogHeader>
           {selectedCertificateForEmail && (
-            <EmailCertificateForm 
-              certificate={selectedCertificateForEmail} 
-              onClose={() => setEmailDialogOpen(false)} 
+            <EmailCertificateForm
+              certificate={selectedCertificateForEmail}
+              onClose={handleEmailDialogClose}
             />
           )}
         </DialogContent>
