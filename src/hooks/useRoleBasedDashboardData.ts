@@ -16,6 +16,12 @@ export interface RoleBasedDashboardData {
     teamId: string;
     teamName: string;
     locationName: string;
+    locationCity?: string;
+    locationState?: string;
+    locationAddress?: string;
+    apUserName?: string;
+    apUserEmail?: string;
+    apUserPhone?: string;
   };
 }
 
@@ -88,10 +94,16 @@ export function useRoleBasedDashboardData(): RoleBasedDashboardData {
     error: metricsError?.message || null,
     canViewSystemMetrics,
     canViewTeamMetrics,
-    teamContext: primaryTeam ? {
+    teamContext: primaryTeam && metrics ? {
       teamId: primaryTeam.team_id,
-      teamName: primaryTeam.teams?.name || 'Unknown Team',
-      locationName: primaryTeam.teams?.locations?.name || 'No Location'
+      teamName: primaryTeam.team_name || 'Unknown Team',
+      locationName: metrics.locationName || 'No Location',
+      locationCity: metrics.locationCity,
+      locationState: metrics.locationState,
+      locationAddress: metrics.locationAddress,
+      apUserName: metrics.apUserName,
+      apUserEmail: metrics.apUserEmail,
+      apUserPhone: metrics.apUserPhone
     } : undefined
   };
 }

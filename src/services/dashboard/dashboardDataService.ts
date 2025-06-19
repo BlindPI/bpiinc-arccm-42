@@ -8,6 +8,12 @@ export interface DashboardMetrics {
   pendingRequests?: number;
   teamSize?: number;
   locationName?: string;
+  locationAddress?: string;
+  locationCity?: string;
+  locationState?: string;
+  apUserName?: string;
+  apUserEmail?: string;
+  apUserPhone?: string;
   upcomingClasses?: number;
   studentsTaught?: number;
   certificationsIssued?: number;
@@ -95,14 +101,33 @@ export class DashboardDataService {
         throw new Error('Access denied: User not a member of this team');
       }
 
-      // Get team info
+      // Get team info with expanded location and provider data
       const { data: team, error: teamError } = await supabase
         .from('teams')
         .select(`
           id,
           name,
           location_id,
-          locations(name)
+          provider_id,
+          locations (
+            id,
+            name,
+            city,
+            state,
+            address
+          ),
+          authorized_providers:provider_id (
+            id,
+            name,
+            contact_email,
+            contact_phone,
+            user_id,
+            profiles:user_id (
+              display_name,
+              email,
+              phone
+            )
+          )
         `)
         .eq('id', teamId)
         .single();
@@ -136,9 +161,30 @@ export class DashboardDataService {
         activeCourses = count || 0;
       }
 
+      // Extract AP user contact details
+      const apUser = team.authorized_providers ? {
+        name: team.authorized_providers.profiles?.display_name || team.authorized_providers.name,
+        email: team.authorized_providers.profiles?.email || team.authorized_providers.contact_email,
+        phone: team.authorized_providers.profiles?.phone || team.authorized_providers.contact_phone
+      } : null;
+
+      // Prepare location data
+      const location = team.locations ? {
+        name: team.locations.name,
+        address: team.locations.address,
+        city: team.locations.city,
+        state: team.locations.state
+      } : null;
+
       return {
         teamSize: teamSize || 0,
-        locationName: team.locations?.name || 'No Location',
+        locationName: location?.name || 'No Location',
+        locationAddress: location?.address,
+        locationCity: location?.city,
+        locationState: location?.state,
+        apUserName: apUser?.name,
+        apUserEmail: apUser?.email,
+        apUserPhone: apUser?.phone,
         totalCertificates,
         activeCourses
       };
@@ -309,10 +355,20 @@ export class DashboardDataService {
         }
       } else if (teamId) {
         // Team members see team-specific activities only
+        // First get the team's location_id
+        const { data: teamData, error: teamError } = await supabase
+          .from('teams')
+          .select('location_id')
+          .eq('id', teamId)
+          .single();
+          
+        if (teamError) throw teamError;
+        
+        // Then use the location_id to filter certificates
         const { data: teamActivities, error } = await supabase
           .from('certificates')
           .select('id, course_name, created_at, recipient_name')
-          .eq('location_id', teamId) // Assuming location-based filtering
+          .eq('location_id', teamData.location_id)
           .order('created_at', { ascending: false })
           .limit(5);
 

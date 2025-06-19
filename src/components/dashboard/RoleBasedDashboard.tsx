@@ -5,16 +5,19 @@ import { Badge } from '@/components/ui/badge';
 import { useRoleBasedDashboardData } from '@/hooks/useRoleBasedDashboardData';
 import { useProfile } from '@/hooks/useProfile';
 import { LoadingDashboard } from './LoadingDashboard';
-import { 
-  Users, 
-  BookOpen, 
-  Award, 
-  Clock, 
-  TrendingUp, 
+import {
+  Users,
+  BookOpen,
+  Award,
+  Clock,
+  TrendingUp,
   MapPin,
   AlertCircle,
   Activity,
-  Shield
+  Shield,
+  Mail,
+  Phone,
+  Building2
 } from 'lucide-react';
 
 export function RoleBasedDashboard() {
@@ -148,9 +151,49 @@ export function RoleBasedDashboard() {
             <div className="text-lg font-medium text-green-600">
               {metrics.locationName || 'No Location'}
             </div>
-            <p className="text-xs text-gray-500 mt-1">Team location</p>
+            {metrics.locationCity && metrics.locationState && (
+              <p className="text-sm text-gray-600 mt-1">
+                {metrics.locationCity}, {metrics.locationState}
+              </p>
+            )}
+            {metrics.locationAddress && (
+              <p className="text-xs text-gray-500 mt-1">{metrics.locationAddress}</p>
+            )}
           </CardContent>
-        </Card>,
+        </Card>
+      );
+      
+      // AP User Card (if available)
+      if (metrics.apUserName) {
+        cards.push(
+          <Card key="ap-user">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Account Provider
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg font-medium text-blue-600">
+                {metrics.apUserName}
+              </div>
+              {metrics.apUserEmail && (
+                <p className="text-sm text-gray-600 mt-1 truncate">
+                  {metrics.apUserEmail}
+                </p>
+              )}
+              {metrics.apUserPhone && (
+                <p className="text-xs text-gray-500 mt-1">
+                  {metrics.apUserPhone}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        );
+      }
+      
+      // Certificate and Course cards
+      cards.push(
         <Card key="team-certificates">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
@@ -306,10 +349,18 @@ export function RoleBasedDashboard() {
               {profile?.role}
             </Badge>
             {teamContext && (
-              <Badge variant="secondary" className="flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                {teamContext.locationName}
-              </Badge>
+              <>
+                <Badge variant="secondary" className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  {teamContext.locationName}
+                </Badge>
+                {teamContext.apUserName && (
+                  <Badge variant="outline" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    AP: {teamContext.apUserName}
+                  </Badge>
+                )}
+              </>
             )}
           </div>
         </div>
