@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,18 +45,6 @@ export default function Notifications() {
     }
   }, [realNotifications, realUnreadCount, profile]);
 
-  // Use real certificate notifications instead of mock data
-  const notifications = realNotifications.map(notification => ({
-    id: notification.id,
-    title: notification.title,
-    message: notification.message,
-    type: getNotificationTypeFromCertificateType(notification.notification_type),
-    category: 'CERTIFICATE',
-    read: !!notification.read_at,
-    timestamp: notification.created_at,
-    priority: getPriorityFromCertificateType(notification.notification_type)
-  }));
-  
   // Helper functions to map certificate notification types to UI types
   function getNotificationTypeFromCertificateType(type: string): string {
     switch (type) {
@@ -87,6 +74,18 @@ export default function Notifications() {
         return 'NORMAL';
     }
   }
+
+  // Use real certificate notifications instead of mock data
+  const notifications = realNotifications.map(notification => ({
+    id: notification.id,
+    title: notification.title,
+    message: notification.message,
+    type: getNotificationTypeFromCertificateType(notification.notification_type),
+    category: 'CERTIFICATE',
+    read: !!notification.read_at,
+    timestamp: notification.created_at,
+    priority: getPriorityFromCertificateType(notification.notification_type)
+  }));
 
   // Handle marking notification as read
   const handleMarkAsRead = async (notificationId: string) => {
@@ -280,47 +279,47 @@ export default function Notifications() {
           ) : (
             <div className="space-y-4">
               {filteredNotifications.map((notification) => (
-              <div
-                key={notification.id}
-                className={`flex items-start gap-4 p-4 border rounded-lg ${
-                  !notification.read ? 'bg-blue-50/50 border-blue-200' : ''
-                }`}
-              >
-                <div className="mt-1">
-                  {getNotificationIcon(notification.type)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-medium">{notification.title}</h4>
+                <div
+                  key={notification.id}
+                  className={`flex items-start gap-4 p-4 border rounded-lg ${
+                    !notification.read ? 'bg-blue-50/50 border-blue-200' : ''
+                  }`}
+                >
+                  <div className="mt-1">
+                    {getNotificationIcon(notification.type)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-medium">{notification.title}</h4>
+                      {!notification.read && (
+                        <div className="w-2 h-2 bg-blue-600 rounded-full" />
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {notification.message}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        {notification.category}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(notification.timestamp).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
                     {!notification.read && (
-                      <div className="w-2 h-2 bg-blue-600 rounded-full" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleMarkAsRead(notification.id)}
+                        title="Mark as read"
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {notification.message}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">
-                      {notification.category}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(notification.timestamp).toLocaleString()}
-                    </span>
-                  </div>
                 </div>
-                <div className="flex gap-1">
-                  {!notification.read && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleMarkAsRead(notification.id)}
-                      title="Mark as read"
-                    >
-                      <Check className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
               ))}
             </div>
           )}
