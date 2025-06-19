@@ -72,6 +72,7 @@ export default function Notifications() {
       default:
         return 'info';
     }
+  }
   
   function getPriorityFromCertificateType(type: string): string {
     switch (type) {
