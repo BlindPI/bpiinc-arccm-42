@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import SignIn from '@/pages/SignIn';
 import SignUp from '@/pages/SignUp';
 import Dashboard from '@/pages/Dashboard';
+import LandingPage from '@/pages/LandingPage';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import Settings from '@/pages/Settings';
 import UserManagement from '@/pages/UserManagement';
@@ -49,6 +50,7 @@ export function AppRoutes() {
     <Routes>
       <Route path="/auth/signin" element={<SignIn />} />
       <Route path="/auth/signup" element={<SignUp />} />
+      <Route path="/landing" element={<LandingPage />} />
       
       <Route path="/" element={
         <ProtectedRoute>
