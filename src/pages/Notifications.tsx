@@ -162,10 +162,6 @@ export default function Notifications() {
             <Button variant="outline" size="sm" onClick={handleClearNotifications}>
               Clear All
             </Button>
-            <Button variant="outline">
-              <Settings className="h-4 w-4 mr-2" />
-              Preferences
-            </Button>
             <Button
               variant="outline"
               onClick={handleMarkAllAsRead}
