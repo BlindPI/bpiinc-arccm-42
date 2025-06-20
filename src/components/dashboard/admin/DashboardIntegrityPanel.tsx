@@ -19,22 +19,55 @@ export function DashboardIntegrityPanel() {
   const handleRunAudit = async () => {
     setIsLoading(true);
     try {
-      console.log('Starting dashboard integrity audit...');
+      console.log('🔍 Starting dashboard integrity audit...');
       const service = new DashboardIntegrityService();
+      
+      // Add a small delay to show loading state
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       const results = await service.performFullAudit();
-      console.log('Audit results:', results);
+      console.log('✅ Audit results:', results);
       setAuditResults(results);
       
       toast({
         title: "Audit Complete",
-        description: "Dashboard integrity check completed successfully.",
+        description: `Found ${results.summary?.totalIssues || 0} issues. Health score: ${results.overallScore || 0}%`,
       });
     } catch (error) {
-      console.error('Failed to perform dashboard integrity check:', error);
+      console.error('❌ Failed to perform dashboard integrity check:', error);
+      
+      // More detailed error handling
+      let errorMessage = 'Unknown error occurred';
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.code) {
+        errorMessage = `Database error: ${error.code}`;
+      }
+      
       toast({
         title: "Audit Failed",
-        description: `Failed to perform dashboard integrity check: ${error.message}`,
+        description: `Failed to perform dashboard integrity check: ${errorMessage}`,
         variant: "destructive",
+      });
+      
+      // Set a basic error state so users can see something
+      setAuditResults({
+        overallScore: 0,
+        summary: {
+          totalUsers: 0,
+          totalTeams: 0,
+          totalIssues: 1,
+          criticalIssues: 1,
+          warningIssues: 0
+        },
+        issues: [{
+          type: 'System Error',
+          description: `Unable to complete integrity check: ${errorMessage}`,
+          severity: 'critical',
+          count: 1
+        }],
+        recommendations: ['Check database connectivity and permissions', 'Verify all required tables exist'],
+        rawReport: null
       });
     } finally {
       setIsLoading(false);
@@ -46,23 +79,50 @@ export function DashboardIntegrityPanel() {
     
     setIsFixing(true);
     try {
-      console.log('Starting auto-fix process...');
+      console.log('🔧 Starting auto-fix process...');
       const service = new DashboardIntegrityService();
+      
+      // Add a small delay to show loading state
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       const fixResults = await service.autoFixIssues();
-      console.log('Fix results:', fixResults);
+      console.log('✅ Fix results:', fixResults);
+      
+      const successMessage = fixResults.totalFixed > 0
+        ? `Fixed ${fixResults.totalFixed} issues automatically.`
+        : 'No issues found that could be automatically fixed.';
       
       toast({
         title: "Auto-Fix Complete",
-        description: `Fixed ${fixResults.totalFixed || 0} issues automatically.`,
+        description: successMessage,
+        variant: fixResults.totalFixed > 0 ? "default" : "secondary"
       });
+      
+      // Show errors if any occurred during fixing
+      if (fixResults.errors && fixResults.errors.length > 0) {
+        console.warn('⚠️ Fix errors:', fixResults.errors);
+        toast({
+          title: "Some Issues Could Not Be Fixed",
+          description: `${fixResults.errors.length} issues require manual attention.`,
+          variant: "destructive",
+        });
+      }
       
       // Re-run audit to get updated results
       await handleRunAudit();
     } catch (error) {
-      console.error('Failed to auto-fix issues:', error);
+      console.error('❌ Failed to auto-fix issues:', error);
+      
+      let errorMessage = 'Unknown error occurred';
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.code) {
+        errorMessage = `Database error: ${error.code}`;
+      }
+      
       toast({
         title: "Auto-Fix Failed",
-        description: `Failed to auto-fix issues: ${error.message}`,
+        description: `Failed to auto-fix issues: ${errorMessage}`,
         variant: "destructive",
       });
     } finally {

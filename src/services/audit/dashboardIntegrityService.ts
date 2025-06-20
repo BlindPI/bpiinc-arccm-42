@@ -401,4 +401,84 @@ export class DashboardIntegrityService {
       return { fixed, errors: [error.message] };
     }
   }
+  // Instance methods for the UI component
+  async performFullAudit(): Promise<any> {
+    try {
+      const report = await DashboardIntegrityService.generateIntegrityReport();
+      
+      // Transform the report to match UI expectations
+      const issues = [];
+      const recommendations = [];
+      
+      // Collect all issues and recommendations
+      report.apUserAudit.forEach(user => {
+        user.issues.forEach(issue => {
+          issues.push({
+            type: 'AP User Assignment',
+            description: `${user.displayName}: ${issue}`,
+            severity: issue.includes('No location assignment') || issue.includes('non-existent') ? 'critical' : 'warning',
+            count: 1
+          });
+        });
+        recommendations.push(...user.recommendations.map(rec => `${user.displayName}: ${rec}`));
+      });
+      
+      report.teamProviderAudit.forEach(team => {
+        team.issues.forEach(issue => {
+          issues.push({
+            type: 'Team Provider Relationship',
+            description: `${team.teamName}: ${issue}`,
+            severity: issue.includes('no assigned') || issue.includes('non-existent') ? 'critical' : 'warning',
+            count: 1
+          });
+        });
+        recommendations.push(...team.recommendations.map(rec => `${team.teamName}: ${rec}`));
+      });
+      
+      // Calculate overall health score
+      const totalUsers = report.systemSummary.totalAPUsers + report.systemSummary.totalTeams;
+      const totalIssues = report.systemSummary.criticalIssues + report.systemSummary.warningIssues;
+      const overallScore = totalUsers > 0 ? Math.max(0, Math.round(((totalUsers - totalIssues) / totalUsers) * 100)) : 100;
+      
+      return {
+        overallScore,
+        summary: {
+          totalUsers: report.systemSummary.totalAPUsers,
+          totalTeams: report.systemSummary.totalTeams,
+          totalIssues: totalIssues,
+          criticalIssues: report.systemSummary.criticalIssues,
+          warningIssues: report.systemSummary.warningIssues
+        },
+        issues,
+        recommendations: [...new Set(recommendations)], // Remove duplicates
+        rawReport: report // Keep original for reference
+      };
+    } catch (error) {
+      console.error('Error performing full audit:', error);
+      throw error;
+    }
+  }
+  
+  async autoFixIssues(): Promise<any> {
+    try {
+      const [apUserFixes, teamProviderFixes] = await Promise.all([
+        DashboardIntegrityService.autoFixAPUserAssignments(),
+        DashboardIntegrityService.autoFixTeamProviderRelationships()
+      ]);
+      
+      const totalFixed = apUserFixes.fixed + teamProviderFixes.fixed;
+      const allErrors = [...apUserFixes.errors, ...teamProviderFixes.errors];
+      
+      return {
+        totalFixed,
+        apUserFixes: apUserFixes.fixed,
+        teamProviderFixes: teamProviderFixes.fixed,
+        errors: allErrors,
+        success: totalFixed > 0 || allErrors.length === 0
+      };
+    } catch (error) {
+      console.error('Error auto-fixing issues:', error);
+      throw error;
+    }
+  }
 }
