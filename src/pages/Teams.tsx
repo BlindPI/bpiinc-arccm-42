@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
-import { RealTeamManagementHub } from '@/components/team/RealTeamManagementHub';
+import { CleanTeamManagementHub } from '@/components/team/CleanTeamManagementHub';
 import { Crown, Users, ArrowRight, Shield, Building2 } from 'lucide-react';
 import type { DatabaseUserRole } from '@/types/database-roles';
 import { hasEnterpriseAccess } from '@/types/database-roles';
@@ -85,8 +85,8 @@ export default function Teams() {
         </div>
       </div>
 
-      {/* Real Team Management Hub */}
-      <RealTeamManagementHub />
+      {/* Clean Team Management Hub */}
+      <CleanTeamManagementHub />
     </div>
   );
 }
