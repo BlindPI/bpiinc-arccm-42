@@ -42,10 +42,17 @@ export function CleanProviderManagementHub() {
   });
 
   // Get available AP users
-  const { data: apUsers = [] } = useQuery({
+  const { data: apUsers = [], isLoading: usersLoading, error: usersError } = useQuery({
     queryKey: ['clean-ap-users'],
     queryFn: () => CleanAPTeamService.getAvailableAPUsers(),
+    refetchInterval: 10000, // Refetch every 10 seconds
   });
+
+  // Debug logging
+  if (usersError) {
+    console.error('AP Users loading error:', usersError);
+  }
+  console.log('AP Users loaded:', apUsers);
 
   // Get available locations
   const { data: locations = [] } = useQuery({

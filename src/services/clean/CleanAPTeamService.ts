@@ -62,11 +62,19 @@ export class CleanAPTeamService {
     try {
       console.log(`🎯 Assigning AP user ${apUserId} to location ${locationId}`);
       
-      // Use the clean database function (with new unique name)
-      const { data, error } = await supabase.rpc('assign_ap_user_to_location', {
-        p_ap_user_id: apUserId,
-        p_location_id: locationId
-      });
+      // Direct table insertion - no database functions
+      const { data: assignment, error } = await supabase
+        .from('ap_user_location_assignments')
+        .upsert({
+          ap_user_id: apUserId,
+          location_id: locationId,
+          status: 'active',
+          assigned_at: new Date().toISOString()
+        }, {
+          onConflict: 'ap_user_id,location_id'
+        })
+        .select('id')
+        .single();
       
       if (error) throw error;
       
@@ -74,7 +82,7 @@ export class CleanAPTeamService {
       
       return {
         success: true,
-        assignmentId: data,
+        assignmentId: assignment.id,
         message: 'AP user successfully assigned to location'
       };
       
@@ -96,13 +104,34 @@ export class CleanAPTeamService {
     try {
       console.log('🏗️ Creating team with AP user:', teamData);
       
-      // Use the clean database function (with new unique name)
-      const { data, error } = await supabase.rpc('create_team_with_ap_user', {
-        p_name: teamData.name,
-        p_description: teamData.description || '',
-        p_location_id: teamData.locationId,
-        p_ap_user_id: teamData.apUserId
-      });
+      // Validate AP user is assigned to this location
+      const { data: assignment, error: assignmentError } = await supabase
+        .from('ap_user_location_assignments')
+        .select('id')
+        .eq('ap_user_id', teamData.apUserId)
+        .eq('location_id', teamData.locationId)
+        .eq('status', 'active')
+        .single();
+      
+      if (assignmentError || !assignment) {
+        throw new Error('AP user is not assigned to this location');
+      }
+      
+      // Create team directly in table
+      const { data: team, error } = await supabase
+        .from('teams')
+        .insert({
+          name: teamData.name,
+          description: teamData.description,
+          location_id: teamData.locationId,
+          assigned_ap_user_id: teamData.apUserId,
+          team_type: 'general',
+          status: 'active',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select('id')
+        .single();
       
       if (error) throw error;
       
@@ -110,7 +139,7 @@ export class CleanAPTeamService {
       
       return {
         success: true,
-        teamId: data,
+        teamId: team.id,
         message: `Team "${teamData.name}" created successfully`
       };
       
@@ -138,20 +167,59 @@ export class CleanAPTeamService {
         throw new Error('AP user not found');
       }
       
-      // Use the clean database function (with new unique name)
-      const { data: locationData, error: locationError } = await supabase
-        .rpc('get_ap_user_dashboard', {
-          p_ap_user_id: apUserId
+      // Get location assignments directly
+      const { data: assignments, error: assignmentError } = await supabase
+        .from('ap_user_location_assignments')
+        .select(`
+          location_id,
+          assigned_at,
+          locations!inner(id, name)
+        `)
+        .eq('ap_user_id', apUserId)
+        .eq('status', 'active');
+      
+      if (assignmentError) throw assignmentError;
+      
+      const locations = [];
+      
+      for (const assignment of assignments || []) {
+        const location = assignment.locations;
+        if (!location) continue;
+        
+        // Get teams for this location - simplified query
+        const { data: teams, error: teamsError } = await supabase
+          .from('teams')
+          .select('id, name, description, team_type, status, created_at')
+          .eq('location_id', location.id)
+          .eq('assigned_ap_user_id', apUserId)
+          .eq('status', 'active');
+        
+        if (teamsError) {
+          console.warn('Error getting teams:', teamsError);
+          continue;
+        }
+        
+        // Get member counts for each team
+        let totalMemberCount = 0;
+        
+        for (const team of teams || []) {
+          const { data: members, error: memberError } = await supabase
+            .from('team_members')
+            .select('id')
+            .eq('team_id', team.id)
+            .eq('status', 'active');
+          
+          const memberCount = members?.length || 0;
+          totalMemberCount += memberCount;
+        }
+        
+        locations.push({
+          locationId: location.id,
+          locationName: location.name,
+          teamCount: teams?.length || 0,
+          memberCount: totalMemberCount
         });
-      
-      if (locationError) throw locationError;
-      
-      const locations = (locationData || []).map((loc: any) => ({
-        locationId: loc.location_id,
-        locationName: loc.location_name,
-        teamCount: parseInt(loc.team_count) || 0,
-        memberCount: parseInt(loc.member_count) || 0
-      }));
+      }
       
       console.log(`✅ Dashboard data retrieved: ${locations.length} locations`);
       
@@ -182,15 +250,15 @@ export class CleanAPTeamService {
       
       if (error) throw error;
       
-      return (teams || []).map(team => ({
+      return (teams || []).map((team: any) => ({
         id: team.id,
         name: team.name,
-        description: team.description,
+        description: team.description || '',
         locationId: team.location_id,
         assignedAPUserId: team.assigned_ap_user_id,
-        status: team.status,
-        teamType: team.team_type,
-        createdBy: team.created_by,
+        status: (team.status as 'active' | 'inactive' | 'archived') || 'active',
+        teamType: team.team_type || 'general',
+        createdBy: team.created_by || '',
         createdAt: team.created_at,
         updatedAt: team.updated_at
       }));
@@ -214,22 +282,22 @@ export class CleanAPTeamService {
           user_id,
           role,
           status,
-          joined_at,
+          created_at,
           profiles!inner(display_name, email)
         `)
         .eq('team_id', teamId)
         .eq('status', 'active')
-        .order('joined_at', { ascending: true });
+        .order('created_at', { ascending: true });
       
       if (error) throw error;
       
-      return (members || []).map(member => ({
+      return (members || []).map((member: any) => ({
         id: member.id,
         teamId: member.team_id,
         userId: member.user_id,
-        role: member.role,
-        status: member.status,
-        joinedAt: member.joined_at,
+        role: member.role || 'member',
+        status: member.status as 'active' | 'inactive',
+        joinedAt: member.created_at,
         displayName: member.profiles?.display_name || member.profiles?.email || 'Unknown',
         email: member.profiles?.email || ''
       }));
@@ -308,32 +376,44 @@ export class CleanAPTeamService {
     isAssigned: boolean;
   }>> {
     try {
-      // Get all AP users
+      console.log('🔍 Getting AP users...');
+      
+      // Get all AP users - simplified query first
       const { data: apUsers, error: apError } = await supabase
         .from('profiles')
-        .select('id, display_name, email')
+        .select('id, display_name, email, role, status')
         .eq('role', 'AP')
-        .eq('status', 'ACTIVE')
         .order('display_name');
       
-      if (apError) throw apError;
+      if (apError) {
+        console.error('AP users query error:', apError);
+        throw apError;
+      }
       
-      // Get assigned user IDs
+      console.log('Found AP users:', apUsers?.length || 0);
+      
+      // Get assigned user IDs - handle case where table might be empty
       const { data: assignments, error: assignError } = await supabase
         .from('ap_user_location_assignments')
         .select('ap_user_id')
         .eq('status', 'active');
       
-      if (assignError) throw assignError;
+      // Don't throw error if assignments table is empty, just log warning
+      if (assignError) {
+        console.warn('Assignment query error (table might be empty):', assignError);
+      }
       
       const assignedIds = new Set(assignments?.map(a => a.ap_user_id) || []);
       
-      return (apUsers || []).map(user => ({
+      const result = (apUsers || []).map(user => ({
         id: user.id,
-        displayName: user.display_name || user.email,
-        email: user.email,
+        displayName: user.display_name || user.email || 'Unnamed User',
+        email: user.email || '',
         isAssigned: assignedIds.has(user.id)
       }));
+      
+      console.log('Processed AP users:', result);
+      return result;
       
     } catch (error: any) {
       console.error('❌ Error getting available AP users:', error);
@@ -350,21 +430,30 @@ export class CleanAPTeamService {
     assignedAPUsers: number;
   }>> {
     try {
+      console.log('🔍 Getting locations...');
+      
       // Get all locations
       const { data: locations, error: locationError } = await supabase
         .from('locations')
         .select('id, name')
         .order('name');
       
-      if (locationError) throw locationError;
+      if (locationError) {
+        console.error('Locations query error:', locationError);
+        throw locationError;
+      }
       
-      // Get assignment counts
+      console.log('Found locations:', locations?.length || 0);
+      
+      // Get assignment counts - handle empty table
       const { data: assignments, error: assignError } = await supabase
         .from('ap_user_location_assignments')
         .select('location_id')
         .eq('status', 'active');
       
-      if (assignError) throw assignError;
+      if (assignError) {
+        console.warn('Assignment counts query error (table might be empty):', assignError);
+      }
       
       const assignmentCounts = new Map<string, number>();
       assignments?.forEach(assignment => {
