@@ -4,67 +4,52 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { correctedAPProviderService } from '@/services/provider/correctedAPProviderService';
+import { apUserService, type APUser, type APUserLocationAssignment } from '@/services/provider/apUserService';
 import { toast } from 'sonner';
-import {
-  UserCheck,
-  MapPin,
-  Building2,
-  Users,
-  Mail,
+import { 
+  UserCheck, 
+  MapPin, 
+  Building2, 
+  Users, 
+  Mail, 
   Phone,
   Briefcase,
   Calendar,
   Target,
   Plus,
-  X,
-  AlertCircle
+  X
 } from 'lucide-react';
 import { APUserSelectionDialog } from './APUserSelectionDialog';
-
-// Simplified types aligned with corrected architecture
-interface APUserWithAssignments {
-  id: string;
-  display_name: string;
-  email: string;
-  organization?: string;
-  assignedLocations: number;
-  locationNames: string[];
-  managedTeams: number;
-  assignmentStatus: 'assigned' | 'unassigned';
-}
 
 export function APUserManagementDashboard() {
   const queryClient = useQueryClient();
   const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [selectedAPUser, setSelectedAPUser] = useState<APUser | null>(null);
 
-  // Fetch system overview using corrected service
-  const { data: systemData, isLoading: loadingSystem } = useQuery({
-    queryKey: ['ap-system-overview'],
-    queryFn: async () => {
-      const result = await correctedAPProviderService.getSystemOverview();
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to load system overview');
-      }
-      return result.data;
-    }
+  // Fetch all AP users
+  const { data: apUsers = [], isLoading: loadingUsers } = useQuery({
+    queryKey: ['ap-users'],
+    queryFn: () => apUserService.getAPUsers()
+  });
+
+  // Fetch all AP user assignments
+  const { data: assignments = [], isLoading: loadingAssignments } = useQuery({
+    queryKey: ['ap-user-assignments'],
+    queryFn: () => apUserService.getAPUserAssignments()
   });
 
   // Remove assignment mutation
   const removeAssignmentMutation = useMutation({
     mutationFn: async ({ apUserId, locationId }: { apUserId: string; locationId: string }) => {
-      const result = await correctedAPProviderService.removeAPUserFromLocation(apUserId, locationId);
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to remove assignment');
-      }
-      return result;
+      return await apUserService.removeAPUserFromLocation(apUserId, locationId);
     },
-    onSuccess: (result) => {
-      toast.success(result.message || 'AP user removed from location successfully');
-      queryClient.invalidateQueries({ queryKey: ['ap-system-overview'] });
+    onSuccess: () => {
+      toast.success('AP user removed from location successfully');
+      queryClient.invalidateQueries({ queryKey: ['ap-user-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['authorized-providers'] });
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to remove AP user assignment');
+      toast.error('Failed to remove AP user assignment');
     }
   });
 
@@ -75,10 +60,23 @@ export function APUserManagementDashboard() {
   };
 
   const handleAssignmentCreated = () => {
-    queryClient.invalidateQueries({ queryKey: ['ap-system-overview'] });
+    queryClient.invalidateQueries({ queryKey: ['ap-user-assignments'] });
+    queryClient.invalidateQueries({ queryKey: ['authorized-providers'] });
   };
 
-  const renderAPUserCard = (apUser: APUserWithAssignments) => {
+  // Group assignments by AP user
+  const assignmentsByUser = assignments.reduce((acc, assignment) => {
+    if (!acc[assignment.ap_user_id]) {
+      acc[assignment.ap_user_id] = [];
+    }
+    acc[assignment.ap_user_id].push(assignment);
+    return acc;
+  }, {} as Record<string, APUserLocationAssignment[]>);
+
+  const renderAPUserCard = (apUser: APUser) => {
+    const userAssignments = assignmentsByUser[apUser.id] || [];
+    const activeAssignments = userAssignments.filter(a => a.status === 'active');
+
     return (
       <Card key={apUser.id} className="mb-4">
         <CardHeader className="pb-3">
@@ -94,15 +92,19 @@ export function APUserManagementDashboard() {
                     <Mail className="h-3 w-3" />
                     {apUser.email}
                   </div>
+                  {apUser.phone && (
+                    <div className="flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      {apUser.phone}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
             <div className="text-right">
-              <Badge variant={apUser.assignmentStatus === 'assigned' ? 'default' : 'secondary'}>
-                {apUser.assignmentStatus === 'assigned' ? 'Assigned' : 'Unassigned'}
-              </Badge>
+              <Badge variant="secondary">AP User</Badge>
               <p className="text-sm text-muted-foreground mt-1">
-                {apUser.assignedLocations} location{apUser.assignedLocations !== 1 ? 's' : ''}
+                {activeAssignments.length} location{activeAssignments.length !== 1 ? 's' : ''}
               </p>
             </div>
           </div>
@@ -113,23 +115,48 @@ export function APUserManagementDashboard() {
             <div className="flex items-center gap-2 mb-3 text-sm">
               <Building2 className="h-4 w-4 text-muted-foreground" />
               <span>{apUser.organization}</span>
+              {apUser.job_title && (
+                <>
+                  <span className="text-muted-foreground">•</span>
+                  <Briefcase className="h-4 w-4 text-muted-foreground" />
+                  <span>{apUser.job_title}</span>
+                </>
+              )}
             </div>
           )}
 
-          {apUser.assignedLocations > 0 ? (
+          {activeAssignments.length > 0 ? (
             <div className="space-y-2">
               <h4 className="font-medium text-sm">Location Assignments:</h4>
-              <div className="flex flex-wrap gap-2">
-                {apUser.locationNames.map((locationName) => (
-                  <Badge key={locationName} variant="outline" className="text-xs">
-                    <MapPin className="h-3 w-3 mr-1" />
-                    {locationName}
-                  </Badge>
-                ))}
-              </div>
-              <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
-                <span>Managed Teams: {apUser.managedTeams}</span>
-              </div>
+              {activeAssignments.map((assignment) => (
+                <div 
+                  key={assignment.assignment_id}
+                  className="flex items-center justify-between p-3 bg-muted rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">{assignment.location_name}</p>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <span>Role: {assignment.assignment_role}</span>
+                        <span>Teams: {assignment.team_count}</span>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          Since {new Date(assignment.start_date).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveAssignment(assignment.ap_user_id, assignment.location_id)}
+                    disabled={removeAssignmentMutation.isPending}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
             </div>
           ) : (
             <div className="text-center py-4 text-muted-foreground">
@@ -142,27 +169,70 @@ export function APUserManagementDashboard() {
     );
   };
 
-  if (loadingSystem) {
+  const renderAssignmentsList = () => {
+    if (assignments.length === 0) {
+      return (
+        <div className="text-center py-8 text-muted-foreground">
+          <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>No AP user assignments found</p>
+          <p className="text-sm">Assign AP users to locations to get started</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {assignments.map((assignment) => (
+          <Card key={assignment.assignment_id}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                    <UserCheck className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="font-medium">{assignment.ap_user_name}</h4>
+                    <p className="text-sm text-muted-foreground">{assignment.ap_user_email}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">{assignment.location_name}</span>
+                    {assignment.location_city && (
+                      <span className="text-sm text-muted-foreground">
+                        • {assignment.location_city}, {assignment.location_state}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right text-sm">
+                    <Badge variant="secondary">{assignment.assignment_role}</Badge>
+                    <p className="text-muted-foreground mt-1">
+                      {assignment.team_count} team{assignment.team_count !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveAssignment(assignment.ap_user_id, assignment.location_id)}
+                    disabled={removeAssignmentMutation.isPending}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  };
+
+  if (loadingUsers || loadingAssignments) {
     return (
       <div className="p-8 text-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
         <p>Loading AP user data...</p>
-      </div>
-    );
-  }
-
-  if (!systemData) {
-    return (
-      <div className="p-8 text-center text-muted-foreground">
-        <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-        <p>Failed to load AP user data</p>
-        <Button
-          variant="outline"
-          onClick={() => queryClient.invalidateQueries({ queryKey: ['ap-system-overview'] })}
-          className="mt-4"
-        >
-          Retry
-        </Button>
       </div>
     );
   }
@@ -194,16 +264,16 @@ export function APUserManagementDashboard() {
             <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
               <div>
                 <p className="text-sm text-muted-foreground">Total AP Users</p>
-                <p className="text-2xl font-bold">{systemData.summary.totalAPUsers}</p>
+                <p className="text-2xl font-bold">{apUsers.length}</p>
               </div>
               <UserCheck className="h-8 w-8 text-primary" />
             </div>
             
             <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
               <div>
-                <p className="text-sm text-muted-foreground">Assigned AP Users</p>
+                <p className="text-sm text-muted-foreground">Active Assignments</p>
                 <p className="text-2xl font-bold">
-                  {systemData.summary.assignedAPUsers}
+                  {assignments.filter(a => a.status === 'active').length}
                 </p>
               </div>
               <Target className="h-8 w-8 text-primary" />
@@ -211,27 +281,13 @@ export function APUserManagementDashboard() {
             
             <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
               <div>
-                <p className="text-sm text-muted-foreground">Managed Teams</p>
+                <p className="text-sm text-muted-foreground">Assigned Users</p>
                 <p className="text-2xl font-bold">
-                  {systemData.summary.totalManagedTeams}
+                  {Object.keys(assignmentsByUser).length}
                 </p>
               </div>
               <MapPin className="h-8 w-8 text-primary" />
             </div>
-
-            {systemData.issues.length > 0 && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <AlertCircle className="h-4 w-4 text-red-600" />
-                  <p className="text-sm font-medium text-red-800">Issues Found</p>
-                </div>
-                <ul className="text-xs text-red-700 space-y-1">
-                  {systemData.issues.map((issue, index) => (
-                    <li key={index}>• {issue}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -243,8 +299,8 @@ export function APUserManagementDashboard() {
             </TabsList>
             
             <TabsContent value="by-user" className="space-y-4">
-              {systemData.apUsers.length > 0 ? (
-                systemData.apUsers.map(renderAPUserCard)
+              {apUsers.length > 0 ? (
+                apUsers.map(renderAPUserCard)
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <UserCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -255,52 +311,7 @@ export function APUserManagementDashboard() {
             </TabsContent>
             
             <TabsContent value="by-assignment" className="space-y-4">
-              <div className="space-y-4">
-                {systemData.apUsers
-                  .filter(user => user.assignmentStatus === 'assigned')
-                  .map((user) => (
-                    <Card key={user.id}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                              <UserCheck className="h-5 w-5 text-primary" />
-                            </div>
-                            <div>
-                              <h4 className="font-medium">{user.display_name}</h4>
-                              <p className="text-sm text-muted-foreground">{user.email}</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4 text-muted-foreground" />
-                              <div className="flex flex-wrap gap-1">
-                                {user.locationNames.map((locationName) => (
-                                  <Badge key={locationName} variant="outline" className="text-xs">
-                                    {locationName}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-right text-sm">
-                            <Badge variant="secondary">
-                              {user.assignedLocations} location{user.assignedLocations !== 1 ? 's' : ''}
-                            </Badge>
-                            <p className="text-muted-foreground mt-1">
-                              {user.managedTeams} team{user.managedTeams !== 1 ? 's' : ''}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                {systemData.apUsers.filter(user => user.assignmentStatus === 'assigned').length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No AP user assignments found</p>
-                    <p className="text-sm">Assign AP users to locations to get started</p>
-                  </div>
-                )}
-              </div>
+              {renderAssignmentsList()}
             </TabsContent>
           </Tabs>
         </div>

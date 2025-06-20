@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { ComplianceService } from '@/services/compliance/complianceService';
 
@@ -69,6 +68,7 @@ export async function debugComplianceSystem() {
         requirements: breakdown.requirements.length,
         actions: breakdown.actions.length
       });
+    }
     }
 
   } catch (error) {

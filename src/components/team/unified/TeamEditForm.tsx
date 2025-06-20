@@ -52,8 +52,7 @@ export function TeamEditForm({ team, onCancel, onSuccess }: TeamEditFormProps) {
     description: team.description || '',
     location_id: team.location_id || '',
     team_type: team.team_type || 'standard',
-    status: team.status || 'active',
-    assigned_ap_user_id: team.assigned_ap_user_id || ''
+    status: team.status || 'active'
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [hasChanges, setHasChanges] = useState(false);
@@ -62,13 +61,12 @@ export function TeamEditForm({ team, onCancel, onSuccess }: TeamEditFormProps) {
 
   // Track changes
   useEffect(() => {
-    const changed =
+    const changed = 
       formData.name !== team.name ||
       formData.description !== (team.description || '') ||
       formData.location_id !== (team.location_id || '') ||
       formData.team_type !== (team.team_type || 'standard') ||
-      formData.status !== (team.status || 'active') ||
-      formData.assigned_ap_user_id !== (team.assigned_ap_user_id || '');
+      formData.status !== (team.status || 'active');
     
     setHasChanges(changed);
   }, [formData, team]);
@@ -84,22 +82,6 @@ export function TeamEditForm({ team, onCancel, onSuccess }: TeamEditFormProps) {
       
       if (error) throw error;
       return data as Location[];
-    }
-  });
-
-  // Fetch available AP users (corrected architecture)
-  const { data: apUsers = [], isLoading: apUsersLoading } = useQuery({
-    queryKey: ['ap-users-for-edit'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, display_name, email, organization')
-        .eq('role', 'AP')
-        .eq('status', 'ACTIVE')
-        .order('display_name');
-      
-      if (error) throw error;
-      return data;
     }
   });
 
@@ -152,8 +134,7 @@ export function TeamEditForm({ team, onCancel, onSuccess }: TeamEditFormProps) {
       description: formData.description?.trim() || undefined,
       location_id: formData.location_id === 'none' ? undefined : formData.location_id || undefined,
       team_type: formData.team_type,
-      status: formData.status,
-      assigned_ap_user_id: formData.assigned_ap_user_id || undefined
+      status: formData.status
     };
 
     updateTeamMutation.mutate(updates);
@@ -174,8 +155,7 @@ export function TeamEditForm({ team, onCancel, onSuccess }: TeamEditFormProps) {
       description: team.description || '',
       location_id: team.location_id || '',
       team_type: team.team_type || 'standard',
-      status: team.status || 'active',
-      assigned_ap_user_id: team.assigned_ap_user_id || ''
+      status: team.status || 'active'
     });
     setErrors({});
   };
@@ -286,40 +266,6 @@ export function TeamEditForm({ team, onCancel, onSuccess }: TeamEditFormProps) {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          {/* AP User Assignment (Corrected Architecture) */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Assigned AP User (Authorized Provider)
-            </Label>
-            <Select
-              value={formData.assigned_ap_user_id}
-              onValueChange={(value) => handleInputChange('assigned_ap_user_id', value)}
-              disabled={apUsersLoading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={apUsersLoading ? "Loading AP users..." : "Select AP user (optional)"} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">No AP user assigned</SelectItem>
-                {apUsers.map((apUser) => (
-                  <SelectItem key={apUser.id} value={apUser.id}>
-                    <div>
-                      <div className="font-medium">{apUser.display_name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {apUser.email}
-                        {apUser.organization && ` • ${apUser.organization}`}
-                      </div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              The AP user assigned to this team serves as the Authorized Provider. Change this to reassign team responsibility.
-            </p>
           </div>
 
           {/* Status */}

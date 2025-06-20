@@ -44,7 +44,7 @@ export function CapabilitiesTab({ providerId, capabilities, onCapabilitiesChange
       const { data, error } = await supabase
         .from('provider_training_capabilities')
         .insert({
-          assigned_ap_user_id: providerId, // Updated: AP user assignment
+          provider_id: providerId,
           course_category: capabilityData.courseCategory,
           certification_types: capabilityData.certificationTypes,
           max_team_size: capabilityData.maxTeamSize,

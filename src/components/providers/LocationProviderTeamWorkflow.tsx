@@ -53,29 +53,6 @@ export function LocationProviderTeamWorkflow() {
     queryKey: ['available-providers'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          display_name,
-          email,
-          organization,
-          role,
-          status
-        `)
-        .eq('role', 'AP')
-        .eq('status', 'ACTIVE')
-        .order('display_name');
-      
-      if (error) throw error;
-      return data || [];
-    }
-  });
-
-  // Legacy providers for backward compatibility
-  const { data: legacyProviders = [] } = useQuery({
-    queryKey: ['legacy-workflow-providers'],
-    queryFn: async () => {
-      const { data, error } = await supabase
         .from('authorized_providers')
         .select(`
           *,
@@ -113,9 +90,8 @@ export function LocationProviderTeamWorkflow() {
   const assignProviderMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
-        .from('profiles')
+        .from('authorized_providers')
         .update({ primary_location_id: workflowData.locationId })
-        .eq('role', 'AP')
         .eq('id', workflowData.providerId);
 
       if (error) throw error;
@@ -140,7 +116,7 @@ export function LocationProviderTeamWorkflow() {
           name: workflowData.teamName,
           description: workflowData.teamDescription,
           location_id: workflowData.locationId,
-          assigned_ap_user_id: workflowData.providerId,
+          provider_id: workflowData.providerId,
           team_type: 'operational',
           status: 'active'
         })

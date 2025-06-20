@@ -25,29 +25,6 @@ export function ProviderLocationAssignments() {
     queryKey: ['providers-with-locations'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          display_name,
-          email,
-          organization,
-          role,
-          status
-        `)
-        .eq('role', 'AP')
-        .eq('status', 'ACTIVE')
-        .order('display_name');
-      
-      if (error) throw error;
-      return data || [];
-    }
-  });
-
-  // Legacy authorized_providers query for backward compatibility
-  const { data: legacyProviders = [] } = useQuery({
-    queryKey: ['legacy-provider-locations'],
-    queryFn: async () => {
-      const { data, error } = await supabase
         .from('authorized_providers')
         .select(`
           *,
@@ -69,7 +46,7 @@ export function ProviderLocationAssignments() {
         .from('locations')
         .select(`
           *,
-          profiles!assigned_ap_user_id(id, display_name, email, organization)
+          authorized_providers!primary_location_id(*)
         `)
         .order('name');
       
@@ -101,9 +78,8 @@ export function ProviderLocationAssignments() {
   const assignProviderMutation = useMutation({
     mutationFn: async ({ providerId, locationId }: { providerId: string; locationId: string }) => {
       const { error } = await supabase
-        .from('profiles')
+        .from('authorized_providers')
         .update({ primary_location_id: locationId })
-        .eq('role', 'AP')
         .eq('id', providerId);
 
       if (error) throw error;
@@ -124,9 +100,8 @@ export function ProviderLocationAssignments() {
   const removeProviderMutation = useMutation({
     mutationFn: async (providerId: string) => {
       const { error } = await supabase
-        .from('profiles')
+        .from('authorized_providers')
         .update({ primary_location_id: null })
-        .eq('role', 'AP')
         .eq('id', providerId);
 
       if (error) throw error;
@@ -142,9 +117,9 @@ export function ProviderLocationAssignments() {
   });
 
   const assignedProviders = providers.filter(p => p.primary_location_id);
-  const unassignedApUsers = providers.filter(p => !p.primary_location_id);
-  const assignedLocations = locations.filter(l => l.profiles && l.profiles.length > 0);
-  const unassignedLocations = locations.filter(l => !l.profiles || l.profiles.length === 0);
+  const unassignedProviders = providers.filter(p => !p.primary_location_id);
+  const assignedLocations = locations.filter(l => l.authorized_providers && l.authorized_providers.length > 0);
+  const unassignedLocations = locations.filter(l => !l.authorized_providers || l.authorized_providers.length === 0);
 
   return (
     <div className="space-y-6">
@@ -285,7 +260,7 @@ export function ProviderLocationAssignments() {
                   </h4>
                   <div className="space-y-2">
                     {assignedLocations.map((location) => {
-                      const apUser = location.profiles?.[0];
+                      const provider = location.authorized_providers?.[0];
                       const teams = locationTeams.filter(t => t.location?.id === location.id);
                       return (
                         <div key={location.id} className="p-2 border border-green-200 bg-green-50 rounded">

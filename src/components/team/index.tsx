@@ -161,48 +161,41 @@ export default function Team() {
         }
       }
 
-      // Get AP user data if assigned_ap_user_id exists (corrected architecture)
-      let apUserData = null;
-      if (teamData.assigned_ap_user_id) {
-        const { data: apData, error: apError } = await supabase
-          .from("profiles")
+      // Get provider data if provider_id exists
+      let providerData = null;
+      if (teamData.provider_id) {
+        const { data: provData, error: provError } = await supabase
+          .from("authorized_providers")
           .select("*")
-          .eq("id", teamData.assigned_ap_user_id)
-          .eq("role", "AP")
-          .eq("status", "ACTIVE")
+          .eq("id", teamData.provider_id)
           .single();
         
-        if (!apError && apData) {
-          apUserData = {
-            id: apData.id,
-            name: apData.display_name,
-            provider_type: 'authorized_provider',
-            status: 'active',
-            primary_location_id: teamData.location_id,
-            performance_rating: 0,
-            compliance_score: 0,
-            created_at: apData.created_at || new Date().toISOString(),
-            updated_at: apData.updated_at || new Date().toISOString(),
-            description: apData.organization || 'Authorized Provider',
-            email: apData.email,
-            organization: apData.organization
+        if (!provError && provData) {
+          providerData = {
+            id: provData.id.toString(),
+            name: provData.name,
+            provider_type: provData.provider_type || 'training_provider',
+            status: provData.status || 'active',
+            primary_location_id: provData.primary_location_id,
+            performance_rating: provData.performance_rating || 0,
+            compliance_score: provData.compliance_score || 0,
+            created_at: provData.created_at || new Date().toISOString(),
+            updated_at: provData.updated_at || new Date().toISOString(),
+            description: provData.description
           };
         }
       }
 
-      // Create enhanced team with required metadata - using corrected architecture
+      // Create enhanced team with required metadata - fix type issues
       const enhancedTeam: EnhancedTeam = {
         ...teamData,
-        // Corrected architecture: Only AP user assignment
-        assigned_ap_user_id: teamData.assigned_ap_user_id,
-        created_by_ap_user_id: teamData.created_by_ap_user_id,
+        provider_id: teamData.provider_id?.toString(),
         status: teamData.status as 'active' | 'inactive' | 'suspended',
         metadata: safeParseMetadata(teamData.metadata),
         monthly_targets: safeParseJsonField(teamData.monthly_targets),
         current_metrics: safeParseJsonField(teamData.current_metrics),
         location: locationData,
-        provider: apUserData, // Use AP user data instead of provider data
-        assignedAPUser: apUserData, // Add explicit AP user reference
+        provider: providerData,
         members: transformedMembers
       };
 
@@ -296,7 +289,7 @@ export default function Team() {
                   onUpdate={(updatedTeam) => {
                     const enhancedUpdated: EnhancedTeam = {
                       ...updatedTeam,
-                      assigned_ap_user_id: updatedTeam.assigned_ap_user_id,
+                      provider_id: updatedTeam.provider_id?.toString(),
                       status: updatedTeam.status as 'active' | 'inactive' | 'suspended',
                       metadata: safeParseMetadata(updatedTeam.metadata),
                       monthly_targets: safeParseJsonField(updatedTeam.monthly_targets),
@@ -311,11 +304,11 @@ export default function Team() {
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString()
                       } : undefined,
-                      apUser: updatedTeam.apUser ? {
-                        id: updatedTeam.apUser.id,
-                        display_name: updatedTeam.apUser.display_name,
-                        email: updatedTeam.apUser.email,
-                        organization: updatedTeam.apUser.organization,
+                      provider: updatedTeam.provider ? {
+                        id: updatedTeam.provider.id,
+                        name: updatedTeam.provider.name,
+                        provider_type: updatedTeam.provider.provider_type,
+                        status: 'active',
                         primary_location_id: undefined,
                         performance_rating: 0,
                         compliance_score: 0,

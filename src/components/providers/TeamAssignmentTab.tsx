@@ -73,8 +73,8 @@ export function TeamAssignmentTab({ providerId, assignments, onAssignmentChange 
         .eq('status', 'active')
         .not('id', 'in', `(
           SELECT team_id 
-          FROM ap_user_team_assignments
-          WHERE assigned_ap_user_id = '${providerId}'
+          FROM provider_team_assignments 
+          WHERE provider_id = '${providerId}' 
           AND status = 'active'
         )`);
       
@@ -224,8 +224,8 @@ export function TeamAssignmentTab({ providerId, assignments, onAssignmentChange 
       endDate?: string;
     }) => {
       const { data, error } = await supabase
-        .rpc('assign_ap_user_to_team', {
-          p_ap_user_id: providerId,
+        .rpc('assign_provider_to_team', {
+          p_provider_id: providerId,
           p_team_id: assignmentData.teamId,
           p_assignment_role: assignmentData.assignmentRole,
           p_oversight_level: assignmentData.oversightLevel,
