@@ -37,7 +37,6 @@ export function CreateTeamDialog({
     description: '',
     team_type: 'standard',
     location_id: '',
-    assigned_ap_user_id: '', // ADDED: AP user assignment
   });
 
   const { data: locations = [] } = useQuery({
@@ -50,22 +49,6 @@ export function CreateTeamDialog({
       
       if (error) throw error;
       return data || [];
-    }
-  });
-
-  // ADDED: Fetch available AP users (corrected architecture)
-  const { data: apUsers = [] } = useQuery({
-    queryKey: ['ap-users-professional-create'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, display_name, email, organization')
-        .eq('role', 'AP')
-        .eq('status', 'ACTIVE')
-        .order('display_name');
-      
-      if (error) throw error;
-      return data;
     }
   });
 
@@ -93,7 +76,6 @@ export function CreateTeamDialog({
           description: teamData.description || null,
           team_type: teamData.team_type,
           location_id: teamData.location_id || null,
-          assigned_ap_user_id: teamData.assigned_ap_user_id || null, // ADDED: AP user assignment
           status: 'active',
           performance_score: 0,
           created_by: user.id // Ensure this is a valid UUID
@@ -116,7 +98,6 @@ export function CreateTeamDialog({
         description: '',
         team_type: 'standard',
         location_id: '',
-        assigned_ap_user_id: '', // ADDED: Reset AP user assignment
       });
     },
     onError: (error: any) => {
@@ -206,27 +187,6 @@ export function CreateTeamDialog({
                 {locations.map((location) => (
                   <SelectItem key={location.id} value={location.id}>
                     {location.name} {location.city && `- ${location.city}, ${location.state}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* ADDED: AP User Assignment Section */}
-          <div className="space-y-2">
-            <Label htmlFor="assigned_ap_user_id">AP User (Authorized Provider) - Optional</Label>
-            <Select
-              value={formData.assigned_ap_user_id}
-              onValueChange={(value) => setFormData({ ...formData, assigned_ap_user_id: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select AP user (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">No AP user assigned</SelectItem>
-                {apUsers.map((apUser) => (
-                  <SelectItem key={apUser.id} value={apUser.id}>
-                    {apUser.display_name} {apUser.organization && `(${apUser.organization})`}
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -21,7 +21,7 @@ interface UniversalTeamWizardProps {
 
 const steps = [
   { title: 'Basic Info', description: 'Team name and type' },
-  { title: 'Location & AP User', description: 'Assignment and association' },
+  { title: 'Location & Provider', description: 'Assignment and association' },
   { title: 'Permissions', description: 'Team capabilities' },
   { title: 'Review', description: 'Confirm and create' }
 ];
@@ -60,22 +60,21 @@ export function UniversalTeamWizard({ userRole = 'IT', onTeamCreated }: Universa
   });
 
   // Get provider data for review step
-  const { data: apUserData } = useQuery({
-    queryKey: ['ap-user', formData.assigned_ap_user_id],
+  const { data: providerData } = useQuery({
+    queryKey: ['provider', formData.provider_id],
     queryFn: async () => {
-      if (!formData.assigned_ap_user_id) return null;
-
+      if (!formData.provider_id) return null;
+      
       const { data, error } = await supabase
-        .from('profiles')
-        .select('display_name, organization')
-        .eq('id', formData.assigned_ap_user_id)
-        .eq('role', 'AP')
+        .from('authorized_providers')
+        .select('name')
+        .eq('id', parseInt(formData.provider_id))
         .single();
-
+      
       if (error) throw error;
       return data;
     },
-    enabled: !!formData.assigned_ap_user_id
+    enabled: !!formData.provider_id
   });
 
   const getWizardConfig = () => {
@@ -98,11 +97,11 @@ export function UniversalTeamWizard({ userRole = 'IT', onTeamCreated }: Universa
         };
       case 'AP':
         return {
-          title: 'AP User Team Creation',
-          description: 'Create teams with AP user (Authorized Provider) assignment',
+          title: 'Provider Team Creation',
+          description: 'Create teams for your authorized provider organization',
           icon: Building2,
           variant: 'secondary' as const,
-          features: ['AP user assignment', 'Team management', 'Performance tracking', 'Training coordination']
+          features: ['Provider scope', 'Team management', 'Performance tracking', 'Training coordination']
         };
       default:
         return {

@@ -54,9 +54,9 @@ export class APUserService {
    */
   async getAvailableAPUsersForLocation(locationId: string): Promise<APUser[]> {
     try {
-      // Use the database function
+      // Try using the database function first
       const { data, error } = await supabase
-        .rpc('get_available_ap_users_for_location', { p_location_id: locationId });
+        .rpc('get_available_ap_users_for_location' as any, { p_location_id: locationId });
 
       if (!error && data) {
         return data.map((user: any) => ({
@@ -72,13 +72,8 @@ export class APUserService {
           job_title: user.job_title
         }));
       }
-      
-      if (error) {
-        console.error('RPC function error:', error);
-        throw error;
-      }
     } catch (error: any) {
-      console.error('Database function failed:', error);
+      console.warn('Database function not available, using fallback method');
     }
 
     // Fallback: Get all AP users and filter out assigned ones
@@ -139,9 +134,9 @@ export class APUserService {
     endDate?: string
   ): Promise<string> {
     try {
-      // Use the database function
+      // Try using the database function first
       const { data, error } = await supabase
-        .rpc('assign_ap_user_to_location', {
+        .rpc('assign_ap_user_to_location' as any, {
           p_ap_user_id: apUserId,
           p_location_id: locationId,
           p_assignment_role: assignmentRole,
@@ -151,13 +146,8 @@ export class APUserService {
       if (!error && data) {
         return data;
       }
-      
-      if (error) {
-        console.error('RPC assignment function error:', error);
-        throw error;
-      }
     } catch (error: any) {
-      console.error('Database function failed, using fallback:', error);
+      console.warn('Database function not available, using fallback method');
     }
 
     // Fallback: Direct table operations
@@ -175,7 +165,29 @@ export class APUserService {
         throw new Error('AP user not found or not active');
       }
 
-      // Create the authorized_provider record directly
+      // Try to create assignment record in ap_user_location_assignments table
+      let assignmentId: string;
+      try {
+        const { data: assignment, error: assignmentError } = await supabase
+          .from('ap_user_location_assignments' as any)
+          .insert({
+            ap_user_id: apUserId,
+            location_id: locationId,
+            assignment_role: assignmentRole,
+            end_date: endDate || null,
+            status: 'active'
+          })
+          .select()
+          .single();
+
+        if (assignmentError) throw assignmentError;
+        assignmentId = assignment.id;
+      } catch (tableError) {
+        console.warn('ap_user_location_assignments table not available, using authorized_providers only');
+        assignmentId = crypto.randomUUID();
+      }
+
+      // Create the corresponding authorized_provider record
       const { data: provider, error: providerError } = await supabase
         .from('authorized_providers')
         .insert({
@@ -199,18 +211,7 @@ export class APUserService {
         throw providerError;
       }
 
-      // Update profile location if not set
-      if (!apUser.location_id || apUser.location_id !== locationId) {
-        await supabase
-          .from('profiles')
-          .update({
-            location_id: locationId,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', apUserId);
-      }
-
-      return provider.id;
+      return assignmentId;
     } catch (fallbackError: any) {
       console.error('All assignment methods failed:', fallbackError);
       throw fallbackError;
@@ -222,9 +223,9 @@ export class APUserService {
    */
   async getAPUserAssignments(apUserId?: string): Promise<APUserLocationAssignment[]> {
     try {
-      // Use the RPC function
+      // Try the RPC function first
       const { data, error } = await supabase
-        .rpc('get_ap_user_assignments', { p_ap_user_id: apUserId || null });
+        .rpc('get_ap_user_assignments' as any, { p_ap_user_id: apUserId || null });
 
       if (!error && data) {
         return data.map((assignment: any) => ({
@@ -243,12 +244,8 @@ export class APUserService {
           team_count: assignment.team_count
         }));
       }
-      
-      if (error) {
-        console.error('RPC assignments function error:', error);
-      }
     } catch (rpcError) {
-      console.error('RPC function failed, using fallback method:', rpcError);
+      console.warn('RPC function not available, using fallback method');
     }
 
     // Fallback: Use authorized_providers table

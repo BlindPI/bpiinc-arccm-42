@@ -49,9 +49,7 @@ export function TeamCreateForm({ onCancel, onSuccess }: TeamCreateFormProps) {
     description: '',
     location_id: '',
     team_type: 'standard',
-    status: 'active',
-    assigned_ap_user_id: '', // NEW: AP user assignment
-    created_by_ap_user_id: '' // NEW: Track who created the team
+    status: 'active'
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   
@@ -69,49 +67,6 @@ export function TeamCreateForm({ onCancel, onSuccess }: TeamCreateFormProps) {
       if (error) throw error;
       return data as Location[];
     }
-  });
-
-  // Fetch available AP users for selected location only
-  const { data: apUsers = [], isLoading: apUsersLoading } = useQuery({
-    queryKey: ['available-ap-users-for-team-location', formData.location_id],
-    queryFn: async () => {
-      if (!formData.location_id || formData.location_id === 'none') return [];
-      
-      try {
-        // Use the RPC function to get location-specific AP users
-        const { data, error } = await supabase
-          .rpc('get_available_ap_users_for_location', {
-            p_location_id: formData.location_id
-          });
-        
-        if (error) throw error;
-        
-        return data?.map((user: any) => ({
-          id: user.user_id,
-          display_name: user.display_name,
-          email: user.email,
-          organization: user.organization
-        })) || [];
-      } catch (error) {
-        console.error('Failed to get available AP users:', error);
-        
-        // Fallback: Get AP users and filter by location compatibility
-        const { data: allAPs, error: apError } = await supabase
-          .from('profiles')
-          .select('id, display_name, email, organization, location_id')
-          .eq('role', 'AP')
-          .eq('status', 'ACTIVE')
-          .order('display_name');
-        
-        if (apError) throw apError;
-        
-        // Filter to users with no location or matching location
-        return allAPs?.filter(user =>
-          !user.location_id || user.location_id === formData.location_id
-        ) || [];
-      }
-    },
-    enabled: !!(formData.location_id && formData.location_id !== 'none')
   });
 
   // Create team mutation
@@ -157,9 +112,7 @@ export function TeamCreateForm({ onCancel, onSuccess }: TeamCreateFormProps) {
       ...formData,
       name: formData.name.trim(),
       description: formData.description?.trim() || undefined,
-      location_id: formData.location_id === 'none' ? undefined : formData.location_id || undefined,
-      assigned_ap_user_id: formData.assigned_ap_user_id || undefined,
-      created_by_ap_user_id: formData.created_by_ap_user_id || undefined
+      location_id: formData.location_id === 'none' ? undefined : formData.location_id || undefined
     };
 
     createTeamMutation.mutate(teamData);
@@ -260,14 +213,7 @@ export function TeamCreateForm({ onCancel, onSuccess }: TeamCreateFormProps) {
             </Label>
             <Select
               value={formData.location_id}
-              onValueChange={(value) => {
-                // Clear AP user selection when location changes
-                setFormData(prev => ({
-                  ...prev,
-                  location_id: value,
-                  assigned_ap_user_id: ''
-                }));
-              }}
+              onValueChange={(value) => handleInputChange('location_id', value)}
               disabled={locationsLoading}
             >
               <SelectTrigger>
@@ -287,55 +233,6 @@ export function TeamCreateForm({ onCancel, onSuccess }: TeamCreateFormProps) {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          {/* AP User Assignment (Corrected Architecture) */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Assign AP User (Authorized Provider)
-            </Label>
-            <Select
-              value={formData.assigned_ap_user_id}
-              onValueChange={(value) => handleInputChange('assigned_ap_user_id', value)}
-              disabled={apUsersLoading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={apUsersLoading ? "Loading AP users..." : "Select AP user (optional)"} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">No AP user assigned</SelectItem>
-                {apUsers.length === 0 && formData.location_id && formData.location_id !== 'none' && !apUsersLoading && (
-                  <SelectItem value="" disabled>
-                    No available AP users for this location
-                  </SelectItem>
-                )}
-                {(!formData.location_id || formData.location_id === 'none') && (
-                  <SelectItem value="" disabled>
-                    Select a location first to see available AP users
-                  </SelectItem>
-                )}
-                {apUsers.map((apUser) => (
-                  <SelectItem key={apUser.id} value={apUser.id}>
-                    <div>
-                      <div className="font-medium">{apUser.display_name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {apUser.email}
-                        {apUser.organization && ` • ${apUser.organization}`}
-                      </div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              {!formData.location_id || formData.location_id === 'none'
-                ? 'Select a location first to see available AP users for assignment'
-                : apUsers.length === 0 && !apUsersLoading
-                ? 'No AP users available for this location - they may already be assigned'
-                : 'AP users serve as Authorized Providers. Selecting an AP user assigns them responsibility for this team.'
-              }
-            </p>
           </div>
 
           {/* Status */}

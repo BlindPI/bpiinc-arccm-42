@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { CleanProviderManagementHub } from '@/components/providers/CleanProviderManagementHub';
+import { UnifiedProviderManagementHub } from '@/components/providers/UnifiedProviderManagementHub';
 
 export default function ProviderManagement() {
-  return <CleanProviderManagementHub />;
+  return <UnifiedProviderManagementHub />;
 }

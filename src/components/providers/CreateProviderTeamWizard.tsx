@@ -40,7 +40,7 @@ export function CreateProviderTeamWizard({
         description: data.description,
         team_type: data.team_type,
         location_id: locationId,
-        assigned_ap_user_id: providerId, // Updated: AP user assignment
+        provider_id: providerId, // Keep as string, service will handle conversion
         created_by: user.id
       });
     },

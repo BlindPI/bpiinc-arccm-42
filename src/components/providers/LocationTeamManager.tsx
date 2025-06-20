@@ -17,9 +17,9 @@ export function LocationTeamManager({ locationId, providerId }: LocationTeamMana
     queryFn: () => teamManagementService.getTeamsByLocation(locationId)
   });
 
-  // Filter teams by AP user ID (corrected architecture)
-  const apUserTeams = locationTeams.filter(team => team.assigned_ap_user_id === providerId);
-  const otherTeams = locationTeams.filter(team => team.assigned_ap_user_id !== providerId);
+  // Filter teams by provider ID (both are strings now)
+  const providerTeams = locationTeams.filter(team => team.provider_id === providerId);
+  const otherTeams = locationTeams.filter(team => team.provider_id !== providerId);
 
   return (
     <div className="space-y-6">

@@ -26,11 +26,9 @@ export function TeamCreationForm({ onSuccess, onCancel }: TeamCreationFormProps)
     description: '',
     team_type: 'training',
     location_id: '',
-    assigned_ap_user_id: '', // UPDATED: Direct AP user assignment (corrected architecture)
-    provider_id: '', // Legacy: Deprecated - will be removed
+    provider_id: '',
     metadata: {},
-    created_by: user?.id || '',
-    created_by_ap_user_id: user?.role === 'AP' ? user?.id : '' // NEW: Track AP user who created team
+    created_by: user?.id || ''
   });
 
   // Get locations for dropdown
@@ -46,29 +44,14 @@ export function TeamCreationForm({ onSuccess, onCancel }: TeamCreationFormProps)
     }
   });
 
-  // Get AP users for dropdown (corrected architecture)
-  const { data: apUsers = [] } = useQuery({
-    queryKey: ['ap-users'],
+  // Get providers for dropdown
+  const { data: providers = [] } = useQuery({
+    queryKey: ['providers'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('id, display_name, email, organization')
-        .eq('role', 'AP')
-        .eq('status', 'ACTIVE')
-        .order('display_name');
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  // Legacy providers query for backward compatibility
-  const { data: legacyProviders = [] } = useQuery({
-    queryKey: ['legacy-providers'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('authorized_providers_legacy')
+        .from('authorized_providers')
         .select('*')
-        .eq('status', 'APPROVED')
+        .eq('status', 'active')
         .order('name');
       if (error) throw error;
       return data;
@@ -101,9 +84,7 @@ export function TeamCreationForm({ onSuccess, onCancel }: TeamCreationFormProps)
       description: formData.description || '',
       team_type: formData.team_type || 'training',
       location_id: formData.location_id || undefined,
-      assigned_ap_user_id: formData.assigned_ap_user_id || undefined,
-      created_by_ap_user_id: formData.created_by_ap_user_id || undefined,
-      // provider_id removed - deprecated in corrected architecture
+      provider_id: formData.provider_id || undefined,
       metadata: formData.metadata || {},
       created_by: user?.id || ''
     });
@@ -177,51 +158,23 @@ export function TeamCreationForm({ onSuccess, onCancel }: TeamCreationFormProps)
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ap-user">Assign AP User (Authorized Provider)</Label>
-            <Select
-              value={formData.assigned_ap_user_id}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_ap_user_id: value }))}
+            <Label htmlFor="provider">Authorized Provider</Label>
+            <Select 
+              value={formData.provider_id} 
+              onValueChange={(value) => setFormData(prev => ({ ...prev, provider_id: value }))}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select AP user (optional)" />
+                <SelectValue placeholder="Select provider (optional)" />
               </SelectTrigger>
               <SelectContent>
-                {apUsers.map((apUser) => (
-                  <SelectItem key={apUser.id} value={apUser.id}>
-                    {apUser.display_name} {apUser.organization && `(${apUser.organization})`}
+                {providers.map((provider) => (
+                  <SelectItem key={provider.id} value={provider.id.toString()}>
+                    {provider.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-sm text-muted-foreground">
-              AP users serve as Authorized Providers for teams. Select an AP user to assign them to this team.
-            </p>
           </div>
-
-          {/* Legacy provider support for backward compatibility */}
-          {legacyProviders.length > 0 && (
-            <div className="space-y-2">
-              <Label htmlFor="legacy-provider">Legacy Provider (Deprecated)</Label>
-              <Select
-                value={formData.provider_id}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, provider_id: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select legacy provider (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {legacyProviders.map((provider) => (
-                    <SelectItem key={provider.id} value={provider.id.toString()}>
-                      {provider.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-sm text-amber-600">
-                ⚠️ Legacy provider system. Use AP User assignment above for new teams.
-              </p>
-            </div>
-          )}
 
           <div className="flex gap-2 pt-4">
             <Button 
