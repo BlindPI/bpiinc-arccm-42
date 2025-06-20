@@ -106,44 +106,7 @@ export function CleanTeamManagementHub() {
     );
   }
 
-  // Show message if user has no teams
-  if (!userTeams.length && !dashboard?.locations.length) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-6 w-6 text-blue-600" />
-            Professional Team Management
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <h3 className="text-lg font-medium mb-2">No Teams Available</h3>
-            <p className="text-muted-foreground mb-4">
-              You don't have any teams assigned yet. Contact your administrator to get started with team management.
-            </p>
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
-                <div>
-                  <h4 className="font-medium text-amber-800">Getting Started</h4>
-                  <p className="text-sm text-amber-700 mt-1">
-                    To manage teams, an administrator needs to:
-                  </p>
-                  <ol className="text-sm text-amber-700 mt-2 ml-4 list-decimal">
-                    <li>Assign you to a location</li>
-                    <li>Create teams for that location</li>
-                    <li>Set you as the team manager</li>
-                  </ol>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  // Always show the team management interface - don't block on no teams
 
   return (
     <div className="space-y-6">
@@ -152,7 +115,7 @@ export function CleanTeamManagementHub() {
         <div>
           <h2 className="text-2xl font-bold">Team Management Dashboard</h2>
           <p className="text-muted-foreground">
-            Manage your teams and members across locations
+            Create and manage your teams and members across locations
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -162,6 +125,28 @@ export function CleanTeamManagementHub() {
           </Badge>
         </div>
       </div>
+
+      {/* Quick Create Team Card - Always Visible */}
+      <Card className="border-blue-200 bg-blue-50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-blue-800">
+            <Plus className="h-5 w-5" />
+            Create New Team
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-blue-700 mb-4">
+            Get started by creating your first team. Teams help organize members and manage work across locations.
+          </p>
+          <Button
+            className="w-full"
+            onClick={() => setActiveTab('create-team')}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Team
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Overview Cards */}
       {dashboard && (
@@ -213,10 +198,11 @@ export function CleanTeamManagementHub() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="teams">My Teams</TabsTrigger>
           <TabsTrigger value="members">Team Members</TabsTrigger>
+          <TabsTrigger value="create-team">Create Team</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">

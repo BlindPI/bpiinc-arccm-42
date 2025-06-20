@@ -6,6 +6,7 @@ import SignUp from '@/pages/SignUp';
 import Dashboard from '@/pages/Dashboard';
 import EnhancedDashboard from '@/pages/EnhancedDashboard';
 import LandingPage from '@/pages/LandingPage';
+import CertificateVerification from '@/pages/CertificateVerification';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import Settings from '@/pages/Settings';
 import UserManagement from '@/pages/UserManagement';
@@ -51,6 +52,7 @@ export function AppRoutes() {
       <Route path="/auth/signin" element={<SignIn />} />
       <Route path="/auth/signup" element={<SignUp />} />
       <Route path="/landing" element={<LandingPage />} />
+      <Route path="/verify" element={<CertificateVerification />} />
       
       <Route path="/" element={
         <ProtectedRoute>

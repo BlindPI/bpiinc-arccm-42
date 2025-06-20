@@ -316,14 +316,23 @@ export function CleanProviderManagementHub() {
                       <SelectValue placeholder="Choose an AP user" />
                     </SelectTrigger>
                     <SelectContent>
-                      {unassignedAPUsers.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          <div>
-                            <div className="font-medium">{user.displayName}</div>
-                            <div className="text-sm text-gray-500">{user.email}</div>
-                          </div>
+                      {unassignedAPUsers.length === 0 ? (
+                        <SelectItem value="no-unassigned-users" disabled>
+                          No unassigned AP users available
                         </SelectItem>
-                      ))}
+                      ) : (
+                        unassignedAPUsers.map((user) => (
+                          <SelectItem
+                            key={user.id || `unassigned-${Math.random()}`}
+                            value={user.id || `invalid-unassigned-${Math.random()}`}
+                          >
+                            <div>
+                              <div className="font-medium">{user.displayName}</div>
+                              <div className="text-sm text-gray-500">{user.email}</div>
+                            </div>
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -335,16 +344,25 @@ export function CleanProviderManagementHub() {
                       <SelectValue placeholder="Choose a location" />
                     </SelectTrigger>
                     <SelectContent>
-                      {locations.map((location) => (
-                        <SelectItem key={location.id} value={location.id}>
-                          <div>
-                            <div className="font-medium">{location.name}</div>
-                            <div className="text-sm text-gray-500">
-                              {location.assignedAPUsers} AP user{location.assignedAPUsers !== 1 ? 's' : ''}
-                            </div>
-                          </div>
+                      {locations.length === 0 ? (
+                        <SelectItem value="no-locations" disabled>
+                          No locations available
                         </SelectItem>
-                      ))}
+                      ) : (
+                        locations.map((location) => (
+                          <SelectItem
+                            key={location.id || `assign-loc-${Math.random()}`}
+                            value={location.id || `invalid-assign-loc-${Math.random()}`}
+                          >
+                            <div>
+                              <div className="font-medium">{location.name}</div>
+                              <div className="text-sm text-gray-500">
+                                {location.assignedAPUsers} AP user{location.assignedAPUsers !== 1 ? 's' : ''}
+                              </div>
+                            </div>
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -413,14 +431,23 @@ export function CleanProviderManagementHub() {
                       <SelectValue placeholder="Choose assigned AP user" />
                     </SelectTrigger>
                     <SelectContent>
-                      {assignedAPUsers.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          <div>
-                            <div className="font-medium">{user.displayName}</div>
-                            <div className="text-sm text-gray-500">{user.email}</div>
-                          </div>
+                      {assignedAPUsers.length === 0 ? (
+                        <SelectItem value="no-assigned-users" disabled>
+                          No assigned AP users available
                         </SelectItem>
-                      ))}
+                      ) : (
+                        assignedAPUsers.map((user) => (
+                          <SelectItem
+                            key={user.id || `assigned-${Math.random()}`}
+                            value={user.id || `invalid-assigned-${Math.random()}`}
+                          >
+                            <div>
+                              <div className="font-medium">{user.displayName}</div>
+                              <div className="text-sm text-gray-500">{user.email}</div>
+                            </div>
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -432,16 +459,25 @@ export function CleanProviderManagementHub() {
                       <SelectValue placeholder="Choose location" />
                     </SelectTrigger>
                     <SelectContent>
-                      {locations.filter(loc => loc.assignedAPUsers > 0).map((location) => (
-                        <SelectItem key={location.id} value={location.id}>
-                          <div>
-                            <div className="font-medium">{location.name}</div>
-                            <div className="text-sm text-gray-500">
-                              {location.assignedAPUsers} AP user{location.assignedAPUsers !== 1 ? 's' : ''}
-                            </div>
-                          </div>
+                      {locations.filter(loc => loc.assignedAPUsers > 0).length === 0 ? (
+                        <SelectItem value="no-locations-with-ap" disabled>
+                          No locations with assigned AP users
                         </SelectItem>
-                      ))}
+                      ) : (
+                        locations.filter(loc => loc.assignedAPUsers > 0).map((location) => (
+                          <SelectItem
+                            key={location.id || `loc-${Math.random()}`}
+                            value={location.id || `invalid-loc-${Math.random()}`}
+                          >
+                            <div>
+                              <div className="font-medium">{location.name}</div>
+                              <div className="text-sm text-gray-500">
+                                {location.assignedAPUsers} AP user{location.assignedAPUsers !== 1 ? 's' : ''}
+                              </div>
+                            </div>
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
