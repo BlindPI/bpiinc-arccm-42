@@ -1,10 +1,10 @@
-
 import React from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import SignIn from '@/pages/SignIn';
 import SignUp from '@/pages/SignUp';
 import Dashboard from '@/pages/Dashboard';
+import EnhancedDashboard from '@/pages/EnhancedDashboard';
 import LandingPage from '@/pages/LandingPage';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import Settings from '@/pages/Settings';
@@ -54,11 +54,17 @@ export function AppRoutes() {
       
       <Route path="/" element={
         <ProtectedRoute>
-          <Dashboard />
+          <EnhancedDashboard />
         </ProtectedRoute>
       } />
 
       <Route path="/dashboard" element={
+        <ProtectedRoute>
+          <EnhancedDashboard />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/dashboard/legacy" element={
         <ProtectedRoute>
           <Dashboard />
         </ProtectedRoute>
