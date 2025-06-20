@@ -10,20 +10,29 @@ import { ProviderLocationAssignments } from './ProviderLocationAssignments';
 import { TeamProviderIntegration } from './TeamProviderIntegration';
 import { APUserSync } from './APUserSync';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  Building2, 
-  Users, 
-  MapPin, 
+import { UnifiedProviderLocationService } from '@/services/provider/unifiedProviderLocationService';
+import {
+  Building2,
+  Users,
+  MapPin,
   ArrowRightLeft,
   UserCheck,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function UnifiedProviderManagementHub() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('workflow');
+
+  // Get unified system health data
+  const { data: systemHealth, isLoading: healthLoading, refetch: refetchHealth } = useQuery({
+    queryKey: ['system-health'],
+    queryFn: () => UnifiedProviderLocationService.getSystemHealthReport(),
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+  });
 
   // Get AP users from profiles table
   const { data: apUsers = [] } = useQuery({
@@ -71,42 +80,48 @@ export function UnifiedProviderManagementHub() {
     }
   });
 
-  // Sync AP user to authorized provider
+  // Auto-fix system issues using unified service
+  const autoFixMutation = useMutation({
+    mutationFn: () => UnifiedProviderLocationService.autoFixAssignmentIssues(),
+    onSuccess: (results) => {
+      toast.success(`Fixed ${results.apUserAssignments + results.providerRecords} issues automatically`);
+      
+      if (results.errors.length > 0) {
+        toast.error(`${results.errors.length} issues require manual attention`);
+        console.warn('Auto-fix errors:', results.errors);
+      }
+      
+      // Refresh all data
+      queryClient.invalidateQueries({ queryKey: ['system-health'] });
+      queryClient.invalidateQueries({ queryKey: ['authorized-providers'] });
+      queryClient.invalidateQueries({ queryKey: ['ap-users'] });
+    },
+    onError: (error: any) => {
+      toast.error(`Auto-fix failed: ${error.message}`);
+    }
+  });
+
+  // Manual sync AP user using unified service
   const syncAPUserMutation = useMutation({
     mutationFn: async ({ apUserId, locationId }: { apUserId: string; locationId?: string }) => {
-      // Get AP user details
-      const { data: apUser, error: userError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', apUserId)
-        .single();
+      if (!locationId) {
+        // Find the first available location
+        const availableLocation = locations.find(loc =>
+          !authorizedProviders.some(prov => prov.primary_location_id === loc.id)
+        ) || locations[0];
+        
+        if (!availableLocation) {
+          throw new Error('No locations available for assignment');
+        }
+        
+        locationId = availableLocation.id;
+      }
       
-      if (userError) throw userError;
-
-      // Create or update authorized provider record
-      const { data: provider, error: providerError } = await supabase
-        .from('authorized_providers')
-        .upsert({
-          id: apUserId, // Use the same UUID as the user
-          name: apUser.display_name || `Provider ${apUser.email}`,
-          provider_type: 'authorized_partner',
-          status: 'active',
-          primary_location_id: locationId,
-          contact_email: apUser.email,
-          description: `Authorized Provider for ${apUser.display_name}`,
-          performance_rating: 4.5,
-          compliance_score: 95.0
-        }, {
-          onConflict: 'id'
-        })
-        .select()
-        .single();
-
-      if (providerError) throw providerError;
-      return provider;
+      return UnifiedProviderLocationService.ensureAPUserProperAssignment(apUserId, locationId);
     },
     onSuccess: () => {
-      toast.success('AP User synced to Authorized Provider successfully');
+      toast.success('AP User properly assigned with location and provider record');
+      queryClient.invalidateQueries({ queryKey: ['system-health'] });
       queryClient.invalidateQueries({ queryKey: ['authorized-providers'] });
       queryClient.invalidateQueries({ queryKey: ['ap-users'] });
     },
@@ -115,15 +130,24 @@ export function UnifiedProviderManagementHub() {
     }
   });
 
-  // Find unsynced AP users (those without corresponding authorized provider records)
-  const unsyncedAPUsers = apUsers.filter(apUser => 
-    !authorizedProviders.some(provider => provider.id === apUser.id)
-  );
+  // Calculate metrics from system health or fallback to legacy approach
+  const systemMetrics = systemHealth ? {
+    totalAPUsers: systemHealth.summary.totalAPUsers,
+    apUsersWithIssues: systemHealth.summary.apUsersWithIssues,
+    totalTeams: systemHealth.summary.totalTeams,
+    teamsWithIssues: systemHealth.summary.teamsWithIssues,
+    overallScore: systemHealth.overallScore
+  } : {
+    totalAPUsers: apUsers.length,
+    apUsersWithIssues: 0,
+    totalTeams: 0,
+    teamsWithIssues: 0,
+    overallScore: 100
+  };
 
-  // Find locations without providers
-  const unassignedLocations = locations.filter(location =>
-    !authorizedProviders.some(provider => provider.primary_location_id === location.id)
-  );
+  // Find problematic users from system health data
+  const problemUsers = systemHealth?.apUserStatus.filter(user => user.issues.length > 0) || [];
+  const problemTeams = systemHealth?.teamHealth.filter(team => team.issues.length > 0) || [];
 
   return (
     <div className="space-y-6">
@@ -138,9 +162,38 @@ export function UnifiedProviderManagementHub() {
         
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-            <span className="text-sm">System Active</span>
+            <div className={`w-3 h-3 rounded-full ${
+              systemMetrics.overallScore >= 90 ? 'bg-green-500' :
+              systemMetrics.overallScore >= 70 ? 'bg-yellow-500' : 'bg-red-500'
+            }`}></div>
+            <span className="text-sm">
+              System Health: {systemMetrics.overallScore}%
+            </span>
           </div>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetchHealth()}
+            disabled={healthLoading}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${healthLoading ? 'animate-spin' : ''}`} />
+            Refresh Status
+          </Button>
+          
+          {(problemUsers.length > 0 || problemTeams.length > 0) && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => autoFixMutation.mutate()}
+              disabled={autoFixMutation.isPending}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${autoFixMutation.isPending ? 'animate-spin' : ''}`} />
+              Auto-Fix Issues
+            </Button>
+          )}
         </div>
       </div>
 
@@ -154,9 +207,9 @@ export function UnifiedProviderManagementHub() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{apUsers.length}</div>
+            <div className="text-2xl font-bold text-blue-600">{systemMetrics.totalAPUsers}</div>
             <p className="text-xs text-gray-500 mt-1">
-              {unsyncedAPUsers.length} unsynced
+              {systemMetrics.apUsersWithIssues} with issues
             </p>
           </CardContent>
         </Card>
@@ -165,12 +218,14 @@ export function UnifiedProviderManagementHub() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
               <Building2 className="h-4 w-4" />
-              Authorized Providers
+              Teams
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{authorizedProviders.length}</div>
-            <p className="text-xs text-gray-500 mt-1">Active providers</p>
+            <div className="text-2xl font-bold text-green-600">{systemMetrics.totalTeams}</div>
+            <p className="text-xs text-gray-500 mt-1">
+              {systemMetrics.teamsWithIssues} with issues
+            </p>
           </CardContent>
         </Card>
 
@@ -183,9 +238,7 @@ export function UnifiedProviderManagementHub() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">{locations.length}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              {unassignedLocations.length} unassigned
-            </p>
+            <p className="text-xs text-gray-500 mt-1">Total locations</p>
           </CardContent>
         </Card>
 
@@ -197,18 +250,19 @@ export function UnifiedProviderManagementHub() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600">
-              {unsyncedAPUsers.length === 0 && unassignedLocations.length === 0 ? 'Healthy' : 'Attention'}
+            <div className={`text-2xl font-bold ${
+              systemMetrics.overallScore >= 90 ? 'text-green-600' :
+              systemMetrics.overallScore >= 70 ? 'text-yellow-600' : 'text-red-600'
+            }`}>
+              {systemMetrics.overallScore}%
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {unsyncedAPUsers.length + unassignedLocations.length} issues
-            </p>
+            <p className="text-xs text-gray-500 mt-1">Overall health</p>
           </CardContent>
         </Card>
       </div>
 
       {/* System Issues Alert */}
-      {(unsyncedAPUsers.length > 0 || unassignedLocations.length > 0) && (
+      {(problemUsers.length > 0 || problemTeams.length > 0) && (
         <Card className="border-amber-200 bg-amber-50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-amber-800">
@@ -217,24 +271,29 @@ export function UnifiedProviderManagementHub() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {unsyncedAPUsers.length > 0 && (
+            {problemUsers.length > 0 && (
               <div>
                 <h4 className="font-medium text-amber-800 mb-2">
-                  Unsynced AP Users ({unsyncedAPUsers.length})
+                  AP Users with Issues ({problemUsers.length})
                 </h4>
                 <div className="space-y-2">
-                  {unsyncedAPUsers.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                  {problemUsers.map((user) => (
+                    <div key={user.userId} className="flex items-center justify-between p-2 bg-white rounded border">
                       <div>
-                        <span className="font-medium">{user.display_name || user.email}</span>
-                        <Badge variant="outline" className="ml-2">AP</Badge>
+                        <span className="font-medium">{user.displayName}</span>
+                        <Badge variant="outline" className="ml-2">
+                          {user.assignmentStatus}
+                        </Badge>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {user.issues.slice(0, 2).join(', ')}
+                        </p>
                       </div>
-                      <Button 
+                      <Button
                         size="sm"
-                        onClick={() => syncAPUserMutation.mutate({ apUserId: user.id })}
+                        onClick={() => syncAPUserMutation.mutate({ apUserId: user.userId })}
                         disabled={syncAPUserMutation.isPending}
                       >
-                        Sync to Provider
+                        Fix Assignment
                       </Button>
                     </div>
                   ))}
@@ -242,16 +301,22 @@ export function UnifiedProviderManagementHub() {
               </div>
             )}
 
-            {unassignedLocations.length > 0 && (
+            {problemTeams.length > 0 && (
               <div>
                 <h4 className="font-medium text-amber-800 mb-2">
-                  Unassigned Locations ({unassignedLocations.length})
+                  Teams with Issues ({problemTeams.length})
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {unassignedLocations.map((location) => (
-                    <div key={location.id} className="p-2 bg-white rounded border">
-                      <span className="font-medium">{location.name}</span>
-                      <p className="text-sm text-gray-500">{location.city}, {location.state}</p>
+                  {problemTeams.map((team) => (
+                    <div key={team.teamId} className="p-2 bg-white rounded border">
+                      <span className="font-medium">{team.teamName}</span>
+                      <Badge variant="outline" className="ml-2">
+                        {team.assignmentStatus}
+                      </Badge>
+                      <p className="text-sm text-gray-500">{team.locationName}</p>
+                      <p className="text-xs text-red-600 mt-1">
+                        {team.issues.slice(0, 1).join(', ')}
+                      </p>
                     </div>
                   ))}
                 </div>

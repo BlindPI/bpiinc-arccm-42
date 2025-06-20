@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { UnifiedProviderLocationService } from '@/services/provider/unifiedProviderLocationService';
 
 export interface APUserAuditResult {
   userId: string;
@@ -53,7 +54,7 @@ export class DashboardIntegrityService {
       const auditResults: APUserAuditResult[] = [];
 
       for (const user of apUsers || []) {
-        // Check location assignments
+        // Check location assignments in ap_user_location_assignments table
         const { data: locationAssignments } = await supabase
           .from('ap_user_location_assignments')
           .select(`
@@ -62,6 +63,16 @@ export class DashboardIntegrityService {
           `)
           .eq('ap_user_id', user.id)
           .eq('status', 'active');
+
+        // ALSO check for assignments in authorized_providers table (primary system)
+        const { data: providerAssignments } = await supabase
+          .from('authorized_providers')
+          .select(`
+            id, primary_location_id, status,
+            primary_location:locations!primary_location_id(id, name, city, state)
+          `)
+          .eq('user_id', user.id)
+          .eq('status', 'APPROVED');
 
         // Check team memberships
         const { data: teamMemberships } = await supabase
@@ -74,14 +85,16 @@ export class DashboardIntegrityService {
           .eq('status', 'active');
 
         const hasLocationAssignment = (locationAssignments?.length || 0) > 0;
+        const hasProviderAssignment = (providerAssignments?.length || 0) > 0;
+        const hasAnyLocationAssignment = hasLocationAssignment || hasProviderAssignment;
         const hasTeamMembership = (teamMemberships?.length || 0) > 0;
-        const isDualRole = hasLocationAssignment && hasTeamMembership;
+        const isDualRole = hasAnyLocationAssignment && hasTeamMembership;
 
         const issues: string[] = [];
         const recommendations: string[] = [];
 
         // Identify issues
-        if (!hasLocationAssignment && !hasTeamMembership) {
+        if (!hasAnyLocationAssignment && !hasTeamMembership) {
           issues.push('No location assignment or team membership found');
           recommendations.push('Assign to a location or add to a team');
         }
@@ -89,6 +102,26 @@ export class DashboardIntegrityService {
         if (isDualRole) {
           issues.push('User has both location assignment and team membership (potential conflict)');
           recommendations.push('Review role conflicts - AP users typically manage locations, not participate in teams');
+        }
+
+        // Check for data consistency issues between the two assignment systems
+        if (hasLocationAssignment && hasProviderAssignment) {
+          // Check if assignments are consistent
+          const locationIds = locationAssignments?.map(a => a.location_id) || [];
+          const providerLocationIds = providerAssignments?.map(a => a.primary_location_id) || [];
+          const hasInconsistency = !locationIds.every(id => providerLocationIds.includes(id)) ||
+                                  !providerLocationIds.every(id => locationIds.includes(id));
+          
+          if (hasInconsistency) {
+            issues.push('Inconsistent assignments between AP user assignments and provider records');
+            recommendations.push('Synchronize ap_user_location_assignments with authorized_providers table');
+          }
+        } else if (hasProviderAssignment && !hasLocationAssignment) {
+          issues.push('Provider assignment exists but missing corresponding AP user location assignment');
+          recommendations.push('Create matching entries in ap_user_location_assignments table');
+        } else if (hasLocationAssignment && !hasProviderAssignment) {
+          issues.push('AP user location assignment exists but missing authorized provider record');
+          recommendations.push('Create matching authorized provider record');
         }
 
         if (hasLocationAssignment) {
@@ -100,14 +133,35 @@ export class DashboardIntegrityService {
           }
         }
 
+        if (hasProviderAssignment) {
+          // Check if provider assignments are complete
+          const incompleteProviderAssignments = providerAssignments?.filter(a => !a.primary_location) || [];
+          if (incompleteProviderAssignments.length > 0) {
+            issues.push('Some authorized provider records point to non-existent locations');
+            recommendations.push('Clean up orphaned provider location references');
+          }
+        }
+
+        // Combine all assignments for reporting
+        const allLocationAssignments = [
+          ...(locationAssignments || []),
+          ...(providerAssignments?.map(p => ({
+            id: p.id,
+            location_id: p.primary_location_id,
+            status: p.status,
+            assignment_role: 'provider',
+            locations: p.primary_location
+          })) || [])
+        ];
+
         auditResults.push({
           userId: user.id,
           displayName: user.display_name,
           email: user.email,
-          hasLocationAssignment,
+          hasLocationAssignment: hasAnyLocationAssignment,
           hasTeamMembership,
           isDualRole,
-          locationAssignments: locationAssignments || [],
+          locationAssignments: allLocationAssignments,
           teamMemberships: teamMemberships || [],
           issues,
           recommendations
@@ -361,7 +415,7 @@ export class DashboardIntegrityService {
                   .from('authorized_providers')
                   .insert({
                     user_id: apAssignment.ap_user_id,
-                    name: apAssignment.profiles?.display_name || 'Auto-assigned Provider',
+                    name: 'Auto-assigned Provider',
                     provider_type: 'location_based',
                     status: 'APPROVED',
                     primary_location_id: teamLocation.location_id
@@ -401,83 +455,97 @@ export class DashboardIntegrityService {
       return { fixed, errors: [error.message] };
     }
   }
-  // Instance methods for the UI component
+  // Instance methods for the UI component - Using Unified Provider Location Service
   async performFullAudit(): Promise<any> {
     try {
-      const report = await DashboardIntegrityService.generateIntegrityReport();
+      console.log('🔍 Running unified provider location audit...');
       
-      // Transform the report to match UI expectations
+      // Use the unified service that understands the complete business logic
+      const healthReport = await UnifiedProviderLocationService.getSystemHealthReport();
+      
+      // Transform to match UI expectations
       const issues = [];
-      const recommendations = [];
-      
-      // Collect all issues and recommendations
-      report.apUserAudit.forEach(user => {
+      const recommendations = [...healthReport.recommendations];
+
+      // Process AP user issues
+      healthReport.apUserStatus.forEach(user => {
         user.issues.forEach(issue => {
+          let severity = 'warning';
+          if (issue.includes('missing') || issue.includes('No location') || issue.includes('inconsistent')) {
+            severity = 'critical';
+          }
+          
           issues.push({
             type: 'AP User Assignment',
             description: `${user.displayName}: ${issue}`,
-            severity: issue.includes('No location assignment') || issue.includes('non-existent') ? 'critical' : 'warning',
+            severity,
             count: 1
           });
         });
-        recommendations.push(...user.recommendations.map(rec => `${user.displayName}: ${rec}`));
       });
-      
-      report.teamProviderAudit.forEach(team => {
+
+      // Process team relationship issues
+      healthReport.teamHealth.forEach(team => {
         team.issues.forEach(issue => {
+          let severity = 'warning';
+          if (issue.includes('no valid') || issue.includes('does not match')) {
+            severity = 'critical';
+          }
+          
           issues.push({
             type: 'Team Provider Relationship',
             description: `${team.teamName}: ${issue}`,
-            severity: issue.includes('no assigned') || issue.includes('non-existent') ? 'critical' : 'warning',
+            severity,
             count: 1
           });
         });
-        recommendations.push(...team.recommendations.map(rec => `${team.teamName}: ${rec}`));
       });
-      
-      // Calculate overall health score
-      const totalUsers = report.systemSummary.totalAPUsers + report.systemSummary.totalTeams;
-      const totalIssues = report.systemSummary.criticalIssues + report.systemSummary.warningIssues;
-      const overallScore = totalUsers > 0 ? Math.max(0, Math.round(((totalUsers - totalIssues) / totalUsers) * 100)) : 100;
-      
+
+      console.log('✅ Unified audit complete:', {
+        overallScore: healthReport.overallScore,
+        totalIssues: issues.length,
+        apUsers: healthReport.summary.totalAPUsers,
+        teams: healthReport.summary.totalTeams
+      });
+
       return {
-        overallScore,
+        overallScore: healthReport.overallScore,
         summary: {
-          totalUsers: report.systemSummary.totalAPUsers,
-          totalTeams: report.systemSummary.totalTeams,
-          totalIssues: totalIssues,
-          criticalIssues: report.systemSummary.criticalIssues,
-          warningIssues: report.systemSummary.warningIssues
+          totalUsers: healthReport.summary.totalAPUsers,
+          totalTeams: healthReport.summary.totalTeams,
+          totalIssues: issues.length,
+          criticalIssues: issues.filter(i => i.severity === 'critical').length,
+          warningIssues: issues.filter(i => i.severity === 'warning').length
         },
         issues,
-        recommendations: [...new Set(recommendations)], // Remove duplicates
-        rawReport: report // Keep original for reference
+        recommendations,
+        rawReport: healthReport // Keep original for reference
       };
     } catch (error) {
-      console.error('Error performing full audit:', error);
+      console.error('❌ Error performing unified audit:', error);
       throw error;
     }
   }
   
   async autoFixIssues(): Promise<any> {
     try {
-      const [apUserFixes, teamProviderFixes] = await Promise.all([
-        DashboardIntegrityService.autoFixAPUserAssignments(),
-        DashboardIntegrityService.autoFixTeamProviderRelationships()
-      ]);
+      console.log('🔧 Running unified auto-fix...');
       
-      const totalFixed = apUserFixes.fixed + teamProviderFixes.fixed;
-      const allErrors = [...apUserFixes.errors, ...teamProviderFixes.errors];
+      // Use the unified service's auto-fix capabilities
+      const fixResults = await UnifiedProviderLocationService.autoFixAssignmentIssues();
+      
+      console.log('✅ Unified auto-fix complete:', fixResults);
       
       return {
-        totalFixed,
-        apUserFixes: apUserFixes.fixed,
-        teamProviderFixes: teamProviderFixes.fixed,
-        errors: allErrors,
-        success: totalFixed > 0 || allErrors.length === 0
+        totalFixed: fixResults.apUserAssignments + fixResults.providerRecords + fixResults.teamAssignments,
+        apUserFixes: fixResults.apUserAssignments,
+        providerRecordFixes: fixResults.providerRecords,
+        teamAssignmentFixes: fixResults.teamAssignments,
+        errors: fixResults.errors,
+        success: (fixResults.apUserAssignments + fixResults.providerRecords + fixResults.teamAssignments) > 0 || fixResults.errors.length === 0
       };
     } catch (error) {
-      console.error('Error auto-fixing issues:', error);
+      console.error('❌ Error in unified auto-fix:', error);
       throw error;
     }
   }
