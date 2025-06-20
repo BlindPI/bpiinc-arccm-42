@@ -36,12 +36,6 @@ export function APUserSelectionDialog({ open, onOpenChange, onProviderCreated }:
   const [selectedAPUserId, setSelectedAPUserId] = useState('');
   const [selectedLocationId, setSelectedLocationId] = useState('');
 
-  // Fetch AP users
-  const { data: apUsers = [], isLoading: loadingAPUsers } = useQuery({
-    queryKey: ['ap-users'],
-    queryFn: () => apUserService.getAPUsers(),
-    enabled: open
-  });
 
   // Fetch locations
   const { data: locations = [], isLoading: loadingLocations } = useQuery({
@@ -55,6 +49,41 @@ export function APUserSelectionDialog({ open, onOpenChange, onProviderCreated }:
       return data;
     },
     enabled: open
+  });
+
+  // Fetch available AP users for selected location
+  const { data: availableAPUsers = [], isLoading: loadingAPUsers } = useQuery({
+    queryKey: ['available-ap-users', selectedLocationId],
+    queryFn: async () => {
+      if (!selectedLocationId) return [];
+      
+      // Get AP users not already assigned to this location
+      const { data: apUsers, error: apError } = await supabase
+        .from('profiles')
+        .select('id, display_name, email, role, organization, job_title, phone, location_id')
+        .eq('role', 'AP')
+        .eq('status', 'ACTIVE');
+      
+      if (apError) throw apError;
+      
+      // Get existing assignments for this location
+      const { data: existingProviders, error: providerError } = await supabase
+        .from('authorized_providers')
+        .select('user_id')
+        .eq('location_id', selectedLocationId)
+        .eq('status', 'APPROVED');
+      
+      if (providerError) throw providerError;
+      
+      const assignedUserIds = existingProviders?.map(p => p.user_id) || [];
+      
+      // Filter out already assigned users and users with conflicting locations
+      return apUsers?.filter(user =>
+        !assignedUserIds.includes(user.id) &&
+        (!user.location_id || user.location_id === selectedLocationId)
+      ) || [];
+    },
+    enabled: open && !!selectedLocationId
   });
 
   const assignAPUserMutation = useMutation({
@@ -91,7 +120,7 @@ export function APUserSelectionDialog({ open, onOpenChange, onProviderCreated }:
     });
   };
 
-  const selectedAPUser = apUsers.find(user => user.id === selectedAPUserId);
+  const selectedAPUser = availableAPUsers.find(user => user.id === selectedAPUserId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -140,7 +169,7 @@ export function APUserSelectionDialog({ open, onOpenChange, onProviderCreated }:
                   <SelectValue placeholder="Select an AP user" />
                 </SelectTrigger>
                 <SelectContent>
-                  {apUsers.map((apUser) => (
+                  {availableAPUsers.map((apUser) => (
                     <SelectItem key={apUser.id} value={apUser.id}>
                       <div className="flex flex-col">
                         <span className="font-medium">{apUser.display_name}</span>
@@ -154,9 +183,14 @@ export function APUserSelectionDialog({ open, onOpenChange, onProviderCreated }:
                 </SelectContent>
               </Select>
               
-              {apUsers.length === 0 && !loadingAPUsers && (
+              {availableAPUsers.length === 0 && !loadingAPUsers && selectedLocationId && (
                 <div className="text-sm text-muted-foreground p-3 bg-muted rounded-lg">
-                  No AP users found. Users must be assigned the AP role before they can be authorized as providers.
+                  No available AP users for this location. All AP users may already be assigned as providers here.
+                </div>
+              )}
+              {!selectedLocationId && (
+                <div className="text-sm text-muted-foreground p-3 bg-muted rounded-lg">
+                  Please select a location first to see available AP users.
                 </div>
               )}
             </div>
