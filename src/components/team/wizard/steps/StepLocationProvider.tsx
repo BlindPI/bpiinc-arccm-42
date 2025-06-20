@@ -50,21 +50,47 @@ export function StepLocationProvider({
     }
   });
 
-  // Get available AP users (corrected architecture)
+  // Get available AP users for selected location only
   const { data: apUsers = [], isLoading: apUsersLoading } = useQuery({
-    queryKey: ['ap-users-wizard-step'],
+    queryKey: ['available-ap-users-for-location', formData.location_id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, display_name, email, organization')
-        .eq('role', 'AP')
-        .eq('status', 'ACTIVE')
-        .order('display_name');
+      if (!formData.location_id) return [];
       
-      if (error) throw error;
-      return data;
+      try {
+        // Use the RPC function to get location-specific AP users
+        const { data, error } = await supabase
+          .rpc('get_available_ap_users_for_location', {
+            p_location_id: formData.location_id
+          });
+        
+        if (error) throw error;
+        
+        return data?.map((user: any) => ({
+          id: user.user_id,
+          display_name: user.display_name,
+          email: user.email,
+          organization: user.organization
+        })) || [];
+      } catch (error) {
+        console.error('Failed to get available AP users:', error);
+        
+        // Fallback: Get AP users and filter by location compatibility
+        const { data: allAPs, error: apError } = await supabase
+          .from('profiles')
+          .select('id, display_name, email, organization, location_id')
+          .eq('role', 'AP')
+          .eq('status', 'ACTIVE')
+          .order('display_name');
+        
+        if (apError) throw apError;
+        
+        // Filter to users with no location or matching location
+        return allAPs?.filter(user =>
+          !user.location_id || user.location_id === formData.location_id
+        ) || [];
+      }
     },
-    enabled: ['SA', 'AD'].includes(userRole || '') || formData.team_type === 'provider_team'
+    enabled: ((['SA', 'AD'].includes(userRole || '') || formData.team_type === 'provider_team') && !!formData.location_id)
   });
 
   const requiresApUser = formData.team_type === 'provider_team';
@@ -95,7 +121,13 @@ export function StepLocationProvider({
               </Label>
               <Select
                 value={formData.location_id}
-                onValueChange={(value) => onUpdateFormData({ location_id: value })}
+                onValueChange={(value) => {
+                  // Clear AP user selection when location changes
+                  onUpdateFormData({
+                    location_id: value,
+                    assigned_ap_user_id: ''
+                  });
+                }}
               >
                 <SelectTrigger className={errors.location_id ? 'border-red-500' : ''}>
                   <SelectValue placeholder={locationsLoading ? "Loading locations..." : "Select a location..."} />
@@ -155,6 +187,16 @@ export function StepLocationProvider({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">No AP user assigned</SelectItem>
+                      {apUsers.length === 0 && formData.location_id && !apUsersLoading && (
+                        <SelectItem value="" disabled>
+                          No available AP users for this location
+                        </SelectItem>
+                      )}
+                      {!formData.location_id && (
+                        <SelectItem value="" disabled>
+                          Select a location first
+                        </SelectItem>
+                      )}
                       {apUsers.map((apUser) => (
                         <SelectItem key={apUser.id} value={apUser.id}>
                           <div className="flex items-center gap-2">
@@ -174,7 +216,11 @@ export function StepLocationProvider({
                     <p className="text-sm text-red-500">{errors.assigned_ap_user_id}</p>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    {requiresApUser
+                    {!formData.location_id
+                      ? 'Select a location first to see available AP users'
+                      : apUsers.length === 0 && !apUsersLoading
+                      ? 'No AP users available for this location - they may already be assigned'
+                      : requiresApUser
                       ? 'Provider teams must be associated with an AP user (Authorized Provider)'
                       : 'Optional: Associate this team with a specific AP user'
                     }

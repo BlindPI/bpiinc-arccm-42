@@ -71,20 +71,47 @@ export function TeamCreateForm({ onCancel, onSuccess }: TeamCreateFormProps) {
     }
   });
 
-  // Fetch available AP users (corrected architecture)
+  // Fetch available AP users for selected location only
   const { data: apUsers = [], isLoading: apUsersLoading } = useQuery({
-    queryKey: ['ap-users-for-teams'],
+    queryKey: ['available-ap-users-for-team-location', formData.location_id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, display_name, email, organization')
-        .eq('role', 'AP')
-        .eq('status', 'ACTIVE')
-        .order('display_name');
+      if (!formData.location_id || formData.location_id === 'none') return [];
       
-      if (error) throw error;
-      return data;
-    }
+      try {
+        // Use the RPC function to get location-specific AP users
+        const { data, error } = await supabase
+          .rpc('get_available_ap_users_for_location', {
+            p_location_id: formData.location_id
+          });
+        
+        if (error) throw error;
+        
+        return data?.map((user: any) => ({
+          id: user.user_id,
+          display_name: user.display_name,
+          email: user.email,
+          organization: user.organization
+        })) || [];
+      } catch (error) {
+        console.error('Failed to get available AP users:', error);
+        
+        // Fallback: Get AP users and filter by location compatibility
+        const { data: allAPs, error: apError } = await supabase
+          .from('profiles')
+          .select('id, display_name, email, organization, location_id')
+          .eq('role', 'AP')
+          .eq('status', 'ACTIVE')
+          .order('display_name');
+        
+        if (apError) throw apError;
+        
+        // Filter to users with no location or matching location
+        return allAPs?.filter(user =>
+          !user.location_id || user.location_id === formData.location_id
+        ) || [];
+      }
+    },
+    enabled: !!(formData.location_id && formData.location_id !== 'none')
   });
 
   // Create team mutation
@@ -233,7 +260,14 @@ export function TeamCreateForm({ onCancel, onSuccess }: TeamCreateFormProps) {
             </Label>
             <Select
               value={formData.location_id}
-              onValueChange={(value) => handleInputChange('location_id', value)}
+              onValueChange={(value) => {
+                // Clear AP user selection when location changes
+                setFormData(prev => ({
+                  ...prev,
+                  location_id: value,
+                  assigned_ap_user_id: ''
+                }));
+              }}
               disabled={locationsLoading}
             >
               <SelectTrigger>
@@ -271,6 +305,16 @@ export function TeamCreateForm({ onCancel, onSuccess }: TeamCreateFormProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">No AP user assigned</SelectItem>
+                {apUsers.length === 0 && formData.location_id && formData.location_id !== 'none' && !apUsersLoading && (
+                  <SelectItem value="" disabled>
+                    No available AP users for this location
+                  </SelectItem>
+                )}
+                {(!formData.location_id || formData.location_id === 'none') && (
+                  <SelectItem value="" disabled>
+                    Select a location first to see available AP users
+                  </SelectItem>
+                )}
                 {apUsers.map((apUser) => (
                   <SelectItem key={apUser.id} value={apUser.id}>
                     <div>
@@ -285,7 +329,12 @@ export function TeamCreateForm({ onCancel, onSuccess }: TeamCreateFormProps) {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              AP users serve as Authorized Providers. Selecting an AP user assigns them responsibility for this team.
+              {!formData.location_id || formData.location_id === 'none'
+                ? 'Select a location first to see available AP users for assignment'
+                : apUsers.length === 0 && !apUsersLoading
+                ? 'No AP users available for this location - they may already be assigned'
+                : 'AP users serve as Authorized Providers. Selecting an AP user assigns them responsibility for this team.'
+              }
             </p>
           </div>
 
