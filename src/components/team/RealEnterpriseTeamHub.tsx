@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { RealTeamDataService } from '@/services/team/realTeamDataService';
+import { UnifiedTeamService } from '@/services/team/unifiedTeamService';
 import { TeamCreationForm } from './forms/TeamCreationForm';
 import { MemberInvitationWorkflow } from './workflows/MemberInvitationWorkflow';
 import { BulkOperationsInterface } from './bulk/BulkOperationsInterface';
@@ -35,19 +35,19 @@ export function RealEnterpriseTeamHub() {
 
   const { data: teams = [], isLoading, error } = useQuery({
     queryKey: ['enhanced-teams'],
-    queryFn: () => RealTeamDataService.getEnhancedTeams(),
+    queryFn: () => UnifiedTeamService.getEnhancedTeams(),
     refetchInterval: 60000,
   });
 
   const { data: analytics } = useQuery({
     queryKey: ['team-analytics'],
-    queryFn: () => RealTeamDataService.getTeamAnalytics(),
+    queryFn: () => UnifiedTeamService.getTeamAnalytics(),
     refetchInterval: 300000,
   });
 
   const { data: complianceMetrics } = useQuery({
     queryKey: ['compliance-metrics'],
-    queryFn: () => ComplianceService.getComplianceMetrics(),
+    queryFn: () => UnifiedTeamService.getComplianceMetrics(),
     refetchInterval: 300000,
   });
 
@@ -294,19 +294,29 @@ export function RealEnterpriseTeamHub() {
                   </span>
                 </div>
 
-                {team.location && (
-                  <p className="text-xs text-muted-foreground">
-                    📍 {team.location.name}
-                  </p>
-                )}
+               {/* AP User Assignment (Corrected Architecture) */}
+               {team.assignedAPUser && (
+                 <div className="p-2 bg-blue-50 rounded text-xs">
+                   <p className="font-medium text-blue-800">AP User: {team.assignedAPUser.name}</p>
+                   {team.assignedAPUser.organization && (
+                     <p className="text-blue-600">{team.assignedAPUser.organization}</p>
+                   )}
+                 </div>
+               )}
 
-                <Button 
-                  onClick={() => handleTeamSelect(team)}
-                  className="w-full"
-                  size="sm"
-                >
-                  Manage Team
-                </Button>
+               {team.location && (
+                 <p className="text-xs text-muted-foreground">
+                   📍 {team.location.name}
+                 </p>
+               )}
+
+               <Button
+                 onClick={() => handleTeamSelect(team)}
+                 className="w-full"
+                 size="sm"
+               >
+                 Manage Team
+               </Button>
               </div>
             </CardContent>
           </Card>

@@ -38,9 +38,11 @@ export function APUserSync() {
     queryKey: ['authorized-providers-sync'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('authorized_providers')
-        .select('*')
-        .order('name');
+        .from('profiles')
+        .select('id, display_name, email, organization, role, status')
+        .eq('role', 'AP')
+        .eq('status', 'ACTIVE')
+        .order('display_name');
       
       if (error) throw error;
       return data;
@@ -56,8 +58,8 @@ export function APUserSync() {
         const existingProvider = authorizedProviders.find(p => p.id === apUser.id);
         
         if (!existingProvider) {
-          const { data: provider, error } = await supabase
-            .from('authorized_providers')
+          const { data: apUser, error } = await supabase
+            .from('profiles')
             .upsert({
               id: apUser.id,
               name: apUser.display_name || `Provider ${apUser.email}`,
@@ -102,8 +104,8 @@ export function APUserSync() {
   // Sync individual AP user
   const syncSingleUserMutation = useMutation({
     mutationFn: async (apUser: any) => {
-      const { data: provider, error } = await supabase
-        .from('authorized_providers')
+      const { data: apUser, error } = await supabase
+        .from('profiles')
         .upsert({
           id: apUser.id,
           name: apUser.display_name || `Provider ${apUser.email}`,

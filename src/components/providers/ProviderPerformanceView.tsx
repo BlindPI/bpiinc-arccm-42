@@ -23,7 +23,24 @@ export function ProviderPerformanceView({ providerId }: ProviderPerformanceViewP
       // OLD BROKEN CODE: const providerIdNum = parseInt(providerId, 10);
       
       // Get provider details using UUID string
-      const { data: provider, error: providerError } = await supabase
+      const { data: apUser, error: apUserError } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          display_name,
+          email,
+          organization,
+          role,
+          status
+        `)
+        .eq('id', providerId)
+        .eq('role', 'AP')
+        .single();
+      
+      if (apUserError) throw apUserError;
+      
+      // Legacy provider data for backward compatibility
+      const { data: legacyProvider, error: legacyError } = await supabase
         .from('authorized_providers')
         .select(`
           id,
@@ -47,7 +64,7 @@ export function ProviderPerformanceView({ providerId }: ProviderPerformanceViewP
           name,
           performance_score
         `)
-        .eq('provider_id', providerId);
+        .eq('assigned_ap_user_id', providerId);
 
       if (teamsError) throw teamsError;
 

@@ -18,7 +18,7 @@ interface TeamFormData {
   description: string;
   team_type: string;
   location_id: string;
-  provider_id: string;
+  assigned_ap_user_id: string; // UPDATED: AP user assignment
   permissions: Record<string, boolean>;
 }
 
@@ -32,7 +32,7 @@ const teamTypeLabels = {
   operational: 'Operational Team',
   administrative: 'Administrative Team',
   training: 'Training Team',
-  provider_team: 'Provider Team',
+  provider_team: 'AP User Team',
   compliance: 'Compliance Team',
   support: 'Support Team'
 };
@@ -100,7 +100,7 @@ export function StepReview({ formData, locationName, providerName }: StepReviewP
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <MapPin className="h-5 w-5" />
-              Location & Provider
+              Location & AP User
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -111,9 +111,9 @@ export function StepReview({ formData, locationName, providerName }: StepReviewP
                 <span className="text-sm">{locationName || 'Loading...'}</span>
               </div>
             </div>
-            {formData.provider_id && (
+            {formData.assigned_ap_user_id && (
               <div>
-                <Label className="text-sm font-medium">Associated Provider</Label>
+                <Label className="text-sm font-medium">Assigned AP User</Label>
                 <div className="flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">{providerName || 'Loading...'}</span>
@@ -232,10 +232,10 @@ export function StepReview({ formData, locationName, providerName }: StepReviewP
                 </span>
               </div>
               <div>
-                <span className="font-medium">Provider Association:</span>
+                <span className="font-medium">AP User Assignment:</span>
                 <br />
                 <span className="text-muted-foreground">
-                  {formData.provider_id ? providerName || 'Configured' : 'None'}
+                  {formData.assigned_ap_user_id ? apUserName || 'Configured' : 'None'}
                 </span>
               </div>
             </div>

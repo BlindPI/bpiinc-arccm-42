@@ -19,7 +19,7 @@ interface TeamFormData {
   description: string;
   team_type: string;
   location_id: string;
-  provider_id: string;
+  assigned_ap_user_id: string; // UPDATED: AP user assignment (corrected architecture)
   permissions: Record<string, boolean>;
 }
 
@@ -50,31 +50,32 @@ export function StepLocationProvider({
     }
   });
 
-  // Get providers (only for SA/AD or provider teams)
-  const { data: providers = [], isLoading: providersLoading } = useQuery({
-    queryKey: ['authorized-providers'],
+  // Get available AP users (corrected architecture)
+  const { data: apUsers = [], isLoading: apUsersLoading } = useQuery({
+    queryKey: ['ap-users-wizard-step'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('authorized_providers')
-        .select('id, name, status')
-        .eq('status', 'active')
-        .order('name');
+        .from('profiles')
+        .select('id, display_name, email, organization')
+        .eq('role', 'AP')
+        .eq('status', 'ACTIVE')
+        .order('display_name');
       
       if (error) throw error;
-      return data || [];
+      return data;
     },
     enabled: ['SA', 'AD'].includes(userRole || '') || formData.team_type === 'provider_team'
   });
 
-  const requiresProvider = formData.team_type === 'provider_team';
-  const canSelectProvider = ['SA', 'AD'].includes(userRole || '');
+  const requiresApUser = formData.team_type === 'provider_team';
+  const canSelectApUser = ['SA', 'AD'].includes(userRole || '');
 
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold mb-2">Location & Provider Assignment</h3>
+        <h3 className="text-lg font-semibold mb-2">Location & AP User Assignment</h3>
         <p className="text-sm text-muted-foreground">
-          Assign the team to a location and optionally associate with a provider.
+          Assign the team to a location and optionally associate with an AP user (Authorized Provider).
         </p>
       </div>
 
@@ -125,13 +126,13 @@ export function StepLocationProvider({
           </CardContent>
         </Card>
 
-        {/* Provider Selection */}
+        {/* AP User Selection */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Building2 className="h-5 w-5" />
-              Provider Association
-              {requiresProvider && (
+              AP User Association
+              {requiresApUser && (
                 <Badge className="bg-blue-50 text-blue-700">
                   Required
                 </Badge>
@@ -139,28 +140,29 @@ export function StepLocationProvider({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {canSelectProvider || requiresProvider ? (
+            {canSelectApUser || requiresApUser ? (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="provider">
-                    Select Provider {requiresProvider && <span className="text-red-500">*</span>}
+                  <Label htmlFor="assigned_ap_user_id">
+                    Select AP User (Authorized Provider) {requiresApUser && <span className="text-red-500">*</span>}
                   </Label>
                   <Select
-                    value={formData.provider_id}
-                    onValueChange={(value) => onUpdateFormData({ provider_id: value })}
+                    value={formData.assigned_ap_user_id}
+                    onValueChange={(value) => onUpdateFormData({ assigned_ap_user_id: value })}
                   >
-                    <SelectTrigger className={errors.provider_id ? 'border-red-500' : ''}>
-                      <SelectValue placeholder={providersLoading ? "Loading providers..." : "Select a provider..."} />
+                    <SelectTrigger className={errors.assigned_ap_user_id ? 'border-red-500' : ''}>
+                      <SelectValue placeholder={apUsersLoading ? "Loading AP users..." : "Select an AP user..."} />
                     </SelectTrigger>
                     <SelectContent>
-                      {providers.map((provider) => (
-                        <SelectItem key={provider.id} value={provider.id.toString()}>
+                      <SelectItem value="">No AP user assigned</SelectItem>
+                      {apUsers.map((apUser) => (
+                        <SelectItem key={apUser.id} value={apUser.id}>
                           <div className="flex items-center gap-2">
                             <Building2 className="h-4 w-4" />
                             <div>
-                              <div className="font-medium">{provider.name}</div>
+                              <div className="font-medium">{apUser.display_name}</div>
                               <div className="text-xs text-muted-foreground">
-                                Active Provider
+                                {apUser.organization || 'AP User'}
                               </div>
                             </div>
                           </div>
@@ -168,13 +170,13 @@ export function StepLocationProvider({
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.provider_id && (
-                    <p className="text-sm text-red-500">{errors.provider_id}</p>
+                  {errors.assigned_ap_user_id && (
+                    <p className="text-sm text-red-500">{errors.assigned_ap_user_id}</p>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    {requiresProvider 
-                      ? 'Provider teams must be associated with an authorized provider'
-                      : 'Optional: Associate this team with a specific provider'
+                    {requiresApUser
+                      ? 'Provider teams must be associated with an AP user (Authorized Provider)'
+                      : 'Optional: Associate this team with a specific AP user'
                     }
                   </p>
                 </div>
@@ -183,7 +185,7 @@ export function StepLocationProvider({
               <div className="text-center py-4">
                 <Building2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm text-muted-foreground">
-                  Provider selection not available for this team type and user role
+                  AP user selection not available for this team type and user role
                 </p>
               </div>
             )}
@@ -205,9 +207,9 @@ export function StepLocationProvider({
                 </span>
               </div>
               <div className="flex justify-between">
-                <span>Provider Association:</span>
-                <span className={formData.provider_id ? 'text-green-600' : requiresProvider ? 'text-red-600' : 'text-muted-foreground'}>
-                  {formData.provider_id ? 'Selected' : requiresProvider ? 'Required' : 'Optional'}
+                <span>AP User Association:</span>
+                <span className={formData.assigned_ap_user_id ? 'text-green-600' : requiresApUser ? 'text-red-600' : 'text-muted-foreground'}>
+                  {formData.assigned_ap_user_id ? 'Selected' : requiresApUser ? 'Required' : 'Optional'}
                 </span>
               </div>
             </div>
@@ -215,16 +217,16 @@ export function StepLocationProvider({
         </Card>
 
         {/* Warnings */}
-        {requiresProvider && !formData.provider_id && (
+        {requiresApUser && !formData.assigned_ap_user_id && (
           <Card className="border-amber-200 bg-amber-50">
             <CardContent className="p-4">
               <div className="flex items-start gap-2">
                 <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
                 <div>
-                  <h4 className="text-sm font-medium text-amber-800">Provider Required</h4>
+                  <h4 className="text-sm font-medium text-amber-800">AP User Required</h4>
                   <p className="text-sm text-amber-700 mt-1">
-                    Provider teams must be associated with an authorized provider organization.
-                    Please select a provider to continue.
+                    Provider teams must be associated with an AP user (Authorized Provider).
+                    Please select an AP user to continue.
                   </p>
                 </div>
               </div>

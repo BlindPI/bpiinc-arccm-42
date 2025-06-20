@@ -93,8 +93,8 @@ export function ProviderTeamManagement({ providerId, providerName }: ProviderTea
 
   // Assign provider to team mutation
   const assignTeamMutation = useMutation({
-    mutationFn: () => UnifiedProviderService.assignProviderToTeam({
-      provider_id: providerId,
+    mutationFn: () => UnifiedProviderService.assignApUserToTeam({
+      assigned_ap_user_id: providerId, // Updated: AP user assignment
       team_id: selectedTeam,
       assignment_role: assignmentRole,
       oversight_level: oversightLevel,

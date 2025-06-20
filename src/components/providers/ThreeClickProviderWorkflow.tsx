@@ -87,10 +87,11 @@ export function ThreeClickProviderWorkflow({ onComplete }: ThreeClickProviderWor
     queryKey: ['authorized-providers'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('authorized_providers')
-        .select('*')
-        .eq('status', 'APPROVED')
-        .order('name');
+        .from('profiles')
+        .select('id, display_name, email, organization')
+        .eq('role', 'AP')
+        .eq('status', 'ACTIVE')
+        .order('display_name');
       if (error) throw error;
       return data;
     }
@@ -152,7 +153,7 @@ export function ThreeClickProviderWorkflow({ onComplete }: ThreeClickProviderWor
           team_type: teamData.team_type,
           status: 'active',
           location_id: teamData.location_id,
-          provider_id: teamData.provider_id,
+          assigned_ap_user_id: teamData.assigned_ap_user_id,
           performance_score: 0,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -251,7 +252,7 @@ export function ThreeClickProviderWorkflow({ onComplete }: ThreeClickProviderWor
         name: teamForm.teamName,
         team_type: teamForm.teamType,
         location_id: workflow.step1.data?.id,
-        provider_id: workflow.step2.data?.id
+        assigned_ap_user_id: workflow.step2.data?.id
       });
 
       setWorkflow(prev => ({

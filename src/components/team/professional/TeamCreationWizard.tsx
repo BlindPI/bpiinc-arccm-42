@@ -44,7 +44,7 @@ export function TeamCreationWizard({ onClose, onTeamCreated }: TeamCreationWizar
     description: '',
     team_type: 'operational',
     location_id: '',
-    provider_id: ''
+    assigned_ap_user_id: '' // UPDATED: AP user assignment
   });
 
   // Fetch locations
@@ -62,14 +62,15 @@ export function TeamCreationWizard({ onClose, onTeamCreated }: TeamCreationWizar
   });
 
   // Fetch providers with proper column hint
-  const { data: providers = [] } = useQuery({
-    queryKey: ['authorized_providers'],
+  const { data: apUsers = [] } = useQuery({
+    queryKey: ['ap-users-creation-wizard'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('authorized_providers')
-        .select('*')
-        .eq('status', 'active')
-        .order('name');
+        .from('profiles')
+        .select('id, display_name, email, organization')
+        .eq('role', 'AP')
+        .eq('status', 'ACTIVE')
+        .order('display_name');
       
       if (error) throw error;
       return data || [];
@@ -86,7 +87,7 @@ export function TeamCreationWizard({ onClose, onTeamCreated }: TeamCreationWizar
           description: teamData.description,
           team_type: teamData.team_type,
           location_id: teamData.location_id || null,
-          provider_id: teamData.provider_id ? parseInt(teamData.provider_id) : null,
+          assigned_ap_user_id: teamData.assigned_ap_user_id || null,
           status: 'active',
           performance_score: 0,
           created_by: user?.id,
@@ -97,7 +98,7 @@ export function TeamCreationWizard({ onClose, onTeamCreated }: TeamCreationWizar
         .select(`
           *,
           locations(*),
-          authorized_providers!provider_id(*)
+          profiles!assigned_ap_user_id(id, display_name, email, organization)
         `)
         .single();
 
@@ -106,22 +107,17 @@ export function TeamCreationWizard({ onClose, onTeamCreated }: TeamCreationWizar
       // Transform to EnhancedTeam format with proper type safety
       const enhancedTeam: EnhancedTeam = {
         ...data,
-        provider_id: data.provider_id?.toString() || '',
+        assigned_ap_user_id: data.assigned_ap_user_id || '',
         status: data.status as 'active' | 'inactive' | 'suspended',
         metadata: safeJsonToRecord(data.metadata),
         monthly_targets: safeJsonToRecord(data.monthly_targets),
         current_metrics: safeJsonToRecord(data.current_metrics),
         location: data.locations || undefined,
-        provider: data.authorized_providers ? {
-          id: data.authorized_providers.id.toString(),
-          name: data.authorized_providers.name,
-          provider_type: data.authorized_providers.provider_type || 'training_provider',
-          status: data.authorized_providers.status || 'active',
-          performance_rating: data.authorized_providers.performance_rating || 0,
-          compliance_score: data.authorized_providers.compliance_score || 0,
-          created_at: data.authorized_providers.created_at,
-          updated_at: data.authorized_providers.updated_at,
-          description: data.authorized_providers.description
+        apUser: data.profiles ? {
+          id: data.profiles.id,
+          display_name: data.profiles.display_name,
+          email: data.profiles.email,
+          organization: data.profiles.organization
         } : undefined,
         members: [],
         member_count: 0
@@ -264,7 +260,7 @@ export function TeamCreationWizard({ onClose, onTeamCreated }: TeamCreationWizar
 
       case 3:
         const selectedLocation = locations.find(l => l.id === formData.location_id);
-        const selectedProvider = providers.find(p => p.id.toString() === formData.provider_id);
+        const selectedApUser = apUsers.find(ap => ap.id === formData.assigned_ap_user_id);
         
         return (
           <div className="space-y-4">
@@ -304,10 +300,12 @@ export function TeamCreationWizard({ onClose, onTeamCreated }: TeamCreationWizar
                   </div>
                 )}
                 
-                {selectedProvider && (
+                {selectedApUser && (
                   <div>
-                    <Label className="text-sm font-medium">Provider</Label>
-                    <p className="text-sm text-muted-foreground">{selectedProvider.name}</p>
+                    <Label className="text-sm font-medium">AP User</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedApUser.display_name} {selectedApUser.organization && `(${selectedApUser.organization})`}
+                    </p>
                   </div>
                 )}
               </CardContent>

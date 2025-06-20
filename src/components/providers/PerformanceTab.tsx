@@ -45,7 +45,7 @@ export function PerformanceTab({ providerId, performanceMetrics, assignments, on
     }) => {
       const { data, error } = await supabase
         .rpc('record_provider_team_performance', {
-          p_provider_id: providerId,
+          p_provider_id: providerId, // Note: Database functions need updating too
           p_team_id: performanceData.teamId,
           p_measurement_period: performanceData.measurementPeriod,
           p_courses_delivered: performanceData.coursesDelivered,

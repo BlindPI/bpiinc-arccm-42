@@ -28,6 +28,9 @@ export interface Provider {
   contact_email?: string;
   contact_phone?: string;
   address?: string;
+  // NEW: AP User fields (corrected architecture)
+  email?: string;
+  organization?: string;
   // For populated relations
   primary_location?: Location;
 }
@@ -70,8 +73,10 @@ export interface Team {
   status: 'active' | 'inactive' | 'suspended';
   performance_score: number;
   location_id?: string;
-  provider_id?: string; // Changed from number to string for consistency
-  created_by?: string;
+  provider_id?: string; // Legacy field for backward compatibility
+  assigned_ap_user_id?: string; // NEW: Direct AP user assignment (corrected architecture)
+  created_by_ap_user_id?: string; // NEW: AP user who created the team
+  created_by?: string;  // Legacy field
   created_at: string;
   updated_at: string;
   metadata?: Record<string, any>;
@@ -81,7 +86,8 @@ export interface Team {
 
 export interface EnhancedTeam extends Team {
   location?: Location;
-  provider?: Provider;
+  provider?: Provider; // Legacy provider interface (for backward compatibility)
+  assignedAPUser?: Provider; // NEW: Direct AP user reference
   members?: TeamMemberWithProfile[];
   metadata: Record<string, any>; // Required for EnhancedTeam
   monthly_targets: Record<string, any>; // Required for EnhancedTeam
@@ -94,9 +100,11 @@ export interface CreateTeamRequest {
   description?: string;
   team_type: string;
   location_id?: string;
-  provider_id?: string; // Changed from number to string
+  provider_id?: string; // Legacy field for backward compatibility
+  assigned_ap_user_id?: string; // NEW: Direct AP user assignment
+  created_by_ap_user_id?: string; // NEW: AP user who created the team
   metadata?: Record<string, any>;
-  created_by: string;
+  created_by: string; // Legacy field
 }
 
 export interface TeamPerformanceMetrics {

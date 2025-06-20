@@ -49,7 +49,9 @@ export function TeamCreateForm({ onCancel, onSuccess }: TeamCreateFormProps) {
     description: '',
     location_id: '',
     team_type: 'standard',
-    status: 'active'
+    status: 'active',
+    assigned_ap_user_id: '', // NEW: AP user assignment
+    created_by_ap_user_id: '' // NEW: Track who created the team
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   
@@ -66,6 +68,22 @@ export function TeamCreateForm({ onCancel, onSuccess }: TeamCreateFormProps) {
       
       if (error) throw error;
       return data as Location[];
+    }
+  });
+
+  // Fetch available AP users (corrected architecture)
+  const { data: apUsers = [], isLoading: apUsersLoading } = useQuery({
+    queryKey: ['ap-users-for-teams'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, display_name, email, organization')
+        .eq('role', 'AP')
+        .eq('status', 'ACTIVE')
+        .order('display_name');
+      
+      if (error) throw error;
+      return data;
     }
   });
 
@@ -112,7 +130,9 @@ export function TeamCreateForm({ onCancel, onSuccess }: TeamCreateFormProps) {
       ...formData,
       name: formData.name.trim(),
       description: formData.description?.trim() || undefined,
-      location_id: formData.location_id === 'none' ? undefined : formData.location_id || undefined
+      location_id: formData.location_id === 'none' ? undefined : formData.location_id || undefined,
+      assigned_ap_user_id: formData.assigned_ap_user_id || undefined,
+      created_by_ap_user_id: formData.created_by_ap_user_id || undefined
     };
 
     createTeamMutation.mutate(teamData);
@@ -233,6 +253,40 @@ export function TeamCreateForm({ onCancel, onSuccess }: TeamCreateFormProps) {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* AP User Assignment (Corrected Architecture) */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Assign AP User (Authorized Provider)
+            </Label>
+            <Select
+              value={formData.assigned_ap_user_id}
+              onValueChange={(value) => handleInputChange('assigned_ap_user_id', value)}
+              disabled={apUsersLoading}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={apUsersLoading ? "Loading AP users..." : "Select AP user (optional)"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No AP user assigned</SelectItem>
+                {apUsers.map((apUser) => (
+                  <SelectItem key={apUser.id} value={apUser.id}>
+                    <div>
+                      <div className="font-medium">{apUser.display_name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {apUser.email}
+                        {apUser.organization && ` • ${apUser.organization}`}
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              AP users serve as Authorized Providers. Selecting an AP user assigns them responsibility for this team.
+            </p>
           </div>
 
           {/* Status */}

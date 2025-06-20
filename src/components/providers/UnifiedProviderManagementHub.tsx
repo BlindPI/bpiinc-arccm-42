@@ -54,6 +54,29 @@ export function UnifiedProviderManagementHub() {
     queryKey: ['authorized-providers'],
     queryFn: async () => {
       const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          display_name,
+          email,
+          organization,
+          role,
+          status
+        `)
+        .eq('role', 'AP')
+        .eq('status', 'ACTIVE')
+        .order('display_name');
+      
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  // Legacy authorized_providers query for backward compatibility during transition
+  const { data: legacyProviders = [] } = useQuery({
+    queryKey: ['legacy-authorized-providers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from('authorized_providers')
         .select(`
           *,

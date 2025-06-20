@@ -31,7 +31,7 @@ export function CreateTeamModal({ open, onOpenChange }: CreateTeamModalProps) {
     description: '',
     team_type: 'standard',
     location_id: '',
-    provider_id: ''
+    assigned_ap_user_id: '' // UPDATED: AP user assignment (corrected architecture)
   });
 
   // Fetch locations
@@ -48,18 +48,19 @@ export function CreateTeamModal({ open, onOpenChange }: CreateTeamModalProps) {
     }
   });
 
-  // Fetch authorized providers
-  const { data: providers = [] } = useQuery({
-    queryKey: ['authorized-providers'],
+  // Fetch available AP users (corrected architecture)
+  const { data: apUsers = [] } = useQuery({
+    queryKey: ['ap-users-create-modal'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('authorized_providers')
-        .select('id, name, provider_type')
-        .eq('status', 'active')
-        .order('name');
+        .from('profiles')
+        .select('id, display_name, email, organization')
+        .eq('role', 'AP')
+        .eq('status', 'ACTIVE')
+        .order('display_name');
       
       if (error) throw error;
-      return data || [];
+      return data;
     }
   });
 
@@ -72,7 +73,7 @@ export function CreateTeamModal({ open, onOpenChange }: CreateTeamModalProps) {
         description: formData.description || undefined,
         team_type: formData.team_type,
         location_id: formData.location_id || undefined,
-        provider_id: formData.provider_id ? parseInt(formData.provider_id) : undefined,
+        assigned_ap_user_id: formData.assigned_ap_user_id || undefined,
         created_by: user.id
       });
     },
@@ -86,7 +87,7 @@ export function CreateTeamModal({ open, onOpenChange }: CreateTeamModalProps) {
         description: '',
         team_type: 'standard',
         location_id: '',
-        provider_id: ''
+        assigned_ap_user_id: ''
       });
     },
     onError: (error: any) => {
@@ -168,16 +169,16 @@ export function CreateTeamModal({ open, onOpenChange }: CreateTeamModalProps) {
           </div>
 
           <div>
-            <Label htmlFor="provider_id">Provider (Optional)</Label>
-            <Select value={formData.provider_id} onValueChange={(value) => setFormData({ ...formData, provider_id: value })}>
+            <Label htmlFor="assigned_ap_user_id">AP User (Authorized Provider) - Optional</Label>
+            <Select value={formData.assigned_ap_user_id} onValueChange={(value) => setFormData({ ...formData, assigned_ap_user_id: value })}>
               <SelectTrigger>
-                <SelectValue placeholder="Select provider" />
+                <SelectValue placeholder="Select AP user (optional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No specific provider</SelectItem>
-                {providers.map((provider) => (
-                  <SelectItem key={provider.id} value={provider.id.toString()}>
-                    {provider.name} ({provider.provider_type})
+                <SelectItem value="">No AP user assigned</SelectItem>
+                {apUsers.map((apUser) => (
+                  <SelectItem key={apUser.id} value={apUser.id}>
+                    {apUser.display_name} {apUser.organization && `(${apUser.organization})`}
                   </SelectItem>
                 ))}
               </SelectContent>

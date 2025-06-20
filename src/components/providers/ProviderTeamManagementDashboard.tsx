@@ -40,6 +40,29 @@ export function ProviderTeamManagementDashboard({ providerId }: ProviderTeamMana
       if (!providerId) return null;
       
       const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          display_name,
+          email,
+          organization,
+          role,
+          status
+        `)
+        .eq('role', 'AP')
+        .eq('status', 'ACTIVE')
+        .order('display_name');
+      
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  // Legacy query for backward compatibility during transition
+  const { data: legacyProviders = [] } = useQuery({
+    queryKey: ['legacy-providers-dashboard'],
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from('authorized_providers')
         .select(`
           *,
@@ -73,7 +96,7 @@ export function ProviderTeamManagementDashboard({ providerId }: ProviderTeamMana
       if (!providerId) return [];
       
       const { data, error } = await supabase
-        .rpc('get_provider_team_assignments_detailed', { p_provider_id: providerId });
+        .rpc('get_ap_user_team_assignments_detailed', { p_ap_user_id: providerId });
       
       if (error) {
         console.error('Error fetching assignments:', error);
@@ -94,7 +117,7 @@ export function ProviderTeamManagementDashboard({ providerId }: ProviderTeamMana
       const { data, error } = await supabase
         .from('provider_team_performance')
         .select('*')
-        .eq('provider_id', providerId)
+        .eq('assigned_ap_user_id', providerId)
         .order('measurement_period', { ascending: false });
       
       if (error) {
@@ -116,7 +139,7 @@ export function ProviderTeamManagementDashboard({ providerId }: ProviderTeamMana
       const { data, error } = await supabase
         .from('provider_training_capabilities')
         .select('*')
-        .eq('provider_id', providerId);
+        .eq('assigned_ap_user_id', providerId);
       
       if (error) {
         console.error('Error fetching capabilities:', error);

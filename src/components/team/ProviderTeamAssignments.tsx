@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { authorizedProviderService } from '@/services/provider/authorizedProviderService';
+import { unifiedApUserService } from '@/services/provider/unifiedApUserService';
 import { Building2, Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,13 +17,23 @@ interface ProviderTeamAssignmentsProps {
 export function ProviderTeamAssignments({ teamId }: ProviderTeamAssignmentsProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [selectedProvider, setSelectedProvider] = useState<string>('');
+  const [selectedApUser, setSelectedApUser] = useState<string>('');
   const [assignmentRole, setAssignmentRole] = useState<string>('support');
   const [oversightLevel, setOversightLevel] = useState<'none' | 'monitor' | 'manage' | 'admin'>('monitor');
 
-  const { data: providers = [] } = useQuery({
-    queryKey: ['authorized-providers'],
-    queryFn: () => authorizedProviderService.getAllProviders()
+  const { data: apUsers = [] } = useQuery({
+    queryKey: ['ap-users-assignments'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, display_name, email, organization')
+        .eq('role', 'AP')
+        .eq('status', 'ACTIVE')
+        .order('display_name');
+      
+      if (error) throw error;
+      return data;
+    }
   });
 
   const { data: assignments = [] } = useQuery({
@@ -52,15 +62,15 @@ export function ProviderTeamAssignments({ teamId }: ProviderTeamAssignmentsProps
     }
   });
 
-  const handleAssignProvider = () => {
-    if (!selectedProvider) {
-      toast.error('Please select a provider');
+  const handleAssignApUser = () => {
+    if (!selectedApUser) {
+      toast.error('Please select an AP user');
       return;
     }
-    assignProviderMutation.mutate();
+    assignApUserMutation.mutate();
   };
 
-  const approvedProviders = providers.filter(p => p.status === 'APPROVED');
+  const activeApUsers = apUsers.filter(ap => ap.status === 'ACTIVE');
 
   return (
     <div className="space-y-6">
@@ -124,24 +134,24 @@ export function ProviderTeamAssignments({ teamId }: ProviderTeamAssignmentsProps
             </div>
             
             <div className="flex items-end">
-              <Button 
-                onClick={handleAssignProvider}
-                disabled={!selectedProvider || assignProviderMutation.isPending}
+              <Button
+                onClick={handleAssignApUser}
+                disabled={!selectedApUser || assignApUserMutation.isPending}
                 className="w-full"
               >
-                {assignProviderMutation.isPending ? 'Assigning...' : 'Assign Provider'}
+                {assignApUserMutation.isPending ? 'Assigning...' : 'Assign AP User'}
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Current Provider Assignments */}
+      {/* Current AP User Assignments */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
-            Provider Assignments
+            AP User Assignments
           </CardTitle>
         </CardHeader>
         <CardContent>

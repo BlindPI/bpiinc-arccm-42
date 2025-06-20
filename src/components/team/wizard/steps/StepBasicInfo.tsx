@@ -19,7 +19,7 @@ interface TeamFormData {
   description: string;
   team_type: string;
   location_id: string;
-  provider_id: string;
+  assigned_ap_user_id: string; // UPDATED: AP user assignment
   permissions: Record<string, boolean>;
 }
 
@@ -53,8 +53,8 @@ const teamTypes = [
   },
   {
     value: 'provider_team',
-    label: 'Provider Team',
-    description: 'Authorized provider organization team',
+    label: 'AP User Team',
+    description: 'Team with assigned AP user (Authorized Provider)',
     icon: Users,
     color: 'bg-orange-50 text-orange-700'
   },
@@ -179,7 +179,7 @@ export function StepBasicInfo({ formData, onUpdateFormData, errors }: StepBasicI
               {formData.team_type === 'provider_team' && (
                 <div className="mt-3 p-3 bg-orange-50 rounded-md">
                   <p className="text-sm text-orange-800">
-                    <strong>Note:</strong> Provider teams require association with an authorized provider organization.
+                    <strong>Note:</strong> AP User teams require assignment of an AP user (Authorized Provider).
                     You'll configure this in the next step.
                   </p>
                 </div>

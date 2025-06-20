@@ -34,7 +34,9 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { useLocationData } from '@/hooks/useLocationData';
-import { simplifiedTeamService } from '@/services/team/simplifiedTeamService';
+import { UnifiedTeamService } from '@/services/team/unifiedTeamService';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import { Location } from '@/types/supabase-schema';
 
 const teamFormSchema = z.object({
@@ -45,6 +47,7 @@ const teamFormSchema = z.object({
   team_type: z.string().optional(),
   status: z.string().optional(),
   primaryLocationId: z.string().optional(),
+  assigned_ap_user_id: z.string().optional(), // NEW: AP user assignment
   auto_assign: z.boolean().default(false).optional(),
   assignment_strategy: z.string().optional(),
 });
@@ -64,8 +67,25 @@ export function AdminTeamCreationWizard({ onTeamCreated, onCancel }: AdminTeamCr
     team_type: '',
     status: 'active',
     primaryLocationId: '',
+    assigned_ap_user_id: '', // NEW: AP user assignment
     auto_assign: false,
     assignment_strategy: 'round_robin'
+  });
+
+  // Fetch available AP users (corrected architecture)
+  const { data: apUsers = [] } = useQuery({
+    queryKey: ['ap-users-admin-create'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, display_name, email, organization')
+        .eq('role', 'AP')
+        .eq('status', 'ACTIVE')
+        .order('display_name');
+      
+      if (error) throw error;
+      return data;
+    }
   });
 
   const form = useForm<z.infer<typeof teamFormSchema>>({
@@ -76,6 +96,7 @@ export function AdminTeamCreationWizard({ onTeamCreated, onCancel }: AdminTeamCr
       team_type: "sales",
       status: "active",
       primaryLocationId: "",
+      assigned_ap_user_id: "",
       auto_assign: false,
       assignment_strategy: "round_robin",
     },
@@ -91,33 +112,34 @@ export function AdminTeamCreationWizard({ onTeamCreated, onCancel }: AdminTeamCr
     setFormData(prev => ({ ...prev, [name]: checked }));
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (values: z.infer<typeof teamFormSchema>) => {
     try {
       setIsSubmitting(true);
       
-      // Create the team using simplified service
+      // Create the team using UnifiedTeamService with corrected architecture
       const teamData = {
-        name: formData.name,
-        description: formData.description,
-        team_type: formData.team_type,
-        status: formData.status as 'active' | 'inactive' | 'suspended',
-        location_id: formData.primaryLocationId || undefined,
-        performance_score: 50 // Default starting score
+        name: values.name,
+        description: values.description,
+        team_type: values.team_type || 'standard',
+        status: (values.status as 'active' | 'inactive' | 'archived') || 'active',
+        location_id: values.primaryLocationId || undefined,
+        assigned_ap_user_id: values.assigned_ap_user_id || undefined,
+        created_by_ap_user_id: values.assigned_ap_user_id || undefined // Same user creates and is assigned
       };
       
-      // For now, we'll use a basic creation approach
-      // The simplified service doesn't have the full team creation method
+      const newTeam = await UnifiedTeamService.createTeam(teamData);
+      
       toast({
-        title: "Team creation initiated",
-        description: "Team will be created with basic settings.",
+        title: "Team created successfully!",
+        description: `Team "${newTeam.name}" has been created with the corrected AP user architecture.`,
       });
       
       onTeamCreated();
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Uh oh! Something went wrong.",
-        description: "There was a problem with your request.",
+        title: "Failed to create team",
+        description: error.message || "There was a problem creating the team.",
       })
     } finally {
       setIsSubmitting(false);
@@ -219,6 +241,34 @@ export function AdminTeamCreationWizard({ onTeamCreated, onCancel }: AdminTeamCr
                   ))}
                 </SelectContent>
               </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="assigned_ap_user_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Assign AP User (Authorized Provider)</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select AP user (optional)" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="">No AP user assigned</SelectItem>
+                  {apUsers?.map((apUser) => (
+                    <SelectItem key={apUser.id} value={apUser.id}>
+                      {apUser.display_name} {apUser.organization && `(${apUser.organization})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                The AP user assigned to this team serves as the Authorized Provider.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

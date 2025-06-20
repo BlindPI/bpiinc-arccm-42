@@ -11,7 +11,7 @@ interface TeamFormData {
   description: string;
   team_type: string;
   location_id: string;
-  provider_id: string;
+  assigned_ap_user_id: string; // UPDATED: AP user assignment
   permissions: Record<string, boolean>;
 }
 

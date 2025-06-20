@@ -40,14 +40,15 @@ export function TeamSettingsPanel({ team, canManage }: TeamSettingsPanelProps) {
   });
 
   // Fetch providers
-  const { data: providers = [] } = useQuery({
-    queryKey: ['authorized_providers'],
+  const { data: apUsers = [] } = useQuery({
+    queryKey: ['ap-users-settings-panel'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('authorized_providers')
-        .select('*')
-        .eq('status', 'active')
-        .order('name');
+        .from('profiles')
+        .select('id, display_name, email, organization')
+        .eq('role', 'AP')
+        .eq('status', 'ACTIVE')
+        .order('display_name');
       
       if (error) throw error;
       return data || [];
@@ -64,7 +65,7 @@ export function TeamSettingsPanel({ team, canManage }: TeamSettingsPanelProps) {
           description: teamData.description,
           team_type: teamData.team_type,
           location_id: teamData.location_id || null,
-          provider_id: teamData.provider_id ? parseInt(teamData.provider_id) : null,
+          assigned_ap_user_id: teamData.assigned_ap_user_id || null,
           status: teamData.status,
           metadata: teamData.metadata,
           monthly_targets: teamData.monthly_targets,
@@ -75,7 +76,7 @@ export function TeamSettingsPanel({ team, canManage }: TeamSettingsPanelProps) {
         .select(`
           *,
           locations(*),
-          authorized_providers(*)
+          profiles!assigned_ap_user_id(id, display_name, email, organization)
         `)
         .single();
 
@@ -223,7 +224,7 @@ export function TeamSettingsPanel({ team, canManage }: TeamSettingsPanelProps) {
       {/* Location & Provider */}
       <Card>
         <CardHeader>
-          <CardTitle>Location & Provider</CardTitle>
+          <CardTitle>Location & AP User</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
