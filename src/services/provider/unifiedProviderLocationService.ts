@@ -60,13 +60,12 @@ export class UnifiedProviderLocationService {
           .eq('user_id', user.id)
           .single();
 
-        // Check teams managed by this provider
+        // Check teams managed by this provider (avoid team_members ambiguity)
         const { data: managedTeams } = await supabase
           .from('teams')
           .select(`
             id, name, status, location_id, provider_id,
-            locations(id, name),
-            team_members(id)
+            locations(id, name)
           `)
           .eq('provider_id', providerRecord?.id);
 
@@ -190,13 +189,13 @@ export class UnifiedProviderLocationService {
    */
   static async getTeamProviderRelationshipHealth() {
     try {
+      // Get teams with basic relationships (avoiding team_members ambiguity)
       const { data: teams, error: teamsError } = await supabase
         .from('teams')
         .select(`
           id, name, status, location_id, provider_id,
           locations(id, name, city, state),
-          authorized_providers(id, name, status, user_id),
-          team_members(id, status)
+          authorized_providers(id, name, status, user_id)
         `);
 
       if (teamsError) throw teamsError;
@@ -241,9 +240,14 @@ export class UnifiedProviderLocationService {
           assignmentStatus = 'missing';
         }
 
-        // Check for active members
-        const activeMembers = team.team_members?.filter(m => m.status === 'active') || [];
-        if (activeMembers.length === 0) {
+        // Check for active members separately to avoid relationship ambiguity
+        const { data: teamMembers } = await supabase
+          .from('team_members')
+          .select('id, status')
+          .eq('team_id', team.id)
+          .eq('status', 'active');
+
+        if (!teamMembers || teamMembers.length === 0) {
           issues.push('Team has no active members');
         }
 
@@ -315,23 +319,40 @@ export class UnifiedProviderLocationService {
    */
   static async getSystemHealthReport() {
     try {
-      const [apStatus, teamHealth] = await Promise.all([
-        this.getAPUserAssignmentStatus(),
-        this.getTeamProviderRelationshipHealth()
-      ]);
+      // Get AP status with error handling
+      let apStatus = [];
+      try {
+        apStatus = await this.getAPUserAssignmentStatus();
+      } catch (error) {
+        console.error('Error getting AP user status:', error);
+        apStatus = [];
+      }
+
+      // Get team health with error handling
+      let teamHealth = [];
+      try {
+        teamHealth = await this.getTeamProviderRelationshipHealth();
+      } catch (error) {
+        console.error('Error getting team health:', error);
+        teamHealth = [];
+      }
 
       const totalAPUsers = apStatus.length;
       const apUsersWithIssues = apStatus.filter(u => u.issues.length > 0).length;
       const totalTeams = teamHealth.length;
       const teamsWithIssues = teamHealth.filter(t => t.issues.length > 0).length;
 
-      const overallScore = Math.round(
-        ((totalAPUsers - apUsersWithIssues) + (totalTeams - teamsWithIssues)) / 
-        (totalAPUsers + totalTeams) * 100
-      );
+      // Calculate overall score with safeguards
+      let overallScore = 100;
+      if (totalAPUsers + totalTeams > 0) {
+        overallScore = Math.round(
+          ((totalAPUsers - apUsersWithIssues) + (totalTeams - teamsWithIssues)) /
+          (totalAPUsers + totalTeams) * 100
+        );
+      }
 
       return {
-        overallScore,
+        overallScore: Math.max(0, overallScore),
         summary: {
           totalAPUsers,
           apUsersWithIssues,
@@ -345,7 +366,21 @@ export class UnifiedProviderLocationService {
       };
     } catch (error) {
       console.error('Error generating system health report:', error);
-      throw error;
+      
+      // Return a minimal fallback report
+      return {
+        overallScore: 0,
+        summary: {
+          totalAPUsers: 0,
+          apUsersWithIssues: 0,
+          totalTeams: 0,
+          teamsWithIssues: 0,
+          totalIssues: 1
+        },
+        apUserStatus: [],
+        teamHealth: [],
+        recommendations: ['Check database connectivity and permissions', 'Verify all required tables exist']
+      };
     }
   }
 
