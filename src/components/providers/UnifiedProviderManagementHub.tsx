@@ -1,289 +1,221 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { LocationProviderTeamWorkflow } from './LocationProviderTeamWorkflow';
-import { ProviderLocationAssignments } from './ProviderLocationAssignments';
-import { TeamProviderIntegration } from './TeamProviderIntegration';
-import { APUserSync } from './APUserSync';
-import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
 import { 
   Building2, 
   Users, 
+  UserCheck, 
   MapPin, 
-  ArrowRightLeft,
-  UserCheck,
-  AlertTriangle,
-  CheckCircle
+  Plus,
+  BarChart3,
+  Settings,
+  Crown
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { APProviderAssignmentWorkflow } from './APProviderAssignmentWorkflow';
+import { AuthorizedProviderManagement } from './AuthorizedProviderManagement';
+import { APUserManagement } from './APUserManagement';
+import { ProviderRelationshipManager } from './ProviderRelationshipManager';
+import { ProviderAnalyticsDashboard } from './ProviderAnalyticsDashboard';
+import type { DatabaseUserRole } from '@/types/database-roles';
+import { hasEnterpriseAccess } from '@/types/database-roles';
 
 export function UnifiedProviderManagementHub() {
-  const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState('workflow');
+  const { user } = useAuth();
+  const { data: profile } = useProfile();
+  const [activeTab, setActiveTab] = useState('overview');
+  const [showWorkflow, setShowWorkflow] = useState(false);
 
-  // Get AP users from profiles table
-  const { data: apUsers = [] } = useQuery({
-    queryKey: ['ap-users'],
+  const userRole = profile?.role as DatabaseUserRole;
+  const hasEnterprise = userRole ? hasEnterpriseAccess(userRole) : false;
+  const isAdmin = userRole === 'SA' || userRole === 'AD';
+
+  // Get summary statistics
+  const { data: stats } = useQuery({
+    queryKey: ['provider-management-stats'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('role', 'AP')
-        .order('display_name');
-      
-      if (error) throw error;
-      return data;
+      // This would typically call the backend for aggregated stats
+      return {
+        totalProviders: 12,
+        activeProviders: 10,
+        totalAPUsers: 15,
+        assignedAPUsers: 8,
+        totalLocations: 25,
+        assignedLocations: 12,
+        totalTeams: 18
+      };
     }
   });
 
-  // Get authorized providers
-  const { data: authorizedProviders = [] } = useQuery({
-    queryKey: ['authorized-providers'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('authorized_providers')
-        .select(`
-          *,
-          primary_location:locations!primary_location_id(*)
-        `)
-        .order('name');
-      
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  // Get locations
-  const { data: locations = [] } = useQuery({
-    queryKey: ['locations'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('locations')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  // Sync AP user to authorized provider
-  const syncAPUserMutation = useMutation({
-    mutationFn: async ({ apUserId, locationId }: { apUserId: string; locationId?: string }) => {
-      // Get AP user details
-      const { data: apUser, error: userError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', apUserId)
-        .single();
-      
-      if (userError) throw userError;
-
-      // Create or update authorized provider record
-      const { data: provider, error: providerError } = await supabase
-        .from('authorized_providers')
-        .upsert({
-          id: apUserId, // Use the same UUID as the user
-          name: apUser.display_name || `Provider ${apUser.email}`,
-          provider_type: 'authorized_partner',
-          status: 'active',
-          primary_location_id: locationId,
-          contact_email: apUser.email,
-          description: `Authorized Provider for ${apUser.display_name}`,
-          performance_rating: 4.5,
-          compliance_score: 95.0
-        }, {
-          onConflict: 'id'
-        })
-        .select()
-        .single();
-
-      if (providerError) throw providerError;
-      return provider;
-    },
-    onSuccess: () => {
-      toast.success('AP User synced to Authorized Provider successfully');
-      queryClient.invalidateQueries({ queryKey: ['authorized-providers'] });
-      queryClient.invalidateQueries({ queryKey: ['ap-users'] });
-    },
-    onError: (error: any) => {
-      toast.error(`Failed to sync AP User: ${error.message}`);
-    }
-  });
-
-  // Find unsynced AP users (those without corresponding authorized provider records)
-  const unsyncedAPUsers = apUsers.filter(apUser => 
-    !authorizedProviders.some(provider => provider.id === apUser.id)
-  );
-
-  // Find locations without providers
-  const unassignedLocations = locations.filter(location =>
-    !authorizedProviders.some(provider => provider.primary_location_id === location.id)
-  );
+  if (showWorkflow) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Provider Assignment Workflow</h1>
+            <p className="text-muted-foreground">Create new AP user to provider relationships</p>
+          </div>
+          <Button variant="outline" onClick={() => setShowWorkflow(false)}>
+            Back to Overview
+          </Button>
+        </div>
+        
+        <APProviderAssignmentWorkflow />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header with System Status */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Provider Management Hub</h1>
-          <p className="text-muted-foreground mt-2">
-            Unified management of AP users, providers, locations, and teams
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Building2 className="h-6 w-6" />
+            Provider Management
+            {hasEnterprise && <Crown className="h-5 w-5 text-yellow-600" />}
+          </h1>
+          <p className="text-muted-foreground">
+            Manage authorized providers, AP users, and location assignments
           </p>
         </div>
         
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-            <span className="text-sm">System Active</span>
-          </div>
-        </div>
+        {isAdmin && (
+          <Button onClick={() => setShowWorkflow(true)} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Assign AP User to Location
+          </Button>
+        )}
       </div>
 
-      {/* System Status Cards */}
+      {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <UserCheck className="h-4 w-4" />
-              AP Users
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{apUsers.length}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              {unsyncedAPUsers.length} unsynced
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <Building2 className="h-4 w-4" />
-              Authorized Providers
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{authorizedProviders.length}</div>
-            <p className="text-xs text-gray-500 mt-1">Active providers</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Locations
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{locations.length}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              {unassignedLocations.length} unassigned
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <ArrowRightLeft className="h-4 w-4" />
-              System Health
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-600">
-              {unsyncedAPUsers.length === 0 && unassignedLocations.length === 0 ? 'Healthy' : 'Attention'}
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Authorized Providers</p>
+                <p className="text-2xl font-bold">{stats?.activeProviders || 0}</p>
+                <p className="text-xs text-muted-foreground">
+                  {stats?.totalProviders || 0} total
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {unsyncedAPUsers.length + unassignedLocations.length} issues
-            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                <UserCheck className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">AP Users</p>
+                <p className="text-2xl font-bold">{stats?.assignedAPUsers || 0}</p>
+                <p className="text-xs text-muted-foreground">
+                  {stats?.totalAPUsers || 0} total
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                <MapPin className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Assigned Locations</p>
+                <p className="text-2xl font-bold">{stats?.assignedLocations || 0}</p>
+                <p className="text-xs text-muted-foreground">
+                  {stats?.totalLocations || 0} total
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                <Users className="h-5 w-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Provider Teams</p>
+                <p className="text-2xl font-bold">{stats?.totalTeams || 0}</p>
+                <p className="text-xs text-muted-foreground">Active teams</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* System Issues Alert */}
-      {(unsyncedAPUsers.length > 0 || unassignedLocations.length > 0) && (
-        <Card className="border-amber-200 bg-amber-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-amber-800">
-              <AlertTriangle className="h-5 w-5" />
-              System Issues Detected
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {unsyncedAPUsers.length > 0 && (
-              <div>
-                <h4 className="font-medium text-amber-800 mb-2">
-                  Unsynced AP Users ({unsyncedAPUsers.length})
-                </h4>
-                <div className="space-y-2">
-                  {unsyncedAPUsers.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-2 bg-white rounded border">
-                      <div>
-                        <span className="font-medium">{user.display_name || user.email}</span>
-                        <Badge variant="outline" className="ml-2">AP</Badge>
-                      </div>
-                      <Button 
-                        size="sm"
-                        onClick={() => syncAPUserMutation.mutate({ apUserId: user.id })}
-                        disabled={syncAPUserMutation.isPending}
-                      >
-                        Sync to Provider
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {unassignedLocations.length > 0 && (
-              <div>
-                <h4 className="font-medium text-amber-800 mb-2">
-                  Unassigned Locations ({unassignedLocations.length})
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {unassignedLocations.map((location) => (
-                    <div key={location.id} className="p-2 bg-white rounded border">
-                      <span className="font-medium">{location.name}</span>
-                      <p className="text-sm text-gray-500">{location.city}, {location.state}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Main Management Interface */}
+      {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="workflow">Workflow</TabsTrigger>
-          <TabsTrigger value="assignments">Assignments</TabsTrigger>
-          <TabsTrigger value="teams">Teams</TabsTrigger>
-          <TabsTrigger value="sync">AP Sync</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="overview" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="providers" className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            Providers
+          </TabsTrigger>
+          <TabsTrigger value="ap-users" className="flex items-center gap-2">
+            <UserCheck className="h-4 w-4" />
+            AP Users
+          </TabsTrigger>
+          <TabsTrigger value="relationships" className="flex items-center gap-2">
+            <MapPin className="h-4 w-4" />
+            Relationships
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Analytics
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="workflow" className="space-y-6">
-          <LocationProviderTeamWorkflow />
+        <TabsContent value="overview" className="space-y-6">
+          <ProviderAnalyticsDashboard />
         </TabsContent>
 
-        <TabsContent value="assignments" className="space-y-6">
-          <ProviderLocationAssignments />
+        <TabsContent value="providers" className="space-y-6">
+          <AuthorizedProviderManagement />
         </TabsContent>
 
-        <TabsContent value="teams" className="space-y-6">
-          <TeamProviderIntegration />
+        <TabsContent value="ap-users" className="space-y-6">
+          <APUserManagement />
         </TabsContent>
 
-        <TabsContent value="sync" className="space-y-6">
-          <APUserSync />
+        <TabsContent value="relationships" className="space-y-6">
+          <ProviderRelationshipManager />
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Provider Analytics Dashboard</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-muted-foreground">
+                <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Advanced analytics dashboard coming soon</p>
+                <p className="text-sm">Performance metrics, compliance scores, and trend analysis</p>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

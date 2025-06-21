@@ -1434,6 +1434,48 @@ export type Database = {
           },
         ]
       }
+      campaign_settings: {
+        Row: {
+          created_at: string | null
+          default_from_email: string
+          default_from_name: string
+          default_reply_to: string
+          enable_auto_unsubscribe: boolean
+          enable_tracking: boolean
+          id: string
+          max_send_rate: number
+          send_time_optimization: boolean
+          timezone_handling: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_from_email?: string
+          default_from_name?: string
+          default_reply_to?: string
+          enable_auto_unsubscribe?: boolean
+          enable_tracking?: boolean
+          id?: string
+          max_send_rate?: number
+          send_time_optimization?: boolean
+          timezone_handling?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          default_from_email?: string
+          default_from_name?: string
+          default_reply_to?: string
+          enable_auto_unsubscribe?: boolean
+          enable_tracking?: boolean
+          id?: string
+          max_send_rate?: number
+          send_time_optimization?: boolean
+          timezone_handling?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       certificate_audit_logs: {
         Row: {
           action: string
@@ -1466,6 +1508,56 @@ export type Database = {
           reason?: string | null
         }
         Relationships: []
+      }
+      certificate_notifications: {
+        Row: {
+          batch_id: string | null
+          certificate_request_id: string | null
+          created_at: string | null
+          email_sent: boolean | null
+          email_sent_at: string | null
+          id: string
+          message: string
+          notification_type: string
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          batch_id?: string | null
+          certificate_request_id?: string | null
+          created_at?: string | null
+          email_sent?: boolean | null
+          email_sent_at?: string | null
+          id?: string
+          message: string
+          notification_type: string
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          batch_id?: string | null
+          certificate_request_id?: string | null
+          created_at?: string | null
+          email_sent?: boolean | null
+          email_sent_at?: string | null
+          id?: string
+          message?: string
+          notification_type?: string
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certificate_notifications_certificate_request_id_fkey"
+            columns: ["certificate_request_id"]
+            isOneToOne: false
+            referencedRelation: "certificate_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       certificate_requests: {
         Row: {
@@ -3727,6 +3819,7 @@ export type Database = {
           outcome: string | null
           parent_activity_id: string | null
           priority: string | null
+          status: string | null
           subject: string
           updated_at: string | null
         }
@@ -3747,6 +3840,7 @@ export type Database = {
           outcome?: string | null
           parent_activity_id?: string | null
           priority?: string | null
+          status?: string | null
           subject: string
           updated_at?: string | null
         }
@@ -3767,6 +3861,7 @@ export type Database = {
           outcome?: string | null
           parent_activity_id?: string | null
           priority?: string | null
+          status?: string | null
           subject?: string
           updated_at?: string | null
         }
@@ -6014,33 +6109,48 @@ export type Database = {
           content: string
           created_at: string | null
           created_by: string | null
+          design_data: Json | null
+          email_content: string | null
           html_content: string | null
           id: string
+          is_active: boolean | null
+          personalization_fields: Json | null
           subject_line: string
           template_name: string
           template_type: string
+          updated_at: string | null
           variables: string[] | null
         }
         Insert: {
           content: string
           created_at?: string | null
           created_by?: string | null
+          design_data?: Json | null
+          email_content?: string | null
           html_content?: string | null
           id?: string
+          is_active?: boolean | null
+          personalization_fields?: Json | null
           subject_line: string
           template_name: string
           template_type: string
+          updated_at?: string | null
           variables?: string[] | null
         }
         Update: {
           content?: string
           created_at?: string | null
           created_by?: string | null
+          design_data?: Json | null
+          email_content?: string | null
           html_content?: string | null
           id?: string
+          is_active?: boolean | null
+          personalization_fields?: Json | null
           subject_line?: string
           template_name?: string
           template_type?: string
+          updated_at?: string | null
           variables?: string[] | null
         }
         Relationships: []
@@ -6910,184 +7020,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      notification_badges: {
-        Row: {
-          badge_count: number
-          id: string
-          last_updated: string | null
-          page_path: string
-          user_id: string
-        }
-        Insert: {
-          badge_count?: number
-          id?: string
-          last_updated?: string | null
-          page_path: string
-          user_id: string
-        }
-        Update: {
-          badge_count?: number
-          id?: string
-          last_updated?: string | null
-          page_path?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      notification_digests: {
-        Row: {
-          created_at: string | null
-          digest_type: string
-          id: string
-          is_enabled: boolean | null
-          last_sent_at: string | null
-          next_scheduled_at: string | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          digest_type: string
-          id?: string
-          is_enabled?: boolean | null
-          last_sent_at?: string | null
-          next_scheduled_at?: string | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          digest_type?: string
-          id?: string
-          is_enabled?: boolean | null
-          last_sent_at?: string | null
-          next_scheduled_at?: string | null
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      notification_preferences: {
-        Row: {
-          browser_enabled: boolean
-          category: string
-          created_at: string
-          email_enabled: boolean
-          id: string
-          in_app_enabled: boolean
-          notification_type_id: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          browser_enabled?: boolean
-          category: string
-          created_at?: string
-          email_enabled?: boolean
-          id?: string
-          in_app_enabled?: boolean
-          notification_type_id?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          browser_enabled?: boolean
-          category?: string
-          created_at?: string
-          email_enabled?: boolean
-          id?: string
-          in_app_enabled?: boolean
-          notification_type_id?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notification_preferences_notification_type_id_fkey"
-            columns: ["notification_type_id"]
-            isOneToOne: false
-            referencedRelation: "notification_types"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      notification_queue: {
-        Row: {
-          category: string | null
-          created_at: string
-          error: string | null
-          id: string
-          notification_id: string
-          priority: string | null
-          processed_at: string | null
-          status: string
-        }
-        Insert: {
-          category?: string | null
-          created_at?: string
-          error?: string | null
-          id?: string
-          notification_id: string
-          priority?: string | null
-          processed_at?: string | null
-          status?: string
-        }
-        Update: {
-          category?: string | null
-          created_at?: string
-          error?: string | null
-          id?: string
-          notification_id?: string
-          priority?: string | null
-          processed_at?: string | null
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notification_queue_notification_id_fkey"
-            columns: ["notification_id"]
-            isOneToOne: false
-            referencedRelation: "notifications"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      notification_types: {
-        Row: {
-          category: string
-          created_at: string | null
-          default_priority: string
-          description: string | null
-          display_name: string
-          icon: string | null
-          id: string
-          requires_email: boolean
-          updated_at: string | null
-        }
-        Insert: {
-          category: string
-          created_at?: string | null
-          default_priority?: string
-          description?: string | null
-          display_name: string
-          icon?: string | null
-          id: string
-          requires_email?: boolean
-          updated_at?: string | null
-        }
-        Update: {
-          category?: string
-          created_at?: string | null
-          default_priority?: string
-          description?: string | null
-          display_name?: string
-          icon?: string | null
-          id?: string
-          requires_email?: boolean
-          updated_at?: string | null
-        }
-        Relationships: []
       }
       notifications: {
         Row: {
@@ -12499,6 +12431,18 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      create_certificate_notification: {
+        Args: {
+          p_user_id: string
+          p_notification_type: string
+          p_title: string
+          p_message: string
+          p_certificate_request_id?: string
+          p_batch_id?: string
+          p_send_email?: boolean
+        }
+        Returns: string
+      }
       create_new_user: {
         Args: {
           admin_user_id: string
@@ -12540,6 +12484,12 @@ export type Database = {
       evaluate_progression_eligibility: {
         Args: { p_user_id: string; p_target_role: string }
         Returns: Json
+      }
+      exec_sql: {
+        Args: { sql: string }
+        Returns: {
+          result: Json
+        }[]
       }
       execute_automation_rule: {
         Args: { p_rule_id: string }
@@ -12634,6 +12584,16 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_automation_triggers: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          name: string
+          description: string
+          event_type: string
+          is_active: boolean
+        }[]
+      }
       get_available_ap_users_for_location: {
         Args: { p_location_id: string }
         Returns: {
@@ -12669,6 +12629,46 @@ export type Database = {
       get_cache_entry: {
         Args: { p_cache_key: string }
         Returns: Json
+      }
+      get_campaign_analytics: {
+        Args: { campaign_ids?: string[]; date_from?: string; date_to?: string }
+        Returns: {
+          campaign_id: string
+          campaign_name: string
+          campaign_type: string
+          sent_count: number
+          delivered_count: number
+          opened_count: number
+          clicked_count: number
+          bounced_count: number
+          unsubscribed_count: number
+          open_rate: number
+          click_rate: number
+          bounce_rate: number
+          unsubscribe_rate: number
+          revenue_attributed: number
+          created_at: string
+        }[]
+      }
+      get_campaign_performance_summary: {
+        Args: { date_from?: string; date_to?: string }
+        Returns: {
+          total_campaigns: number
+          active_campaigns: number
+          total_recipients: number
+          total_delivered: number
+          total_opened: number
+          total_clicked: number
+          total_bounced: number
+          total_unsubscribed: number
+          avg_open_rate: number
+          avg_click_rate: number
+          avg_bounce_rate: number
+          avg_unsubscribe_rate: number
+          total_revenue: number
+          performance_data: Json
+          engagement_data: Json
+        }[]
       }
       get_certificate_status_counts: {
         Args: Record<PropertyKey, never>
@@ -12747,13 +12747,6 @@ export type Database = {
           count: number
         }[]
       }
-      get_notification_badges: {
-        Args: { p_user_id: string }
-        Returns: {
-          page_path: string
-          badge_count: number
-        }[]
-      }
       get_pipeline_metrics: {
         Args: { pipeline_type_param?: string }
         Returns: {
@@ -12807,16 +12800,18 @@ export type Database = {
       get_provider_team_assignments: {
         Args: { p_provider_id: number } | { p_provider_id: string }
         Returns: {
-          id: string
-          provider_id: number
+          assignment_id: string
           team_id: string
+          team_name: string
           assignment_role: string
           oversight_level: string
-          assigned_by: string
-          assigned_at: string
+          assignment_type: string
+          start_date: string
+          end_date: string
           status: string
-          team_name: string
-          team_location: string
+          team_status: string
+          location_name: string
+          member_count: number
         }[]
       }
       get_provider_team_assignments_detailed: {
@@ -13002,6 +12997,10 @@ export type Database = {
           count: number
         }[]
       }
+      get_unread_certificate_notifications_count: {
+        Args: { p_user_id?: string }
+        Returns: number
+      }
       get_user_compliance_summary: {
         Args: { p_user_id: string }
         Returns: {
@@ -13108,9 +13107,9 @@ export type Database = {
         }
         Returns: string
       }
-      mark_page_notifications_as_read: {
-        Args: { p_user_id: string; p_page_path: string }
-        Returns: undefined
+      mark_certificate_notification_read: {
+        Args: { p_notification_id: string }
+        Returns: boolean
       }
       normalize_team_member_role: {
         Args: { input_role: string }
@@ -13161,6 +13160,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      send_campaign: {
+        Args: { campaign_id: string; send_immediately?: boolean }
+        Returns: {
+          success: boolean
+          message: string
+          recipients_count: number
+        }[]
+      }
       set_cache_entry: {
         Args: {
           p_cache_key: string
@@ -13194,6 +13201,15 @@ export type Database = {
       update_bulk_operation_progress: {
         Args: { p_operation_id: string; p_processed: number; p_failed?: number }
         Returns: undefined
+      }
+      update_campaign_status: {
+        Args: { campaign_id: string; new_status: string }
+        Returns: {
+          success: boolean
+          message: string
+          old_status: string
+          updated_status: string
+        }[]
       }
       update_compliance_record: {
         Args: {
