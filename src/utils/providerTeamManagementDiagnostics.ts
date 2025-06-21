@@ -22,7 +22,7 @@ export class ProviderTeamManagementDiagnostics {
     await this.checkDatabaseTables();
     await this.checkDatabaseFunctions();
     await this.checkDataIntegrity();
-    await this.checkAPUserService();
+    await this.checkProviderRelationshipService();
     await this.checkProviderTeamAssignments();
     
     console.log('\n📊 Diagnostics Summary:');
@@ -200,6 +200,10 @@ export class ProviderTeamManagementDiagnostics {
     } catch (err: any) {
       this.addResult('AP User Service', 'General', 'FAIL', `Service error: ${err.message}`);
     }
+  }
+
+  private async checkProviderRelationshipService() {
+    console.log('\n🤝 Checking Provider Relationship Service...');
   }
 
   private async checkProviderTeamAssignments() {

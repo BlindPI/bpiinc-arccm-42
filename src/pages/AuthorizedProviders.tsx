@@ -1,7 +1,7 @@
 
 import React from 'react';
-import AuthorizedProviderManagement from '@/components/providers/AuthorizedProviderManagement';
+import { UnifiedProviderDashboard } from '@/components/providers/UnifiedProviderDashboard';
 
 export default function AuthorizedProviders() {
-  return <AuthorizedProviderManagement />;
+  return <UnifiedProviderDashboard />;
 }

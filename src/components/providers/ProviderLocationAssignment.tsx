@@ -8,7 +8,7 @@ import { ProviderLocationService } from '@/services/provider/providerLocationSer
 import { supabase } from '@/integrations/supabase/client';
 import { MapPin, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
-import type { AuthorizedProvider } from '@/services/provider/authorizedProviderService';
+import type { AuthorizedProvider } from '@/types/provider-management';
 
 interface ProviderLocationAssignmentProps {
   provider: AuthorizedProvider;

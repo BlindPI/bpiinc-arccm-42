@@ -10,7 +10,7 @@ import {
   ArrowUpRight, ArrowDownRight, Minus, Plus, Settings
 } from 'lucide-react';
 import { ContextualHelp } from '../help/ContextualHelp';
-import type { AuthorizedProvider } from '@/services/provider/authorizedProviderService';
+import type { AuthorizedProvider } from '@/types/provider-management';
 
 interface KPIMetric {
   label: string;
