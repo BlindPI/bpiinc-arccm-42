@@ -377,12 +377,18 @@ export class ProviderRelationshipService {
    */
   async getProviders(filters?: ProviderFilters): Promise<AuthorizedProvider[]> {
     try {
+      console.log('🔍 DEBUG: Starting getProviders with filters:', filters);
+      
+      // Fix for PGRST201 error: Use explicit foreign key relationship specification
+      // This resolves PostgREST ambiguity when multiple FK relationships exist to same table
       let query = supabase
         .from('authorized_providers')
         .select(`
           *,
-          locations:primary_location_id(id, name, city, state)
+          primary_location:locations!primary_location_id(id, name, city, state, created_at, updated_at)
         `);
+      
+      console.log('🔍 DEBUG: Query constructed with explicit foreign key specification');
 
       // Apply filters
       if (filters?.status && filters.status.length > 0) {
@@ -412,11 +418,78 @@ export class ProviderRelationshipService {
       query = query.order('name');
 
       const { data, error } = await query;
-      if (error) throw error;
+      
+      if (error) {
+        console.error('🚨 DEBUG: PostgREST Error Details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        
+        // If it's still the PGRST201 error, provide specific diagnostics
+        if (error.code === 'PGRST201') {
+          console.error('🚨 DEBUG: PGRST201 - Multiple relationship ambiguity detected');
+          console.error('🚨 DEBUG: This indicates multiple foreign keys to the same table');
+          
+          // Try a fallback query without the relationship
+          console.log('🔄 DEBUG: Attempting fallback query without location relationship...');
+          const fallbackQuery = supabase
+            .from('authorized_providers')
+            .select('*');
+            
+          // Apply the same filters to fallback
+          if (filters?.status && filters.status.length > 0) {
+            fallbackQuery.in('status', filters.status);
+          }
+          if (filters?.provider_type && filters.provider_type.length > 0) {
+            fallbackQuery.in('provider_type', filters.provider_type);
+          }
+          if (filters?.location_id) {
+            fallbackQuery.eq('primary_location_id', filters.location_id);
+          }
+          if (filters?.performance_rating_min) {
+            fallbackQuery.gte('performance_rating', filters.performance_rating_min);
+          }
+          if (filters?.compliance_score_min) {
+            fallbackQuery.gte('compliance_score', filters.compliance_score_min);
+          }
+          if (filters?.search) {
+            fallbackQuery.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+          }
+          
+          fallbackQuery.order('name');
+          
+          const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+          
+          if (fallbackError) {
+            console.error('🚨 DEBUG: Fallback query also failed:', fallbackError);
+            throw fallbackError;
+          }
+          
+          console.log('✅ DEBUG: Fallback query succeeded, returning data without location relationships');
+          return fallbackData || [];
+        }
+        
+        throw error;
+      }
 
-      return data || [];
+      console.log('✅ DEBUG: Query successful, returning providers with location data');
+      console.log('🔍 DEBUG: Sample provider structure:', data?.[0] ? Object.keys(data[0]) : 'No data');
+      
+      // Transform the data to match the expected AuthorizedProvider type
+      // The query returns primary_location instead of locations due to explicit FK specification
+      const transformedData = (data || []).map(provider => ({
+        ...provider,
+        // Transform primary_location back to locations for backward compatibility
+        locations: provider.primary_location || null,
+        // Remove the primary_location property to avoid type conflicts
+        primary_location: undefined
+      }));
+      
+      return transformedData;
     } catch (error) {
-      console.error('Error fetching providers:', error);
+      console.error('🚨 DEBUG: Final error in getProviders:', error);
       throw await this.standardizeErrorMessage(error);
     }
   }
