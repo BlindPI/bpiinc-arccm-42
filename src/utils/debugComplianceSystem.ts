@@ -53,13 +53,8 @@ export async function debugComplianceSystem() {
       const actions = await ComplianceService.getUserComplianceActions(user.id);
       console.log('⚡ Compliance actions count:', actions.length);
 
-    } else {
-      console.log('❌ No authenticated user found');
-    }
-
-    // 7. Test provider compliance functions
-    console.log('\n7. Testing provider compliance functions...');
-    if (user) {
+      // 7. Test provider compliance functions
+      console.log('\n7. Testing provider compliance functions...');
       const providerScore = await ComplianceService.getProviderComplianceScore(user.id);
       console.log('🏢 Provider compliance score:', providerScore);
       
@@ -68,7 +63,8 @@ export async function debugComplianceSystem() {
         requirements: breakdown.requirements.length,
         actions: breakdown.actions.length
       });
-    }
+    } else {
+      console.log('❌ No authenticated user found');
     }
 
   } catch (error) {
