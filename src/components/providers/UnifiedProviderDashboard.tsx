@@ -573,23 +573,23 @@ export const UnifiedProviderDashboard: React.FC<UnifiedProviderDashboardProps> =
                 className="w-full"
               />
             </div>
-            <Select value={filters.status?.[0] || ''} onValueChange={(value) => handleFilterChange('status', value ? [value] : undefined)}>
+            <Select value={filters.status?.[0] || 'all'} onValueChange={(value) => handleFilterChange('status', value === 'all' ? undefined : [value])}>
               <SelectTrigger>
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Statuses</SelectItem>
+                <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={filters.provider_type?.[0] || ''} onValueChange={(value) => handleFilterChange('provider_type', value ? [value] : undefined)}>
+            <Select value={filters.provider_type?.[0] || 'all'} onValueChange={(value) => handleFilterChange('provider_type', value === 'all' ? undefined : [value])}>
               <SelectTrigger>
                 <SelectValue placeholder="Filter by type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Types</SelectItem>
+                <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="medical">Medical</SelectItem>
                 <SelectItem value="training">Training</SelectItem>
                 <SelectItem value="corporate">Corporate</SelectItem>
