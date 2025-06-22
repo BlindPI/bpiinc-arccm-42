@@ -102,6 +102,50 @@ export async function debugAPUserTeamQuery(userId: string) {
       assignments?.forEach(assignment => {
         console.log(`   - Team ID: ${assignment.team_id}, Status: ${assignment.status}, Role: ${assignment.assignment_role}`);
       });
+      
+      // CRITICAL: Check if assigned teams actually exist in teams table
+      if (assignments && assignments.length > 0) {
+        console.log('\n4b. CHECKING IF ASSIGNED TEAMS EXIST IN TEAMS TABLE...');
+        for (const assignment of assignments) {
+          const { data: teamExists, error: teamExistsError } = await supabase
+            .from('teams')
+            .select('id, name, status')
+            .eq('id', assignment.team_id)
+            .maybeSingle();
+            
+          if (teamExistsError) {
+            console.error(`❌ Error checking team ${assignment.team_id}:`, teamExistsError);
+          } else if (!teamExists) {
+            console.error(`❌ CRITICAL: Team ${assignment.team_id} DOES NOT EXIST in teams table!`);
+          } else {
+            console.log(`✅ Team ${assignment.team_id} exists: ${teamExists.name} (status: ${teamExists.status})`);
+          }
+        }
+        
+        // Test the join query that's failing
+        console.log('\n4c. TESTING JOIN QUERY (what the app uses)...');
+        const { data: joinResults, error: joinError } = await supabase
+          .from('provider_team_assignments')
+          .select(`
+            *,
+            teams!inner(
+              id,
+              name,
+              status
+            )
+          `)
+          .eq('provider_id', providerRecord.id)
+          .eq('status', 'active');
+          
+        if (joinError) {
+          console.error('❌ JOIN QUERY FAILED:', joinError);
+        } else {
+          console.log(`✅ JOIN QUERY SUCCESS: Found ${joinResults?.length || 0} results`);
+          joinResults?.forEach(result => {
+            console.log(`   - Assignment ID: ${result.id}, Team: ${result.teams.name}`);
+          });
+        }
+      }
     }
     
     // Step 5: Check all teams table to see what exists

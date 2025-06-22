@@ -98,7 +98,7 @@ export function ProviderTeamInterface({ teams: parentTeams, onRefresh }: Provide
           )
         `)
         .eq('provider_id', providerRecord.id)
-        .eq('status', 'active');
+        .in('status', ['active', 'APPROVED', 'approved']);
 
       if (assignmentsError) {
         console.error('🚨 Error loading team assignments:', assignmentsError);
@@ -190,7 +190,7 @@ export function ProviderTeamInterface({ teams: parentTeams, onRefresh }: Provide
               )
             `)
             .eq('location_id', providerRecord.primary_location_id)
-            .eq('status', 'active')
+            .in('status', ['active', 'APPROVED', 'approved'])
             .order('created_at', { ascending: false });
           
           if (!locationTeamsError && locationTeams) {
