@@ -33,6 +33,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { diagnoseAPTeamMemberAccess, logAPTeamMemberDiagnostics } from '@/utils/diagnoseAPTeamMemberAccess';
 import { diagnoseAPTeamRelationshipDeep } from '@/utils/diagnoseAPTeamRelationshipDeep';
+import { testSafeFunctionError } from '@/utils/testSafeFunctionError';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Users,
@@ -410,14 +411,24 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
             <div className="flex items-center gap-2">
               <span className="text-red-600 font-medium">🚨 Team Member Access Issues</span>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => diagnoseAPTeamRelationshipDeep(user?.id, teamId)}
-              className="text-red-600 border-red-300"
-            >
-              Run Deep Diagnostic
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => diagnoseAPTeamRelationshipDeep(user?.id, teamId)}
+                className="text-red-600 border-red-300"
+              >
+                Deep Diagnostic
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => testSafeFunctionError(teamId, teamMembers?.[0]?.id)}
+                className="text-blue-600 border-blue-300"
+              >
+                Test Function Error
+              </Button>
+            </div>
           </div>
           <p className="text-red-700 text-sm mt-1">
             {accessDiagnostics.critical} critical issues detected with AP user team member access.
