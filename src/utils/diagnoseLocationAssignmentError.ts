@@ -170,6 +170,24 @@ export class LocationAssignmentErrorDiagnostic {
 }
 
 /**
+ * Main diagnostic function used by providerRelationshipService
+ */
+export async function diagnoseLocationAssignmentError(providerId: string, locationId: string) {
+  console.log('🔍 DIAGNOSTIC: Location Assignment Error Analysis');
+  console.log(`Provider ID: ${providerId}, Location ID: ${locationId}`);
+  
+  return LocationAssignmentErrorDiagnostic.diagnoseAndFix(providerId);
+}
+
+/**
+ * Log diagnostic results
+ */
+export async function logDiagnosticResults(diagnostics: any) {
+  console.log('📋 DIAGNOSTIC RESULTS:', diagnostics);
+  return diagnostics;
+}
+
+/**
  * Quick fix function to replace broken location assignment queries
  */
 export async function getAPUserLocationAndTeams(userId: string) {
