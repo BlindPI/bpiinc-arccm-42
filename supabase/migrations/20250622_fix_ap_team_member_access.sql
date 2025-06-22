@@ -7,6 +7,7 @@
 BEGIN;
 
 -- 1. Create RLS policies for AP users on team_members table
+DROP POLICY IF EXISTS "ap_users_can_manage_their_team_members" ON team_members;
 CREATE POLICY "ap_users_can_manage_their_team_members" ON team_members
   FOR ALL
   TO authenticated
@@ -80,9 +81,9 @@ BEGIN
     RAISE EXCEPTION 'Insufficient permissions to manage this team member';
   END IF;
   
-  -- Validate role
-  IF p_new_role NOT IN ('member', 'lead', 'instructor', 'coordinator') THEN
-    RAISE EXCEPTION 'Invalid role: %', p_new_role;
+  -- Validate role - FIXED to use actual TEAM MEMBER roles from database
+  IF p_new_role NOT IN ('ADMIN', 'MEMBER', 'admin', 'member') THEN
+    RAISE EXCEPTION 'Invalid role: %. Valid team roles are: ADMIN, MEMBER, admin, member', p_new_role;
   END IF;
   
   -- Update the member role
@@ -138,9 +139,9 @@ BEGIN
     RAISE EXCEPTION 'Insufficient permissions to add members to this team';
   END IF;
   
-  -- Validate role
-  IF p_role NOT IN ('member', 'lead', 'instructor', 'coordinator') THEN
-    RAISE EXCEPTION 'Invalid role: %', p_role;
+  -- Validate role - FIXED to use actual TEAM MEMBER roles from database
+  IF p_role NOT IN ('ADMIN', 'MEMBER', 'admin', 'member') THEN
+    RAISE EXCEPTION 'Invalid role: %. Valid team roles are: ADMIN, MEMBER, admin, member', p_role;
   END IF;
   
   -- Check if user exists
