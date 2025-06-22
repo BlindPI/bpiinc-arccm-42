@@ -343,15 +343,17 @@ export const ProviderAssignmentManager: React.FC = () => {
    */
   const removeFromLocationMutation = useMutation({
     mutationFn: async ({ providerId, locationId }: { providerId: string; locationId: string }) => {
-      // For now, just return success - full removal will be implemented with proper location assignment table
-      toast.info('Location assignment removal will be fully implemented with proper location assignment table');
-      return Promise.resolve();
+      console.log('🔥 DEBUG: Removing provider from location via ProviderAssignmentManager');
+      console.log('🔥 DEBUG: Provider ID:', providerId, 'Location ID:', locationId);
+      
+      return await providerRelationshipService.removeProviderFromLocation(providerId, locationId);
     },
     onSuccess: () => {
-      toast.success('Location assignment removed');
+      toast.success('Location assignment removed successfully');
       queryClient.invalidateQueries({ queryKey: ['providers-with-assignments'] });
     },
     onError: (error: any) => {
+      console.error('🔥 DEBUG: Location removal failed:', error);
       toast.error(`Failed to remove location assignment: ${error.message}`);
     }
   });
@@ -626,7 +628,19 @@ export const ProviderAssignmentManager: React.FC = () => {
                           <div className="font-medium text-sm">Primary Location</div>
                           <div className="text-sm text-muted-foreground">{provider.primary_location_name}</div>
                         </div>
-                        <Badge variant="outline">Primary</Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">Primary</Badge>
+                          {provider.primary_location_id && provider.primary_location_name !== 'No Primary Location' && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleRemoveFromLocation(provider.id, provider.primary_location_id!)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -645,7 +659,12 @@ export const ProviderAssignmentManager: React.FC = () => {
                               <Badge variant={assignment.status === 'active' ? 'default' : 'secondary'} className="text-xs">
                                 {assignment.status}
                               </Badge>
-                              <Button size="sm" variant="ghost">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleRemoveFromLocation(provider.id, assignment.location_id)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
                                 <Trash2 className="h-3 w-3" />
                               </Button>
                             </div>
