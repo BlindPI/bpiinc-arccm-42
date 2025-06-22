@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { providerRelationshipService } from '@/services/provider/providerRelationshipService';
 import { validateDashboardDataSources, logValidationResults } from '@/utils/validateDashboardDataSources';
 import { useAuth } from '@/contexts/AuthContext';
@@ -92,12 +93,29 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
       setValidationResults(validation);
       await logValidationResults(validation);
       
-      // For AP users, find their provider record
-      if (isAPUser && user?.email) {
-        const providers = await providerRelationshipService.getProviders({
-          search: user.email
-        });
-        return providers.length > 0 ? providers : [];
+      // For AP users, find their provider record using user_id relationship
+      if (isAPUser && user?.id) {
+        console.log('🔍 ENHANCED DASHBOARD: Looking up AP user provider record for user ID:', user.id);
+        
+        // Query authorized_providers table by user_id (not email search)
+        const { data: providerRecord, error } = await supabase
+          .from('authorized_providers')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        if (error) {
+          console.error('🚨 ENHANCED DASHBOARD: Error finding provider record:', error);
+          return [];
+        }
+        
+        if (providerRecord) {
+          console.log('✅ ENHANCED DASHBOARD: Found provider record:', providerRecord.name, providerRecord.id);
+          return [providerRecord];
+        } else {
+          console.log('❌ ENHANCED DASHBOARD: No provider record found for user_id:', user.id);
+          return [];
+        }
       }
       
       // For admins, show recent providers
