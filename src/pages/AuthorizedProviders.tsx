@@ -38,7 +38,7 @@ export default function AuthorizedProviders() {
           <TabsContent value="assignments" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>🎯 SOLUTION TO UI/UX DISCONNECT</CardTitle>
+                <CardTitle>AP Management</CardTitle>
                 <CardDescription>
                   This is the comprehensive assignment manager that shows:
                   • All AP Users in one place
