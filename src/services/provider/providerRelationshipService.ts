@@ -1501,12 +1501,10 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
         .from('team_members')
         .select(`
           *,
-          profiles!inner(
+          profiles(
             id,
             email,
-            role,
-            first_name,
-            last_name
+            role
           )
         `)
         .eq('team_id', teamId)
@@ -1524,12 +1522,12 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
         team_id: member.team_id,
         role: member.role,
         status: member.status,
-        joined_date: member.joined_date,
+        joined_date: member.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
         created_at: member.created_at,
-        email: member.profiles?.email,
-        first_name: member.profiles?.first_name,
-        last_name: member.profiles?.last_name,
-        user_role: member.profiles?.role
+        email: member.profiles?.email || `user_${member.user_id}@unknown.com`,
+        first_name: null, // profiles table doesn't have this field
+        last_name: null,  // profiles table doesn't have this field
+        user_role: member.profiles?.role || 'Unknown'
       }));
     } catch (error) {
       console.error('Error fetching team members:', error);

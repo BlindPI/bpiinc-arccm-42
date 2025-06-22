@@ -336,12 +336,9 @@ export const TeamMemberManagement: React.FC<TeamMemberManagementProps> = ({
                     <div className="flex items-center gap-3 mb-2">
                       <div>
                         <h4 className="font-medium">
-                          {member.first_name && member.last_name 
-                            ? `${member.first_name} ${member.last_name}`
-                            : member.email || 'Unknown User'
-                          }
+                          {member?.email || 'Unknown User'}
                         </h4>
-                        {member.email && (
+                        {member?.email && (
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
                             <Mail className="h-3 w-3" />
                             <span>{member.email}</span>
