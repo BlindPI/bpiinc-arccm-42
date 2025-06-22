@@ -88,6 +88,39 @@ export const ProviderLocationAssignment: React.FC<ProviderLocationAssignmentProp
     }
   });
 
+  const removeLocationMutation = useMutation({
+    mutationFn: async () => {
+      console.log('🔥 DEBUG: Starting location removal');
+      console.log('🔥 DEBUG: Provider ID:', provider.id);
+      
+      if (!provider.primary_location_id) {
+        throw new Error('No location to remove');
+      }
+      
+      try {
+        console.log('🔥 DEBUG: Calling removeProviderFromLocation...');
+        await providerRelationshipService.removeProviderFromLocation(provider.id, provider.primary_location_id);
+        console.log('🔥 DEBUG: Location removal completed successfully');
+      } catch (error) {
+        console.error('🔥 DEBUG: Location removal FAILED:', error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      console.log('🔥 DEBUG: Location removal mutation succeeded');
+      toast.success('Location assignment removed successfully!');
+      queryClient.invalidateQueries({ queryKey: ['authorized-providers'] });
+      queryClient.invalidateQueries({ queryKey: ['provider-location-teams', provider.id] });
+      queryClient.invalidateQueries({ queryKey: ['provider-location-kpis', provider.id] });
+      queryClient.invalidateQueries({ queryKey: ['unavailable-locations'] });
+      onLocationAssigned?.();
+    },
+    onError: (error: any) => {
+      console.error('🔥 DEBUG: Location removal mutation failed:', error);
+      toast.error(`Failed to remove location: ${error.message || 'Unknown error'}`);
+    }
+  });
+
   const availableLocations = locations.filter(
     location => !unavailableLocations.includes(location.id) || location.id === provider.primary_location_id
   );
@@ -98,6 +131,14 @@ export const ProviderLocationAssignment: React.FC<ProviderLocationAssignmentProp
       return;
     }
     assignLocationMutation.mutate();
+  };
+
+  const handleRemoveLocation = () => {
+    if (!provider.primary_location_id) {
+      toast.error('No location to remove');
+      return;
+    }
+    removeLocationMutation.mutate();
   };
 
   // Get location name from locations if we have the ID
@@ -115,12 +156,23 @@ export const ProviderLocationAssignment: React.FC<ProviderLocationAssignmentProp
       <CardContent className="space-y-4">
         {provider.primary_location_id ? (
           <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-            <div className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="font-medium text-green-800">Currently Assigned</p>
-                <p className="text-sm text-green-600">{primaryLocationName || 'Unknown Location'}</p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-green-600" />
+                <div>
+                  <p className="font-medium text-green-800">Currently Assigned</p>
+                  <p className="text-sm text-green-600">{primaryLocationName || 'Unknown Location'}</p>
+                </div>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRemoveLocation}
+                disabled={removeLocationMutation.isPending}
+                className="text-red-600 border-red-200 hover:bg-red-50"
+              >
+                {removeLocationMutation.isPending ? 'Removing...' : 'Remove'}
+              </Button>
             </div>
           </div>
         ) : (
@@ -153,14 +205,27 @@ export const ProviderLocationAssignment: React.FC<ProviderLocationAssignmentProp
             </SelectContent>
           </Select>
           
-          <Button 
-            onClick={handleAssignLocation}
-            disabled={!selectedLocation || assignLocationMutation.isPending}
-            className="w-full"
-          >
-            {assignLocationMutation.isPending ? 'Assigning...' : 
-             provider.primary_location_id ? 'Change Location' : 'Assign Location'}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleAssignLocation}
+              disabled={!selectedLocation || assignLocationMutation.isPending}
+              className="flex-1"
+            >
+              {assignLocationMutation.isPending ? 'Assigning...' :
+               provider.primary_location_id ? 'Change Location' : 'Assign Location'}
+            </Button>
+            
+            {provider.primary_location_id && (
+              <Button
+                variant="outline"
+                onClick={handleRemoveLocation}
+                disabled={removeLocationMutation.isPending}
+                className="text-red-600 border-red-200 hover:bg-red-50"
+              >
+                {removeLocationMutation.isPending ? 'Clearing...' : 'Clear Location'}
+              </Button>
+            )}
+          </div>
         </div>
 
         {availableLocations.length === 0 && (
