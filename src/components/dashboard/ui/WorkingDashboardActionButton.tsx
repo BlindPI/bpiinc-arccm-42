@@ -58,8 +58,9 @@ export const WorkingDashboardActionButton: React.FC<WorkingDashboardActionButton
     // Handle specific action routing
     switch (label) {
       case 'Manage Team':
-        console.log('🎯 ROUTING: Navigate to team management');
-        navigate('/teams');
+        console.log('🎯 ROUTING: Navigate to working team management interface');
+        // Route AP users to the working ProviderTeamInterface that uses the proven service method
+        navigate('/provider-team-management');
         toast.success('Opening team management...');
         break;
         

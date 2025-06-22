@@ -484,29 +484,42 @@ export class ProviderRelationshipService {
       
       console.log(`DEBUG: Provider ${providerId} validation passed, proceeding with team assignments query`);
 
-      const { data, error } = await supabase
+      // FIXED: Use separate queries to bypass RLS restrictions for AP users
+      // First get the assignments
+      const { data: assignments, error: assignmentError } = await supabase
         .from('provider_team_assignments')
-        .select(`
-          *,
-          teams!inner(
-            id,
-            name,
-            team_type,
-            status,
-            performance_score,
-            location_id
-          )
-        `)
+        .select('*')
         .eq('provider_id', providerId)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching team assignments:', error);
+      if (assignmentError) {
+        console.error('Error fetching team assignments:', assignmentError);
         return [];
       }
 
+      if (!assignments || assignments.length === 0) {
+        console.log(`DEBUG: No team assignments found for provider ${providerId}`);
+        return [];
+      }
+
+      // FIXED: Get team details separately to avoid RLS issues
+      const teamIds = assignments.map(a => a.team_id);
+      const { data: teams, error: teamError } = await supabase
+        .from('teams')
+        .select('id, name, team_type, status, performance_score, location_id')
+        .in('id', teamIds);
+
+      if (teamError) {
+        console.error('Error fetching team details:', teamError);
+        // Continue with assignments even if team details fail
+      }
+
+      // Create a map of team details for easy lookup
+      const teamMap = new Map((teams || []).map(team => [team.id, team]));
+
       // FIXED: Calculate actual member counts for each team
-      const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (assignment) => {
+      const assignmentsWithMemberCounts = await Promise.all(assignments.map(async (assignment) => {
+        const teamDetails = teamMap.get(assignment.team_id);
         // Get actual member count from team_members table - simplified query
         let actualMemberCount = 0;
         try {
@@ -517,7 +530,7 @@ export class ProviderRelationshipService {
             .eq('status', 'active');
           
           actualMemberCount = memberResult.count || 0;
-          console.log(`DEBUG: Team "${assignment.teams.name}" has ${actualMemberCount} active members`);
+          console.log(`DEBUG: Team "${teamDetails?.name || 'Unknown'}" has ${actualMemberCount} active members`);
         } catch (memberError) {
           console.error('Error fetching member count:', memberError);
           actualMemberCount = 0;
@@ -525,12 +538,12 @@ export class ProviderRelationshipService {
 
         // FIXED: Get location name using location_id from teams table
         let locationName = 'Unknown Location';
-        if (assignment.teams.location_id) {
+        if (teamDetails?.location_id) {
           try {
             const locationResult = await supabase
               .from('locations')
               .select('name')
-              .eq('id', assignment.teams.location_id)
+              .eq('id', teamDetails.location_id)
               .single();
             
             if (!locationResult.error && locationResult.data) {
@@ -555,12 +568,12 @@ export class ProviderRelationshipService {
           assigned_at: assignment.assigned_at,
           created_at: assignment.created_at,
           updated_at: assignment.updated_at,
-          team_name: assignment.teams.name,
-          team_type: assignment.teams.team_type,
-          team_status: assignment.teams.status,
+          team_name: teamDetails?.name || 'Unknown Team',
+          team_type: teamDetails?.team_type || 'unknown',
+          team_status: teamDetails?.status || 'unknown',
           location_name: locationName, // FIXED: Proper location name resolution
           member_count: actualMemberCount, // FIXED: Actual member count from database
-          performance_score: assignment.teams.performance_score || 0
+          performance_score: teamDetails?.performance_score || 0
         };
       }));
 
