@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { UnifiedTeamService } from '@/services/team/unifiedTeamService';
+import { TeamCreationWizard } from '@/components/team/provider/TeamCreationWizard';
+import { TeamMemberManagement } from '@/components/team/provider/TeamMemberManagement';
 import { toast } from 'sonner';
-import { 
-  Users, 
-  Building2, 
+import {
+  Users,
+  Building2,
   Plus,
   TrendingUp,
   MapPin,
@@ -32,6 +34,7 @@ interface ProviderTeamInterfaceProps {
 export function ProviderTeamInterface({ teams, onRefresh }: ProviderTeamInterfaceProps) {
   const [selectedTeam, setSelectedTeam] = useState<EnhancedTeam | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showMemberManagement, setShowMemberManagement] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleTeamAction = async (action: string, teamId: string) => {
@@ -59,29 +62,26 @@ export function ProviderTeamInterface({ teams, onRefresh }: ProviderTeamInterfac
 
   if (showCreateForm) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Create New Team</h2>
-          <Button variant="outline" onClick={() => setShowCreateForm(false)}>
-            Back to Teams
-          </Button>
-        </div>
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-muted-foreground">
-              Provider team creation form will be implemented here.
-            </p>
-            <div className="mt-4 flex gap-2">
-              <Button onClick={() => setShowCreateForm(false)}>
-                Cancel
-              </Button>
-              <Button variant="outline">
-                Create Team
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <TeamCreationWizard
+        onComplete={(teamId) => {
+          setShowCreateForm(false);
+          toast.success('Team created successfully!');
+          onRefresh();
+        }}
+        onCancel={() => setShowCreateForm(false)}
+      />
+    );
+  }
+
+  if (showMemberManagement && selectedTeam) {
+    return (
+      <TeamMemberManagement
+        teamId={selectedTeam.id}
+        onBack={() => {
+          setShowMemberManagement(false);
+          setSelectedTeam(null);
+        }}
+      />
     );
   }
 
@@ -147,16 +147,42 @@ export function ProviderTeamInterface({ teams, onRefresh }: ProviderTeamInterfac
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   Team Members
-                  <Button size="sm">
+                  <Button
+                    size="sm"
+                    onClick={() => setShowMemberManagement(true)}
+                  >
                     <UserPlus className="h-4 w-4 mr-2" />
-                    Add Member
+                    Manage Members
                   </Button>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">
-                  Provider member management interface will be implemented here.
-                </p>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                        <Users className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{selectedTeam.member_count || 0} Members</p>
+                        <p className="text-sm text-muted-foreground">Active team members</p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowMemberManagement(true)}
+                    >
+                      View All
+                    </Button>
+                  </div>
+                  
+                  <div className="text-center py-4">
+                    <Button onClick={() => setShowMemberManagement(true)}>
+                      <Settings className="h-4 w-4 mr-2" />
+                      Full Member Management
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -167,9 +193,23 @@ export function ProviderTeamInterface({ teams, onRefresh }: ProviderTeamInterfac
                 <CardTitle>Team Performance</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">
-                  Provider team performance tracking will be implemented here.
-                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center p-4 border rounded-lg">
+                    <TrendingUp className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                    <p className="text-2xl font-bold">{selectedTeam.performance_score || 0}%</p>
+                    <p className="text-sm text-muted-foreground">Overall Score</p>
+                  </div>
+                  <div className="text-center p-4 border rounded-lg">
+                    <Users className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+                    <p className="text-2xl font-bold">{selectedTeam.member_count || 0}</p>
+                    <p className="text-sm text-muted-foreground">Active Members</p>
+                  </div>
+                  <div className="text-center p-4 border rounded-lg">
+                    <MapPin className="h-8 w-8 mx-auto mb-2 text-purple-600" />
+                    <p className="text-lg font-bold">{selectedTeam.location?.name || 'N/A'}</p>
+                    <p className="text-sm text-muted-foreground">Location</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -180,9 +220,42 @@ export function ProviderTeamInterface({ teams, onRefresh }: ProviderTeamInterfac
                 <CardTitle>Team Settings</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">
-                  Provider team configuration will be implemented here.
-                </p>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium">Team Name</label>
+                      <p className="text-lg">{selectedTeam.name}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Team Type</label>
+                      <p className="text-lg">{selectedTeam.team_type || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Status</label>
+                      <Badge className="ml-2">
+                        {selectedTeam.status}
+                      </Badge>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Location</label>
+                      <p className="text-lg">{selectedTeam.location?.name || 'No location assigned'}</p>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium">Description</label>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedTeam.description || 'No description available'}
+                    </p>
+                  </div>
+                  
+                  <div className="pt-4 border-t">
+                    <Button variant="outline">
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Team Settings
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

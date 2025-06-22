@@ -103,7 +103,7 @@ export const WorkingDashboardActionButton: React.FC<WorkingDashboardActionButton
       onClick={handleClick}
       disabled={disabled}
     >
-      <Icon className="h-6 w-6 mb-2" />
+      {Icon && <Icon className="h-6 w-6 mb-2 flex-shrink-0" />}
       <div className="text-center">
         <div className="text-sm font-medium">{label}</div>
         <div className="text-xs opacity-75 mt-1">{description}</div>
