@@ -1504,6 +1504,7 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
           profiles(
             id,
             email,
+            display_name,
             role
           )
         `)
@@ -1524,7 +1525,8 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
         status: member.status,
         joined_date: member.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
         created_at: member.created_at,
-        email: member.profiles?.email || `user_${member.user_id}@unknown.com`,
+        email: member.profiles?.email || null, // Allow null emails for AP users
+        display_name: member.profiles?.display_name || null, // Include display_name
         first_name: null, // profiles table doesn't have this field
         last_name: null,  // profiles table doesn't have this field
         user_role: member.profiles?.role || 'Unknown'

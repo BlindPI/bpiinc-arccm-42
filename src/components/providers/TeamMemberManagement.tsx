@@ -49,6 +49,7 @@ interface TeamMember {
   joined_date: string;
   created_at: string;
   email?: string;
+  display_name?: string;
   first_name?: string;
   last_name?: string;
   user_role?: string;
@@ -179,7 +180,8 @@ export const TeamMemberManagement: React.FC<TeamMemberManagementProps> = ({
   };
 
   const handleRemoveMember = async (member: TeamMember) => {
-    if (confirm(`Are you sure you want to remove ${member.email || 'this member'} from the team?`)) {
+    const memberName = member?.email || member?.display_name || 'this member';
+    if (confirm(`Are you sure you want to remove ${memberName} from the team?`)) {
       await removeMemberMutation.mutateAsync(member.user_id);
     }
   };
@@ -336,7 +338,7 @@ export const TeamMemberManagement: React.FC<TeamMemberManagementProps> = ({
                     <div className="flex items-center gap-3 mb-2">
                       <div>
                         <h4 className="font-medium">
-                          {member?.email || 'Unknown User'}
+                          {member?.display_name || member?.email || 'Unknown User'}
                         </h4>
                         {member?.email && (
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -431,7 +433,7 @@ export const TeamMemberManagement: React.FC<TeamMemberManagementProps> = ({
                   <SelectContent>
                     {searchResults.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
-                        {user.email} - {user.role}
+                        {user.display_name || user.email || 'User'} - {user.role}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -489,7 +491,7 @@ export const TeamMemberManagement: React.FC<TeamMemberManagementProps> = ({
           <DialogHeader>
             <DialogTitle>Edit Team Member</DialogTitle>
             <DialogDescription>
-              Update role for {editingMember?.email}
+              Update role for {editingMember?.display_name || editingMember?.email || 'this member'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
