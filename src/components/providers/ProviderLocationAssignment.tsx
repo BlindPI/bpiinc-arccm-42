@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ProviderLocationService } from '@/services/provider/providerLocationService';
+import { providerRelationshipService } from '@/services/provider/providerRelationshipService';
 import { supabase } from '@/integrations/supabase/client';
 import { MapPin, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -54,7 +54,7 @@ export const ProviderLocationAssignment: React.FC<ProviderLocationAssignmentProp
       console.log('🔥 FIXED Location Assignment - provider.id:', provider.id, 'type:', typeof provider.id);
       console.log('🔥 FIXED Location Assignment - selectedLocation:', selectedLocation, 'type:', typeof selectedLocation);
       // FIXED: Use UUID directly instead of converting to string
-      return ProviderLocationService.assignProviderToLocation(provider.id, selectedLocation);
+      return providerRelationshipService.assignProviderToLocation(provider.id, selectedLocation);
     },
     onSuccess: () => {
       toast.success('Location assigned successfully! Provider team has been created.');

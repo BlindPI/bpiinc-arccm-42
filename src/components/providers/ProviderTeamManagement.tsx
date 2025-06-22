@@ -126,44 +126,26 @@ export const ProviderTeamManagement: React.FC<ProviderTeamManagementProps> = ({
   /**
    * Load available teams for assignment - REAL SERVICE CALL
    */
-  const { 
-    data: availableTeams, 
-    isLoading: teamsLoading 
+  const {
+    data: availableTeams,
+    isLoading: teamsLoading
   } = useQuery({
     queryKey: ['available-teams', providerId],
     queryFn: async (): Promise<AvailableTeam[]> => {
-      // Get teams that are not already assigned to this provider
-      const { data: teams, error } = await supabase
-        .from('teams')
-        .select(`
-          id,
-          name,
-          team_type,
-          status,
-          location:locations(name),
-          team_members(count)
-        `)
-        .eq('status', 'active')
-        .not('id', 'in', `(
-          SELECT team_id 
-          FROM provider_team_assignments 
-          WHERE provider_id = '${providerId}' 
-          AND status = 'active'
-        )`);
-
-      if (error) {
-        throw new Error(`Failed to load available teams: ${error.message}`);
-      }
-
-      // Transform the data to match our interface
-      return teams?.map(team => ({
+      // FIXED: Use the service's getAvailableTeams method instead of complex SQL
+      console.log(`🔍 DEBUG: Loading available teams for provider ${providerId}`);
+      
+      const teams = await providerRelationshipService.getAvailableTeams(providerId);
+      
+      // Transform to match AvailableTeam interface
+      return teams.map(team => ({
         id: team.id,
         name: team.name,
         location_name: team.location?.name || 'No location',
-        member_count: team.team_members?.[0]?.count || 0,
+        member_count: team.members?.length || 0,
         status: team.status,
         team_type: team.team_type
-      })) || [];
+      }));
     },
     enabled: showAssignDialog
   });
