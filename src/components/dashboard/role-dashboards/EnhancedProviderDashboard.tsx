@@ -38,7 +38,7 @@ import {
   AlertTriangle,
   Crown
 } from 'lucide-react';
-import { DashboardActionButton } from '../ui/DashboardActionButton';
+import { WorkingDashboardActionButton } from '../ui/WorkingDashboardActionButton';
 import { InlineLoader } from '@/components/ui/LoadingStates';
 import type { DatabaseUserRole } from '@/types/database-roles';
 import { hasEnterpriseAccess } from '@/types/database-roles';
@@ -298,33 +298,29 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <DashboardActionButton
+                <WorkingDashboardActionButton
                   icon={Calendar}
                   label="Schedule Course"
                   description="Schedule and manage courses"
-                  path="/courses"
                   colorScheme="blue"
                 />
-                <DashboardActionButton
+                <WorkingDashboardActionButton
                   icon={Users}
                   label="Manage Team"
                   description="Team assignments and management"
-                  path="/teams"
                   colorScheme="green"
                   disabled={!roleBasedActions.canManageTeams}
                 />
-                <DashboardActionButton
+                <WorkingDashboardActionButton
                   icon={Award}
                   label="Issue Certificate"
                   description="Issue new certificates"
-                  path="/certificates"
                   colorScheme="purple"
                 />
-                <DashboardActionButton
+                <WorkingDashboardActionButton
                   icon={ClipboardList}
                   label="View Reports"
                   description="Analytics and performance reports"
-                  path="/analytics"
                   colorScheme="amber"
                   disabled={!roleBasedActions.canViewPerformance}
                 />

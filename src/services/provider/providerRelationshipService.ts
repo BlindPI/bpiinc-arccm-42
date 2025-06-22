@@ -1068,18 +1068,10 @@ export class ProviderRelationshipService {
       if (teamAssignmentsResult.error) throw teamAssignmentsResult.error;
 
       const teamIds = teamAssignmentsResult.data?.map(a => a.team_id) || [];
+      console.log(`DEBUG: Provider ${providerId} has ${teamIds.length} team assignments`);
       
-      if (teamIds.length === 0) {
-        return {
-          certificatesIssued: 0,
-          coursesDelivered: 0,
-          teamMembersManaged: 0,
-          locationsServed: 0,
-          averageSatisfactionScore: 0,
-          complianceScore: 85.0,
-          performanceRating: 3.5
-        };
-      }
+      // DON'T RETURN EARLY - Calculate metrics even without team assignments
+      // Provider might have primary location with data
 
       // FIXED: Certificate count with proper location ID mapping to handle mismatch
       console.log(`DEBUG: Getting certificates for provider ${providerId}`);
@@ -1154,30 +1146,99 @@ export class ProviderRelationshipService {
         courseCount = courseResult.count || 0;
       }
 
-      // Get team members managed - simplified count query
+      // Get team members managed - FIXED: Count from all teams at provider's locations
       let memberCount = 0;
-      if (teamIds.length > 0) {
-        const memberResult = await supabase
-          .from('team_members')
-          .select('id', { count: 'exact' })
-          .in('team_id', teamIds)
-          .eq('status', 'active');
-          
-        memberCount = memberResult.count || 0;
-      }
-
-      // Get unique locations served - simplified query
       let locationCount = 0;
-      if (teamIds.length > 0) {
-        const teamResult = await supabase
+      
+      // Get provider's primary location first
+      const providerLocationResult = await supabase
+        .from('authorized_providers')
+        .select('primary_location_id')
+        .eq('id', providerId)
+        .single();
+      
+      if (!providerLocationResult.error && providerLocationResult.data?.primary_location_id) {
+        const primaryLocationId = providerLocationResult.data.primary_location_id;
+        console.log(`DEBUG: Provider primary location: ${primaryLocationId}`);
+        
+        // Count location (at least primary location)
+        locationCount = 1;
+        
+        // Get teams at this location
+        const teamsAtLocationResult = await supabase
           .from('teams')
-          .select('location_id')
-          .in('id', teamIds)
-          .not('location_id', 'is', null);
+          .select('id')
+          .eq('location_id', primaryLocationId)
+          .eq('status', 'active');
+        
+        if (!teamsAtLocationResult.error && teamsAtLocationResult.data) {
+          const locationTeamIds = teamsAtLocationResult.data.map(t => t.id);
+          console.log(`DEBUG: Found ${locationTeamIds.length} teams at primary location`);
+          
+          // Count members from teams at this location
+          if (locationTeamIds.length > 0) {
+            const memberResult = await supabase
+              .from('team_members')
+              .select('id', { count: 'exact' })
+              .in('team_id', locationTeamIds)
+              .eq('status', 'active');
+            
+            memberCount = memberResult.count || 0;
+            console.log(`DEBUG: Found ${memberCount} team members at primary location`);
+          }
+        }
+        
+        // Also add members from explicitly assigned teams (if any)
+        if (teamIds.length > 0) {
+          const assignedMemberResult = await supabase
+            .from('team_members')
+            .select('id', { count: 'exact' })
+            .in('team_id', teamIds)
+            .eq('status', 'active');
+          
+          const assignedMembers = assignedMemberResult.count || 0;
+          memberCount += assignedMembers;
+          console.log(`DEBUG: Added ${assignedMembers} members from assigned teams, total: ${memberCount}`);
+          
+          // Count unique locations from assigned teams
+          const teamResult = await supabase
+            .from('teams')
+            .select('location_id')
+            .in('id', teamIds)
+            .filter('location_id', 'not.is', null);
 
-        if (!teamResult.error && teamResult.data) {
-          const uniqueLocations = new Set(teamResult.data.map(t => t.location_id));
-          locationCount = uniqueLocations.size;
+          if (!teamResult.error && teamResult.data) {
+            const uniqueLocations = new Set([
+              primaryLocationId,
+              ...teamResult.data.map(t => t.location_id)
+            ]);
+            locationCount = uniqueLocations.size;
+            console.log(`DEBUG: Total unique locations: ${locationCount}`);
+          }
+        }
+      } else {
+        console.log(`DEBUG: No primary location found for provider ${providerId}`);
+        
+        // Fallback: count from assigned teams only
+        if (teamIds.length > 0) {
+          const memberResult = await supabase
+            .from('team_members')
+            .select('id', { count: 'exact' })
+            .in('team_id', teamIds)
+            .eq('status', 'active');
+            
+          memberCount = memberResult.count || 0;
+          
+          const teamResult = await supabase
+            .from('teams')
+            .select('location_id')
+            .in('id', teamIds)
+            .not('location_id', 'is', null');
+
+          if (!teamResult.error && teamResult.data) {
+            const uniqueLocations = new Set(teamResult.data.map(t => t.location_id));
+            locationCount = uniqueLocations.size;
+          }
         }
       }
 
