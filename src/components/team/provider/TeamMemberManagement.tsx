@@ -31,6 +31,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { diagnoseAPTeamMemberAccess, logAPTeamMemberDiagnostics } from '@/utils/diagnoseAPTeamMemberAccess';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Users,
   UserPlus,
@@ -93,11 +95,13 @@ const MEMBER_ROLES = [
 ];
 
 export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementProps) {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedRole, setSelectedRole] = useState('member');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [accessDiagnostics, setAccessDiagnostics] = useState<any>(null);
 
   // Load team details
   const { data: team } = useQuery({
@@ -114,11 +118,27 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
     }
   });
 
-  // Load team members with enhanced data loading
+  // Load team members with enhanced data loading and diagnostics
   const { data: teamMembers = [], isLoading: membersLoading, error: membersError } = useQuery({
     queryKey: ['team-members', teamId],
     queryFn: async (): Promise<TeamMember[]> => {
       console.log('🔍 Loading team members for team:', teamId);
+      
+      // 🚨 RUN AP TEAM MEMBER ACCESS DIAGNOSTICS
+      try {
+        const diagnostics = await diagnoseAPTeamMemberAccess(user?.id);
+        setAccessDiagnostics(await logAPTeamMemberDiagnostics(diagnostics));
+        
+        console.log('📊 AP TEAM MEMBER ACCESS DIAGNOSTIC COMPLETE');
+        
+        // Check for critical RLS issues
+        const criticalIssues = diagnostics.filter(d => d.detected && d.severity === 'critical');
+        if (criticalIssues.length > 0) {
+          console.error('🚨 CRITICAL TEAM MEMBER ACCESS ISSUES:', criticalIssues.map(i => i.issue_type));
+        }
+      } catch (diagnosticError) {
+        console.error('❌ Team member access diagnostic failed:', diagnosticError);
+      }
       
       // Try multiple query strategies to get the data
       let finalData: TeamMember[] = [];
@@ -239,22 +259,30 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
     enabled: showAddDialog && teamMembers.length > 0
   });
 
-  // Add members mutation
+  // Add members mutation using safe function
   const addMembersMutation = useMutation({
     mutationFn: async ({ userIds, role }: { userIds: string[]; role: string }) => {
-      const memberInserts = userIds.map(userId => ({
-        team_id: teamId,
-        user_id: userId,
-        role,
-        status: 'active',
-        joined_at: new Date().toISOString()
-      }));
-
-      const { error } = await supabase
-        .from('team_members')
-        .insert(memberInserts);
+      console.log('🔄 Adding team members using safe function:', { userIds, role });
       
-      if (error) throw error;
+      // Use the safe function for each user
+      const results = await Promise.all(
+        userIds.map(async (userId) => {
+          const { data, error } = await supabase.rpc('add_team_member_safe', {
+            p_team_id: teamId,
+            p_user_id: userId,
+            p_role: role
+          });
+          
+          if (error) {
+            console.error('❌ Failed to add team member:', { userId, error });
+            throw error;
+          }
+          
+          return data;
+        })
+      );
+      
+      console.log('✅ Team members added successfully:', results);
     },
     onSuccess: () => {
       toast.success('Members added successfully!');
@@ -267,15 +295,21 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
     }
   });
 
-  // Remove member mutation
+  // Remove member mutation using safe function
   const removeMemberMutation = useMutation({
     mutationFn: async (memberId: string) => {
-      const { error } = await supabase
-        .from('team_members')
-        .update({ status: 'inactive' })
-        .eq('id', memberId);
+      console.log('🔄 Removing team member using safe function:', memberId);
       
-      if (error) throw error;
+      const { data, error } = await supabase.rpc('remove_team_member_safe' as any, {
+        p_member_id: memberId
+      });
+      
+      if (error) {
+        console.error('❌ Failed to remove team member:', error);
+        throw error;
+      }
+      
+      console.log('✅ Team member removed successfully');
     },
     onSuccess: () => {
       toast.success('Member removed successfully!');
@@ -286,15 +320,30 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
     }
   });
 
-  // Update role mutation
+  // Update role mutation using safe function
   const updateRoleMutation = useMutation({
     mutationFn: async ({ memberId, role }: { memberId: string; role: string }) => {
-      const { error } = await supabase
-        .from('team_members')
-        .update({ role })
-        .eq('id', memberId);
+      console.log('🔄 Updating team member role using safe function:', { memberId, role });
       
-      if (error) throw error;
+      const { error } = await supabase.rpc('update_team_member_role_safe' as any, {
+        p_member_id: memberId,
+        p_new_role: role
+      });
+      
+      if (error) {
+        console.error('❌ Team member role update failed:', error);
+        
+        // Provide user-friendly error messages
+        if (error.message.includes('Insufficient permissions')) {
+          throw new Error('You do not have permission to change roles for this team member.');
+        } else if (error.message.includes('Invalid role')) {
+          throw new Error('The selected role is not valid for team members.');
+        } else {
+          throw new Error(`Failed to update member role: ${error.message}`);
+        }
+      }
+      
+      console.log('✅ Team member role updated successfully using safe function');
     },
     onSuccess: () => {
       toast.success('Member role updated successfully!');
@@ -349,6 +398,34 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
 
   return (
     <div className="space-y-6">
+      {/* AP Team Member Access Alerts */}
+      {accessDiagnostics && accessDiagnostics.critical > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center gap-2">
+            <span className="text-red-600 font-medium">🚨 Team Member Access Issues</span>
+          </div>
+          <p className="text-red-700 text-sm mt-1">
+            {accessDiagnostics.critical} critical issues detected with AP user team member access.
+            This explains the 400 errors when trying to change team member positions.
+          </p>
+          <p className="text-red-600 text-xs mt-2">
+            Check console for detailed diagnostic results and recommended fixes.
+          </p>
+        </div>
+      )}
+
+      {accessDiagnostics && accessDiagnostics.high > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex items-center gap-2">
+            <span className="text-amber-600 font-medium">⚠️ Team Structure Issues</span>
+          </div>
+          <p className="text-amber-700 text-sm mt-1">
+            {accessDiagnostics.high} high-priority issues found. Team makeup changes may not work properly
+            due to role permissions and team structure problems.
+          </p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -359,6 +436,11 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
             {process.env.NODE_ENV === 'development' && (
               <div className="text-xs text-muted-foreground mt-1">
                 Debug: {teamMembers.length} raw members, {safeFilteredMembers.length} safe members
+                {accessDiagnostics && (
+                  <span className="ml-2 text-red-600">
+                    | Access Issues: {accessDiagnostics.total}
+                  </span>
+                )}
               </div>
             )}
           </p>
@@ -502,6 +584,7 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
                     <Select
                       value={member.role}
                       onValueChange={(value) => handleUpdateRole(member.id, value)}
+                      disabled={accessDiagnostics && accessDiagnostics.critical > 0}
                     >
                       <SelectTrigger className="w-32">
                         <SelectValue />
@@ -514,6 +597,12 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
                         ))}
                       </SelectContent>
                     </Select>
+                    
+                    {accessDiagnostics && accessDiagnostics.critical > 0 && (
+                      <span className="text-xs text-red-600">
+                        Role changes disabled due to access restrictions
+                      </span>
+                    )}
                     
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
