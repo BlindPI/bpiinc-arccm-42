@@ -597,19 +597,108 @@ export class ProviderRelationshipService {
 
   async removeProviderFromTeam(providerId: string, teamId: string): Promise<void> {
     try {
-      const { error } = await supabase
+      console.log(`DEBUG: Removing provider ${providerId} from team ${teamId}`);
+      
+      // First, get the assignment to check if it exists
+      const { data: existing, error: checkError } = await supabase
+        .from('provider_team_assignments')
+        .select('id, assignment_role')
+        .eq('provider_id', providerId)
+        .eq('team_id', teamId)
+        .eq('status', 'active')
+        .single();
+
+      if (checkError) {
+        if (checkError.code === 'PGRST116') {
+          console.log(`DEBUG: No active assignment found between provider ${providerId} and team ${teamId}`);
+          return; // Assignment doesn't exist, consider it success
+        }
+        throw checkError;
+      }
+
+      if (!existing) {
+        console.log(`DEBUG: No active assignment found to remove`);
+        return;
+      }
+
+      // Soft delete the assignment
+      const { error: updateError } = await supabase
         .from('provider_team_assignments')
         .update({
           status: 'inactive',
           updated_at: new Date().toISOString()
         })
-        .eq('provider_id', providerId)
-        .eq('team_id', teamId)
-        .eq('status', 'active');
+        .eq('id', existing.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // If this was a primary assignment, clear the teams.provider_id
+      if (existing.assignment_role === 'primary') {
+        const { error: teamUpdateError } = await supabase
+          .from('teams')
+          .update({
+            provider_id: null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', teamId);
+
+        if (teamUpdateError) {
+          console.error('Warning: Could not clear team provider_id:', teamUpdateError);
+          // Don't throw here as the assignment removal was successful
+        } else {
+          console.log(`DEBUG: Cleared provider_id from team ${teamId}`);
+        }
+      }
+
+      console.log(`DEBUG: Successfully removed provider ${providerId} from team ${teamId}`);
     } catch (error) {
       console.error('Error removing provider from team:', error);
+      throw await this.standardizeErrorMessage(error);
+    }
+  }
+
+  async deleteTeamAssignment(assignmentId: string): Promise<void> {
+    try {
+      console.log(`DEBUG: Deleting team assignment ${assignmentId}`);
+      
+      // Get assignment details before deletion
+      const { data: assignment, error: fetchError } = await supabase
+        .from('provider_team_assignments')
+        .select('provider_id, team_id, assignment_role')
+        .eq('id', assignmentId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Soft delete the assignment
+      const { error: deleteError } = await supabase
+        .from('provider_team_assignments')
+        .update({
+          status: 'inactive',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', assignmentId);
+
+      if (deleteError) throw deleteError;
+
+      // If this was a primary assignment, clear the teams.provider_id
+      if (assignment.assignment_role === 'primary') {
+        const { error: teamUpdateError } = await supabase
+          .from('teams')
+          .update({
+            provider_id: null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', assignment.team_id);
+
+        if (teamUpdateError) {
+          console.error('Warning: Could not clear team provider_id:', teamUpdateError);
+        }
+      }
+
+      console.log(`DEBUG: Successfully deleted team assignment ${assignmentId}`);
+    } catch (error) {
+      console.error('Error deleting team assignment:', error);
       throw await this.standardizeErrorMessage(error);
     }
   }
@@ -704,13 +793,235 @@ export class ProviderRelationshipService {
 
   async getProviderLocationAssignments(providerId: string): Promise<ProviderLocationAssignment[]> {
     try {
+      console.log(`DEBUG: Getting location assignments for provider ${providerId}`);
+      
       if (!await this.validateProviderUUID(providerId)) {
         throw new Error(`Provider ${providerId} not found`);
       }
 
-      return [];
+      // Get assignments from provider_location_assignments table
+      const { data: assignments, error: assignError } = await supabase
+        .from('provider_location_assignments')
+        .select(`
+          *,
+          locations!inner(
+            id,
+            name,
+            city,
+            state,
+            address
+          )
+        `)
+        .eq('provider_id', providerId)
+        .order('created_at', { ascending: false });
+
+      if (assignError) {
+        console.error('Error fetching location assignments:', assignError);
+        // If the table doesn't exist yet, check primary location
+        const { data: provider, error: providerError } = await supabase
+          .from('authorized_providers')
+          .select('primary_location_id')
+          .eq('id', providerId)
+          .single();
+
+        if (!providerError && provider?.primary_location_id) {
+          // Get location details for primary location
+          const { data: location, error: locationError } = await supabase
+            .from('locations')
+            .select('id, name, city, state, address')
+            .eq('id', provider.primary_location_id)
+            .single();
+
+          if (!locationError && location) {
+            return [{
+              id: `${providerId}-${location.id}-primary`,
+              provider_id: providerId,
+              location_id: location.id,
+              assignment_role: 'primary',
+              start_date: new Date().toISOString().split('T')[0],
+              status: 'active',
+              location_name: location.name,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }];
+          }
+        }
+        return [];
+      }
+
+      // Map assignments with location details
+      return (assignments || []).map(assignment => ({
+        id: assignment.id,
+        provider_id: assignment.provider_id,
+        location_id: assignment.location_id,
+        assignment_role: assignment.assignment_role,
+        start_date: assignment.start_date,
+        end_date: assignment.end_date,
+        status: assignment.status,
+        location_name: assignment.locations.name,
+        created_at: assignment.created_at,
+        updated_at: assignment.updated_at
+      }));
     } catch (error) {
       console.error('Error fetching provider location assignments:', error);
+      throw await this.standardizeErrorMessage(error);
+    }
+  }
+
+  async updateProviderLocationAssignment(assignmentId: string, updates: Partial<ProviderLocationAssignment>): Promise<void> {
+    try {
+      console.log(`DEBUG: Updating location assignment ${assignmentId}`);
+      
+      const updateData = {
+        ...updates,
+        updated_at: new Date().toISOString()
+      };
+
+      // Remove fields that shouldn't be updated
+      delete updateData.id;
+      delete updateData.provider_id;
+      delete updateData.location_id;
+      delete updateData.created_at;
+      delete updateData.location_name;
+
+      const { error } = await supabase
+        .from('provider_location_assignments')
+        .update(updateData)
+        .eq('id', assignmentId);
+
+      if (error) throw error;
+      
+      console.log(`DEBUG: Successfully updated location assignment ${assignmentId}`);
+    } catch (error) {
+      console.error('Error updating location assignment:', error);
+      throw await this.standardizeErrorMessage(error);
+    }
+  }
+
+  async removeProviderFromLocation(providerId: string, locationId: string): Promise<void> {
+    try {
+      console.log(`DEBUG: Removing provider ${providerId} from location ${locationId}`);
+      
+      // Check if this is the primary location
+      const { data: provider, error: providerError } = await supabase
+        .from('authorized_providers')
+        .select('primary_location_id')
+        .eq('id', providerId)
+        .single();
+
+      if (providerError) throw providerError;
+
+      if (provider.primary_location_id === locationId) {
+        // Clear primary location using bypass function to avoid RLS issues
+        try {
+          const { data: result, error: functionError } = await supabase.rpc(
+            'assign_provider_location_safe',
+            {
+              p_provider_id: providerId,
+              p_location_id: null
+            }
+          );
+          
+          if (functionError) {
+            // Fallback to direct update
+            const { error: clearError } = await supabase
+              .from('authorized_providers')
+              .update({
+                primary_location_id: null,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', providerId);
+
+            if (clearError) throw clearError;
+          }
+        } catch (error) {
+          console.error('Error clearing primary location:', error);
+          throw error;
+        }
+        
+        console.log(`DEBUG: Cleared primary location for provider ${providerId}`);
+      }
+
+      // Also remove from location assignments table if it exists
+      const { error: assignmentError } = await supabase
+        .from('provider_location_assignments')
+        .update({
+          status: 'inactive',
+          updated_at: new Date().toISOString()
+        })
+        .eq('provider_id', providerId)
+        .eq('location_id', locationId)
+        .eq('status', 'active');
+
+      // Don't throw error if table doesn't exist
+      if (assignmentError && assignmentError.code !== '42P01') {
+        console.error('Warning: Could not update location assignment:', assignmentError);
+      }
+
+      console.log(`DEBUG: Successfully removed provider ${providerId} from location ${locationId}`);
+    } catch (error) {
+      console.error('Error removing provider from location:', error);
+      throw await this.standardizeErrorMessage(error);
+    }
+  }
+
+  async deleteLocationAssignment(assignmentId: string): Promise<void> {
+    try {
+      console.log(`DEBUG: Deleting location assignment ${assignmentId}`);
+      
+      // Get assignment details
+      const { data: assignment, error: fetchError } = await supabase
+        .from('provider_location_assignments')
+        .select('provider_id, location_id, assignment_role')
+        .eq('id', assignmentId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Soft delete the assignment
+      const { error: deleteError } = await supabase
+        .from('provider_location_assignments')
+        .update({
+          status: 'inactive',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', assignmentId);
+
+      if (deleteError) throw deleteError;
+
+      // If this was a primary assignment, clear the provider's primary_location_id
+      if (assignment.assignment_role === 'primary') {
+        try {
+          const { data: result, error: functionError } = await supabase.rpc(
+            'assign_provider_location_safe',
+            {
+              p_provider_id: assignment.provider_id,
+              p_location_id: null
+            }
+          );
+          
+          if (functionError) {
+            // Fallback to direct update
+            const { error: providerUpdateError } = await supabase
+              .from('authorized_providers')
+              .update({
+                primary_location_id: null,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', assignment.provider_id);
+
+            if (providerUpdateError) {
+              console.error('Warning: Could not clear provider primary location:', providerUpdateError);
+            }
+          }
+        } catch (error) {
+          console.error('Warning: Could not clear provider primary location:', error);
+        }
+      }
+
+      console.log(`DEBUG: Successfully deleted location assignment ${assignmentId}`);
+    } catch (error) {
+      console.error('Error deleting location assignment:', error);
       throw await this.standardizeErrorMessage(error);
     }
   }
