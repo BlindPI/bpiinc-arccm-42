@@ -114,29 +114,107 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
     }
   });
 
-  // Load team members
-  const { data: teamMembers = [], isLoading: membersLoading } = useQuery({
+  // Load team members with enhanced data loading
+  const { data: teamMembers = [], isLoading: membersLoading, error: membersError } = useQuery({
     queryKey: ['team-members', teamId],
     queryFn: async (): Promise<TeamMember[]> => {
-      const { data, error } = await supabase
-        .from('team_members')
-        .select(`
-          *,
-          user:profiles(
-            id,
-            email,
-            display_name,
-            phone,
-            role,
-            status
-          )
-        `)
-        .eq('team_id', teamId)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false });
+      console.log('🔍 Loading team members for team:', teamId);
       
-      if (error) throw error;
-      return data || [];
+      // Try multiple query strategies to get the data
+      let finalData: TeamMember[] = [];
+      
+      // Strategy 1: Try direct join
+      try {
+        const { data: joinData, error: joinError } = await supabase
+          .from('team_members')
+          .select(`
+            *,
+            user:profiles(
+              id,
+              email,
+              display_name,
+              phone,
+              organization,
+              role,
+              status
+            )
+          `)
+          .eq('team_id', teamId)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false });
+        
+        if (!joinError && joinData && joinData.length > 0) {
+          console.log('✅ Direct join successful:', joinData.length, 'members');
+          console.log('📋 Sample member data:', joinData[0]);
+          finalData = joinData;
+        } else {
+          console.log('⚠️ Direct join failed or empty:', joinError?.message);
+          throw new Error('Direct join failed, trying manual approach');
+        }
+      } catch (joinError) {
+        console.log('🔄 Direct join failed, trying manual approach...');
+        
+        // Strategy 2: Manual join - get team members first, then profiles
+        const { data: members, error: memberError } = await supabase
+          .from('team_members')
+          .select('*')
+          .eq('team_id', teamId)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false });
+        
+        if (memberError) {
+          console.error('❌ Failed to load team members:', memberError);
+          throw memberError;
+        }
+        
+        if (!members || members.length === 0) {
+          console.log('ℹ️ No team members found');
+          return [];
+        }
+        
+        console.log('✅ Found team members:', members.length);
+        
+        // Get user IDs and fetch profiles
+        const userIds = members.map(m => m.user_id).filter(Boolean);
+        console.log('👥 User IDs to fetch:', userIds);
+        
+        if (userIds.length > 0) {
+          const { data: profiles, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, email, display_name, phone, organization, role, status')
+            .in('id', userIds);
+          
+          if (profileError) {
+            console.error('❌ Failed to load profiles:', profileError);
+            // Continue with null profiles rather than failing completely
+          }
+          
+          console.log('👤 Loaded profiles:', profiles?.length || 0);
+          console.log('📋 Sample profile:', profiles?.[0]);
+          
+          // Combine members with their profiles
+          finalData = members.map(member => ({
+            ...member,
+            user: profiles?.find(p => p.id === member.user_id) || null
+          }));
+        } else {
+          finalData = members.map(member => ({ ...member, user: null }));
+        }
+      }
+      
+      console.log('📊 Final team members data:', finalData.length, 'members');
+      if (finalData.length > 0) {
+        console.log('📋 Sample final member:', {
+          id: finalData[0].id,
+          user_id: finalData[0].user_id,
+          user: finalData[0].user,
+          hasUser: !!finalData[0].user,
+          userEmail: finalData[0].user?.email,
+          userDisplayName: finalData[0].user?.display_name
+        });
+      }
+      
+      return finalData;
     }
   });
 
@@ -277,6 +355,12 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
           <h2 className="text-xl font-semibold">Team Members</h2>
           <p className="text-muted-foreground">
             {team?.name} • {teamMembers.length} members
+            {/* Debug info */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="text-xs text-muted-foreground mt-1">
+                Debug: {teamMembers.length} raw members, {safeFilteredMembers.length} safe members
+              </div>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -358,7 +442,22 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
         </CardHeader>
         <CardContent>
           {membersLoading ? (
-            <div className="text-center py-8">Loading members...</div>
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              Loading members...
+            </div>
+          ) : membersError ? (
+            <div className="text-center py-8 text-red-600">
+              <p className="font-medium">Error loading team members:</p>
+              <p className="text-sm mt-2">{(membersError as Error).message}</p>
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={() => window.location.reload()}
+              >
+                Retry
+              </Button>
+            </div>
           ) : safeFilteredMembers.length > 0 ? (
             <div className="space-y-4">
               {safeFilteredMembers.map((member) => (
