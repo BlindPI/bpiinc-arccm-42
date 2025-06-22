@@ -32,6 +32,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { diagnoseAPTeamMemberAccess, logAPTeamMemberDiagnostics } from '@/utils/diagnoseAPTeamMemberAccess';
+import { diagnoseAPTeamRelationshipDeep } from '@/utils/diagnoseAPTeamRelationshipDeep';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Users,
@@ -135,6 +136,10 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
         const criticalIssues = diagnostics.filter(d => d.detected && d.severity === 'critical');
         if (criticalIssues.length > 0) {
           console.error('🚨 CRITICAL TEAM MEMBER ACCESS ISSUES:', criticalIssues.map(i => i.issue_type));
+          
+          // Run deep diagnostic for detailed analysis
+          console.log('🔍 RUNNING DEEP DIAGNOSTIC FOR ROOT CAUSE ANALYSIS...');
+          await diagnoseAPTeamRelationshipDeep(user?.id, teamId);
         }
       } catch (diagnosticError) {
         console.error('❌ Team member access diagnostic failed:', diagnosticError);
@@ -401,15 +406,25 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
       {/* AP Team Member Access Alerts */}
       {accessDiagnostics && accessDiagnostics.critical > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center gap-2">
-            <span className="text-red-600 font-medium">🚨 Team Member Access Issues</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-red-600 font-medium">🚨 Team Member Access Issues</span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => diagnoseAPTeamRelationshipDeep(user?.id, teamId)}
+              className="text-red-600 border-red-300"
+            >
+              Run Deep Diagnostic
+            </Button>
           </div>
           <p className="text-red-700 text-sm mt-1">
             {accessDiagnostics.critical} critical issues detected with AP user team member access.
             This explains the 400 errors when trying to change team member positions.
           </p>
           <p className="text-red-600 text-xs mt-2">
-            Check console for detailed diagnostic results and recommended fixes.
+            Check console for detailed diagnostic results. Click "Run Deep Diagnostic" for root cause analysis.
           </p>
         </div>
       )}
