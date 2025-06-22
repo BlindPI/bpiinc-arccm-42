@@ -2,7 +2,7 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
-import { RoleBasedDashboard } from './RoleBasedDashboard';
+import { SimpleRoleRouter } from './SimpleRoleRouter';
 import { LoadingDashboard } from './LoadingDashboard';
 import { Loader2 } from 'lucide-react';
 
@@ -57,13 +57,13 @@ export default function DashboardContent() {
             Your account doesn't have a role assigned yet. Please contact your administrator.
           </p>
         </div>
-        <RoleBasedDashboard />
+        <SimpleRoleRouter />
       </div>
     );
   }
 
   console.log('🔧 DASHBOARD-CONTENT: Rendering role-based dashboard for role:', userRole);
 
-  // Render the new role-based dashboard
-  return <RoleBasedDashboard />;
+  // Render the working role-based dashboard with proper data
+  return <SimpleRoleRouter />;
 }
