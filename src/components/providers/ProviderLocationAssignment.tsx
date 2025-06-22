@@ -50,13 +50,29 @@ export const ProviderLocationAssignment: React.FC<ProviderLocationAssignmentProp
   });
 
   const assignLocationMutation = useMutation({
-    mutationFn: () => {
-      console.log('🔥 FIXED Location Assignment - provider.id:', provider.id, 'type:', typeof provider.id);
-      console.log('🔥 FIXED Location Assignment - selectedLocation:', selectedLocation, 'type:', typeof selectedLocation);
-      // FIXED: Use UUID directly instead of converting to string
-      return providerRelationshipService.assignProviderToLocation(provider.id, selectedLocation);
+    mutationFn: async () => {
+      console.log('🔥 DEBUG: Starting location assignment mutation');
+      console.log('🔥 DEBUG: Provider ID:', provider.id, 'type:', typeof provider.id);
+      console.log('🔥 DEBUG: Selected Location:', selectedLocation, 'type:', typeof selectedLocation);
+      
+      try {
+        console.log('🔥 DEBUG: Calling providerRelationshipService.assignProviderToLocation...');
+        const result = await providerRelationshipService.assignProviderToLocation(provider.id, selectedLocation, 'primary');
+        console.log('🔥 DEBUG: Service call completed successfully, result:', result);
+        return result;
+      } catch (error) {
+        console.error('🔥 DEBUG: Service call FAILED with error:', error);
+        console.error('🔥 DEBUG: Error details:', {
+          message: error?.message,
+          code: error?.code,
+          details: error?.details,
+          stack: error?.stack
+        });
+        throw error; // Re-throw to trigger onError
+      }
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      console.log('🔥 DEBUG: Mutation onSuccess triggered with result:', result);
       toast.success('Location assigned successfully! Provider team has been created.');
       queryClient.invalidateQueries({ queryKey: ['authorized-providers'] });
       queryClient.invalidateQueries({ queryKey: ['provider-location-teams', provider.id] });
@@ -65,7 +81,10 @@ export const ProviderLocationAssignment: React.FC<ProviderLocationAssignmentProp
       setSelectedLocation('');
     },
     onError: (error: any) => {
-      toast.error(`Failed to assign location: ${error.message}`);
+      console.error('🔥 DEBUG: Mutation onError triggered with error:', error);
+      console.error('🔥 DEBUG: Error message:', error?.message);
+      console.error('🔥 DEBUG: Full error object:', error);
+      toast.error(`Failed to assign location: ${error.message || 'Unknown error'}`);
     }
   });
 
