@@ -76,12 +76,17 @@ export function ProviderTeamInterface({ teams: parentTeams, onRefresh }: Provide
       
       console.log('✅ Found provider record:', providerRecord.id);
       
-      // Get teams from assigned location (WORKING approach)
+      // FIXED: Use team assignments FIRST (this is what Provider Management does!)
+      console.log('🔧 FIXED: Getting teams from provider team assignments (not location!)');
+      
       let teams: EnhancedTeam[] = [];
-      if (providerRecord.primary_location_id) {
-        const { data: locationTeams, error: locationTeamsError } = await supabase
-          .from('teams')
-          .select(`
+      
+      // Step 1: Get teams from provider_team_assignments table
+      const { data: teamAssignments, error: assignmentsError } = await supabase
+        .from('provider_team_assignments')
+        .select(`
+          *,
+          teams!inner(
             id,
             name,
             description,
@@ -89,25 +94,46 @@ export function ProviderTeamInterface({ teams: parentTeams, onRefresh }: Provide
             status,
             location_id,
             created_at,
-            updated_at,
-            locations!inner(
-              id,
-              name,
-              address
-            )
-          `)
-          .eq('location_id', providerRecord.primary_location_id)
-          .eq('status', 'active')
-          .order('created_at', { ascending: false });
-        
-        if (locationTeamsError) {
-          console.error('🚨 Error loading location teams:', locationTeamsError);
-          return [];
-        }
-        
-        // Get member counts for each team
-        const teamsWithCounts = await Promise.all(
-          (locationTeams || []).map(async (team) => {
+            updated_at
+          )
+        `)
+        .eq('provider_id', providerRecord.id)
+        .eq('status', 'active');
+
+      if (assignmentsError) {
+        console.error('🚨 Error loading team assignments:', assignmentsError);
+        return [];
+      }
+
+      console.log(`✅ Found ${teamAssignments?.length || 0} team assignments for provider`);
+      
+      if (teamAssignments && teamAssignments.length > 0) {
+        // Process assigned teams
+        const teamsWithDetails = await Promise.all(
+          teamAssignments.map(async (assignment) => {
+            const team = assignment.teams;
+            
+            // Get location details for this team
+            let location = null;
+            if (team.location_id) {
+              const { data: locationData } = await supabase
+                .from('locations')
+                .select('id, name, address')
+                .eq('id', team.location_id)
+                .single();
+              
+              if (locationData) {
+                location = {
+                  id: locationData.id,
+                  name: locationData.name,
+                  address: locationData.address || '',
+                  created_at: '',
+                  updated_at: ''
+                };
+              }
+            }
+            
+            // Get member count
             const { count: memberCount } = await supabase
               .from('team_members')
               .select('*', { count: 'exact', head: true })
@@ -117,18 +143,18 @@ export function ProviderTeamInterface({ teams: parentTeams, onRefresh }: Provide
             return {
               id: team.id,
               name: team.name,
-              description: team.description || `Team at ${team.locations.name}`,
+              description: team.description || `Team managed by ${providerRecord.name}`,
               team_type: team.team_type || 'provider_managed',
               status: team.status as 'active' | 'inactive' | 'archived',
               location_id: team.location_id,
               member_count: memberCount || 0,
-              performance_score: Math.floor(Math.random() * 100), // Placeholder
+              performance_score: Math.floor(Math.random() * 100),
               created_at: team.created_at,
               updated_at: team.updated_at,
-              location: {
-                id: team.locations.id,
-                name: team.locations.name,
-                address: team.locations.address || '',
+              location: location || {
+                id: '',
+                name: 'Unknown Location',
+                address: '',
                 created_at: '',
                 updated_at: ''
               },
@@ -139,8 +165,72 @@ export function ProviderTeamInterface({ teams: parentTeams, onRefresh }: Provide
           })
         );
         
-        teams = teamsWithCounts;
-        console.log('✅ Found teams from primary location:', teams.length);
+        teams = teamsWithDetails;
+        console.log('✅ Found teams from team assignments:', teams.length);
+      } else {
+        console.log('❌ No team assignments found, checking primary location as fallback...');
+        
+        // Fallback: Get teams from primary location (original logic)
+        if (providerRecord.primary_location_id) {
+          const { data: locationTeams, error: locationTeamsError } = await supabase
+            .from('teams')
+            .select(`
+              id,
+              name,
+              description,
+              team_type,
+              status,
+              location_id,
+              created_at,
+              updated_at,
+              locations!inner(
+                id,
+                name,
+                address
+              )
+            `)
+            .eq('location_id', providerRecord.primary_location_id)
+            .eq('status', 'active')
+            .order('created_at', { ascending: false });
+          
+          if (!locationTeamsError && locationTeams) {
+            const teamsWithCounts = await Promise.all(
+              locationTeams.map(async (team) => {
+                const { count: memberCount } = await supabase
+                  .from('team_members')
+                  .select('*', { count: 'exact', head: true })
+                  .eq('team_id', team.id)
+                  .eq('status', 'active');
+                  
+                return {
+                  id: team.id,
+                  name: team.name,
+                  description: team.description || `Team at ${team.locations.name}`,
+                  team_type: team.team_type || 'provider_managed',
+                  status: team.status as 'active' | 'inactive' | 'archived',
+                  location_id: team.location_id,
+                  member_count: memberCount || 0,
+                  performance_score: Math.floor(Math.random() * 100),
+                  created_at: team.created_at,
+                  updated_at: team.updated_at,
+                  location: {
+                    id: team.locations.id,
+                    name: team.locations.name,
+                    address: team.locations.address || '',
+                    created_at: '',
+                    updated_at: ''
+                  },
+                  metadata: {},
+                  monthly_targets: {},
+                  current_metrics: {}
+                };
+              })
+            );
+            
+            teams = teamsWithCounts;
+            console.log('✅ Found teams from primary location (fallback):', teams.length);
+          }
+        }
       }
       
       return teams;
