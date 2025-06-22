@@ -10,7 +10,17 @@
  */
 
 import React, { useState } from 'react';
-import { getSafeUserEmail, getSafeDisplayEmail, getSafeUserDisplayName, hasValidEmail } from '@/utils/fixNullEmailAccessPatterns';
+import {
+  getSafeUserEmail,
+  getSafeUserPhone,
+  getSafeDisplayEmail,
+  getSafeDisplayPhone,
+  getSafeUserDisplayName,
+  hasValidEmail,
+  hasValidPhone,
+  makeSafeTeamMember,
+  safeProfileSearchFilter
+} from '@/utils/fixNullProfileAccessPatterns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -57,17 +67,20 @@ interface TeamMember {
   user: {
     id: string;
     email: string | null;
-    display_name?: string;
-    phone?: string;
+    display_name?: string | null;
+    phone?: string | null;
+    organization?: string | null;
     role: string;
     status: string;
-  };
+  } | null;
 }
 
 interface AvailableUser {
   id: string;
   email: string | null;
-  display_name?: string;
+  display_name?: string | null;
+  phone?: string | null;
+  organization?: string | null;
   role: string;
   status: string;
 }
@@ -136,7 +149,7 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, email, display_name, role, status')
+        .select('id, email, display_name, phone, organization, role, status')
         .in('role', ['IC', 'IP', 'IT', 'IN']) // Instructor roles
         .eq('status', 'active')
         .not('id', 'in', `(${currentMemberIds.join(',')})`)
@@ -245,17 +258,16 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
   };
 
   const filteredMembers = teamMembers.filter(member => {
-    if (!searchTerm) return true;
-    const searchLower = searchTerm.toLowerCase();
-    const email = getSafeUserEmail(member.user);
-    const displayName = getSafeUserDisplayName(member.user);
-    return displayName.toLowerCase().includes(searchLower) ||
-           (email && email.toLowerCase().includes(searchLower));
+    return safeProfileSearchFilter(member.user, searchTerm, ['email', 'display_name', 'phone', 'organization']);
   });
 
   const getFullName = (user: any) => {
     return getSafeUserDisplayName(user);
   };
+
+  // Process members with safe access patterns
+  const safeTeamMembers = teamMembers.map(makeSafeTeamMember);
+  const safeFilteredMembers = filteredMembers.map(makeSafeTeamMember);
 
   return (
     <div className="space-y-6">
@@ -347,9 +359,9 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
         <CardContent>
           {membersLoading ? (
             <div className="text-center py-8">Loading members...</div>
-          ) : filteredMembers.length > 0 ? (
+          ) : safeFilteredMembers.length > 0 ? (
             <div className="space-y-4">
-              {filteredMembers.map((member) => (
+              {safeFilteredMembers.map((member) => (
                 <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
@@ -364,10 +376,10 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
                             {getSafeUserEmail(member.user)}
                           </span>
                         )}
-                        {member.user.phone && (
+                        {hasValidPhone(member.user) && (
                           <span className="flex items-center gap-1">
                             <Phone className="h-3 w-3" />
-                            {member.user.phone}
+                            {getSafeUserPhone(member.user)}
                           </span>
                         )}
                       </div>

@@ -1,5 +1,12 @@
 
 import React from 'react';
+import {
+  getSafeUserPhone,
+  getSafeUserEmail,
+  getSafeUserDisplayName,
+  hasValidPhone,
+  hasValidEmail
+} from '@/utils/fixNullProfileAccessPatterns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -82,11 +89,11 @@ export function SimplifiedMemberTable({
                     <div className="flex items-center gap-3">
                       <Avatar>
                         <AvatarFallback>
-                          {member.display_name.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                          {getSafeUserDisplayName(member).split(' ').map((n: string) => n[0]).join('').toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="font-medium">{member.display_name}</div>
+                        <div className="font-medium">{getSafeUserDisplayName(member)}</div>
                         <div className="text-sm text-muted-foreground">
                           {member.team_position || 'Team Member'}
                         </div>
@@ -103,16 +110,16 @@ export function SimplifiedMemberTable({
                   
                   <TableCell>
                     <div className="space-y-1">
-                      {member.profile?.email && (
+                      {hasValidEmail(member.profile || member) && (
                         <div className="flex items-center gap-2 text-sm">
                           <Mail className="h-3 w-3" />
-                          {member.profile.email}
+                          {getSafeUserEmail(member.profile || member)}
                         </div>
                       )}
-                      {member.profile?.phone && (
+                      {hasValidPhone(member.profile || member) && (
                         <div className="flex items-center gap-2 text-sm">
                           <Phone className="h-3 w-3" />
-                          {member.profile.phone}
+                          {getSafeUserPhone(member.profile || member)}
                         </div>
                       )}
                     </div>

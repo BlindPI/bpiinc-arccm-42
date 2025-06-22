@@ -5,14 +5,22 @@ import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UserCheck, Mail, Phone, Building } from 'lucide-react';
+import {
+  getSafeUserPhone,
+  getSafeUserEmail,
+  getSafeUserDisplayName,
+  getSafeUserOrganization,
+  hasValidPhone,
+  hasValidEmail
+} from '@/utils/fixNullProfileAccessPatterns';
 
 interface APUser {
   id: string;
-  display_name: string;
-  email: string;
-  phone?: string;
-  organization?: string;
-  job_title?: string;
+  display_name: string | null;
+  email: string | null;
+  phone?: string | null;
+  organization?: string | null;
+  job_title?: string | null;
   created_at: string;
 }
 
@@ -103,28 +111,30 @@ export function APUserSelector({ selectedUserId, onSelect }: APUserSelectorProps
                           <UserCheck className="h-5 w-5 text-green-600" />
                         </div>
                         <div>
-                          <h4 className="font-medium">{user.display_name}</h4>
+                          <h4 className="font-medium">{getSafeUserDisplayName(user)}</h4>
                           <Badge variant="secondary">Authorized Provider</Badge>
                         </div>
                       </div>
                       
                       <div className="grid gap-2 text-sm text-muted-foreground ml-13">
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4" />
-                          <span>{user.email}</span>
-                        </div>
-                        
-                        {user.phone && (
+                        {hasValidEmail(user) && (
                           <div className="flex items-center gap-2">
-                            <Phone className="h-4 w-4" />
-                            <span>{user.phone}</span>
+                            <Mail className="h-4 w-4" />
+                            <span>{getSafeUserEmail(user)}</span>
                           </div>
                         )}
                         
-                        {user.organization && (
+                        {hasValidPhone(user) && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4" />
+                            <span>{getSafeUserPhone(user)}</span>
+                          </div>
+                        )}
+                        
+                        {getSafeUserOrganization(user) && (
                           <div className="flex items-center gap-2">
                             <Building className="h-4 w-4" />
-                            <span>{user.organization}</span>
+                            <span>{getSafeUserOrganization(user)}</span>
                           </div>
                         )}
                       </div>
@@ -159,8 +169,8 @@ export function APUserSelector({ selectedUserId, onSelect }: APUserSelectorProps
                         <UserCheck className="h-4 w-4 text-amber-600" />
                       </div>
                       <div>
-                        <div className="font-medium text-sm">{user.display_name}</div>
-                        <div className="text-xs text-muted-foreground">{user.email}</div>
+                        <div className="font-medium text-sm">{getSafeUserDisplayName(user)}</div>
+                        <div className="text-xs text-muted-foreground">{getSafeUserEmail(user) || 'No email'}</div>
                       </div>
                     </div>
                     <Badge variant="outline">Assigned</Badge>

@@ -23,6 +23,13 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ExtendedProfile } from "@/types/supabase-schema";
+import {
+  getSafeUserPhone,
+  getSafeUserEmail,
+  getSafeUserDisplayName,
+  hasValidPhone,
+  hasValidEmail
+} from '@/utils/fixNullProfileAccessPatterns';
 
 const roleNames: Record<string, string> = {
   'IT': 'Instructor Trainee',
@@ -46,12 +53,15 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
   if (!user) return null;
 
   const getInitials = (name?: string, email?: string) => {
-    if (name) {
-      const parts = name.trim().split(" ");
+    const safeName = getSafeUserDisplayName(user);
+    const safeEmail = getSafeUserEmail(user);
+    
+    if (safeName && safeName !== 'Unknown User') {
+      const parts = safeName.trim().split(" ");
       if (parts.length === 1) return parts[0][0] || "";
       return parts[0][0] + (parts[1]?.[0] || "");
     }
-    if (email) return email[0]?.toUpperCase() || "U";
+    if (safeEmail) return safeEmail[0]?.toUpperCase() || "U";
     return "U";
   };
 
@@ -94,9 +104,9 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
           <div className="w-full md:w-1/3 bg-gradient-to-b from-blue-500/90 to-purple-500/60 px-8 py-10 flex flex-col items-center gap-4 md:gap-8 justify-center border-r md:border-r border-slate-100 dark:border-slate-800">
             <div className="flex flex-col items-center gap-2">
               <span className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 text-white font-bold text-3xl uppercase ring-4 ring-primary/30 shadow-md mb-2">
-                {getInitials(user.display_name, user.email)}
+                {getInitials()}
               </span>
-              <div className="text-xl font-semibold text-white drop-shadow">{user.display_name || "No Name"}</div>
+              <div className="text-xl font-semibold text-white drop-shadow">{getSafeUserDisplayName(user)}</div>
               <div className="flex gap-2 mt-2">
                 {getRoleBadge(user.role)}
                 {getStatusBadge(userStatus)}
@@ -105,12 +115,14 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
             <div className="mt-6 flex flex-col gap-2 w-full text-base text-blue-50/90">
               <div className="flex items-center gap-2">
                 <Mail className="w-5 h-5 text-amber-100" />
-                <span className="truncate">{user.email || <span className="text-slate-100/50 italic">No email</span>}</span>
+                <span className="truncate">
+                  {hasValidEmail(user) ? getSafeUserEmail(user) : <span className="text-slate-100/50 italic">No email</span>}
+                </span>
               </div>
-              {user.phone && (
+              {hasValidPhone(user) && (
                 <div className="flex items-center gap-2">
                   <Phone className="w-5 h-5 text-green-200" />
-                  <span>{user.phone}</span>
+                  <span>{getSafeUserPhone(user)}</span>
                 </div>
               )}
               {user.bio && (
