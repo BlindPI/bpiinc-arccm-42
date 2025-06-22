@@ -18,6 +18,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { providerRelationshipService } from '@/services/provider/providerRelationshipService';
 import { validateDashboardDataSources } from '@/utils/validateDashboardDataSources';
+import { diagnoseTeamLoadingPerformance } from '@/utils/diagnoseTeamLoadingPerformance';
 import { useTeamContext } from '@/hooks/useTeamContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
@@ -56,6 +57,7 @@ export function EnhancedTeamProviderDashboard() {
   const { data: profile } = useProfile();
   const { primaryTeam, teamLocation } = useTeamContext();
   const [validationResults, setValidationResults] = useState<any[]>([]);
+  const [performanceDiagnostics, setPerformanceDiagnostics] = useState<any>(null);
 
   // Role-based access control
   const userRole = profile?.role as DatabaseUserRole;
@@ -64,29 +66,63 @@ export function EnhancedTeamProviderDashboard() {
   const isAPUser = userRole === 'AP';
 
   // Get team-provider relationships using proven service
-  const { 
-    data: teamMetrics, 
+  const {
+    data: teamMetrics,
     isLoading: metricsLoading,
-    refetch: refetchMetrics 
+    refetch: refetchMetrics
   } = useQuery({
     queryKey: ['enhanced-team-metrics', primaryTeam?.team_id],
     queryFn: async (): Promise<TeamProviderMetrics | null> => {
       if (!primaryTeam?.team_id) return null;
 
-      console.log('🔍 ENHANCED TEAM DASHBOARD: Loading with validation...');
+      console.log('🔍 ENHANCED TEAM DASHBOARD: Loading with performance diagnostics...');
+      const dashboardStartTime = performance.now();
       
-      // Run validation to compare old vs new approach
+      // 🚨 PERFORMANCE DIAGNOSTIC: Run full diagnostic
+      try {
+        const diagnostics = await diagnoseTeamLoadingPerformance(primaryTeam.team_id);
+        setPerformanceDiagnostics(diagnostics);
+        
+        console.log('📊 PERFORMANCE DIAGNOSTIC RESULTS:');
+        console.log(`📊 Total Duration: ${diagnostics.totalDuration.toFixed(2)}ms`);
+        console.log(`📊 Total Queries: ${diagnostics.summary.totalQueries}`);
+        console.log(`📊 Critical Issues: ${diagnostics.summary.criticalIssues}`);
+        console.log('📊 Bottlenecks:', diagnostics.bottlenecks);
+        console.log('📊 Recommended Fixes:', diagnostics.summary.recommendedFixes);
+      } catch (diagnosticError) {
+        console.error('❌ Performance diagnostic failed:', diagnosticError);
+      }
+      
+      // 🚨 PERFORMANCE LOGGING: Track validation overhead
+      const validationStartTime = performance.now();
       const validation = await validateDashboardDataSources();
+      const validationDuration = performance.now() - validationStartTime;
+      console.log(`⏱️ VALIDATION DURATION: ${validationDuration.toFixed(2)}ms`);
       setValidationResults(validation);
       
-      // Find providers assigned to this team using proven service
+      // 🚨 PERFORMANCE LOGGING: Track provider fetching
+      const providerFetchStartTime = performance.now();
       console.log('🔍 Searching for providers assigned to team:', primaryTeam.team_id);
       
       const allProviders = await providerRelationshipService.getProviders({});
+      const providerFetchDuration = performance.now() - providerFetchStartTime;
+      console.log(`⏱️ PROVIDER FETCH DURATION: ${providerFetchDuration.toFixed(2)}ms for ${allProviders.length} providers`);
+      
+      // 🚨 PERFORMANCE LOGGING: Track N+1 query problem
+      const assignmentStartTime = performance.now();
       const teamProviders = [];
+      let assignmentQueryCount = 0;
       
       for (const provider of allProviders) {
+        const assignmentQueryStartTime = performance.now();
         const assignments = await providerRelationshipService.getProviderTeamAssignments(provider.id);
+        const assignmentQueryDuration = performance.now() - assignmentQueryStartTime;
+        assignmentQueryCount++;
+        
+        if (assignmentQueryDuration > 500) {
+          console.warn(`⚠️ SLOW ASSIGNMENT QUERY: ${assignmentQueryDuration.toFixed(2)}ms for provider ${provider.id}`);
+        }
+        
         const teamAssignment = assignments.find(a => a.team_id === primaryTeam.team_id && a.status === 'active');
         if (teamAssignment) {
           teamProviders.push({
@@ -96,30 +132,62 @@ export function EnhancedTeamProviderDashboard() {
         }
       }
       
+      const assignmentDuration = performance.now() - assignmentStartTime;
+      console.log(`⏱️ ASSIGNMENT PROCESSING: ${assignmentDuration.toFixed(2)}ms with ${assignmentQueryCount} queries`);
+      
+      if (assignmentQueryCount > 20) {
+        console.error(`🚨 N+1 QUERY PROBLEM DETECTED: ${assignmentQueryCount} queries for ${allProviders.length} providers`);
+      }
+      
       console.log(`🔍 Found ${teamProviders.length} providers assigned to team`);
 
-      // Calculate metrics using proven service methods
+      // 🚨 PERFORMANCE LOGGING: Track KPI calculation overhead
+      const kpiStartTime = performance.now();
       let totalCertificates = 0;
       let totalCourses = 0;
+      let kpiQueryCount = 0;
       
       if (teamProviders.length > 0) {
-        // Use the provider KPI calculation which handles location ID mismatches
         for (const { provider } of teamProviders) {
+          const individualKpiStart = performance.now();
           const kpis = await providerRelationshipService.getProviderLocationKPIs(provider.id);
+          const individualKpiDuration = performance.now() - individualKpiStart;
+          kpiQueryCount++;
+          
+          if (individualKpiDuration > 1000) {
+            console.warn(`⚠️ SLOW KPI CALCULATION: ${individualKpiDuration.toFixed(2)}ms for provider ${provider.id}`);
+          }
+          
           totalCertificates += kpis.certificatesIssued;
           totalCourses += kpis.coursesDelivered;
         }
       }
+      
+      const kpiDuration = performance.now() - kpiStartTime;
+      console.log(`⏱️ KPI CALCULATION: ${kpiDuration.toFixed(2)}ms with ${kpiQueryCount} provider KPI calculations`);
 
-      // Get actual team member count (not hardcoded)
+      // 🚨 PERFORMANCE LOGGING: Track member count query
+      const memberCountStartTime = performance.now();
       const { data: members, error: memberError } = await supabase
         .from('team_members')
         .select('id', { count: 'exact' })
         .eq('team_id', primaryTeam.team_id)
         .eq('status', 'active');
+      const memberCountDuration = performance.now() - memberCountStartTime;
+      console.log(`⏱️ MEMBER COUNT QUERY: ${memberCountDuration.toFixed(2)}ms`);
       
       const realMemberCount = memberError ? 0 : (members?.length || 0);
       console.log(`🔍 Team ${primaryTeam.teams?.name} has ${realMemberCount} active members`);
+
+      const totalDashboardDuration = performance.now() - dashboardStartTime;
+      console.log(`⏱️ TOTAL DASHBOARD LOAD TIME: ${totalDashboardDuration.toFixed(2)}ms`);
+      
+      // 🚨 PERFORMANCE ALERTS
+      if (totalDashboardDuration > 5000) {
+        console.error(`🚨 CRITICAL PERFORMANCE ISSUE: Dashboard took ${totalDashboardDuration.toFixed(2)}ms to load`);
+      } else if (totalDashboardDuration > 2000) {
+        console.warn(`⚠️ SLOW DASHBOARD LOAD: ${totalDashboardDuration.toFixed(2)}ms`);
+      }
 
       return {
         teamSize: realMemberCount,
@@ -134,7 +202,7 @@ export function EnhancedTeamProviderDashboard() {
       };
     },
     enabled: !!primaryTeam?.team_id,
-    refetchInterval: 30000
+    refetchInterval: 30000 // 🚨 PERFORMANCE ISSUE: Frequent refetching compounds the problem
   });
 
   // Get recent courses using consistent table (course_schedules, not course_offerings)
@@ -240,12 +308,44 @@ export function EnhancedTeamProviderDashboard() {
     return <InlineLoader message="Loading enhanced team dashboard..." />;
   }
 
-  // Show validation alerts
+  // Show validation alerts and performance diagnostics
   const criticalIssues = validationResults.filter(v => v.severity === 'critical');
   const dataSourceIssues = validationResults.filter(v => v.source.includes('Team'));
+  const performanceIssues = performanceDiagnostics?.bottlenecks?.filter(b => b.severity === 'critical') || [];
 
   return (
     <div className="space-y-6">
+      {/* Performance Diagnostic Alerts */}
+      {performanceIssues.length > 0 && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            🚨 PERFORMANCE CRITICAL: {performanceIssues.length} critical performance issues detected.
+            Check console for detailed diagnostics. Primary issues: {performanceIssues.map(p => p.issue).join(', ')}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {performanceDiagnostics && performanceDiagnostics.summary.totalQueries > 20 && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            🚨 N+1 QUERY PROBLEM: Dashboard is making {performanceDiagnostics.summary.totalQueries} database queries.
+            This explains the slow loading. Recommended fixes: {performanceDiagnostics.summary.recommendedFixes.slice(0, 2).join(', ')}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {performanceDiagnostics && performanceDiagnostics.totalDuration > 3000 && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            ⏱️ SLOW LOADING: Dashboard took {performanceDiagnostics.totalDuration.toFixed(0)}ms to load.
+            Slowest operation: {performanceDiagnostics.summary.slowestOperation}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Data Source Validation Alerts */}
       {criticalIssues.length > 0 && (
         <Alert variant="destructive">
