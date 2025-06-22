@@ -33,7 +33,7 @@ const mapDatabaseToTeamConfig = (dbRow: any): TeamNavigationConfig => ({
 // Helper function to convert database row to ProviderNavigationConfig
 const mapDatabaseToProviderConfig = (dbRow: any): ProviderNavigationConfig => ({
   id: dbRow.id,
-  providerId: dbRow.provider_id.toString(), // Convert number to string
+  providerId: dbRow.provider_id, // provider_id is now UUID string, no conversion needed
   configOverrides: dbRow.config_overrides as Partial<NavigationVisibilityConfig>,
   isActive: dbRow.is_active
 });
@@ -150,19 +150,19 @@ export function useTeamNavigationVisibility() {
 
   // Mutation to update provider navigation config
   const updateProviderNavigationConfig = useMutation({
-    mutationFn: async ({ 
-      providerId, 
-      configOverrides 
-    }: { 
-      providerId: string; 
-      configOverrides: Partial<NavigationVisibilityConfig> 
+    mutationFn: async ({
+      providerId,
+      configOverrides
+    }: {
+      providerId: string;
+      configOverrides: Partial<NavigationVisibilityConfig>
     }) => {
       console.log('🔧 PROVIDER-NAV: Updating provider navigation config:', { providerId, configOverrides });
       
       const { data, error } = await supabase
         .from('provider_navigation_configs')
         .upsert({
-          provider_id: parseInt(providerId), // Convert string to number for database
+          provider_id: providerId, // provider_id is now UUID string, no parseInt needed
           config_overrides: configOverrides,
           created_by: user?.id,
           is_active: true
