@@ -8,6 +8,7 @@ import { UnifiedTeamService } from '@/services/team/unifiedTeamService';
 import { TeamCreationWizard } from '@/components/team/provider/TeamCreationWizard';
 import { TeamMemberManagement } from '@/components/team/provider/TeamMemberManagement';
 import { providerRelationshipService } from '@/services/provider/providerRelationshipService';
+import { debugAPUserTeamQuery } from '@/utils/debugAPUserTeamQuery';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -52,6 +53,9 @@ export function ProviderTeamInterface({ teams: parentTeams, onRefresh }: Provide
       if (!user?.id) return [];
       
       console.log('🔧 DEBUG: Loading teams for AP user using CORRECT approach (no location_assignments table!)');
+      
+      // RUN DIAGNOSTIC TO SEE WHAT'S ACTUALLY IN THE DATABASE
+      await debugAPUserTeamQuery(user.id);
       
       // Use the WORKING Provider Management approach
       const { data: providerRecord, error: providerError } = await supabase
