@@ -1439,7 +1439,15 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
       
       const { data: allTeams, error: allTeamsError } = await supabase
         .from('teams')
-        .select('id, name, team_type, status, location_id, provider_id')
+        .select(`
+          id,
+          name,
+          team_type,
+          status,
+          location_id,
+          provider_id,
+          locations(name)
+        `)
         .eq('status', 'active');
 
       if (allTeamsError) {
@@ -1465,21 +1473,61 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
       const availableTeams = (allTeams || []).filter(team => !assignedTeamIds.includes(team.id));
       console.log(`DEBUG: Available teams for assignment: ${availableTeams.length}`);
 
-      return availableTeams.map(team => ({
-        id: team.id,
-        name: team.name,
-        team_type: team.team_type,
-        status: team.status,
-        location_id: team.location_id,
-        provider_id: team.provider_id,
-        performance_score: 0,
-        monthly_targets: {},
-        current_metrics: {},
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        location: undefined,
-        members: []
+      // FIXED: Get actual member counts for each team
+      const teamsWithMemberCounts = await Promise.all(availableTeams.map(async (team) => {
+        // Get actual member count from team_members table
+        let memberCount = 0;
+        try {
+          const { data: memberData, count, error: memberError } = await supabase
+            .from('team_members')
+            .select('id', { count: 'exact' })
+            .eq('team_id', team.id)
+            .eq('status', 'active');
+          
+          if (!memberError && count !== null) {
+            memberCount = count;
+            console.log(`DEBUG: Team "${team.name}" has ${memberCount} active members`);
+          } else {
+            console.log(`DEBUG: Could not get member count for team "${team.name}":`, memberError);
+          }
+        } catch (error) {
+          console.error(`DEBUG: Error getting member count for team ${team.id}:`, error);
+        }
+
+        // Create mock members array with correct length for compatibility
+        const mockMembers = Array.from({ length: memberCount }, (_, index) => ({
+          id: `mock-${team.id}-${index}`,
+          user_id: `mock-user-${index}`,
+          team_id: team.id,
+          role: 'member',
+          status: 'active',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }));
+
+        return {
+          id: team.id,
+          name: team.name,
+          team_type: team.team_type,
+          status: team.status,
+          location_id: team.location_id,
+          provider_id: team.provider_id,
+          performance_score: 0,
+          monthly_targets: {},
+          current_metrics: {},
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          location: team.locations ? {
+            id: team.location_id || '',
+            name: team.locations.name,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          } : undefined,
+          members: mockMembers // FIXED: Array with correct length for member count
+        };
       }));
+
+      return teamsWithMemberCounts;
     } catch (error) {
       console.error('DEBUG: Error fetching available teams:', error);
       return [];
