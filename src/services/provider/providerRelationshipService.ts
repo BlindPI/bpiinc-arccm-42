@@ -504,9 +504,9 @@ if (error) {
   return [];
 }
 
-// FIXED: Calculate actual member counts for each team
+// FIXED: Calculate actual member counts for each team with RLS fallback
 const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (assignment) => {
-  // Get actual member count from team_members table - simplified query
+  // Get actual member count from team_members table with RLS-aware fallback
   let actualMemberCount = 0;
   try {
     const memberResult = await supabase
@@ -515,11 +515,45 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
       .eq('team_id', assignment.team_id)
       .eq('status', 'active');
     
-    actualMemberCount = memberResult.count || 0;
-    console.log(`DEBUG: Team "${assignment.teams.name}" has ${actualMemberCount} active members`);
+    if (memberResult.error) {
+      console.log(`DEBUG: Direct team member query failed (likely RLS restriction): ${memberResult.error.message}`);
+      console.log(`DEBUG: Attempting fallback using database function for team ${assignment.team_id}`);
+      
+      // Fallback: Use database function that bypasses RLS restrictions
+      try {
+        const fallbackResult = await supabase.rpc('get_team_member_count' as any, {
+          p_team_id: assignment.team_id
+        });
+        
+        if (fallbackResult.error) {
+          console.error('Error with team member count fallback function:', fallbackResult.error);
+          actualMemberCount = 0;
+        } else {
+          actualMemberCount = typeof fallbackResult.data === 'number' ? fallbackResult.data : 0;
+          console.log(`DEBUG: Team "${assignment.teams.name}" has ${actualMemberCount} active members (via fallback function)`);
+        }
+      } catch (functionError) {
+        console.error('Database function not available, using 0 count:', functionError);
+        actualMemberCount = 0;
+      }
+    } else {
+      actualMemberCount = memberResult.count || 0;
+      console.log(`DEBUG: Team "${assignment.teams.name}" has ${actualMemberCount} active members (direct query)`);
+    }
   } catch (memberError) {
     console.error('Error fetching member count:', memberError);
-    actualMemberCount = 0;
+    
+    // Final fallback: Try the database function even on exception
+    try {
+      const fallbackResult = await supabase.rpc('get_team_member_count' as any, {
+        p_team_id: assignment.team_id
+      });
+      actualMemberCount = typeof fallbackResult.data === 'number' ? fallbackResult.data : 0;
+      console.log(`DEBUG: Team "${assignment.teams.name}" member count retrieved via exception fallback: ${actualMemberCount}`);
+    } catch (fallbackError) {
+      console.error('Final fallback also failed:', fallbackError);
+      actualMemberCount = 0;
+    }
   }
 
   // FIXED: Get location name using location_id from teams table
@@ -1449,6 +1483,134 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
     } catch (error) {
       console.error('DEBUG: Error fetching available teams:', error);
       return [];
+    }
+  }
+
+  // =====================================================================================
+  // TEAM MEMBER MANAGEMENT OPERATIONS (NEW - for AP users)
+  // =====================================================================================
+
+  /**
+   * Get team members for a specific team (AP user compatible)
+   */
+  async getTeamMembers(teamId: string): Promise<any[]> {
+    try {
+      console.log(`DEBUG: Getting team members for team ${teamId}`);
+      
+      const { data, error } = await supabase
+        .from('team_members')
+        .select(`
+          *,
+          profiles!inner(
+            id,
+            email,
+            role,
+            first_name,
+            last_name
+          )
+        `)
+        .eq('team_id', teamId)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching team members:', error);
+        return [];
+      }
+
+      return (data || []).map(member => ({
+        id: member.id,
+        user_id: member.user_id,
+        team_id: member.team_id,
+        role: member.role,
+        status: member.status,
+        joined_date: member.joined_date,
+        created_at: member.created_at,
+        email: member.profiles?.email,
+        first_name: member.profiles?.first_name,
+        last_name: member.profiles?.last_name,
+        user_role: member.profiles?.role
+      }));
+    } catch (error) {
+      console.error('Error fetching team members:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Add team member using safe database function
+   */
+  async addTeamMember(teamId: string, userId: string, role: string = 'member'): Promise<string> {
+    try {
+      console.log(`DEBUG: Adding team member ${userId} to team ${teamId} with role ${role}`);
+      
+      const { data: memberId, error } = await supabase.rpc('add_team_member_safe' as any, {
+        p_team_id: teamId,
+        p_user_id: userId,
+        p_role: role
+      });
+
+      if (error) {
+        console.error('Error adding team member via function:', error);
+        throw error;
+      }
+
+      console.log(`DEBUG: Successfully added team member with ID: ${memberId}`);
+      return memberId;
+    } catch (error) {
+      console.error('Error adding team member:', error);
+      throw await this.standardizeErrorMessage(error);
+    }
+  }
+
+  /**
+   * Remove team member using safe database function
+   */
+  async removeTeamMember(teamId: string, userId: string): Promise<boolean> {
+    try {
+      console.log(`DEBUG: Removing team member ${userId} from team ${teamId}`);
+      
+      const { data: success, error } = await supabase.rpc('remove_team_member_safe' as any, {
+        p_team_id: teamId,
+        p_user_id: userId
+      });
+
+      if (error) {
+        console.error('Error removing team member via function:', error);
+        throw error;
+      }
+
+      console.log(`DEBUG: Team member removal result: ${success}`);
+      return success;
+    } catch (error) {
+      console.error('Error removing team member:', error);
+      throw await this.standardizeErrorMessage(error);
+    }
+  }
+
+  /**
+   * Update team member role
+   */
+  async updateTeamMemberRole(teamId: string, userId: string, newRole: string): Promise<void> {
+    try {
+      console.log(`DEBUG: Updating team member ${userId} role in team ${teamId} to ${newRole}`);
+      
+      const { error } = await supabase
+        .from('team_members')
+        .update({
+          role: newRole,
+          updated_at: new Date().toISOString()
+        })
+        .eq('team_id', teamId)
+        .eq('user_id', userId)
+        .eq('status', 'active');
+
+      if (error) throw error;
+      
+      console.log(`DEBUG: Successfully updated team member role`);
+    } catch (error) {
+      console.error('Error updating team member role:', error);
+      throw await this.standardizeErrorMessage(error);
     }
   }
 

@@ -44,11 +44,12 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { toast } from 'sonner';
-import type { 
+import type {
   ProviderTeamAssignmentDetailed,
   AssignProviderToTeamRequest,
   ProviderTeamAssignment
 } from '@/types/provider-management';
+import { TeamMemberManagement } from './TeamMemberManagement';
 
 // =====================================================================================
 // PHASE 4: PROVIDER TEAM MANAGEMENT COMPONENT
@@ -93,6 +94,8 @@ export const ProviderTeamManagement: React.FC<ProviderTeamManagementProps> = ({
   const [selectedAssignments, setSelectedAssignments] = useState<string[]>([]);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showTeamMemberDialog, setShowTeamMemberDialog] = useState(false);
+  const [selectedTeamForMembers, setSelectedTeamForMembers] = useState<{id: string, name: string} | null>(null);
   const [editingAssignment, setEditingAssignment] = useState<ProviderTeamAssignmentDetailed | null>(null);
   const [formData, setFormData] = useState<TeamAssignmentFormData>({
     teamId: '',
@@ -306,6 +309,14 @@ export const ProviderTeamManagement: React.FC<ProviderTeamManagementProps> = ({
   };
 
   /**
+   * Handle team member management
+   */
+  const handleManageTeamMembers = (teamId: string, teamName: string): void => {
+    setSelectedTeamForMembers({ id: teamId, name: teamName });
+    setShowTeamMemberDialog(true);
+  };
+
+  /**
    * Handle manual refresh
    */
   const handleRefresh = async (): Promise<void> => {
@@ -498,6 +509,13 @@ export const ProviderTeamManagement: React.FC<ProviderTeamManagementProps> = ({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleManageTeamMembers(assignment.team_id, assignment.team_name)}
+                    >
+                      <Users className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -771,6 +789,28 @@ export const ProviderTeamManagement: React.FC<ProviderTeamManagementProps> = ({
                 Update Assignment
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Team Member Management Dialog */}
+      <Dialog open={showTeamMemberDialog} onOpenChange={setShowTeamMemberDialog}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Team Member Management</DialogTitle>
+            <DialogDescription>
+              Manage members for {selectedTeamForMembers?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto">
+            {selectedTeamForMembers && (
+              <TeamMemberManagement
+                teamId={selectedTeamForMembers.id}
+                teamName={selectedTeamForMembers.name}
+                providerId={providerId}
+                onClose={() => setShowTeamMemberDialog(false)}
+              />
+            )}
           </div>
         </DialogContent>
       </Dialog>
