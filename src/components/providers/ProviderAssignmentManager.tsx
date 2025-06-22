@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { providerRelationshipService } from '@/services/provider/ProviderRelationshipService';
+import { providerRelationshipService } from '@/services/provider/providerRelationshipService';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   Users, 
