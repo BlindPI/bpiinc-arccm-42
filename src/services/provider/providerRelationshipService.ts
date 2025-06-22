@@ -912,33 +912,22 @@ export class ProviderRelationshipService {
       if (providerError) throw providerError;
 
       if (provider.primary_location_id === locationId) {
-        // Clear primary location using bypass function to avoid RLS issues
-        try {
-          const { data: result, error: functionError } = await supabase.rpc(
-            'assign_provider_location_safe',
-            {
-              p_provider_id: providerId,
-              p_location_id: null
-            }
-          );
-          
-          if (functionError) {
-            // Fallback to direct update
-            const { error: clearError } = await supabase
-              .from('authorized_providers')
-              .update({
-                primary_location_id: null,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', providerId);
-
-            if (clearError) throw clearError;
+        // Use dedicated removal function to avoid RLS issues
+        console.log(`DEBUG: Using dedicated removal function for primary location`);
+        
+        const { data: result, error: removalError } = await supabase.rpc(
+          'remove_provider_location_safe',
+          {
+            p_provider_id: providerId
           }
-        } catch (error) {
-          console.error('Error clearing primary location:', error);
-          throw error;
+        );
+        
+        if (removalError) {
+          console.error('Error with removal function:', removalError);
+          throw removalError;
         }
         
+        console.log(`DEBUG: Successfully used removal function:`, result);
         console.log(`DEBUG: Cleared primary location for provider ${providerId}`);
       }
 
