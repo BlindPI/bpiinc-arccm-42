@@ -129,7 +129,13 @@ export class ProviderRelationshipService {
       }
 
       console.log(`✅ DEBUG: Provider ${id} found with status: ${data.status}`);
-      return data.status === 'active';
+      
+      // Fix: Accept both 'active' and 'APPROVED' status for providers
+      const validStatuses = ['active', 'APPROVED', 'approved'];
+      const isValid = validStatuses.includes(data.status);
+      
+      console.log(`✅ DEBUG: Provider ${id} validation result: ${isValid} (status: ${data.status})`);
+      return isValid;
     } catch (error) {
       console.error('Error validating provider UUID:', error);
       return false;
@@ -554,10 +560,14 @@ export class ProviderRelationshipService {
       console.log(`🔍 DEBUG: Getting team assignments for provider ${providerId}`);
       
       const isValid = await this.validateProviderUUID(providerId);
+      console.log(`🔍 DEBUG: Provider validation result: ${isValid} for provider ${providerId}`);
+      
       if (!isValid) {
-        console.log(`🚨 DEBUG: Provider ${providerId} not found, returning empty assignments`);
+        console.log(`🚨 DEBUG: Provider ${providerId} validation failed, returning empty assignments`);
         return [];
       }
+      
+      console.log(`✅ DEBUG: Provider ${providerId} validation passed, proceeding with team assignments query`);
 
       const { data, error } = await supabase
         .from('provider_team_assignments')
@@ -997,6 +1007,7 @@ export class ProviderRelationshipService {
       console.log(`🔍 DEBUG: Getting available teams for provider ${providerId}`);
       
       // First, let's check if there are any teams at all
+      // NOTE: Teams use 'active' status, not 'APPROVED' (that's for providers)
       const { data: allTeams, error: allTeamsError } = await supabase
         .from('teams')
         .select('id, name, team_type, status, location_id, provider_id')
@@ -1009,24 +1020,32 @@ export class ProviderRelationshipService {
 
       console.log(`🔍 DEBUG: Found ${allTeams?.length || 0} active teams total`);
       console.log(`🔍 DEBUG: Sample team data:`, allTeams?.[0]);
+      
+      // DEBUG: Show all teams with their provider_id values
+      allTeams?.forEach(team => {
+        console.log(`🔍 DEBUG: Team "${team.name}" - provider_id: ${team.provider_id}, status: ${team.status}`);
+      });
 
-      // Get assigned team IDs for this provider
+      // Get assigned team IDs for this provider via provider_team_assignments table
       const { data: assignedTeams, error: assignedError } = await supabase
         .from('provider_team_assignments')
         .select('team_id')
         .eq('provider_id', providerId)
-        .eq('status', 'active');
+        .in('status', ['active', 'APPROVED', 'approved']);
 
       if (assignedError) {
         console.error('🚨 DEBUG: Error fetching assigned teams:', assignedError);
       }
 
       const assignedTeamIds = assignedTeams?.map(a => a.team_id) || [];
-      console.log(`🔍 DEBUG: Provider ${providerId} already assigned to ${assignedTeamIds.length} teams:`, assignedTeamIds);
+      console.log(`🔍 DEBUG: Provider ${providerId} already assigned to ${assignedTeamIds.length} teams via assignments table:`, assignedTeamIds);
 
-      // Filter out already assigned teams
+      // CRITICAL FIX: Teams should be available for assignment regardless of their provider_id
+      // The provider_id in teams table is for ownership, not assignment restrictions
+      // Filter out only teams that are already assigned via provider_team_assignments
       const availableTeams = (allTeams || []).filter(team => !assignedTeamIds.includes(team.id));
       console.log(`🔍 DEBUG: Available teams for assignment: ${availableTeams.length}`);
+      console.log(`🔍 DEBUG: Available team names:`, availableTeams.map(t => t.name));
 
       // Transform to expected Team interface (simplified to avoid TypeScript errors)
       return availableTeams.map(team => ({
