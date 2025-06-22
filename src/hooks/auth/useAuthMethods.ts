@@ -96,17 +96,42 @@ export const useAuthMethods = ({ setLoading, setUser, setSession, navigate }: Au
       setLoading(true);
       console.log("🔍 DEBUG: useAuthMethods - Attempting logout");
       
+      // Set a timeout to prevent hanging logout
+      const logoutTimeout = setTimeout(() => {
+        console.warn("🔍 DEBUG: Logout taking too long, forcing navigation");
+        navigate('/landing', { replace: true });
+        window.location.reload(); // Force reload to clear stuck state
+      }, 5000); // 5 second timeout
+      
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
       
-      console.log("🔍 DEBUG: useAuthMethods - Logout successful");
+      // Clear the timeout since signOut completed
+      clearTimeout(logoutTimeout);
       
-      // Navigate to landing page after successful logout
+      if (error) {
+        console.error("🔍 DEBUG: useAuthMethods - SignOut error (continuing with navigation):", error);
+        // Don't throw error - still navigate to prevent users getting stuck
+      }
+      
+      console.log("🔍 DEBUG: useAuthMethods - Logout completed, navigating to landing");
+      
+      // Navigate to landing page - use replace to prevent back navigation
       navigate('/landing', { replace: true });
       
       return { success: true };
     } catch (error: any) {
-      console.error("🔍 DEBUG: useAuthMethods - Logout error:", error);
+      console.error("🔍 DEBUG: useAuthMethods - Logout error (forcing navigation anyway):", error);
+      
+      // CRITICAL: Even if logout fails, navigate away to prevent users getting stuck
+      console.log("🔍 DEBUG: useAuthMethods - Forcing navigation despite error");
+      navigate('/landing', { replace: true });
+      
+      // For severe errors, reload the page to clear any stuck React state
+      if (error.message?.includes('navigation') || error.message?.includes('provider')) {
+        console.log("🔍 DEBUG: useAuthMethods - Reloading page to clear stuck state");
+        setTimeout(() => window.location.reload(), 100);
+      }
+      
       return {
         success: false,
         error: error.message || "Failed to logout"
@@ -176,8 +201,10 @@ export const useAuthMethods = ({ setLoading, setUser, setSession, navigate }: Au
   const signOut = useCallback(async () => {
     console.log("🔍 DEBUG: useAuthMethods - signOut called");
     const result = await logout();
+    // DON'T throw error for signOut - this could prevent logout completion
+    // Just log the error and let the navigation happen
     if (!result.success) {
-      throw new Error(result.error);
+      console.warn("🔍 DEBUG: useAuthMethods - signOut had issues but navigation completed:", result.error);
     }
   }, [logout]);
 

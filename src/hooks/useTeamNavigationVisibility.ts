@@ -75,36 +75,58 @@ export function useTeamNavigationVisibility() {
     queryFn: async () => {
       if (!user?.id) return [];
       
-      // First, get the provider ID for this user
-      const { data: providerData, error: providerError } = await supabase
-        .from('authorized_providers')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
+      try {
+        // First, get the provider ID for this user
+        const { data: providerData, error: providerError } = await supabase
+          .from('authorized_providers')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
 
-      if (providerError || !providerData) {
-        console.log('🔧 PROVIDER-NAV: No provider found for user:', user.id);
-        return [];
+        if (providerError || !providerData) {
+          console.log('🔧 PROVIDER-NAV: No provider found for user:', user.id);
+          return [];
+        }
+
+        console.log('🔧 PROVIDER-NAV: Fetching provider navigation configs for provider:', providerData.id);
+        
+        const { data, error } = await supabase
+          .from('provider_navigation_configs')
+          .select('*')
+          .eq('provider_id', providerData.id)
+          .eq('is_active', true);
+
+        if (error) {
+          // CRITICAL: Don't throw error if it's the UUID/bigint mismatch - this blocks logout
+          const isTypeMismatchError = error.message?.includes('invalid input syntax for type bigint') ||
+                                    error.code === '22P02';
+          
+          if (isTypeMismatchError) {
+            console.error('🔧 PROVIDER-NAV: UUID/bigint type mismatch error (not blocking logout):', error);
+            console.warn('🔧 PROVIDER-NAV: Database migration needed for provider_navigation_configs');
+            return []; // Return empty array instead of throwing
+          }
+          
+          console.error('🔧 PROVIDER-NAV: Error fetching provider configs:', error);
+          throw error; // Other errors can still throw
+        }
+
+        console.log('🔧 PROVIDER-NAV: Retrieved provider configs:', data);
+        return data.map(mapDatabaseToProviderConfig);
+      } catch (error) {
+        // Additional safety net for any other errors
+        console.error('🔧 PROVIDER-NAV: Exception in provider config fetch (not blocking logout):', error);
+        return []; // Always return empty array to prevent blocking logout
       }
-
-      console.log('🔧 PROVIDER-NAV: Fetching provider navigation configs for provider:', providerData.id);
-      
-      const { data, error } = await supabase
-        .from('provider_navigation_configs')
-        .select('*')
-        .eq('provider_id', providerData.id)
-        .eq('is_active', true);
-
-      if (error) {
-        console.error('🔧 PROVIDER-NAV: Error fetching provider configs:', error);
-        throw error;
-      }
-
-      console.log('🔧 PROVIDER-NAV: Retrieved provider configs:', data);
-      return data.map(mapDatabaseToProviderConfig);
     },
     enabled: !!user?.id,
     staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: (failureCount, error) => {
+      // Don't retry UUID/bigint mismatch errors
+      const isTypeMismatchError = error?.message?.includes('invalid input syntax for type bigint');
+      return !isTypeMismatchError && failureCount < 2;
+    },
+    retryDelay: 1000,
   });
 
   // Mutation to update team navigation config
