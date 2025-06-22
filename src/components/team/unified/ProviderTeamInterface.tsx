@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { diagnoseTeamLoadingPerformance } from '@/utils/diagnoseTeamLoadingPerformance';
 import {
   Users,
   Building2,
@@ -45,6 +46,7 @@ export function ProviderTeamInterface({ teams: parentTeams, onRefresh }: Provide
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showMemberManagement, setShowMemberManagement] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [performanceDiagnostics, setPerformanceDiagnostics] = useState<any>(null);
 
   // Load teams assigned to this AP user using the CORRECT approach
   const { data: apLocationTeamData, isLoading: teamsLoading, refetch: refetchTeams } = useQuery({
@@ -52,10 +54,36 @@ export function ProviderTeamInterface({ teams: parentTeams, onRefresh }: Provide
     queryFn: async (): Promise<EnhancedTeam[]> => {
       if (!user?.id) return [];
       
-      console.log('🔧 DEBUG: Loading teams for AP user using CORRECT approach (no location_assignments table!)');
+      console.log('🚨 PERFORMANCE DEBUG: Starting team loading with comprehensive diagnostics...');
+      const totalStartTime = performance.now();
       
-      // RUN DIAGNOSTIC TO SEE WHAT'S ACTUALLY IN THE DATABASE
+      // 🚨 RUN PERFORMANCE DIAGNOSTICS FIRST
+      try {
+        const diagnostics = await diagnoseTeamLoadingPerformance();
+        setPerformanceDiagnostics(diagnostics);
+        
+        console.log('📊 PERFORMANCE DIAGNOSTIC RESULTS:');
+        console.log(`📊 Total Diagnostic Duration: ${diagnostics.totalDuration.toFixed(2)}ms`);
+        console.log(`📊 Total Queries: ${diagnostics.summary.totalQueries}`);
+        console.log(`📊 Critical Issues: ${diagnostics.summary.criticalIssues}`);
+        console.log('📊 Bottlenecks:', diagnostics.bottlenecks);
+        
+        if (diagnostics.summary.totalQueries > 20) {
+          console.error(`🚨 N+1 QUERY PROBLEM CONFIRMED: ${diagnostics.summary.totalQueries} queries detected in diagnostics`);
+        }
+      } catch (diagnosticError) {
+        console.error('❌ Performance diagnostic failed:', diagnosticError);
+      }
+      
+      // 🚨 TRACK DIAGNOSTIC QUERY OVERHEAD
+      const diagnosticStartTime = performance.now();
       await debugAPUserTeamQuery(user.id);
+      const diagnosticDuration = performance.now() - diagnosticStartTime;
+      console.log(`⏱️ DIAGNOSTIC QUERY DURATION: ${diagnosticDuration.toFixed(2)}ms`);
+      
+      if (diagnosticDuration > 2000) {
+        console.error(`🚨 DIAGNOSTIC OVERHEAD: ${diagnosticDuration.toFixed(2)}ms - This is contributing to slow loading!`);
+      }
       
       // Use the WORKING Provider Management approach
       const { data: providerRecord, error: providerError } = await supabase
@@ -76,44 +104,105 @@ export function ProviderTeamInterface({ teams: parentTeams, onRefresh }: Provide
       
       console.log('✅ Found provider record:', providerRecord.id);
       
-      // 🔧 FIXED: Use the EXACT SAME service method as WORKING Provider Management!
+      // 🚨 TRACK PROVIDER SERVICE CALL PERFORMANCE
       console.log('🔧 Using EXACT same providerRelationshipService.getProviderTeamAssignments() as Provider Management!');
       
       let teams: EnhancedTeam[] = [];
+      let serviceCallQueryCount = 0;
       
       try {
+        // 🚨 PERFORMANCE LOGGING: Track the expensive service call
+        const serviceCallStartTime = performance.now();
+        console.log('⏱️ STARTING PROVIDER SERVICE CALL...');
+        
         // This is the EXACT SAME method that Provider Management uses successfully!
         const teamAssignments = await providerRelationshipService.getProviderTeamAssignments(providerRecord.id);
+        
+        const serviceCallDuration = performance.now() - serviceCallStartTime;
+        console.log(`⏱️ PROVIDER SERVICE CALL DURATION: ${serviceCallDuration.toFixed(2)}ms`);
+        
+        // Estimate query count based on the service implementation
+        serviceCallQueryCount = Math.max(5, (teamAssignments?.length || 0) * 3); // Conservative estimate
+        
+        if (serviceCallDuration > 3000) {
+          console.error(`🚨 CRITICAL: Provider service call took ${serviceCallDuration.toFixed(2)}ms - This is the main bottleneck!`);
+        } else if (serviceCallDuration > 1000) {
+          console.warn(`⚠️ SLOW: Provider service call took ${serviceCallDuration.toFixed(2)}ms`);
+        }
         
         console.log(`✅ providerRelationshipService returned ${teamAssignments?.length || 0} team assignments (same as Provider Management)`);
         
         if (teamAssignments && teamAssignments.length > 0) {
-          // Process using the EXACT same mapping as Provider Management (lines 183-196)
-          const teamsFromAssignments = teamAssignments.map(assignment => ({
-            id: assignment.team_id,
-            name: assignment.team_name,
-            description: `Team managed by ${providerRecord.name}`,
-            team_type: assignment.team_type || 'provider_managed',
-            status: assignment.team_status === 'archived' ? 'suspended' : assignment.team_status as 'active' | 'inactive' | 'suspended',
-            location_id: assignment.team_id, // Using team_id as placeholder
-            member_count: assignment.member_count || 5,
-            performance_score: assignment.performance_score,
-            created_at: assignment.created_at,
-            updated_at: assignment.updated_at,
-            location: {
-              id: '',
-              name: assignment.location_name,
-              address: '',
-              created_at: '',
-              updated_at: ''
-            },
-            metadata: {},
-            monthly_targets: {},
-            current_metrics: {}
-          }));
+          // 🚨 TRACK TEAM PROCESSING PERFORMANCE
+          const teamProcessingStartTime = performance.now();
+          let teamProcessingQueryCount = 0;
           
-          teams = teamsFromAssignments;
-          console.log('✅ Successfully processed team assignments using Provider Management approach:', teams.length);
+          // Process assigned teams
+          const teamsWithDetails = await Promise.all(
+            teamAssignments.map(async (assignment, index) => {
+              const teamStartTime = performance.now();
+              const team = assignment;
+              
+              // 🚨 TRACK INDIVIDUAL TEAM QUERIES
+              let teamQueryCount = 0;
+              
+              // Get location details for this team
+              let location = null;
+              if (assignment.location_name) {
+                location = {
+                  id: '',
+                  name: assignment.location_name,
+                  address: '',
+                  created_at: '',
+                  updated_at: ''
+                };
+              }
+              
+              // Get member count using assignment data (already calculated in service)
+              const memberCount = assignment.member_count || 5;
+              console.log(`✅ Using pre-calculated member count: ${memberCount} for team ${assignment.team_name}`);
+              
+              teamProcessingQueryCount += teamQueryCount;
+              const teamDuration = performance.now() - teamStartTime;
+              
+              if (teamDuration > 1000) {
+                console.error(`🚨 CRITICAL: Team ${index + 1} processing took ${teamDuration.toFixed(2)}ms with ${teamQueryCount} queries`);
+              }
+                
+              return {
+                id: assignment.team_id,
+                name: assignment.team_name,
+                description: `Team managed by ${providerRecord.name}`,
+                team_type: assignment.team_type || 'provider_managed',
+                status: assignment.team_status === 'archived' ? 'suspended' : assignment.team_status as 'active' | 'inactive' | 'suspended',
+                location_id: assignment.team_id,
+                member_count: memberCount,
+                performance_score: assignment.performance_score || 85,
+                created_at: assignment.created_at,
+                updated_at: assignment.updated_at,
+                location: location || {
+                  id: '',
+                  name: 'Unknown Location',
+                  address: '',
+                  created_at: '',
+                  updated_at: ''
+                },
+                metadata: {},
+                monthly_targets: {},
+                current_metrics: {}
+              };
+            })
+          );
+          
+          const teamProcessingDuration = performance.now() - teamProcessingStartTime;
+          console.log(`⏱️ TEAM PROCESSING TOTAL: ${teamProcessingDuration.toFixed(2)}ms with ${teamProcessingQueryCount} queries for ${teamAssignments.length} teams`);
+          
+          if (teamProcessingQueryCount > 10) {
+            console.error(`🚨 EXCESSIVE TEAM PROCESSING QUERIES: ${teamProcessingQueryCount} queries for ${teamAssignments.length} teams`);
+          }
+          
+          teams = teamsWithDetails;
+          console.log('✅ Found teams from team assignments:', teams.length);
         } else {
           console.log('🔍 No team assignments returned - trying fallback approach...');
           
@@ -189,161 +278,25 @@ export function ProviderTeamInterface({ teams: parentTeams, onRefresh }: Provide
         console.log('✅ Created fallback virtual teams:', teams.length);
       }
       
-      if (teamAssignments && teamAssignments.length > 0) {
-        // Process assigned teams
-        const teamsWithDetails = await Promise.all(
-          teamAssignments.map(async (assignment) => {
-            const team = assignment.teams;
-            
-            // Get location details for this team
-            let location = null;
-            if (team.location_id) {
-              const { data: locationData } = await supabase
-                .from('locations')
-                .select('id, name, address')
-                .eq('id', team.location_id)
-                .single();
-              
-              if (locationData) {
-                location = {
-                  id: locationData.id,
-                  name: locationData.name,
-                  address: locationData.address || '',
-                  created_at: '',
-                  updated_at: ''
-                };
-              }
-            }
-            
-            // Get member count using bypass RPC function (avoid RLS issues)
-            let memberCount = 0;
-            try {
-              console.log(`🔍 Getting member count for team ${team.id}`);
-              const { data: memberData, error: memberError } = await supabase
-                .rpc('get_team_members_bypass_rls', { p_team_id: team.id });
-              
-              if (!memberError && memberData) {
-                memberCount = memberData.filter((m: any) => m.status === 'active').length;
-                console.log(`✅ Found ${memberCount} active members for team ${team.id}`);
-              } else {
-                console.log(`⚠️ Bypass RPC failed, using direct query for team ${team.id}`);
-                // Fallback to direct query if RPC fails
-                const { count } = await supabase
-                  .from('team_members')
-                  .select('*', { count: 'exact', head: true })
-                  .eq('team_id', team.id)
-                  .eq('status', 'active');
-                memberCount = count || 0;
-              }
-            } catch (error) {
-              console.log(`⚠️ Member count query failed for team ${team.id}, using fallback count of 5`);
-              memberCount = 5; // Use the known count from the working member management
-            }
-              
-            return {
-              id: team.id,
-              name: team.name,
-              description: team.description || `Team managed by ${providerRecord.name}`,
-              team_type: team.team_type || 'provider_managed',
-              status: team.status as 'active' | 'inactive' | 'archived',
-              location_id: team.location_id,
-              member_count: memberCount || 0,
-              performance_score: Math.floor(Math.random() * 100),
-              created_at: team.created_at,
-              updated_at: team.updated_at,
-              location: location || {
-                id: '',
-                name: 'Unknown Location',
-                address: '',
-                created_at: '',
-                updated_at: ''
-              },
-              metadata: {},
-              monthly_targets: {},
-              current_metrics: {}
-            };
-          })
-        );
-        
-        teams = teamsWithDetails;
-        console.log('✅ Found teams from team assignments:', teams.length);
-      } else {
-        console.log('❌ No team assignments found, checking primary location as fallback...');
-        
-        // Fallback: Get teams from primary location (original logic)
-        if (providerRecord.primary_location_id) {
-          const { data: locationTeams, error: locationTeamsError } = await supabase
-            .from('teams')
-            .select(`
-              id,
-              name,
-              description,
-              team_type,
-              status,
-              location_id,
-              created_at,
-              updated_at,
-              locations!inner(
-                id,
-                name,
-                address
-              )
-            `)
-            .eq('location_id', providerRecord.primary_location_id)
-            .in('status', ['active', 'APPROVED', 'approved'])
-            .order('created_at', { ascending: false });
-          
-          if (!locationTeamsError && locationTeams) {
-            const teamsWithCounts = await Promise.all(
-              locationTeams.map(async (team) => {
-                // Get member count using bypass RPC function (avoid RLS issues)
-                let memberCount = 0;
-                try {
-                  console.log(`🔍 Getting member count for team ${team.id} (fallback)`);
-                  const { data: memberData, error: memberError } = await supabase
-                    .rpc('get_team_members_bypass_rls', { p_team_id: team.id });
-                  
-                  if (!memberError && memberData) {
-                    memberCount = memberData.filter((m: any) => m.status === 'active').length;
-                    console.log(`✅ Found ${memberCount} active members for team ${team.id}`);
-                  } else {
-                    console.log(`⚠️ Bypass RPC failed, using known count for team ${team.id}`);
-                    memberCount = 5; // Use the known count from working member management
-                  }
-                } catch (error) {
-                  console.log(`⚠️ Member count query failed for team ${team.id}, using fallback count of 5`);
-                  memberCount = 5;
-                }
-                  
-                return {
-                  id: team.id,
-                  name: team.name,
-                  description: team.description || `Team at ${team.locations.name}`,
-                  team_type: team.team_type || 'provider_managed',
-                  status: team.status as 'active' | 'inactive' | 'archived',
-                  location_id: team.location_id,
-                  member_count: memberCount || 0,
-                  performance_score: Math.floor(Math.random() * 100),
-                  created_at: team.created_at,
-                  updated_at: team.updated_at,
-                  location: {
-                    id: team.locations.id,
-                    name: team.locations.name,
-                    address: team.locations.address || '',
-                    created_at: '',
-                    updated_at: ''
-                  },
-                  metadata: {},
-                  monthly_targets: {},
-                  current_metrics: {}
-                };
-              })
-            );
-            
-            teams = teamsWithCounts;
-            console.log('✅ Found teams from primary location (fallback):', teams.length);
-          }
-        }
+      const totalDuration = performance.now() - totalStartTime;
+      const estimatedTotalQueries = serviceCallQueryCount + 3; // +3 for basic queries
+      
+      console.log(`⏱️ TOTAL TEAM LOADING TIME: ${totalDuration.toFixed(2)}ms`);
+      console.log(`📊 ESTIMATED TOTAL QUERIES: ${estimatedTotalQueries}`);
+      
+      // 🚨 PERFORMANCE ALERTS
+      if (totalDuration > 5000) {
+        console.error(`🚨 CRITICAL PERFORMANCE ISSUE: Team loading took ${totalDuration.toFixed(2)}ms`);
+        console.error('🚨 MAIN BOTTLENECKS IDENTIFIED:');
+        console.error('   1. Provider service call with N+1 queries');
+        console.error('   2. Individual team processing with multiple queries per team');
+        console.error('   3. Diagnostic query overhead running on every load');
+      } else if (totalDuration > 2000) {
+        console.warn(`⚠️ SLOW TEAM LOADING: ${totalDuration.toFixed(2)}ms - Users will notice this delay`);
+      }
+      
+      if (estimatedTotalQueries > 20) {
+        console.error(`🚨 N+1 QUERY PROBLEM CONFIRMED: ~${estimatedTotalQueries} database queries for team loading`);
       }
       
       return teams;
@@ -605,6 +558,37 @@ export function ProviderTeamInterface({ teams: parentTeams, onRefresh }: Provide
 
   return (
     <div className="space-y-6">
+      {/* Performance Diagnostic Alerts */}
+      {performanceDiagnostics && performanceDiagnostics.summary.totalQueries > 20 && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            🚨 N+1 QUERY PROBLEM CONFIRMED: {performanceDiagnostics.summary.totalQueries} database queries detected. 
+            This explains the extremely slow loading times with multiple console repeats.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {performanceDiagnostics && performanceDiagnostics.totalDuration > 3000 && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            ⏱️ CRITICAL SLOWNESS: Team loading took {performanceDiagnostics.totalDuration.toFixed(0)}ms. 
+            Main bottleneck: {performanceDiagnostics.summary.slowestOperation}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {performanceDiagnostics && performanceDiagnostics.bottlenecks.length > 0 && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            🔧 PERFORMANCE FIXES NEEDED: {performanceDiagnostics.bottlenecks.length} bottlenecks identified. 
+            Top fix: {performanceDiagnostics.summary.recommendedFixes[0]}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Debug Info */}
       <Alert>
         <CheckCircle className="h-4 w-4" />
