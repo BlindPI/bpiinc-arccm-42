@@ -59,7 +59,7 @@ FOR SELECT USING (
     SELECT 1 FROM teams t
     JOIN authorized_providers ap ON t.provider_id = ap.id
     WHERE t.id = team_members.team_id
-    AND ap.ap_user_id = auth.uid()
+    AND ap.user_id = auth.uid()
   )
   OR
   -- Users can see their own memberships
@@ -80,7 +80,7 @@ FOR INSERT WITH CHECK (
     SELECT 1 FROM teams t
     JOIN authorized_providers ap ON t.provider_id = ap.id
     WHERE t.id = team_members.team_id
-    AND ap.ap_user_id = auth.uid()
+    AND ap.user_id = auth.uid()
   )
   OR
   -- System admins can add members to any team
@@ -98,7 +98,7 @@ FOR UPDATE USING (
     SELECT 1 FROM teams t
     JOIN authorized_providers ap ON t.provider_id = ap.id
     WHERE t.id = team_members.team_id
-    AND ap.ap_user_id = auth.uid()
+    AND ap.user_id = auth.uid()
   )
   OR
   -- System admins can update any team member
@@ -116,7 +116,7 @@ FOR DELETE USING (
     SELECT 1 FROM teams t
     JOIN authorized_providers ap ON t.provider_id = ap.id
     WHERE t.id = team_members.team_id
-    AND ap.ap_user_id = auth.uid()
+    AND ap.user_id = auth.uid()
   )
   OR
   -- System admins can remove any team member
@@ -143,7 +143,7 @@ FOR SELECT USING (
   EXISTS (
     SELECT 1 FROM authorized_providers ap
     WHERE ap.id = teams.provider_id
-    AND ap.ap_user_id = auth.uid()
+    AND ap.user_id = auth.uid()
   )
   OR
   -- Team members can see teams they belong to
@@ -168,7 +168,7 @@ FOR INSERT WITH CHECK (
   EXISTS (
     SELECT 1 FROM authorized_providers ap
     WHERE ap.id = teams.provider_id
-    AND ap.ap_user_id = auth.uid()
+    AND ap.user_id = auth.uid()
   )
   OR
   -- System admins can create any team
@@ -185,7 +185,7 @@ FOR UPDATE USING (
   EXISTS (
     SELECT 1 FROM authorized_providers ap
     WHERE ap.id = teams.provider_id
-    AND ap.ap_user_id = auth.uid()
+    AND ap.user_id = auth.uid()
   )
   OR
   -- System admins can update any team
@@ -202,7 +202,7 @@ FOR DELETE USING (
   EXISTS (
     SELECT 1 FROM authorized_providers ap
     WHERE ap.id = teams.provider_id
-    AND ap.ap_user_id = auth.uid()
+    AND ap.user_id = auth.uid()
   )
   OR
   -- System admins can delete any team

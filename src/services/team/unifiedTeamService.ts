@@ -68,7 +68,52 @@ export class UnifiedTeamService {
    */
   static async getTeams(userRole: DatabaseUserRole, userId: string): Promise<EnhancedTeam[]> {
     try {
-      // Use the new bypass RPC function that avoids RLS recursion
+      // For AP users, filter teams based on provider assignments
+      if (userRole === 'AP') {
+        console.log('🔍 UNIFIEDTEAMSERVICE: Loading teams for AP user with provider filtering...');
+        
+        // Get the provider record for this user
+        const { data: providerData, error: providerError } = await supabase
+          .from('authorized_providers')
+          .select('id')
+          .eq('user_id', userId)
+          .single();
+
+        if (providerError || !providerData) {
+          console.error('Error fetching provider record:', providerError);
+          return [];
+        }
+
+        // Get teams assigned to this provider via provider_team_assignments
+        const { data: assignmentData, error: assignmentError } = await supabase
+          .from('provider_team_assignments')
+          .select(`
+            team_id,
+            status,
+            teams!inner (
+              *,
+              locations (name, address)
+            )
+          `)
+          .eq('provider_id', providerData.id)
+          .eq('status', 'active');
+
+        if (assignmentError) {
+          console.error('Error fetching provider team assignments:', assignmentError);
+          return [];
+        }
+
+        const teams = (assignmentData || [])
+          .map((assignment: any) => ({
+            ...assignment.teams,
+            location: assignment.teams.locations ? { name: assignment.teams.locations.name } : null
+          }));
+
+        console.log(`🔍 UNIFIEDTEAMSERVICE: Found ${teams.length} teams for AP user (provider-filtered)`);
+        return teams as unknown as EnhancedTeam[];
+      }
+
+      // For other users, use the bypass RPC function
       const { data, error } = await supabase
         .rpc('get_teams_bypass_rls', { p_user_id: userId });
 
