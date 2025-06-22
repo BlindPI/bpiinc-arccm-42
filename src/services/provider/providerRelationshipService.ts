@@ -1233,7 +1233,7 @@ export class ProviderRelationshipService {
             .from('teams')
             .select('location_id')
             .in('id', teamIds)
-            .not('location_id', 'is', null');
+            .not('location_id', 'is', 'null');
 
           if (!teamResult.error && teamResult.data) {
             const uniqueLocations = new Set(teamResult.data.map(t => t.location_id));
