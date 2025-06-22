@@ -112,59 +112,109 @@ export function TeamCreationWizard({ onComplete, onCancel }: TeamCreationWizardP
     enabled: !!user?.id
   });
 
-  // Load available locations
+  // Load AP user's assigned locations
   const { data: locations = [] } = useQuery({
-    queryKey: ['provider-locations', providerData?.id],
+    queryKey: ['ap-assigned-locations', user?.id],
     queryFn: async (): Promise<Location[]> => {
-      if (!providerData?.id) return [];
+      if (!user?.id) return [];
       
-      const { data, error } = await supabase
-        .from('locations')
-        .select('*')
-        .eq('provider_id', providerData.id)
-        .eq('status', 'active')
-        .order('name');
+      console.log('🔍 DEBUG: Loading AP assigned locations for user:', user.id);
       
-      if (error) throw error;
-      return data || [];
+      // Get locations that this AP user is assigned to
+      const { data: locationAssignments, error: assignmentError } = await supabase
+        .from('location_assignments')
+        .select(`
+          location_id,
+          locations!inner(
+            id,
+            name,
+            address,
+            status
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'active');
+      
+      if (assignmentError) {
+        console.error('🚨 Error loading location assignments:', assignmentError);
+        throw assignmentError;
+      }
+      
+      console.log('✅ Found location assignments:', locationAssignments);
+      
+      // Extract the locations from the assignments
+      const assignedLocations = (locationAssignments || [])
+        .map(assignment => assignment.locations)
+        .filter(location => location && location.status === 'active');
+      
+      return assignedLocations;
     },
-    enabled: !!providerData?.id
+    enabled: !!user?.id
   });
 
-  // Load available team members
+  // Load available team members from AP user's assigned locations
   const { data: availableMembers = [] } = useQuery({
-    queryKey: ['available-members', providerData?.id],
+    queryKey: ['available-members', user?.id, locations],
     queryFn: async (): Promise<AvailableMember[]> => {
-      if (!providerData?.id) return [];
+      if (!user?.id || locations.length === 0) return [];
       
-      // Get users with instructor roles who could be team members
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, email, role, status')
-        .in('role', ['IC', 'IP', 'IT', 'IN']) // Instructor roles
+      console.log('🔍 DEBUG: Loading available members for locations:', locations.map(l => l.id));
+      
+      // Get users who are already team members in the AP user's assigned locations
+      const locationIds = locations.map(l => l.id);
+      
+      const { data: existingMembers, error } = await supabase
+        .from('team_members')
+        .select(`
+          user_id,
+          teams!inner(
+            location_id
+          ),
+          profiles!inner(
+            id,
+            email,
+            role,
+            status
+          )
+        `)
+        .in('teams.location_id', locationIds)
         .eq('status', 'active')
-        .order('first_name');
+        .eq('profiles.status', 'active');
       
-      if (error) throw error;
+      if (error) {
+        console.error('🚨 Error loading team members:', error);
+        throw error;
+      }
       
-      // Transform data to match AvailableMember interface
-      return (data || []).map(profile => ({
-        id: profile.id,
-        full_name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
-        email: profile.email || '',
-        role: profile.role || '',
-        status: profile.status || 'active'
-      }));
+      console.log('✅ Found existing team members:', existingMembers);
+      
+      // Get unique members and transform data
+      const uniqueMembers = new Map();
+      (existingMembers || []).forEach(member => {
+        if (member.profiles && !uniqueMembers.has(member.profiles.id)) {
+          uniqueMembers.set(member.profiles.id, {
+            id: member.profiles.id,
+            full_name: member.profiles.email, // Use email as display name
+            email: member.profiles.email,
+            role: member.profiles.role,
+            status: member.profiles.status
+          });
+        }
+      });
+      
+      return Array.from(uniqueMembers.values());
     },
-    enabled: !!providerData?.id
+    enabled: !!user?.id && locations.length > 0
   });
 
   // Create team mutation
   const createTeamMutation = useMutation({
     mutationFn: async (teamData: TeamFormData) => {
-      if (!providerData?.id) throw new Error('Provider context required');
+      if (!teamData.location_id) throw new Error('Location is required');
       
-      // Create the team
+      console.log('🔍 DEBUG: Creating team with data:', teamData);
+      
+      // Create the team (teams belong to locations, not providers)
       const { data: team, error: teamError } = await supabase
         .from('teams')
         .insert({
@@ -172,7 +222,6 @@ export function TeamCreationWizard({ onComplete, onCancel }: TeamCreationWizardP
           description: teamData.description,
           team_type: teamData.team_type,
           location_id: teamData.location_id,
-          provider_id: providerData.id,
           max_members: teamData.max_members,
           status: 'active',
           goals: teamData.goals,
@@ -181,7 +230,12 @@ export function TeamCreationWizard({ onComplete, onCancel }: TeamCreationWizardP
         .select()
         .single();
       
-      if (teamError) throw teamError;
+      if (teamError) {
+        console.error('🚨 Error creating team:', teamError);
+        throw teamError;
+      }
+
+      console.log('✅ Team created:', team);
 
       // Add selected members to the team
       if (teamData.selectedMembers.length > 0) {
@@ -190,14 +244,37 @@ export function TeamCreationWizard({ onComplete, onCancel }: TeamCreationWizardP
           user_id: memberId,
           role: 'member',
           status: 'active',
-          joined_at: new Date().toISOString()
+          created_at: new Date().toISOString()
         }));
 
         const { error: membersError } = await supabase
           .from('team_members')
           .insert(memberInserts);
         
-        if (membersError) throw membersError;
+        if (membersError) {
+          console.error('🚨 Error adding team members:', membersError);
+          throw membersError;
+        }
+        
+        console.log('✅ Team members added');
+      }
+
+      // Assign the AP user to this team as a coordinator/manager
+      const { error: apAssignmentError } = await supabase
+        .from('team_members')
+        .insert({
+          team_id: team.id,
+          user_id: user?.id,
+          role: 'coordinator',
+          status: 'active',
+          created_at: new Date().toISOString()
+        });
+      
+      if (apAssignmentError) {
+        console.error('🚨 Error assigning AP user to team:', apAssignmentError);
+        // Don't throw - team is created, just log the error
+      } else {
+        console.log('✅ AP user assigned to team as coordinator');
       }
 
       return team;

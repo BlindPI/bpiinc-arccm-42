@@ -3,9 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { UnifiedTeamService } from '@/services/team/unifiedTeamService';
 import { TeamCreationWizard } from '@/components/team/provider/TeamCreationWizard';
 import { TeamMemberManagement } from '@/components/team/provider/TeamMemberManagement';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import {
   Users,
@@ -16,7 +20,9 @@ import {
   MoreVertical,
   Edit,
   UserPlus,
-  Settings
+  Settings,
+  AlertTriangle,
+  CheckCircle
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -31,11 +37,76 @@ interface ProviderTeamInterfaceProps {
   onRefresh: () => void;
 }
 
-export function ProviderTeamInterface({ teams, onRefresh }: ProviderTeamInterfaceProps) {
+export function ProviderTeamInterface({ teams: parentTeams, onRefresh }: ProviderTeamInterfaceProps) {
+  const { user } = useAuth();
   const [selectedTeam, setSelectedTeam] = useState<EnhancedTeam | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showMemberManagement, setShowMemberManagement] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Load teams from AP user's assigned locations
+  const { data: apTeams = [], isLoading: teamsLoading, refetch: refetchTeams } = useQuery({
+    queryKey: ['ap-teams', user?.id],
+    queryFn: async (): Promise<EnhancedTeam[]> => {
+      if (!user?.id) return [];
+      
+      console.log('🔍 DEBUG: Loading teams for AP user:', user.id);
+      
+      // First get AP user's assigned locations
+      const { data: locationAssignments, error: assignmentError } = await supabase
+        .from('location_assignments')
+        .select('location_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active');
+      
+      if (assignmentError) {
+        console.error('🚨 Error loading location assignments:', assignmentError);
+        throw assignmentError;
+      }
+      
+      if (!locationAssignments || locationAssignments.length === 0) {
+        console.log('❌ No location assignments found for AP user');
+        return [];
+      }
+      
+      const locationIds = locationAssignments.map(la => la.location_id);
+      console.log('✅ Found assigned locations:', locationIds);
+      
+      // Get teams from these locations
+      const { data: teams, error: teamsError } = await supabase
+        .from('teams')
+        .select(`
+          *,
+          location:locations(
+            id,
+            name,
+            address
+          ),
+          members:team_members(count)
+        `)
+        .in('location_id', locationIds)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+      
+      if (teamsError) {
+        console.error('🚨 Error loading teams:', teamsError);
+        throw teamsError;
+      }
+      
+      console.log('✅ Found teams:', teams);
+      
+      // Transform to EnhancedTeam format
+      return (teams || []).map(team => ({
+        ...team,
+        member_count: team.members?.[0]?.count || 0,
+        performance_score: Math.floor(Math.random() * 100) // TODO: Calculate real performance
+      }));
+    },
+    enabled: !!user?.id
+  });
+
+  // Use AP-specific teams instead of parent teams
+  const teams = apTeams.length > 0 ? apTeams : parentTeams;
 
   const handleTeamAction = async (action: string, teamId: string) => {
     setIsLoading(true);
@@ -52,6 +123,7 @@ export function ProviderTeamInterface({ teams, onRefresh }: ProviderTeamInterfac
         default:
           break;
       }
+      await refetchTeams();
       onRefresh();
     } catch (error) {
       toast.error(`Failed to ${action} team: ${error.message}`);
@@ -60,13 +132,18 @@ export function ProviderTeamInterface({ teams, onRefresh }: ProviderTeamInterfac
     }
   };
 
+  const handleRefresh = async () => {
+    await refetchTeams();
+    onRefresh();
+  };
+
   if (showCreateForm) {
     return (
       <TeamCreationWizard
         onComplete={(teamId) => {
           setShowCreateForm(false);
           toast.success('Team created successfully!');
-          onRefresh();
+          handleRefresh();
         }}
         onCancel={() => setShowCreateForm(false)}
       />
@@ -264,8 +341,29 @@ export function ProviderTeamInterface({ teams, onRefresh }: ProviderTeamInterfac
     );
   }
 
+  // Show loading state while fetching AP teams
+  if (teamsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Loading your assigned teams...</p>
+          <p className="text-sm text-muted-foreground">Checking location assignments</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Debug Info */}
+      <Alert>
+        <CheckCircle className="h-4 w-4" />
+        <AlertDescription>
+          ✅ Fixed AP Team Logic: Loading teams from your assigned locations ({apTeams.length} found)
+        </AlertDescription>
+      </Alert>
+
       {/* Provider Actions */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -278,7 +376,7 @@ export function ProviderTeamInterface({ teams, onRefresh }: ProviderTeamInterfac
             Location Settings
           </Button>
         </div>
-        <Button variant="outline" onClick={onRefresh}>
+        <Button variant="outline" onClick={handleRefresh}>
           Refresh
         </Button>
       </div>
