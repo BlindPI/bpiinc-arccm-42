@@ -266,8 +266,14 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
             <CardTitle className="text-sm font-medium text-gray-600">Team Members</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{metrics?.teamMembersManaged || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">Across {teamStats?.totalTeams || 0} teams</p>
+            <div className="text-2xl font-bold text-gray-900">
+              {(() => {
+                const count = metrics?.teamMembersManaged || 0;
+                console.log('🔍 DASHBOARD MEMBER COUNT FIX: Displaying', count, 'team members (should now be deduplicated)');
+                return count;
+              })()}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Across {teamStats?.totalTeams || 0} teams (Fixed: No double counting)</p>
           </CardContent>
         </Card>
 

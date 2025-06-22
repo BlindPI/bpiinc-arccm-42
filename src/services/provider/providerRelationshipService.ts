@@ -1179,7 +1179,7 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
         courseCount = courseResult.count || 0;
       }
 
-      // Get team members managed - FIXED: Count from all teams at provider's locations
+      // FIXED: Get team members managed - DEDUPLICATED to avoid double counting
       let memberCount = 0;
       let locationCount = 0;
       
@@ -1189,6 +1189,9 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
         .select('primary_location_id')
         .eq('id', providerId)
         .single();
+      
+      // FIXED: Collect ALL unique team IDs to avoid double counting
+      let allUniqueTeamIds: string[] = [];
       
       if (!providerLocationResult.error && providerLocationResult.data?.primary_location_id) {
         const primaryLocationId = providerLocationResult.data.primary_location_id;
@@ -1207,33 +1210,14 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
         if (!teamsAtLocationResult.error && teamsAtLocationResult.data) {
           const locationTeamIds = teamsAtLocationResult.data.map(t => t.id);
           console.log(`DEBUG: Found ${locationTeamIds.length} teams at primary location`);
-          
-          // Count members from teams at this location
-          if (locationTeamIds.length > 0) {
-            const memberResult = await supabase
-              .from('team_members')
-              .select('id', { count: 'exact' })
-              .in('team_id', locationTeamIds)
-              .eq('status', 'active');
-            
-            memberCount = memberResult.count || 0;
-            console.log(`DEBUG: Found ${memberCount} team members at primary location`);
-          }
+          allUniqueTeamIds.push(...locationTeamIds);
         }
         
-        // Also add members from explicitly assigned teams (if any)
+        // Add explicitly assigned teams (avoiding duplicates)
         if (teamIds.length > 0) {
-          const assignedMemberResult = await supabase
-            .from('team_members')
-            .select('id', { count: 'exact' })
-            .in('team_id', teamIds)
-            .eq('status', 'active');
+          allUniqueTeamIds.push(...teamIds);
           
-          const assignedMembers = assignedMemberResult.count || 0;
-          memberCount += assignedMembers;
-          console.log(`DEBUG: Added ${assignedMembers} members from assigned teams, total: ${memberCount}`);
-          
-          // Count unique locations from assigned teams
+          // Count unique locations from all teams
           const teamResult = await supabase
             .from('teams')
             .select('location_id')
@@ -1252,15 +1236,9 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
       } else {
         console.log(`DEBUG: No primary location found for provider ${providerId}`);
         
-        // Fallback: count from assigned teams only
+        // Fallback: use assigned teams only
         if (teamIds.length > 0) {
-          const memberResult = await supabase
-            .from('team_members')
-            .select('id', { count: 'exact' })
-            .in('team_id', teamIds)
-            .eq('status', 'active');
-            
-          memberCount = memberResult.count || 0;
+          allUniqueTeamIds.push(...teamIds);
           
           const teamResult = await supabase
             .from('teams')
@@ -1273,6 +1251,24 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
             locationCount = uniqueLocations.size;
           }
         }
+      }
+      
+      // FIXED: Deduplicate team IDs to prevent double counting
+      const uniqueTeamIds = Array.from(new Set(allUniqueTeamIds));
+      console.log(`DEBUG: Before deduplication: ${allUniqueTeamIds.length} teams, After: ${uniqueTeamIds.length} unique teams`);
+      
+      // FIXED: Count members from unique teams only (NO DOUBLE COUNTING)
+      if (uniqueTeamIds.length > 0) {
+        const memberResult = await supabase
+          .from('team_members')
+          .select('id', { count: 'exact' })
+          .in('team_id', uniqueTeamIds)
+          .eq('status', 'active');
+        
+        memberCount = memberResult.count || 0;
+        console.log(`DEBUG: Found ${memberCount} team members from ${uniqueTeamIds.length} unique teams (FIXED: no double counting)`);
+      } else {
+        console.log(`DEBUG: No teams found for provider ${providerId}`);
       }
 
       return {
@@ -1502,7 +1498,12 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
           role: 'member',
           status: 'active',
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          display_name: `Mock Member ${index + 1}`,
+          email: null,
+          first_name: null,
+          last_name: null,
+          user_role: 'member'
         }));
 
         return {
