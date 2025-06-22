@@ -626,7 +626,34 @@ export class ProviderRelationshipService {
         throw new Error(`Location ${locationId} not found`);
       }
 
-      return `${providerId}-${locationId}-${Date.now()}`;
+      console.log(`DEBUG: Assigning provider ${providerId} to location ${locationId} with role ${role}`);
+
+      // For now, update the provider's primary_location_id if role is 'primary'
+      if (role === 'primary') {
+        const { data: provider, error: providerError } = await supabase
+          .from('authorized_providers')
+          .select('name, provider_type, description, website, contact_email, contact_phone, address, status, performance_rating, compliance_score')
+          .eq('id', providerId)
+          .single();
+
+        if (providerError) throw providerError;
+
+        await supabase
+          .from('authorized_providers')
+          .update({
+            primary_location_id: locationId,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', providerId);
+
+        console.log(`✅ DEBUG: Updated provider ${providerId} primary location to ${locationId}`);
+      }
+
+      // In the future, this would create a record in provider_location_assignments table
+      const assignmentId = `${providerId}-${locationId}-${Date.now()}`;
+      
+      console.log(`✅ DEBUG: Location assignment created with ID: ${assignmentId}`);
+      return assignmentId;
     } catch (error) {
       console.error('Error assigning provider to location:', error);
       throw await this.standardizeErrorMessage(error);
