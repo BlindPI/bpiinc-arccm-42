@@ -76,17 +76,19 @@ export function ProviderTeamInterface({ teams: parentTeams, onRefresh }: Provide
       
       console.log('✅ Found provider record:', providerRecord.id);
       
-      // FIXED: Use team assignments FIRST (this is what Provider Management does!)
-      console.log('🔧 FIXED: Getting teams from provider team assignments (not location!)');
+      // 🔧 FIXED: Use the EXACT SAME logic as Provider Management KPI calculation!
+      console.log('🔧 Using Provider Management location-based approach (same as calculateRealProviderKPIs)');
       
       let teams: EnhancedTeam[] = [];
       
-      // Step 1: Get teams from provider_team_assignments table
-      const { data: teamAssignments, error: assignmentsError } = await supabase
-        .from('provider_team_assignments')
-        .select(`
-          *,
-          teams!inner(
+      // Use the EXACT SAME logic as providerRelationshipService.calculateRealProviderKPIs() lines 1167-1188
+      if (providerRecord.primary_location_id) {
+        console.log(`🔍 Getting teams at primary location: ${providerRecord.primary_location_id}`);
+        
+        // This is the EXACT query from Provider Management that works!
+        const teamsAtLocationResult = await supabase
+          .from('teams')
+          .select(`
             id,
             name,
             description,
@@ -94,18 +96,75 @@ export function ProviderTeamInterface({ teams: parentTeams, onRefresh }: Provide
             status,
             location_id,
             created_at,
-            updated_at
-          )
-        `)
-        .eq('provider_id', providerRecord.id)
-        .in('status', ['active', 'APPROVED', 'approved']);
-
-      if (assignmentsError) {
-        console.error('🚨 Error loading team assignments:', assignmentsError);
-        return [];
+            updated_at,
+            performance_score
+          `)
+          .eq('location_id', providerRecord.primary_location_id)
+          .in('status', ['active', 'APPROVED', 'approved']);
+        
+        if (teamsAtLocationResult.error) {
+          console.error('🚨 Error loading teams at location:', teamsAtLocationResult.error);
+          return [];
+        }
+        
+        console.log(`✅ Found ${teamsAtLocationResult.data?.length || 0} teams at provider's primary location`);
+        
+        if (teamsAtLocationResult.data && teamsAtLocationResult.data.length > 0) {
+          // Get location details
+          const { data: locationData } = await supabase
+            .from('locations')
+            .select('id, name, address')
+            .eq('id', providerRecord.primary_location_id)
+            .single();
+          
+          // Process teams using Provider Management approach
+          const teamsWithDetails = await Promise.all(
+            teamsAtLocationResult.data.map(async (team) => {
+              // Get member count using the EXACT same approach as Provider Management
+              const memberResult = await supabase
+                .from('team_members')
+                .select('id', { count: 'exact' })
+                .eq('team_id', team.id)
+                .eq('status', 'active');
+              
+              const memberCount = memberResult.count || 0;
+              console.log(`DEBUG: Team "${team.name}" has ${memberCount} active members (Provider Management approach)`);
+              
+              return {
+                id: team.id,
+                name: team.name,
+                description: team.description || `Team at ${locationData?.name || 'Unknown Location'}`,
+                team_type: team.team_type || 'provider_managed',
+                status: team.status as 'active' | 'inactive' | 'archived',
+                location_id: team.location_id,
+                member_count: memberCount,
+                performance_score: team.performance_score || 0,
+                created_at: team.created_at,
+                updated_at: team.updated_at,
+                location: locationData ? {
+                  id: locationData.id,
+                  name: locationData.name,
+                  address: locationData.address || '',
+                  created_at: '',
+                  updated_at: ''
+                } : {
+                  id: '',
+                  name: 'Unknown Location',
+                  address: '',
+                  created_at: '',
+                  updated_at: ''
+                },
+                metadata: {},
+                monthly_targets: {},
+                current_metrics: {}
+              };
+            })
+          );
+          
+          teams = teamsWithDetails;
+          console.log('✅ Successfully loaded teams using Provider Management approach:', teams.length);
+        }
       }
-
-      console.log(`✅ Found ${teamAssignments?.length || 0} team assignments for provider`);
       
       if (teamAssignments && teamAssignments.length > 0) {
         // Process assigned teams
