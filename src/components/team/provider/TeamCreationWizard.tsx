@@ -112,44 +112,42 @@ export function TeamCreationWizard({ onComplete, onCancel }: TeamCreationWizardP
     enabled: !!user?.id
   });
 
-  // Load AP user's assigned locations
+  // Load AP user's assigned location (from provider record)
   const { data: locations = [] } = useQuery({
-    queryKey: ['ap-assigned-locations', user?.id],
+    queryKey: ['ap-assigned-locations', providerData?.id],
     queryFn: async (): Promise<Location[]> => {
-      if (!user?.id) return [];
+      if (!providerData?.primary_location_id) return [];
       
-      console.log('🔍 DEBUG: Loading AP assigned locations for user:', user.id);
+      console.log('🔍 DEBUG: Loading AP assigned location for provider:', providerData.id, 'location:', providerData.primary_location_id);
       
-      // Get locations that this AP user is assigned to
-      const { data: locationAssignments, error: assignmentError } = await supabase
-        .from('location_assignments')
-        .select(`
-          location_id,
-          locations!inner(
-            id,
-            name,
-            address,
-            status
-          )
-        `)
-        .eq('user_id', user.id)
-        .eq('status', 'active');
+      // Get the primary location that this AP user is assigned to
+      const { data: location, error } = await supabase
+        .from('locations')
+        .select('id, name, address, status')
+        .eq('id', providerData.primary_location_id)
+        .eq('status', 'active')
+        .single();
       
-      if (assignmentError) {
-        console.error('🚨 Error loading location assignments:', assignmentError);
-        throw assignmentError;
+      if (error) {
+        console.error('🚨 Error loading primary location:', error);
+        throw error;
       }
       
-      console.log('✅ Found location assignments:', locationAssignments);
+      if (!location) {
+        console.log('❌ No active location found');
+        return [];
+      }
       
-      // Extract the locations from the assignments
-      const assignedLocations = (locationAssignments || [])
-        .map(assignment => assignment.locations)
-        .filter(location => location && location.status === 'active');
+      console.log('✅ Found assigned location:', location);
       
-      return assignedLocations;
+      return [{
+        id: location.id,
+        name: location.name,
+        address: location.address || '',
+        status: location.status
+      }];
     },
-    enabled: !!user?.id
+    enabled: !!providerData?.primary_location_id
   });
 
   // Load available team members from AP user's assigned locations

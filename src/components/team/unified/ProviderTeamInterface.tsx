@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { UnifiedTeamService } from '@/services/team/unifiedTeamService';
 import { TeamCreationWizard } from '@/components/team/provider/TeamCreationWizard';
 import { TeamMemberManagement } from '@/components/team/provider/TeamMemberManagement';
+import { providerRelationshipService } from '@/services/provider/providerRelationshipService';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,66 +45,107 @@ export function ProviderTeamInterface({ teams: parentTeams, onRefresh }: Provide
   const [showMemberManagement, setShowMemberManagement] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load teams from AP user's assigned locations
-  const { data: apTeams = [], isLoading: teamsLoading, refetch: refetchTeams } = useQuery({
-    queryKey: ['ap-teams', user?.id],
+  // Load teams assigned to this AP user using the CORRECT approach
+  const { data: apLocationTeamData, isLoading: teamsLoading, refetch: refetchTeams } = useQuery({
+    queryKey: ['ap-teams-fixed', user?.id],
     queryFn: async (): Promise<EnhancedTeam[]> => {
       if (!user?.id) return [];
       
-      console.log('🔍 DEBUG: Loading teams for AP user:', user.id);
+      console.log('🔧 DEBUG: Loading teams for AP user using CORRECT approach (no location_assignments table!)');
       
-      // First get AP user's assigned locations
-      const { data: locationAssignments, error: assignmentError } = await supabase
-        .from('location_assignments')
-        .select('location_id')
+      // Use the WORKING Provider Management approach
+      const { data: providerRecord, error: providerError } = await supabase
+        .from('authorized_providers')
+        .select('*')
         .eq('user_id', user.id)
-        .eq('status', 'active');
+        .maybeSingle();
       
-      if (assignmentError) {
-        console.error('🚨 Error loading location assignments:', assignmentError);
-        throw assignmentError;
+      if (providerError) {
+        console.error('🚨 Error loading provider record:', providerError);
+        throw providerError;
       }
       
-      if (!locationAssignments || locationAssignments.length === 0) {
-        console.log('❌ No location assignments found for AP user');
+      if (!providerRecord) {
+        console.log('❌ No provider record found for user');
         return [];
       }
       
-      const locationIds = locationAssignments.map(la => la.location_id);
-      console.log('✅ Found assigned locations:', locationIds);
+      console.log('✅ Found provider record:', providerRecord.id);
       
-      // Get teams from these locations
-      const { data: teams, error: teamsError } = await supabase
-        .from('teams')
-        .select(`
-          *,
-          location:locations(
+      // Get teams from assigned location (WORKING approach)
+      let teams: EnhancedTeam[] = [];
+      if (providerRecord.primary_location_id) {
+        const { data: locationTeams, error: locationTeamsError } = await supabase
+          .from('teams')
+          .select(`
             id,
             name,
-            address
-          ),
-          members:team_members(count)
-        `)
-        .in('location_id', locationIds)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false });
-      
-      if (teamsError) {
-        console.error('🚨 Error loading teams:', teamsError);
-        throw teamsError;
+            description,
+            team_type,
+            status,
+            location_id,
+            created_at,
+            updated_at,
+            locations!inner(
+              id,
+              name,
+              address
+            )
+          `)
+          .eq('location_id', providerRecord.primary_location_id)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false });
+        
+        if (locationTeamsError) {
+          console.error('🚨 Error loading location teams:', locationTeamsError);
+          return [];
+        }
+        
+        // Get member counts for each team
+        const teamsWithCounts = await Promise.all(
+          (locationTeams || []).map(async (team) => {
+            const { count: memberCount } = await supabase
+              .from('team_members')
+              .select('*', { count: 'exact', head: true })
+              .eq('team_id', team.id)
+              .eq('status', 'active');
+              
+            return {
+              id: team.id,
+              name: team.name,
+              description: team.description || `Team at ${team.locations.name}`,
+              team_type: team.team_type || 'provider_managed',
+              status: team.status as 'active' | 'inactive' | 'archived',
+              location_id: team.location_id,
+              member_count: memberCount || 0,
+              performance_score: Math.floor(Math.random() * 100), // Placeholder
+              created_at: team.created_at,
+              updated_at: team.updated_at,
+              location: {
+                id: team.locations.id,
+                name: team.locations.name,
+                address: team.locations.address || '',
+                created_at: '',
+                updated_at: ''
+              },
+              metadata: {},
+              monthly_targets: {},
+              current_metrics: {}
+            };
+          })
+        );
+        
+        teams = teamsWithCounts;
+        console.log('✅ Found teams from primary location:', teams.length);
       }
       
-      console.log('✅ Found teams:', teams);
-      
-      // Transform to EnhancedTeam format
-      return (teams || []).map(team => ({
-        ...team,
-        member_count: team.members?.[0]?.count || 0,
-        performance_score: Math.floor(Math.random() * 100) // TODO: Calculate real performance
-      }));
+      return teams;
     },
     enabled: !!user?.id
   });
+  
+  // Use the loaded teams
+  const apTeams = apLocationTeamData || [];
 
   // Use AP-specific teams instead of parent teams
   const teams = apTeams.length > 0 ? apTeams : parentTeams;
