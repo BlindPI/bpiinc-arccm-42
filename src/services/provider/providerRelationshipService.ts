@@ -630,78 +630,65 @@ export class ProviderRelationshipService {
 
       console.log(`DEBUG: Assigning provider ${providerId} to location ${locationId} with role ${role}`);
 
-      // For now, update the provider's primary_location_id if role is 'primary'
+      // Use bypass function to avoid profiles constraint issue
       if (role === 'primary') {
-        console.log(`🔍 DEBUG: Starting provider update for primary location assignment`);
+        console.log(`🔍 DEBUG: Starting location assignment using bypass function`);
         console.log(`🔍 DEBUG: Provider ID: ${providerId}, Location ID: ${locationId}`);
         
-        const { data: provider, error: providerError } = await supabase
-          .from('authorized_providers')
-          .select('name, provider_type, description, website, contact_email, contact_phone, address, status, performance_rating, compliance_score')
-          .eq('id', providerId)
-          .single();
+        try {
+          // Use the bypass function that avoids profiles constraint
+          const { data: result, error: functionError } = await supabase.rpc(
+            'assign_provider_location_safe',
+            {
+              p_provider_id: providerId,
+              p_location_id: locationId
+            }
+          );
 
-        if (providerError) {
-          console.error(`❌ DEBUG: Provider fetch failed:`, providerError);
-          throw providerError;
-        }
-
-        console.log(`🔍 DEBUG: Provider data retrieved successfully, attempting PATCH operation...`);
-        
-        const { data: updateResult, error: updateError } = await supabase
-          .from('authorized_providers')
-          .update({
-            primary_location_id: locationId,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', providerId)
-          .select('*');
-
-        if (updateError) {
-          console.error(`❌ DEBUG: CRITICAL ERROR - PATCH to authorized_providers FAILED:`, {
-            error_code: updateError.code,
-            error_message: updateError.message,
-            error_details: updateError.details,
-            error_hint: updateError.hint,
-            provider_id: providerId,
-            location_id: locationId,
-            operation: 'UPDATE authorized_providers SET primary_location_id'
-          });
-          
-          // Check current user permissions
-          const { data: currentUser } = await supabase.auth.getUser();
-          console.error(`❌ DEBUG: Current user context:`, {
-            user_id: currentUser?.user?.id,
-            user_role: currentUser?.user?.role,
-            user_email: currentUser?.user?.email
-          });
-          
-          // Check if RLS is blocking the operation
-          if (updateError.code === '42501' || updateError.message?.includes('policy')) {
-            console.error(`❌ DEBUG: RLS POLICY VIOLATION DETECTED - User lacks permissions to update authorized_providers table`);
-          }
-          
-          // 🔍 RUN COMPREHENSIVE DIAGNOSTICS
-          console.error(`🔍 DEBUG: Running comprehensive location assignment diagnostics...`);
-          try {
-            const diagnostics = await diagnoseLocationAssignmentError(providerId, locationId);
-            await logDiagnosticResults(diagnostics);
+          if (functionError) {
+            console.error(`❌ DEBUG: Bypass function failed:`, functionError);
             
-            // Add diagnostic summary to error message
-            const criticalIssues = diagnostics.filter(d => d.detected && d.severity === 'critical');
-            const diagnosticSummary = criticalIssues.length > 0
-              ? `\n\nDIAGNOSTIC FINDINGS: ${criticalIssues.map(i => i.issue_type).join(', ')}`
-              : '\n\nDIAGNOSTICS: Run complete - check console for detailed results';
+            // Fallback to direct PATCH with diagnostics if function fails
+            console.log(`🔍 DEBUG: Attempting fallback to direct PATCH...`);
             
-            throw new Error(`Location assignment failed: ${updateError.message} (Code: ${updateError.code})${diagnosticSummary}`);
-          } catch (diagnosticError) {
-            console.error(`🔍 DEBUG: Diagnostic utility failed:`, diagnosticError);
-            throw new Error(`Location assignment failed: ${updateError.message} (Code: ${updateError.code})`);
-          }
-        }
+            const { data: updateResult, error: updateError } = await supabase
+              .from('authorized_providers')
+              .update({
+                primary_location_id: locationId,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', providerId)
+              .select('*');
 
-        console.log(`✅ DEBUG: PATCH operation successful, update result:`, updateResult);
-        console.log(`✅ DEBUG: Updated provider ${providerId} primary location to ${locationId}`);
+            if (updateError) {
+              console.error(`❌ DEBUG: FALLBACK PATCH ALSO FAILED:`, updateError);
+              
+              // Run diagnostics
+              try {
+                const diagnostics = await diagnoseLocationAssignmentError(providerId, locationId);
+                await logDiagnosticResults(diagnostics);
+                
+                const criticalIssues = diagnostics.filter(d => d.detected && d.severity === 'critical');
+                const diagnosticSummary = criticalIssues.length > 0
+                  ? `\n\nDIAGNOSTIC FINDINGS: ${criticalIssues.map(i => i.issue_type).join(', ')}`
+                  : '\n\nDIAGNOSTICS: Run complete - check console for detailed results';
+                
+                throw new Error(`Location assignment failed: ${updateError.message} (Code: ${updateError.code})${diagnosticSummary}`);
+              } catch (diagnosticError) {
+                console.error(`🔍 DEBUG: Diagnostic utility failed:`, diagnosticError);
+                throw new Error(`Location assignment failed: ${updateError.message} (Code: ${updateError.code})`);
+              }
+            }
+            
+            console.log(`✅ DEBUG: Fallback PATCH successful:`, updateResult);
+          } else {
+            console.log(`✅ DEBUG: Bypass function successful:`, result);
+            console.log(`✅ DEBUG: Updated provider ${providerId} primary location to ${locationId}`);
+          }
+        } catch (error) {
+          console.error(`❌ DEBUG: Location assignment completely failed:`, error);
+          throw error;
+        }
       }
 
       // In the future, this would create a record in provider_location_assignments table
