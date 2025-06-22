@@ -792,15 +792,32 @@ export class ProviderRelationshipService {
         };
       }
 
-      // Get certificates issued through provider's teams
+      // Get certificates issued at provider's location(s)
+      // First get the provider's primary location
+      const { data: providerData, error: providerError } = await supabase
+        .from('authorized_providers')
+        .select('primary_location_id')
+        .eq('id', providerId)
+        .single();
+
       let certificates: any[] = [];
-      if (teamIds.length > 0) {
+      if (!providerError && providerData?.primary_location_id) {
+        console.log(`🔍 DEBUG: Getting certificates for provider's location: ${providerData.primary_location_id}`);
+        
         const { data: certData, error: certError } = await supabase
           .from('certificates')
-          .select('id')
-          .in('team_id', teamIds);
+          .select('id, location_id, status')
+          .eq('location_id', providerData.primary_location_id)
+          .eq('status', 'ACTIVE');
         
-        if (!certError) certificates = certData || [];
+        if (!certError) {
+          certificates = certData || [];
+          console.log(`✅ DEBUG: Found ${certificates.length} certificates for location ${providerData.primary_location_id}`);
+        } else {
+          console.error('🚨 DEBUG: Error fetching certificates:', certError);
+        }
+      } else {
+        console.log(`🚨 DEBUG: No primary location found for provider ${providerId}`);
       }
 
       // Get courses conducted
