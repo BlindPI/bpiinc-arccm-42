@@ -1,14 +1,16 @@
 /**
  * TEAM MEMBER MANAGEMENT - PROVIDER INTERFACE
- * 
+ *
  * ✅ Full member management functionality with real database integration
  * ✅ Add/remove team members
  * ✅ Role assignment and management
  * ✅ Member performance tracking
  * ✅ Real-time updates
+ * ✅ FIXED: Safe email access for AP users with null emails
  */
 
 import React, { useState } from 'react';
+import { getSafeUserEmail, getSafeDisplayEmail, getSafeUserDisplayName, hasValidEmail } from '@/utils/fixNullEmailAccessPatterns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -54,7 +56,8 @@ interface TeamMember {
   performance_score?: number;
   user: {
     id: string;
-    email: string;
+    email: string | null;
+    display_name?: string;
     phone?: string;
     role: string;
     status: string;
@@ -63,7 +66,8 @@ interface TeamMember {
 
 interface AvailableUser {
   id: string;
-  email: string;
+  email: string | null;
+  display_name?: string;
   role: string;
   status: string;
 }
@@ -108,6 +112,7 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
           user:profiles(
             id,
             email,
+            display_name,
             phone,
             role,
             status
@@ -131,7 +136,7 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, email, role, status')
+        .select('id, email, display_name, role, status')
         .in('role', ['IC', 'IP', 'IT', 'IN']) // Instructor roles
         .eq('status', 'active')
         .not('id', 'in', `(${currentMemberIds.join(',')})`)
@@ -239,13 +244,17 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
     );
   };
 
-  const filteredMembers = teamMembers.filter(member =>
-    !searchTerm ||
-    member.user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredMembers = teamMembers.filter(member => {
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    const email = getSafeUserEmail(member.user);
+    const displayName = getSafeUserDisplayName(member.user);
+    return displayName.toLowerCase().includes(searchLower) ||
+           (email && email.toLowerCase().includes(searchLower));
+  });
 
   const getFullName = (user: any) => {
-    return user.email; // Use email as display name since we don't have first/last name
+    return getSafeUserDisplayName(user);
   };
 
   return (
@@ -349,10 +358,12 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
                     <div>
                       <h4 className="font-medium">{getFullName(member.user)}</h4>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {member.user.email}
-                        </span>
+                        {hasValidEmail(member.user) && (
+                          <span className="flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {getSafeUserEmail(member.user)}
+                          </span>
+                        )}
                         {member.user.phone && (
                           <span className="flex items-center gap-1">
                             <Phone className="h-3 w-3" />
@@ -470,7 +481,7 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
                     />
                     <div>
                       <div className="font-medium">{getFullName(user)}</div>
-                      <div className="text-sm text-muted-foreground">{user.email}</div>
+                      <div className="text-sm text-muted-foreground">{getSafeDisplayEmail(user)}</div>
                       <Badge variant="outline" className="text-xs">
                         {user.role}
                       </Badge>
