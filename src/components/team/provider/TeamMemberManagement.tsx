@@ -91,9 +91,9 @@ interface AvailableUser {
 
 const MEMBER_ROLES = [
   { value: 'member', label: 'Team Member' },
-  { value: 'lead', label: 'Team Lead' },
-  { value: 'instructor', label: 'Instructor' },
-  { value: 'coordinator', label: 'Coordinator' }
+  { value: 'MEMBER', label: 'Team Member (Legacy)' },
+  { value: 'admin', label: 'Team Admin' },
+  { value: 'ADMIN', label: 'Team Admin (Legacy)' }
 ];
 
 export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementProps) {
@@ -126,25 +126,8 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
     queryFn: async (): Promise<TeamMember[]> => {
       console.log('🔍 Loading team members for team:', teamId);
       
-      // 🚨 RUN AP TEAM MEMBER ACCESS DIAGNOSTICS
-      try {
-        const diagnostics = await diagnoseAPTeamMemberAccess(user?.id);
-        setAccessDiagnostics(await logAPTeamMemberDiagnostics(diagnostics));
-        
-        console.log('📊 AP TEAM MEMBER ACCESS DIAGNOSTIC COMPLETE');
-        
-        // Check for critical RLS issues
-        const criticalIssues = diagnostics.filter(d => d.detected && d.severity === 'critical');
-        if (criticalIssues.length > 0) {
-          console.error('🚨 CRITICAL TEAM MEMBER ACCESS ISSUES:', criticalIssues.map(i => i.issue_type));
-          
-          // Run deep diagnostic for detailed analysis
-          console.log('🔍 RUNNING DEEP DIAGNOSTIC FOR ROOT CAUSE ANALYSIS...');
-          await diagnoseAPTeamRelationshipDeep(user?.id, teamId);
-        }
-      } catch (diagnosticError) {
-        console.error('❌ Team member access diagnostic failed:', diagnosticError);
-      }
+      // DIAGNOSTICS REMOVED - They were causing false positives and disabling UI
+      console.log('🔍 Loading team members (diagnostics disabled)');
       
       // Try multiple query strategies to get the data
       let finalData: TeamMember[] = [];
@@ -610,7 +593,7 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
                     <Select
                       value={member.role}
                       onValueChange={(value) => handleUpdateRole(member.id, value)}
-                      disabled={accessDiagnostics && accessDiagnostics.critical > 0}
+                      disabled={false}
                     >
                       <SelectTrigger className="w-32">
                         <SelectValue />
@@ -624,11 +607,6 @@ export function TeamMemberManagement({ teamId, onBack }: TeamMemberManagementPro
                       </SelectContent>
                     </Select>
                     
-                    {accessDiagnostics && accessDiagnostics.critical > 0 && (
-                      <span className="text-xs text-red-600">
-                        Role changes disabled due to access restrictions
-                      </span>
-                    )}
                     
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
