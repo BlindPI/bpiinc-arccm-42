@@ -305,7 +305,10 @@ async function sendSingleEmail(
         .replace(/\{\{location_name\}\}/g, locationName)
         .replace(/\{\{issue_date\}\}/g, new Date(certificate.issue_date).toLocaleDateString())
         .replace(/\{\{expiry_date\}\}/g, new Date(certificate.expiry_date).toLocaleDateString())
-        .replace(/\{\{verification_code\}\}/g, certificate.verification_code);
+        .replace(/\{\{verification_code\}\}/g, certificate.verification_code)
+        .replace(/\{\{certificate_url\}\}/g, certificate.certificate_url || '#')
+        .replace(/\{\{verification_portal_url\}\}/g, 'https://arccm.netlify.app/verify')
+        .replace(/\{\{https:\/\/arccm\.netlify\.app\/verify\}\}/g, 'https://arccm.netlify.app/verify');
     } else {
       emailBody = `
         <h1>Your ${certificate.course_name} Certificate</h1>
