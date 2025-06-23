@@ -72,6 +72,41 @@ export function PaginatedCertificatesView() {
 
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
 
+  // **STATS QUERY - SEPARATE FROM PAGINATION FOR ACCURATE TOTALS**
+  const { data: statsData } = useQuery({
+    queryKey: ['certificate-stats', isAdmin, filters.status, profile?.id],
+    queryFn: async () => {
+      let query = supabase
+        .from('certificates')
+        .select('id, status, email_status, is_batch_emailed', { count: 'exact' });
+
+      // **CRITICAL SECURITY FIX**: Apply same role-based filtering as paginated query
+      if (!isAdmin && profile?.id) {
+        if (profile?.role === 'AP') {
+          // RLS handles location-based filtering for AP users - SAME AS PAGINATED QUERY
+          console.log('AP user stats: Relying on RLS for location-based certificate visibility');
+        } else {
+          // Other roles: Filter by user_id (existing behavior) - SAME AS PAGINATED QUERY
+          query = query.eq('user_id', profile.id);
+        }
+      }
+
+      // Apply status filter to stats as well
+      if (filters.status !== 'all') {
+        query = query.eq('status', filters.status);
+      }
+
+      const { data, error, count } = await query;
+      if (error) throw error;
+      
+      return {
+        certificates: (data || []) as Pick<Certificate, 'id' | 'status' | 'email_status' | 'is_batch_emailed'>[],
+        totalCount: count || 0
+      };
+    },
+    enabled: !!profile
+  });
+
   // **SERVER-SIDE PAGINATED QUERY WITH PERFORMANCE OPTIMIZATION**
   const { data: paginatedData, isLoading } = useQuery({
     queryKey: ['paginated-certificates', isAdmin, filters, pagination.page, pagination.pageSize, profile?.id],
@@ -87,11 +122,13 @@ export function PaginatedCertificatesView() {
         .from('certificates')
         .select('*', { count: 'exact' });
 
-      // Apply role-based filtering
+      // Apply role-based filtering - CRITICAL: Same as stats query
       if (!isAdmin && profile?.id) {
         if (profile?.role === 'AP') {
           console.log('AP user: Relying on RLS for location-based certificate visibility');
+          // RLS policy filters certificates based on AP user's location assignments
         } else {
+          // Other roles: Filter by user_id (existing behavior)
           query = query.eq('user_id', profile.id);
         }
       }
@@ -335,8 +372,36 @@ export function PaginatedCertificatesView() {
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <CertificateStatsCards certificates={paginatedData?.certificates || []} />
+      {/* Stats Cards - Use separate stats data for accurate totals */}
+      <CertificateStatsCards certificates={statsData?.certificates?.map(cert => ({
+        ...cert,
+        // Add missing required fields for Certificate type
+        certificate_request_id: '',
+        issued_by: '',
+        verification_code: '',
+        certificate_url: '',
+        recipient_name: '',
+        course_name: '',
+        instructor_name: '',
+        location_id: '',
+        batch_id: '',
+        issue_date: '',
+        expiry_date: '',
+        created_at: '',
+        updated_at: '',
+        user_id: '',
+        template_id: '',
+        course_id: '',
+        qr_code_url: '',
+        certificate_number: '',
+        is_template: false,
+        recipient_email: '',
+        batch_name: '',
+        length: 0,
+        last_emailed_at: '',
+        batch_email_id: '',
+        roster_id: ''
+      })) as Certificate[] || []} />
 
       {/* Header and Controls */}
       <Card className="border-0 shadow-md">
@@ -348,14 +413,11 @@ export function PaginatedCertificatesView() {
             </CardTitle>
             
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-sm">
-                {pagination.totalRecords} total certificates
-              </Badge>
-              <Badge variant="default" className="text-sm">
-                Page {pagination.page} of {pagination.totalPages}
+              <Badge variant="outline" className="text-sm font-medium">
+                {statsData?.totalCount || 0} certificates
               </Badge>
               {selectedCertificates.size > 0 && (
-                <Badge variant="default" className="text-sm">
+                <Badge variant="secondary" className="text-sm font-medium">
                   {selectedCertificates.size} selected
                 </Badge>
               )}
@@ -394,62 +456,71 @@ export function PaginatedCertificatesView() {
           
           {/* Advanced Controls */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Sorting */}
-              <Select 
-                value={filters.sortBy.field} 
-                onValueChange={(field) => handleFilterChange('sortBy', { ...filters.sortBy, field })}
-              >
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {sortOptions.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleFilterChange('sortBy', { 
-                  ...filters.sortBy, 
-                  direction: filters.sortBy.direction === 'asc' ? 'desc' : 'asc' 
-                })}
-              >
-                {filters.sortBy.direction === 'asc' ? '↑' : '↓'}
-              </Button>
-              
-              {/* Grouping */}
-              <Select 
-                value={filters.groupBy} 
-                onValueChange={(groupBy) => handleFilterChange('groupBy', groupBy)}
-              >
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {groupOptions.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      <div className="flex items-center gap-2">
-                        <option.icon className="h-4 w-4" />
+            <div className="flex items-center gap-3">
+              {/* Sorting Controls */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Sort by:</span>
+                <Select
+                  value={filters.sortBy.field}
+                  onValueChange={(field) => handleFilterChange('sortBy', { ...filters.sortBy, field })}
+                >
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sortOptions.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
                         {option.label}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleFilterChange('sortBy', {
+                    ...filters.sortBy,
+                    direction: filters.sortBy.direction === 'asc' ? 'desc' : 'asc'
+                  })}
+                  className="px-3"
+                >
+                  {filters.sortBy.direction === 'asc' ? '↑' : '↓'}
+                </Button>
+              </div>
+              
+              {/* Grouping Controls */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Group by:</span>
+                <Select
+                  value={filters.groupBy}
+                  onValueChange={(groupBy) => handleFilterChange('groupBy', groupBy)}
+                >
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groupOptions.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        <div className="flex items-center gap-2">
+                          <option.icon className="h-4 w-4" />
+                          {option.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
             <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700">View:</span>
               <div className="flex border rounded-lg">
                 <Button
                   variant={viewMode === 'grid' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('grid')}
+                  className="px-3"
                 >
                   <Grid className="h-4 w-4" />
                 </Button>
@@ -457,6 +528,7 @@ export function PaginatedCertificatesView() {
                   variant={viewMode === 'list' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('list')}
+                  className="px-3"
                 >
                   <List className="h-4 w-4" />
                 </Button>
