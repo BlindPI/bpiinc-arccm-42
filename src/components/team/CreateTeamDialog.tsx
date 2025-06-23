@@ -1,6 +1,6 @@
 /**
- * WORKING Create Team Dialog
- * Actually creates teams using CleanAPTeamService
+ * Create Team Dialog
+ * Creates teams using RealTeamService
  */
 
 import React, { useState } from 'react';
@@ -10,7 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CleanAPTeamService } from '@/services/clean/CleanAPTeamService';
+import { RealTeamService } from '@/services/team/realTeamService';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Plus, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
@@ -23,28 +24,38 @@ export function CreateTeamDialog() {
     name: '',
     description: '',
     locationId: '',
-    apUserId: user?.id || ''
+    teamType: 'standard'
   });
 
   // Get locations
   const { data: locations = [] } = useQuery({
     queryKey: ['locations-for-team'],
-    queryFn: () => CleanAPTeamService.getAvailableLocations()
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('id, name')
+        .eq('status', 'active')
+        .order('name');
+      
+      if (error) throw error;
+      return data || [];
+    }
   });
 
   // Create team mutation
   const createTeamMutation = useMutation({
-    mutationFn: () => CleanAPTeamService.createTeamWithAPUser({
+    mutationFn: () => RealTeamService.createTeam({
       name: formData.name,
       description: formData.description,
-      locationId: formData.locationId,
-      apUserId: formData.apUserId
+      team_type: formData.teamType,
+      location_id: formData.locationId,
+      created_by: user?.id || ''
     }),
     onSuccess: () => {
       toast.success('Team created successfully!');
-      queryClient.invalidateQueries({ queryKey: ['clean-user-teams'] });
-      queryClient.invalidateQueries({ queryKey: ['clean-ap-dashboard'] });
-      setFormData({ name: '', description: '', locationId: '', apUserId: user?.id || '' });
+      queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
+      queryClient.invalidateQueries({ queryKey: ['team-analytics'] });
+      setFormData({ name: '', description: '', locationId: '', teamType: 'standard' });
       setOpen(false);
     },
     onError: (error: any) => {
@@ -93,3 +104,78 @@ export function CreateTeamDialog() {
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="team-description">Description</Label>
+            <Input
+              id="team-description"
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Enter team description (optional)"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="team-type">Team Type</Label>
+            <Select
+              value={formData.teamType}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, teamType: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select team type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="standard">Standard</SelectItem>
+                <SelectItem value="instructor">Instructor</SelectItem>
+                <SelectItem value="training">Training</SelectItem>
+                <SelectItem value="assessment">Assessment</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="team-location">Location *</Label>
+            <Select
+              value={formData.locationId}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, locationId: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a location" />
+              </SelectTrigger>
+              <SelectContent>
+                {locations.map((location: any) => (
+                  <SelectItem key={location.id} value={location.id}>
+                    {location.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={createTeamMutation.isPending}
+              className="flex-1"
+            >
+              {createTeamMutation.isPending ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create Team'
+              )}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
