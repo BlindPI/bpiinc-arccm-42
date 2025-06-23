@@ -50,19 +50,22 @@ function addMonthsToDate(date: Date, months: number): Date {
 }
 
 function determineAssessmentStatus(row: any): string {
-  const assessmentField = row['assessment'] || row['Assessment'] || row['assessment_status'] || row['Assessment Status'] || row['Pass/Fail'] || '';
+  // Enhanced field mapping to capture GRADE and other assessment field variants
+  const assessmentField = row['assessment'] || row['Assessment'] || row['assessment_status'] ||
+                         row['Assessment Status'] || row['Pass/Fail'] || row['GRADE'] ||
+                         row['Grade'] || row['grade'] || '';
   
   if (!assessmentField) return 'PASS'; // Default to pass if not specified
   
   const status = String(assessmentField).trim().toUpperCase();
   
-  if (status === 'FAIL' || status === 'FAILED') {
+  if (status === 'FAIL' || status === 'FAILED' || status === 'F') {
     return 'FAIL';
-  } else if (status === 'PENDING' || status === 'NOT ASSESSED') {
+  } else if (status === 'PENDING' || status === 'NOT ASSESSED' || status === 'P') {
     return 'PENDING';
   }
   
-  return 'PASS'; // Default to pass for any other value
+  return 'PASS'; // Default to pass for any other value (including 'PASS', 'PASSED', grades like 'A', 'B', etc.)
 }
 
 export function useFileProcessor() {
@@ -164,22 +167,35 @@ export function useFileProcessor() {
           status.processed++;
           setProcessingStatus({ ...status });
 
-          // Extract and standardize all fields
+          // Extract and standardize all fields with comprehensive mapping
           const processedRow = {
-            name: (row['Student Name'] || '').toString().trim(),
-            email: (row['Email'] || '').toString().trim(),
-            phone: (row['Phone'] || '').toString().trim(),
-            company: (row['Company'] || row['Organization'] || '').toString().trim(),
-            firstAidLevel: (row['First Aid Level'] || '').toString().trim(),
-            cprLevel: (row['CPR Level'] || '').toString().trim(),
-            courseLength: parseFloat(row['Length']?.toString() || '0') || 0,
-            issueDate: extractedData.issueDate || formatDate(row['Issue Date'] || new Date()),
-            expiryDate: row['Expiry Date'] ? formatDate(row['Expiry Date']) : '',
-            city: (row['City'] || row['Location'] || '').toString().trim(),
-            province: (row['Province'] || row['State'] || '').toString().trim(),
-            postalCode: (row['Postal Code'] || row['Zip Code'] || '').toString().trim(),
-            instructorName: (row['Instructor Name'] || row['Instructor'] || '').toString().trim(),
-            instructorLevel: (row['Instructor Level'] || row['Instructor Type'] || '').toString().trim(),
+            name: (row['Student Name'] || row['NAME'] || row['Name'] || '').toString().trim(),
+            email: (row['Email'] || row['EMAIL'] || row['email'] || '').toString().trim(),
+            phone: (row['Phone'] || row['PHONE'] || row['phone'] || '').toString().trim(),
+            company: (row['Company'] || row['COMPANY'] || row['Organization'] || row['company'] || '').toString().trim(),
+            firstAidLevel: (row['First Aid Level'] || row['FIRST'] || row['First Aid'] || row['first_aid_level'] || '').toString().trim(),
+            cprLevel: (row['CPR Level'] || row['CPR'] || row['cpr_level'] || '').toString().trim(),
+            courseLength: parseFloat(
+              row['Length']?.toString() ||
+              row['HOURS']?.toString() ||
+              row['Hours']?.toString() ||
+              row['Course Hours']?.toString() ||
+              '0'
+            ) || 0,
+            issueDate: extractedData.issueDate || formatDate(
+              row['Issue Date'] ||
+              row['ISSUE'] ||
+              row['Completion Date'] ||
+              row['issue_date'] ||
+              new Date()
+            ),
+            expiryDate: row['Expiry Date'] || row['expiry_date'] ? formatDate(row['Expiry Date'] || row['expiry_date']) : '',
+            city: (row['City'] || row['CITY'] || row['Location'] || row['city'] || '').toString().trim(),
+            province: (row['Province'] || row['PROVINCE'] || row['State'] || row['province'] || '').toString().trim(),
+            postalCode: (row['Postal Code'] || row['POSTAL'] || row['Zip Code'] || row['postal_code'] || '').toString().trim(),
+            instructorName: (row['Instructor Name'] || row['INSTRUCTOR_NAME'] || row['Instructor'] || row['instructor_name'] || '').toString().trim(),
+            instructorLevel: (row['Instructor Level'] || row['Instructor Type'] || row['instructor_level'] || '').toString().trim(),
+            notes: (row['Notes'] || row['NOTES'] || row['notes'] || row['Comments'] || row['comments'] || '').toString().trim(),
             assessmentStatus: determineAssessmentStatus(row),
             rowNum,
             isProcessed: false,

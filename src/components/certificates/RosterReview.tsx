@@ -163,6 +163,7 @@ export function RosterReview({
               <TableHead>Issue Date</TableHead>
               <TableHead>Course Info</TableHead>
               <TableHead>Instructor</TableHead>
+              <TableHead>Notes</TableHead>
               <TableHead className="text-right">Status</TableHead>
             </TableRow>
           </TableHeader>
@@ -299,6 +300,17 @@ export function RosterReview({
                     <span className="text-muted-foreground italic">—</span>
                   )}
                 </TableCell>
+                <TableCell>
+                  {row.notes ? (
+                    <div className="max-w-xs">
+                      <span className="text-sm text-gray-700 line-clamp-2" title={row.notes}>
+                        {row.notes}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground italic text-sm">—</span>
+                  )}
+                </TableCell>
                 <TableCell className="text-right">
                   {/* DEBUG: Log assessment status for debugging */}
                   {(() => {
@@ -306,7 +318,8 @@ export function RosterReview({
                       assessmentStatus: row.assessmentStatus,
                       error: row.error,
                       isProcessed: row.isProcessed,
-                      name: row.name
+                      name: row.name,
+                      notes: row.notes
                     });
                     return null;
                   })()}
@@ -331,7 +344,7 @@ export function RosterReview({
 
             {paginatedData.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   No results found
                 </TableCell>
               </TableRow>

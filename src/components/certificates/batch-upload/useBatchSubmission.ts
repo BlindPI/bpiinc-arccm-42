@@ -173,6 +173,7 @@ export function useBatchSubmission() {
             postal_code: row.postalCode || null,
             instructor_name: row.instructorName || null,
             instructor_level: row.instructorLevel || null,
+            notes: row.notes || null, // Capture notes from Excel uploads
             status: 'PENDING', // Always set to PENDING so admins can review
             user_id: user.id,
             location_id: selectedLocationId !== 'none' ? selectedLocationId : null,

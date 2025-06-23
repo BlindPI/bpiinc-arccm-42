@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { 
+import React, { useState } from 'react';
+import {
   Table,
   TableBody,
   TableCaption,
@@ -12,7 +12,7 @@ import {
 import { format, parseISO } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Archive, ArchiveX, Loader2, Clock, Bug } from "lucide-react";
+import { Archive, ArchiveX, Loader2, Clock, Bug, ChevronDown, ChevronRight, StickyNote, Phone, Building, MapPin, User, Package } from "lucide-react";
 import { useProfile } from '@/hooks/useProfile';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,11 +29,30 @@ export function ArchivedRequestsTable({
   const isMobile = useIsMobile();
   const { data: profile } = useProfile();
   const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   
   // Filter requests for non-admin users to only show their own
-  const filteredRequests = canManageRequests 
-    ? requests 
+  const filteredRequests = canManageRequests
+    ? requests
     : requests.filter(req => req.user_id === profile?.id);
+
+  const toggleRowExpansion = (requestId: string) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(requestId)) {
+      newExpanded.delete(requestId);
+    } else {
+      newExpanded.add(requestId);
+    }
+    setExpandedRows(newExpanded);
+  };
+
+  const hasAdditionalData = (request: any) => {
+    const extendedRequest = request as any;
+    return extendedRequest.notes || request.phone || request.company ||
+           request.city || request.province || request.postal_code ||
+           request.instructor_name || request.instructor_level ||
+           request.cpr_level || request.first_aid_level;
+  };
 
   // Debug logging for archived requests
   React.useEffect(() => {
@@ -93,6 +112,7 @@ export function ArchivedRequestsTable({
           </TableCaption>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-8"></TableHead>
               <TableHead className={isMobile ? 'text-xs' : ''}>Recipient</TableHead>
               <TableHead className={isMobile ? 'text-xs' : ''}>Course</TableHead>
               <TableHead className={isMobile ? 'text-xs' : ''}>Request Date</TableHead>

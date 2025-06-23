@@ -24,7 +24,10 @@ import {
   User,
   Package,
   Download,
-  RefreshCw
+  RefreshCw,
+  Building,
+  MapPin,
+  StickyNote
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -367,39 +370,143 @@ export function EnhancedPendingRequestsView() {
             Review the details of this certificate request before taking action.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-6">
+          {/* Basic Information */}
           <div>
-            <Label>Recipient Name</Label>
-            <Input type="text" value={request.recipient_name} readOnly />
+            <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Basic Information
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Recipient Name</Label>
+                <Input type="text" value={request.recipient_name} readOnly />
+              </div>
+              <div>
+                <Label>Course Name</Label>
+                <Input type="text" value={request.course_name} readOnly />
+              </div>
+              <div>
+                <Label>Email</Label>
+                <Input type="email" value={request.email || 'N/A'} readOnly />
+              </div>
+              <div>
+                <Label>Phone</Label>
+                <Input type="tel" value={request.phone || 'N/A'} readOnly />
+              </div>
+              <div>
+                <Label>Issue Date</Label>
+                <Input type="text" value={request.issue_date} readOnly />
+              </div>
+              <div>
+                <Label>Expiry Date</Label>
+                <Input type="text" value={request.expiry_date} readOnly />
+              </div>
+            </div>
           </div>
-          <div>
-            <Label>Course Name</Label>
-            <Input type="text" value={request.course_name} readOnly />
-          </div>
-          <div>
-            <Label>Email</Label>
-            <Input type="email" value={request.email || 'N/A'} readOnly />
-          </div>
-          <div>
-            <Label>Phone</Label>
-            <Input type="tel" value={request.phone || 'N/A'} readOnly />
-          </div>
-          <div>
-            <Label>Issue Date</Label>
-            <Input type="text" value={request.issue_date} readOnly />
-          </div>
-           <div>
-            <Label>Expiry Date</Label>
-            <Input type="text" value={request.expiry_date} readOnly />
-          </div>
-          <div>
-            <Label>City</Label>
-            <Input type="text" value={request.city || 'N/A'} readOnly />
-          </div>
-          <div>
-            <Label>Province</Label>
-            <Input type="text" value={request.province || 'N/A'} readOnly />
-          </div>
+
+          {/* Company & Address Information */}
+          {(request.company || request.city || request.province || request.postal_code) && (
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <Building className="h-4 w-4" />
+                Company & Address
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {request.company && (
+                  <div>
+                    <Label>Company</Label>
+                    <Input type="text" value={request.company} readOnly />
+                  </div>
+                )}
+                {request.city && (
+                  <div>
+                    <Label>City</Label>
+                    <Input type="text" value={request.city} readOnly />
+                  </div>
+                )}
+                {request.province && (
+                  <div>
+                    <Label>Province</Label>
+                    <Input type="text" value={request.province} readOnly />
+                  </div>
+                )}
+                {request.postal_code && (
+                  <div>
+                    <Label>Postal Code</Label>
+                    <Input type="text" value={request.postal_code} readOnly />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Instructor Information */}
+          {(request.instructor_name || request.instructor_level) && (
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Instructor Information
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {request.instructor_name && (
+                  <div>
+                    <Label>Instructor Name</Label>
+                    <Input type="text" value={request.instructor_name} readOnly />
+                  </div>
+                )}
+                {request.instructor_level && (
+                  <div>
+                    <Label>Instructor Level</Label>
+                    <Input type="text" value={request.instructor_level} readOnly />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Certification Details */}
+          {(request.cpr_level || request.first_aid_level || request.assessment_status) && (
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                Certification Details
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {request.cpr_level && (
+                  <div>
+                    <Label>CPR Level</Label>
+                    <Input type="text" value={request.cpr_level} readOnly />
+                  </div>
+                )}
+                {request.first_aid_level && (
+                  <div>
+                    <Label>First Aid Level</Label>
+                    <Input type="text" value={request.first_aid_level} readOnly />
+                  </div>
+                )}
+                {request.assessment_status && (
+                  <div>
+                    <Label>Assessment Status</Label>
+                    <Input type="text" value={request.assessment_status} readOnly />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Notes Section */}
+          {(request as any).notes && (
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <StickyNote className="h-4 w-4" />
+                Notes
+              </h4>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{(request as any).notes}</p>
+              </div>
+            </div>
+          )}
         </div>
         {canManage && (
           <div className="mt-4">

@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { CheckCircle, XCircle, Trash2, AlertCircle, Eye, FileText } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { CheckCircle, XCircle, Trash2, AlertCircle, Eye, FileText, ChevronDown, ChevronRight, MapPin, User, Phone, Building, StickyNote } from 'lucide-react';
 import { CertificateRequest } from '@/types/supabase-schema';
 import { format } from 'date-fns';
 import { useProfile } from '@/hooks/useProfile';
@@ -33,9 +34,20 @@ export function CertificateRequestsTable({
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   // Only SA/AD users can manage requests
   const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
+
+  const toggleRowExpansion = (requestId: string) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(requestId)) {
+      newExpanded.delete(requestId);
+    } else {
+      newExpanded.add(requestId);
+    }
+    setExpandedRows(newExpanded);
+  };
 
   const handleRejectClick = (requestId: string) => {
     if (!canManageRequests) return;
@@ -107,6 +119,7 @@ export function CertificateRequestsTable({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-8"></TableHead>
               <TableHead>Recipient</TableHead>
               <TableHead>Course</TableHead>
               <TableHead>Issue Date</TableHead>
@@ -118,92 +131,197 @@ export function CertificateRequestsTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {requests.map((request) => (
-              <TableRow key={request.id}>
-                <TableCell>
-                  <div>
-                    <div className="font-medium">{request.recipient_name}</div>
-                    {request.email && (
-                      <div className="text-sm text-gray-500">{request.email}</div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>{request.course_name}</TableCell>
-                <TableCell>{request.issue_date}</TableCell>
-                <TableCell>
-                  {request.assessment_status === 'FAIL' ? (
-                    <div className="flex items-center gap-1 text-red-600">
-                      <AlertCircle className="h-4 w-4" />
-                      Failed
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1 text-green-600">
-                      <CheckCircle className="h-4 w-4" />
-                      Passed
-                    </div>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {getStatusBadge(request.status, request.assessment_status)}
-                </TableCell>
-                {showBatchInfo && (
-                  <TableCell>
-                    {request.batch_name || 'Individual'}
-                  </TableCell>
-                )}
-                <TableCell>
-                  {format(new Date(request.created_at), 'MMM d, yyyy')}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    {/* Always show view button */}
-                    <Button variant="ghost" size="sm">
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    
-                    {/* Only show management buttons for SA/AD users */}
-                    {canManageRequests ? (
-                      <>
-                        {request.assessment_status === 'FAIL' ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onDeleteRequest(request.id)}
-                            disabled={isDeleting}
-                            className="text-gray-600 hover:text-gray-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        ) : request.status === 'PENDING' ? (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleRejectClick(request.id)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                            >
-                              <XCircle className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleApproveClick(request.id)}
-                              className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                            </Button>
-                          </>
-                        ) : null}
-                      </>
-                    ) : (
-                      <div className="text-xs text-gray-500 px-2">
-                        View only
+            {requests.map((request) => {
+              const isExpanded = expandedRows.has(request.id);
+              const extendedRequest = request as CertificateRequest & { notes?: string | null };
+              const hasAdditionalData = extendedRequest.notes || request.phone || request.company ||
+                                      request.city || request.province || request.postal_code ||
+                                      request.instructor_name || request.instructor_level;
+              
+              return (
+                <React.Fragment key={request.id}>
+                  <TableRow>
+                    <TableCell>
+                      {hasAdditionalData && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleRowExpansion(request.id)}
+                          className="h-6 w-6 p-0"
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{request.recipient_name}</div>
+                        {request.email && (
+                          <div className="text-sm text-gray-500">{request.email}</div>
+                        )}
                       </div>
+                    </TableCell>
+                    <TableCell>{request.course_name}</TableCell>
+                    <TableCell>{request.issue_date}</TableCell>
+                    <TableCell>
+                      {request.assessment_status === 'FAIL' ? (
+                        <div className="flex items-center gap-1 text-red-600">
+                          <AlertCircle className="h-4 w-4" />
+                          Failed
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-green-600">
+                          <CheckCircle className="h-4 w-4" />
+                          Passed
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {getStatusBadge(request.status, request.assessment_status)}
+                    </TableCell>
+                    {showBatchInfo && (
+                      <TableCell>
+                        {request.batch_name || 'Individual'}
+                      </TableCell>
                     )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                    <TableCell>
+                      {format(new Date(request.created_at), 'MMM d, yyyy')}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {/* Always show view button */}
+                        <Button variant="ghost" size="sm">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        
+                        {/* Only show management buttons for SA/AD users */}
+                        {canManageRequests ? (
+                          <>
+                            {request.assessment_status === 'FAIL' ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => onDeleteRequest(request.id)}
+                                disabled={isDeleting}
+                                className="text-gray-600 hover:text-gray-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            ) : request.status === 'PENDING' ? (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleRejectClick(request.id)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleApproveClick(request.id)}
+                                  className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                </Button>
+                              </>
+                            ) : null}
+                          </>
+                        ) : (
+                          <div className="text-xs text-gray-500 px-2">
+                            View only
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                  
+                  {/* Expanded details row */}
+                  {isExpanded && hasAdditionalData && (
+                    <TableRow>
+                      <TableCell colSpan={showBatchInfo ? 9 : 8} className="bg-gray-50 p-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {/* Contact Information */}
+                          {(request.phone || request.company) && (
+                            <div className="space-y-2">
+                              <h4 className="font-medium text-sm text-gray-700 flex items-center gap-1">
+                                <User className="h-4 w-4" />
+                                Contact Information
+                              </h4>
+                              {request.phone && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Phone className="h-3 w-3 text-gray-400" />
+                                  <span>{request.phone}</span>
+                                </div>
+                              )}
+                              {request.company && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Building className="h-3 w-3 text-gray-400" />
+                                  <span>{request.company}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Address Information */}
+                          {(request.city || request.province || request.postal_code) && (
+                            <div className="space-y-2">
+                              <h4 className="font-medium text-sm text-gray-700 flex items-center gap-1">
+                                <MapPin className="h-4 w-4" />
+                                Address
+                              </h4>
+                              <div className="text-sm text-gray-600">
+                                {[request.city, request.province, request.postal_code]
+                                  .filter(Boolean)
+                                  .join(', ')}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Instructor Information */}
+                          {(request.instructor_name || request.instructor_level) && (
+                            <div className="space-y-2">
+                              <h4 className="font-medium text-sm text-gray-700 flex items-center gap-1">
+                                <User className="h-4 w-4" />
+                                Instructor
+                              </h4>
+                              {request.instructor_name && (
+                                <div className="text-sm text-gray-600">
+                                  <span className="font-medium">Name:</span> {request.instructor_name}
+                                </div>
+                              )}
+                              {request.instructor_level && (
+                                <div className="text-sm text-gray-600">
+                                  <span className="font-medium">Level:</span> {request.instructor_level}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Notes Section - Always full width if present */}
+                          {extendedRequest.notes && (
+                            <div className="col-span-full space-y-2">
+                              <h4 className="font-medium text-sm text-gray-700 flex items-center gap-1">
+                                <StickyNote className="h-4 w-4" />
+                                Notes
+                              </h4>
+                              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                                <p className="text-sm text-gray-700 whitespace-pre-wrap">{extendedRequest.notes}</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </React.Fragment>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
