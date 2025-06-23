@@ -9,7 +9,7 @@ import { Award, History, Archive, Plus, FileCheck, Upload, AlertTriangle } from 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { CertificateRequestsContainer } from "@/components/certificates/CertificateRequestsContainer";
-import { EnhancedCertificatesView } from "@/components/certificates/enhanced-views/EnhancedCertificatesView";
+import { PaginatedCertificatesView } from "@/components/certificates/enhanced-views/PaginatedCertificatesView";
 import { EnhancedRostersView } from "@/components/certificates/enhanced-views/EnhancedRostersView";
 import { EnhancedArchivedView } from "@/components/certificates/enhanced-views/EnhancedArchivedView";
 import { CertificateRecoveryDashboard } from "@/components/certificates/CertificateRecoveryDashboard";
@@ -112,7 +112,7 @@ export default function Certifications() {
             </TabsContent>
             
             <TabsContent value="certificates" className="mt-6">
-              <EnhancedCertificatesView />
+              <PaginatedCertificatesView />
             </TabsContent>
             
             <TabsContent value="rosters" className="mt-6">
