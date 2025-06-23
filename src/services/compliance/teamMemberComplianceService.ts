@@ -100,7 +100,9 @@ export class TeamMemberComplianceService {
       const teamIds = teamAssignments.map(a => a.team_id);
       console.log(`DEBUG: Found ${teamIds.length} teams for provider ${providerId}`);
 
-      // Get all team members across provider's teams
+      // Get all team members across provider's teams - FIXED: Better query structure
+      console.log(`DEBUG: Querying team members for team IDs:`, teamIds);
+      
       const { data: teamMembers, error: membersError } = await supabase
         .from('team_members')
         .select(`
@@ -108,19 +110,36 @@ export class TeamMemberComplianceService {
           team_id,
           role,
           status,
-          updated_at,
-          teams!team_members_team_id_fkey(id, name),
-          profiles!team_members_user_id_fkey(id, email, display_name, role)
+          updated_at
         `)
         .in('team_id', teamIds)
         .eq('status', 'active');
 
       if (membersError) {
-        console.error('Error fetching team members:', membersError);
-        return [];
-      }
-
-      if (!teamMembers || teamMembers.length === 0) {
+        console.error('DEBUG: Error fetching team members:', membersError);
+        // Try fallback query without complex joins
+        console.log('DEBUG: Attempting fallback team member query...');
+        
+        const fallbackQuery = await supabase
+          .from('team_members')
+          .select('user_id, team_id, role, status, updated_at')
+          .in('team_id', teamIds);
+          
+        if (fallbackQuery.error) {
+          console.error('DEBUG: Fallback query also failed:', fallbackQuery.error);
+          return [];
+        }
+        
+        console.log(`DEBUG: Fallback found ${fallbackQuery.data?.length || 0} team members`);
+        // Use fallback data if main query failed
+        if (fallbackQuery.data && fallbackQuery.data.length > 0) {
+          console.log(`DEBUG: Using fallback data with ${fallbackQuery.data.length} members`);
+          // Override teamMembers with fallback data
+          const teamMembers = fallbackQuery.data;
+        } else {
+          return [];
+        }
+      } else if (!teamMembers || teamMembers.length === 0) {
         console.log(`DEBUG: No team members found for provider ${providerId}`);
         return [];
       }
@@ -168,13 +187,23 @@ export class TeamMemberComplianceService {
             complianceStatus = 'non_compliant';
           }
 
-          const profile = Array.isArray(member.profiles) ? member.profiles[0] : member.profiles;
-          const team = Array.isArray(member.teams) ? member.teams[0] : member.teams;
+          // Get profile data for this member
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, email, display_name, role')
+            .eq('id', member.user_id)
+            .single();
+
+          // Get team data from team assignments
+          const teamAssignment = teamAssignments.find(ta => ta.team_id === member.team_id);
+          const teamName = teamAssignment?.teams?.name || 'Unknown Team';
+
+          console.log(`DEBUG: Processing member ${member.user_id} from team ${teamName}`);
           
           return {
             user_id: member.user_id,
             team_id: member.team_id,
-            team_name: team?.name || 'Unknown Team',
+            team_name: teamName,
             member_name: profile?.display_name || profile?.email || 'Unknown',
             member_email: profile?.email || '',
             member_role: member.role,
@@ -189,14 +218,21 @@ export class TeamMemberComplianceService {
         } catch (error) {
           console.error(`Error getting compliance data for member ${member.user_id}:`, error);
           
-          // Return basic member info with error status
-          const profile = Array.isArray(member.profiles) ? member.profiles[0] : member.profiles;
-          const team = Array.isArray(member.teams) ? member.teams[0] : member.teams;
+          // Get basic profile info for error case
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, email, display_name, role')
+            .eq('id', member.user_id)
+            .single();
+
+          // Get team data from team assignments
+          const teamAssignment = teamAssignments.find(ta => ta.team_id === member.team_id);
+          const teamName = teamAssignment?.teams?.name || 'Unknown Team';
           
           return {
             user_id: member.user_id,
             team_id: member.team_id,
-            team_name: team?.name || 'Unknown Team',
+            team_name: teamName,
             member_name: profile?.display_name || profile?.email || 'Unknown',
             member_email: profile?.email || '',
             member_role: member.role,
