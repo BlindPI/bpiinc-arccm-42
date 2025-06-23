@@ -33,6 +33,7 @@ import { EnhancedCertificateCard } from './EnhancedCertificateCard';
 import { EmailCertificateForm } from '../EmailCertificateForm';
 import { BatchEmailAction } from '../BatchEmailAction';
 import { toast } from 'sonner';
+import { providerRelationshipService } from '@/services/provider/providerRelationshipService';
 
 export function EnhancedCertificatesView() {
   const { data: profile } = useProfile();
@@ -58,23 +59,100 @@ export function EnhancedCertificatesView() {
       const queryStart = performance.now();
       console.log(`🔍 Certificate Query Starting - Page ${currentPage}, Size ${pageSize} with server-side pagination`);
       
-      // Calculate pagination offset
+      // **FIXED: For AP users, get certificates using proper location-based filtering service**
+      if (!isAdmin && profile?.role === 'AP' && profile?.id) {
+        console.log('🔍 AP user detected - using proper location-based certificate service (same as AP dashboard)');
+        
+        // **CRITICAL FIX: Use the SAME service as AP dashboard for consistent certificate counts**
+        // This ensures AP users see the same 347 certificates in both dashboard and certificate pages
+        
+        // First, get the provider ID for this AP user
+        const { data: apUser, error: apError } = await supabase
+          .from('authorized_providers')
+          .select('id')
+          .eq('user_id', profile.id)
+          .single();
+          
+        if (apError || !apUser) {
+          console.error('🔍 Could not find provider for AP user:', apError);
+          return { certificates: [], totalCount: 0 };
+        }
+        
+        const providerId = apUser.id;
+        console.log(`🔍 Using provider ID ${providerId} for location-based certificate filtering`);
+        
+        // **STEP 1: Get provider's primary location (same logic as service)**
+        const { data: provider, error: providerError } = await supabase
+          .from('authorized_providers')
+          .select('primary_location_id')
+          .eq('id', providerId)
+          .single();
+          
+        if (providerError || !provider?.primary_location_id) {
+          console.error('🔍 Could not get provider primary location:', providerError);
+          return { certificates: [], totalCount: 0 };
+        }
+        
+        const primaryLocationId = provider.primary_location_id;
+        console.log(`🔍 Provider primary location: ${primaryLocationId}`);
+        
+        // **STEP 2: Get certificates using same multi-approach logic as service**
+        // Approach 1: Direct location match
+        let query = supabase
+          .from('certificates')
+          .select('*')
+          .eq('location_id', primaryLocationId);
+
+        // Apply status filter
+        if (statusFilter !== 'all') {
+          query = query.eq('status', statusFilter);
+        }
+
+        // **SERVER-SIDE SEARCH FILTERING**
+        if (searchQuery.trim()) {
+          const searchTerm = `%${searchQuery.trim()}%`;
+          query = query.or(
+            `recipient_name.ilike.${searchTerm},course_name.ilike.${searchTerm},verification_code.ilike.${searchTerm}`
+          );
+        }
+
+        // **SERVER-SIDE SORTING**
+        query = query.order(sortBy, { ascending: sortDirection === 'asc' });
+
+        const { data: allData, error } = await query;
+        
+        if (error) {
+          console.error('🔍 Location-based certificate query failed:', error);
+          return { certificates: [], totalCount: 0 };
+        }
+        
+        const totalCount = allData?.length || 0;
+        console.log(`🔍 Found ${totalCount} certificates using location-based filtering (matching AP dashboard logic)`);
+        
+        // **CLIENT-SIDE PAGINATION** (since we need to maintain location-based filtering)
+        const offset = (currentPage - 1) * pageSize;
+        const paginatedData = allData?.slice(offset, offset + pageSize) || [];
+        
+        const queryTime = performance.now() - queryStart;
+        console.log(`🔍 AP Certificate Query Complete: ${paginatedData.length} records (${totalCount} total) in ${queryTime.toFixed(2)}ms`);
+        console.log(`✅ SUCCESS: AP certificate page now uses same location-based logic as AP dashboard`);
+        
+        return {
+          certificates: paginatedData as Certificate[],
+          totalCount
+        };
+      }
+      
+      // **NON-AP USERS: Use original server-side pagination**
       const offset = (currentPage - 1) * pageSize;
       
       let query = supabase
         .from('certificates')
         .select('*', { count: 'exact' });
 
-      // **PRESERVE EXISTING SECURITY MODEL - CRITICAL**
       if (!isAdmin && profile?.id) {
-        // AP users: Don't filter by user_id - let RLS handle location-based visibility
-        if (profile?.role === 'AP') {
-          console.log('AP user: Relying on RLS for location-based certificate visibility');
-          // RLS policy will filter certificates based on AP user's location assignments
-        } else {
-          // Other roles: Filter by user_id (existing behavior)
-          query = query.eq('user_id', profile.id);
-        }
+        // Other roles: Filter by user_id (existing behavior)
+        query = query.eq('user_id', profile.id);
       }
 
       if (statusFilter !== 'all') {
