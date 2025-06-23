@@ -37,6 +37,11 @@ import type {
   TeamMemberComplianceStatus,
   ProviderComplianceSummary
 } from '@/services/compliance/teamMemberComplianceService';
+import { ComplianceRequirementsService } from '@/services/compliance/complianceRequirementsService';
+import type {
+  RoleComplianceTemplate,
+  UserRoleRequirements
+} from '@/services/compliance/complianceRequirementsService';
 
 // =====================================================================================
 // REAL DATA INTERFACES (Replace Mock Data)
@@ -1818,6 +1823,83 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
       return await TeamMemberComplianceService.getComplianceByTeam(providerId);
     } catch (error) {
       console.error('Error getting compliance by team:', error);
+      throw await this.standardizeErrorMessage(error);
+    }
+  }
+
+  // =====================================================================================
+  // COMPLIANCE REQUIREMENTS MANAGEMENT (NEW - Phase 3)
+  // =====================================================================================
+
+  /**
+   * Initialize default compliance requirements for all roles
+   * Sets up AP, IC, IP, IT role-based compliance templates
+   */
+  async initializeComplianceRequirements(): Promise<void> {
+    try {
+      console.log('DEBUG: Initializing compliance requirements via ProviderRelationshipService');
+      await ComplianceRequirementsService.initializeDefaultRequirements();
+      console.log('DEBUG: Successfully initialized compliance requirements');
+    } catch (error) {
+      console.error('Error initializing compliance requirements:', error);
+      throw await this.standardizeErrorMessage(error);
+    }
+  }
+
+  /**
+   * Get role-based compliance template
+   */
+  async getRoleComplianceTemplate(role: 'AP' | 'IC' | 'IP' | 'IT'): Promise<RoleComplianceTemplate | null> {
+    try {
+      return ComplianceRequirementsService.getRequirementsTemplate(role);
+    } catch (error) {
+      console.error('Error getting role compliance template:', error);
+      throw await this.standardizeErrorMessage(error);
+    }
+  }
+
+  /**
+   * Assign role-based requirements to team member
+   * Called when AP users add team members or change roles
+   */
+  async assignRoleRequirementsToTeamMember(userId: string, userRole: string): Promise<UserRoleRequirements> {
+    try {
+      console.log(`DEBUG: Assigning role requirements to team member ${userId} with role ${userRole}`);
+      return await ComplianceRequirementsService.assignRoleRequirementsToUser(userId, userRole);
+    } catch (error) {
+      console.error('Error assigning role requirements to team member:', error);
+      throw await this.standardizeErrorMessage(error);
+    }
+  }
+
+  /**
+   * Update team member role requirements when role changes
+   */
+  async updateTeamMemberRoleRequirements(userId: string, oldRole: string, newRole: string): Promise<void> {
+    try {
+      console.log(`DEBUG: Updating team member ${userId} role requirements from ${oldRole} to ${newRole}`);
+      await ComplianceRequirementsService.updateUserRoleRequirements(userId, oldRole, newRole);
+    } catch (error) {
+      console.error('Error updating team member role requirements:', error);
+      throw await this.standardizeErrorMessage(error);
+    }
+  }
+
+  /**
+   * Get compliance statistics by role for provider oversight
+   */
+  async getRoleComplianceStatistics(): Promise<Array<{
+    role: string;
+    total_users: number;
+    compliant_users: number;
+    compliance_rate: number;
+    common_issues: string[];
+  }>> {
+    try {
+      console.log('DEBUG: Getting role compliance statistics for provider oversight');
+      return await ComplianceRequirementsService.getRoleComplianceStatistics();
+    } catch (error) {
+      console.error('Error getting role compliance statistics:', error);
       throw await this.standardizeErrorMessage(error);
     }
   }
