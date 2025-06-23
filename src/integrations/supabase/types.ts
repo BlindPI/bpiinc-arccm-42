@@ -624,6 +624,59 @@ export type Database = {
         }
         Relationships: []
       }
+      assignment_conflicts: {
+        Row: {
+          auto_resolvable: boolean | null
+          conflict_description: string
+          conflict_type: string
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          resolution_options: Json | null
+          resolved_at: string | null
+          severity: string
+          suggested_resolution: string | null
+          workflow_id: string
+        }
+        Insert: {
+          auto_resolvable?: boolean | null
+          conflict_description: string
+          conflict_type: string
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          resolution_options?: Json | null
+          resolved_at?: string | null
+          severity: string
+          suggested_resolution?: string | null
+          workflow_id: string
+        }
+        Update: {
+          auto_resolvable?: boolean | null
+          conflict_description?: string
+          conflict_type?: string
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          resolution_options?: Json | null
+          resolved_at?: string | null
+          severity?: string
+          suggested_resolution?: string | null
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_conflicts_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "provider_assignment_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -890,6 +943,34 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_authorized_providers_primary_location_id"
+            columns: ["primary_location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_authorized_providers_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_authorized_providers_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_authorized_providers_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       authorized_providers_backup: {
@@ -972,6 +1053,78 @@ export type Database = {
           provider_type?: string | null
           provider_url?: string | null
           specializations?: Json | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
+      authorized_providers_backup_20250621: {
+        Row: {
+          address: string | null
+          approval_date: string | null
+          approved_by: string | null
+          assignment_type: string | null
+          compliance_score: number | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          location_id: string | null
+          name: string | null
+          performance_rating: number | null
+          primary_location_id: string | null
+          provider_name: string | null
+          provider_type: string | null
+          provider_url: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          approval_date?: string | null
+          approved_by?: string | null
+          assignment_type?: string | null
+          compliance_score?: number | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          location_id?: string | null
+          name?: string | null
+          performance_rating?: number | null
+          primary_location_id?: string | null
+          provider_name?: string | null
+          provider_type?: string | null
+          provider_url?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          approval_date?: string | null
+          approved_by?: string | null
+          assignment_type?: string | null
+          compliance_score?: number | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          location_id?: string | null
+          name?: string | null
+          performance_rating?: number | null
+          primary_location_id?: string | null
+          provider_name?: string | null
+          provider_type?: string | null
+          provider_url?: string | null
           status?: string | null
           updated_at?: string | null
           user_id?: string | null
@@ -1581,6 +1734,7 @@ export type Database = {
           last_generation_attempt: string | null
           length: number | null
           location_id: string | null
+          notes: string | null
           phone: string | null
           postal_code: string | null
           province: string | null
@@ -1614,6 +1768,7 @@ export type Database = {
           last_generation_attempt?: string | null
           length?: number | null
           location_id?: string | null
+          notes?: string | null
           phone?: string | null
           postal_code?: string | null
           province?: string | null
@@ -1647,6 +1802,7 @@ export type Database = {
           last_generation_attempt?: string | null
           length?: number | null
           location_id?: string | null
+          notes?: string | null
           phone?: string | null
           postal_code?: string | null
           province?: string | null
@@ -6611,6 +6767,53 @@ export type Database = {
         }
         Relationships: []
       }
+      invitation_email_logs: {
+        Row: {
+          created_at: string | null
+          delivery_details: Json | null
+          delivery_status: string | null
+          email_body: string | null
+          email_subject: string | null
+          email_type: string
+          id: string
+          invitation_id: string
+          sent_at: string | null
+          sent_to: string
+        }
+        Insert: {
+          created_at?: string | null
+          delivery_details?: Json | null
+          delivery_status?: string | null
+          email_body?: string | null
+          email_subject?: string | null
+          email_type: string
+          id?: string
+          invitation_id: string
+          sent_at?: string | null
+          sent_to: string
+        }
+        Update: {
+          created_at?: string | null
+          delivery_details?: Json | null
+          delivery_status?: string | null
+          email_body?: string | null
+          email_subject?: string | null
+          email_type?: string
+          id?: string
+          invitation_id?: string
+          sent_at?: string | null
+          sent_to?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitation_email_logs_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: false
+            referencedRelation: "team_member_invitations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       location_email_templates: {
         Row: {
           body_template: string
@@ -7643,6 +7846,197 @@ export type Database = {
         }
         Relationships: []
       }
+      provider_assignment_workflows: {
+        Row: {
+          ap_user_conflicts: Json | null
+          assignment_summary: Json | null
+          cancelled_at: string | null
+          completed_at: string | null
+          created_at: string | null
+          current_step: number
+          failure_reason: string | null
+          id: string
+          initiated_by: string
+          location_availability: Json | null
+          provider_configuration: Json | null
+          selected_ap_user_id: string | null
+          selected_location_id: string | null
+          started_at: string | null
+          team_assignments: Json | null
+          updated_at: string | null
+          validation_results: Json | null
+          workflow_status: string
+          workflow_type: string
+        }
+        Insert: {
+          ap_user_conflicts?: Json | null
+          assignment_summary?: Json | null
+          cancelled_at?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          current_step?: number
+          failure_reason?: string | null
+          id?: string
+          initiated_by: string
+          location_availability?: Json | null
+          provider_configuration?: Json | null
+          selected_ap_user_id?: string | null
+          selected_location_id?: string | null
+          started_at?: string | null
+          team_assignments?: Json | null
+          updated_at?: string | null
+          validation_results?: Json | null
+          workflow_status?: string
+          workflow_type?: string
+        }
+        Update: {
+          ap_user_conflicts?: Json | null
+          assignment_summary?: Json | null
+          cancelled_at?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          current_step?: number
+          failure_reason?: string | null
+          id?: string
+          initiated_by?: string
+          location_availability?: Json | null
+          provider_configuration?: Json | null
+          selected_ap_user_id?: string | null
+          selected_location_id?: string | null
+          started_at?: string | null
+          team_assignments?: Json | null
+          updated_at?: string | null
+          validation_results?: Json | null
+          workflow_status?: string
+          workflow_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_assignment_workflows_initiated_by_fkey"
+            columns: ["initiated_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "provider_assignment_workflows_initiated_by_fkey"
+            columns: ["initiated_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "provider_assignment_workflows_initiated_by_fkey"
+            columns: ["initiated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_assignment_workflows_selected_ap_user_id_fkey"
+            columns: ["selected_ap_user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "provider_assignment_workflows_selected_ap_user_id_fkey"
+            columns: ["selected_ap_user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "provider_assignment_workflows_selected_ap_user_id_fkey"
+            columns: ["selected_ap_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_assignment_workflows_selected_location_id_fkey"
+            columns: ["selected_location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_location_assignments: {
+        Row: {
+          assigned_by: string | null
+          assignment_role: string | null
+          created_at: string | null
+          end_date: string | null
+          id: string
+          location_id: string
+          provider_id: string
+          start_date: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_by?: string | null
+          assignment_role?: string | null
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          location_id: string
+          provider_id: string
+          start_date?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_by?: string | null
+          assignment_role?: string | null
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          location_id?: string
+          provider_id?: string
+          start_date?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_provider_location_assignments_assigned_by"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_provider_location_assignments_assigned_by"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_provider_location_assignments_assigned_by"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_provider_location_assignments_location_id"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_provider_location_assignments_provider_id"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "authorized_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       provider_navigation_configs: {
         Row: {
           config_overrides: Json
@@ -7650,7 +8044,7 @@ export type Database = {
           created_by: string | null
           id: string
           is_active: boolean | null
-          provider_id: number | null
+          provider_id: string
           updated_at: string | null
         }
         Insert: {
@@ -7659,7 +8053,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_active?: boolean | null
-          provider_id?: number | null
+          provider_id?: string
           updated_at?: string | null
         }
         Update: {
@@ -7668,7 +8062,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_active?: boolean | null
-          provider_id?: number | null
+          provider_id?: string
           updated_at?: string | null
         }
         Relationships: [
@@ -7691,6 +8085,60 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_navigation_configs_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: true
+            referencedRelation: "authorized_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          metadata: Json | null
+          notification_type: string
+          priority: string | null
+          provider_id: string
+          read_at: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          metadata?: Json | null
+          notification_type: string
+          priority?: string | null
+          provider_id: string
+          read_at?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          metadata?: Json | null
+          notification_type?: string
+          priority?: string | null
+          provider_id?: string
+          read_at?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_notifications_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "authorized_providers"
             referencedColumns: ["id"]
           },
         ]
@@ -7755,6 +8203,59 @@ export type Database = {
           },
         ]
       }
+      provider_performance_metrics: {
+        Row: {
+          average_satisfaction_score: number | null
+          certificates_issued: number | null
+          compliance_score: number | null
+          courses_conducted: number | null
+          created_at: string | null
+          id: string
+          locations_served: number | null
+          measurement_period: string
+          performance_rating: number | null
+          provider_id: string
+          team_members_managed: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          average_satisfaction_score?: number | null
+          certificates_issued?: number | null
+          compliance_score?: number | null
+          courses_conducted?: number | null
+          created_at?: string | null
+          id?: string
+          locations_served?: number | null
+          measurement_period?: string
+          performance_rating?: number | null
+          provider_id: string
+          team_members_managed?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          average_satisfaction_score?: number | null
+          certificates_issued?: number | null
+          compliance_score?: number | null
+          courses_conducted?: number | null
+          created_at?: string | null
+          id?: string
+          locations_served?: number | null
+          measurement_period?: string
+          performance_rating?: number | null
+          provider_id?: string
+          team_members_managed?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_provider_performance_metrics_provider_id"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "authorized_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       provider_team_assignments: {
         Row: {
           assigned_at: string | null
@@ -7803,35 +8304,35 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "provider_team_assignments_assigned_by_fkey"
+            foreignKeyName: "fk_provider_team_assignments_assigned_by"
             columns: ["assigned_by"]
             isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
           {
-            foreignKeyName: "provider_team_assignments_assigned_by_fkey"
+            foreignKeyName: "fk_provider_team_assignments_assigned_by"
             columns: ["assigned_by"]
             isOneToOne: false
             referencedRelation: "instructor_workload_summary"
             referencedColumns: ["instructor_id"]
           },
           {
-            foreignKeyName: "provider_team_assignments_assigned_by_fkey"
+            foreignKeyName: "fk_provider_team_assignments_assigned_by"
             columns: ["assigned_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "provider_team_assignments_provider_id_fkey"
+            foreignKeyName: "fk_provider_team_assignments_provider_id"
             columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "authorized_providers"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "provider_team_assignments_team_id_fkey"
+            foreignKeyName: "fk_provider_team_assignments_team_id"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
@@ -8273,6 +8774,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      resource_availability: {
+        Row: {
+          active_assignments: number | null
+          availability_status: string
+          capacity_current: number
+          capacity_maximum: number
+          created_at: string | null
+          id: string
+          last_updated: string | null
+          max_concurrent_assignments: number | null
+          max_locations_per_user: number | null
+          max_teams_per_location: number | null
+          pending_assignments: number | null
+          resource_id: string
+          resource_type: string
+          scheduled_assignments: number | null
+          utilization_percentage: number | null
+        }
+        Insert: {
+          active_assignments?: number | null
+          availability_status: string
+          capacity_current?: number
+          capacity_maximum?: number
+          created_at?: string | null
+          id?: string
+          last_updated?: string | null
+          max_concurrent_assignments?: number | null
+          max_locations_per_user?: number | null
+          max_teams_per_location?: number | null
+          pending_assignments?: number | null
+          resource_id: string
+          resource_type: string
+          scheduled_assignments?: number | null
+          utilization_percentage?: number | null
+        }
+        Update: {
+          active_assignments?: number | null
+          availability_status?: string
+          capacity_current?: number
+          capacity_maximum?: number
+          created_at?: string | null
+          id?: string
+          last_updated?: string | null
+          max_concurrent_assignments?: number | null
+          max_locations_per_user?: number | null
+          max_teams_per_location?: number | null
+          pending_assignments?: number | null
+          resource_id?: string
+          resource_type?: string
+          scheduled_assignments?: number | null
+          utilization_percentage?: number | null
+        }
+        Relationships: []
       }
       risk_assessments: {
         Row: {
@@ -10418,6 +10973,92 @@ export type Database = {
           },
         ]
       }
+      team_member_invitations: {
+        Row: {
+          accepted_at: string | null
+          cancelled_at: string | null
+          created_at: string | null
+          custom_message: string | null
+          declined_at: string | null
+          expires_at: string
+          id: string
+          invitation_token: string
+          invited_at: string | null
+          invited_by: string
+          invited_email: string
+          invited_name: string | null
+          role: string
+          status: string
+          team_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          cancelled_at?: string | null
+          created_at?: string | null
+          custom_message?: string | null
+          declined_at?: string | null
+          expires_at: string
+          id?: string
+          invitation_token: string
+          invited_at?: string | null
+          invited_by: string
+          invited_email: string
+          invited_name?: string | null
+          role?: string
+          status?: string
+          team_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          cancelled_at?: string | null
+          created_at?: string | null
+          custom_message?: string | null
+          declined_at?: string | null
+          expires_at?: string
+          id?: string
+          invitation_token?: string
+          invited_at?: string | null
+          invited_by?: string
+          invited_email?: string
+          invited_name?: string | null
+          role?: string
+          status?: string
+          team_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_member_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_member_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_member_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_member_invitations_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_member_status_history: {
         Row: {
           changed_by: string | null
@@ -11097,6 +11738,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "fk_teams_provider_id"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "authorized_providers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "teams_archived_by_fkey"
             columns: ["archived_by"]
             isOneToOne: false
@@ -11132,13 +11780,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "teams_provider_id_fkey"
-            columns: ["provider_id"]
-            isOneToOne: false
-            referencedRelation: "authorized_providers"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "teams_split_from_team_id_fkey"
             columns: ["split_from_team_id"]
             isOneToOne: false
@@ -11146,6 +11787,72 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      teams_backup_20250621: {
+        Row: {
+          archived_at: string | null
+          archived_by: string | null
+          created_at: string | null
+          created_by: string | null
+          current_metrics: Json | null
+          description: string | null
+          id: string | null
+          location_id: string | null
+          metadata: Json | null
+          monthly_targets: Json | null
+          name: string | null
+          parent_id: string | null
+          parent_team_id: string | null
+          performance_score: number | null
+          provider_id: string | null
+          split_from_team_id: string | null
+          status: string | null
+          team_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          current_metrics?: Json | null
+          description?: string | null
+          id?: string | null
+          location_id?: string | null
+          metadata?: Json | null
+          monthly_targets?: Json | null
+          name?: string | null
+          parent_id?: string | null
+          parent_team_id?: string | null
+          performance_score?: number | null
+          provider_id?: string | null
+          split_from_team_id?: string | null
+          status?: string | null
+          team_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          current_metrics?: Json | null
+          description?: string | null
+          id?: string | null
+          location_id?: string | null
+          metadata?: Json | null
+          monthly_targets?: Json | null
+          name?: string | null
+          parent_id?: string | null
+          parent_team_id?: string | null
+          performance_score?: number | null
+          provider_id?: string | null
+          split_from_team_id?: string | null
+          status?: string | null
+          team_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       test_users: {
         Row: {
@@ -12249,13 +12956,25 @@ export type Database = {
         }[]
       }
       add_team_member_safe: {
-        Args: {
-          p_team_id: string
-          p_user_id: string
-          p_role?: string
-          p_assigned_by?: string
-        }
+        Args:
+          | { p_team_id: string; p_user_id: string; p_role?: string }
+          | {
+              p_team_id: string
+              p_user_id: string
+              p_role?: string
+              p_assigned_by?: string
+            }
+          | {
+              p_team_id: string
+              p_user_id: string
+              p_role?: string
+              p_joined_date?: string
+            }
         Returns: string
+      }
+      advance_workflow_step: {
+        Args: { p_workflow_id: string; p_step_data?: Json }
+        Returns: Json
       }
       assign_ap_user_to_location: {
         Args: {
@@ -12269,6 +12988,10 @@ export type Database = {
       assign_lead_intelligent: {
         Args: { p_lead_id: string; p_assignment_criteria?: Json }
         Returns: string
+      }
+      assign_provider_location_safe: {
+        Args: { p_provider_id: string; p_location_id: string }
+        Returns: Json
       }
       assign_provider_to_team: {
         Args:
@@ -12401,6 +13124,14 @@ export type Database = {
       check_member_compliance: {
         Args: { p_user_id: string }
         Returns: Json
+      }
+      check_provider_data_integrity: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          issue_type: string
+          count: number
+          details: string
+        }[]
       }
       check_role_progression_eligibility: {
         Args: { user_id: string; target_role: string }
@@ -12907,6 +13638,10 @@ export type Database = {
         Args: { p_team_id: string }
         Returns: Json
       }
+      get_team_member_count: {
+        Args: { p_team_id: string }
+        Returns: number
+      }
       get_team_members_bypass_rls: {
         Args: { p_team_id: string }
         Returns: {
@@ -13152,8 +13887,16 @@ export type Database = {
         Args: { p_ap_user_id: string; p_location_id: string }
         Returns: boolean
       }
+      remove_provider_location_safe: {
+        Args: { p_provider_id: string }
+        Returns: Json
+      }
       remove_team_member_bypass_rls: {
         Args: { p_team_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      remove_team_member_safe: {
+        Args: { p_member_id: string } | { p_team_id: string; p_user_id: string }
         Returns: boolean
       }
       safe_backfill_certificate_data: {
@@ -13178,15 +13921,39 @@ export type Database = {
         }
         Returns: undefined
       }
+      start_provider_assignment_workflow: {
+        Args: { p_workflow_type?: string }
+        Returns: string
+      }
       sync_team_location_names: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      test_authorized_providers_update: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       test_conversion_system: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      test_location_assignment_bypass: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      test_location_assignment_rls: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      test_location_removal: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       test_migration_success: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      test_profiles_recursion_fix: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
@@ -13195,6 +13962,10 @@ export type Database = {
         Returns: string
       }
       test_simple_crm_insert: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      test_team_assignment_fix: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
@@ -13225,6 +13996,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      update_resource_availability: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       update_team_member_role_bypass_rls: {
         Args: { p_team_id: string; p_user_id: string; p_new_role: string }
         Returns: {
@@ -13234,6 +14009,10 @@ export type Database = {
           role: string
           updated_at: string
         }[]
+      }
+      update_team_member_role_safe: {
+        Args: { p_member_id: string; p_new_role: string }
+        Returns: undefined
       }
       update_team_performance_scores: {
         Args: Record<PropertyKey, never>
@@ -13251,8 +14030,20 @@ export type Database = {
         }
         Returns: string
       }
+      validate_ap_user_selection: {
+        Args: { p_workflow_id: string; p_ap_user_id: string }
+        Returns: Json
+      }
       validate_configuration_value: {
         Args: { p_data_type: string; p_value: Json; p_validation_rules?: Json }
+        Returns: boolean
+      }
+      validate_location_selection: {
+        Args: { p_workflow_id: string; p_location_id: string }
+        Returns: Json
+      }
+      validate_provider_uuid: {
+        Args: { p_id: string }
         Returns: boolean
       }
       validate_roster_counts: {
