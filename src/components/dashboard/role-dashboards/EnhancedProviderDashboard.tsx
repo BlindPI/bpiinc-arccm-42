@@ -22,11 +22,11 @@ import { providerRelationshipService } from '@/services/provider/providerRelatio
 import { validateDashboardDataSources, logValidationResults } from '@/utils/validateDashboardDataSources';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
-import { 
-  GraduationCap, 
-  Calendar, 
-  Users, 
-  Award, 
+import {
+  GraduationCap,
+  Calendar,
+  Users,
+  Award,
   ClipboardList,
   Building2,
   MapPin,
@@ -36,7 +36,13 @@ import {
   Eye,
   CheckCircle,
   AlertTriangle,
-  Crown
+  Crown,
+  Shield,
+  UserCheck,
+  AlertCircle,
+  Clock,
+  FileText,
+  Target
 } from 'lucide-react';
 import { WorkingDashboardActionButton } from '../ui/WorkingDashboardActionButton';
 import { InlineLoader } from '@/components/ui/LoadingStates';
@@ -271,6 +277,40 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
     enabled: !!(selectedProvider || userProviders?.[0]?.id)
   });
 
+  // PHASE 4: Get comprehensive compliance data for team members
+  const {
+    data: complianceData,
+    isLoading: complianceLoading
+  } = useQuery({
+    queryKey: ['provider-compliance-data', selectedProvider || userProviders?.[0]?.id],
+    queryFn: async () => {
+      const providerId = selectedProvider || userProviders?.[0]?.id;
+      if (!providerId) return null;
+      
+      console.log('🔍 PHASE 4: Loading comprehensive compliance data...');
+      
+      // Get all compliance data using Phase 2 services
+      const [teamMemberCompliance, complianceSummary, overdueMembers, complianceByTeam] = await Promise.all([
+        providerRelationshipService.getProviderTeamMemberCompliance(providerId),
+        providerRelationshipService.getProviderComplianceSummary(providerId),
+        providerRelationshipService.getOverdueComplianceMembers(providerId),
+        providerRelationshipService.getComplianceByTeam(providerId)
+      ]);
+      
+      console.log(`✅ PHASE 4: Loaded compliance data - ${teamMemberCompliance.length} members, ${overdueMembers.length} overdue`);
+      
+      return {
+        teamMemberCompliance,
+        complianceSummary,
+        overdueMembers,
+        complianceByTeam,
+        providerId
+      };
+    },
+    enabled: !!(selectedProvider || userProviders?.[0]?.id),
+    refetchInterval: 60000 // Refresh every minute for real-time compliance monitoring
+  });
+
   // Loading state
   if (providersLoading || metricsLoading) {
     return <InlineLoader message="Loading enhanced provider dashboard..." />;
@@ -382,12 +422,16 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
         </Card>
       </div>
 
-      {/* Enhanced Tabs with Team and Location Management */}
+      {/* Enhanced Tabs with Team and Location Management + PHASE 4: Compliance */}
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="teams">Team Assignments</TabsTrigger>
           <TabsTrigger value="locations">Locations</TabsTrigger>
+          <TabsTrigger value="compliance">
+            <Shield className="h-4 w-4 mr-1" />
+            Compliance
+          </TabsTrigger>
           <TabsTrigger value="performance">Performance</TabsTrigger>
         </TabsList>
 
@@ -535,6 +579,315 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="compliance" className="space-y-6">
+          {/* PHASE 4: Compliance Tab Implementation */}
+          {complianceLoading ? (
+            <div className="text-center py-8">
+              <div className="text-center py-4">Loading compliance data...</div>
+            </div>
+          ) : complianceData ? (
+            <div className="space-y-6">
+              {/* Compliance Summary Cards */}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card className="bg-gradient-to-br from-green-50 to-white border-green-200">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-green-700 flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4" />
+                      Compliant
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">
+                      {complianceData.complianceSummary.compliant_members}
+                    </div>
+                    <p className="text-xs text-green-600 mt-1">
+                      {complianceData.complianceSummary.compliance_breakdown.compliant_percentage}% of team
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-yellow-50 to-white border-yellow-200">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-yellow-700 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      Warning
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-yellow-600">
+                      {complianceData.complianceSummary.warning_members}
+                    </div>
+                    <p className="text-xs text-yellow-600 mt-1">
+                      {complianceData.complianceSummary.compliance_breakdown.warning_percentage}% of team
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-red-50 to-white border-red-200">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-red-700 flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4" />
+                      Non-Compliant
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-red-600">
+                      {complianceData.complianceSummary.non_compliant_members}
+                    </div>
+                    <p className="text-xs text-red-600 mt-1">
+                      {complianceData.complianceSummary.compliance_breakdown.non_compliant_percentage}% of team
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-blue-50 to-white border-blue-200">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-blue-700 flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Pending
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {complianceData.complianceSummary.pending_members}
+                    </div>
+                    <p className="text-xs text-blue-600 mt-1">
+                      {complianceData.complianceSummary.compliance_breakdown.pending_percentage}% of team
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Overall Compliance Rate */}
+              <Card className="border-2 bg-gradient-to-br from-white to-gray-50/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5" />
+                    Overall Compliance Rate
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-4">
+                    <div className="text-4xl font-bold text-gray-900">
+                      {complianceData.complianceSummary.overall_compliance_rate}%
+                    </div>
+                    <div className="flex-1">
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div
+                          className={`h-3 rounded-full transition-all duration-500 ${
+                            complianceData.complianceSummary.overall_compliance_rate >= 90 ? 'bg-green-500' :
+                            complianceData.complianceSummary.overall_compliance_rate >= 70 ? 'bg-yellow-500' :
+                            'bg-red-500'
+                          }`}
+                          style={{ width: `${complianceData.complianceSummary.overall_compliance_rate}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>0%</span>
+                        <span>100%</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 text-sm text-gray-600">
+                    {complianceData.complianceSummary.total_members} total team members •
+                    {complianceData.complianceSummary.total_pending_actions} pending actions •
+                    {complianceData.complianceSummary.total_overdue_actions} overdue actions
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Overdue Actions Alert */}
+              {complianceData.overdueMembers.length > 0 && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    🚨 {complianceData.overdueMembers.length} team members have overdue compliance actions requiring immediate attention.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Team Member Compliance List */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserCheck className="h-5 w-5" />
+                    Team Member Compliance Status
+                    <Badge variant="outline">{complianceData.teamMemberCompliance.length} members</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {complianceData.teamMemberCompliance.length > 0 ? (
+                    <div className="space-y-3">
+                      {complianceData.teamMemberCompliance.map((member) => (
+                        <div key={member.user_id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3">
+                              <h4 className="font-medium">{member.member_name}</h4>
+                              <Badge
+                                variant={
+                                  member.compliance_status === 'compliant' ? 'default' :
+                                  member.compliance_status === 'warning' ? 'secondary' :
+                                  member.compliance_status === 'non_compliant' ? 'destructive' :
+                                  'outline'
+                                }
+                                className={`text-xs ${
+                                  member.compliance_status === 'compliant' ? 'bg-green-100 text-green-800 border-green-300' :
+                                  member.compliance_status === 'warning' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                                  member.compliance_status === 'non_compliant' ? 'bg-red-100 text-red-800 border-red-300' :
+                                  'bg-blue-100 text-blue-800 border-blue-300'
+                                }`}
+                              >
+                                {member.compliance_status === 'compliant' ? '🟢 Compliant' :
+                                 member.compliance_status === 'warning' ? '🟡 Warning' :
+                                 member.compliance_status === 'non_compliant' ? '🔴 Non-Compliant' :
+                                 '🔵 Pending'}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {member.team_name} • {member.member_role}
+                            </p>
+                            <div className="flex items-center gap-4 mt-2">
+                              <div className="text-sm">
+                                <span className="font-medium">Score: </span>
+                                <span className={`font-bold ${
+                                  member.compliance_score >= 90 ? 'text-green-600' :
+                                  member.compliance_score >= 70 ? 'text-yellow-600' :
+                                  'text-red-600'
+                                }`}>
+                                  {member.compliance_score}%
+                                </span>
+                              </div>
+                              {member.pending_actions > 0 && (
+                                <div className="text-sm text-blue-600">
+                                  <Clock className="h-3 w-3 inline mr-1" />
+                                  {member.pending_actions} pending
+                                </div>
+                              )}
+                              {member.overdue_actions > 0 && (
+                                <div className="text-sm text-red-600">
+                                  <AlertTriangle className="h-3 w-3 inline mr-1" />
+                                  {member.overdue_actions} overdue
+                                </div>
+                              )}
+                            </div>
+                            {member.requirements.length > 0 && (
+                              <div className="mt-2">
+                                <div className="text-xs text-gray-500 mb-1">Requirements:</div>
+                                <div className="flex flex-wrap gap-1">
+                                  {member.requirements.slice(0, 3).map((req, index) => (
+                                    <Badge
+                                      key={index}
+                                      variant="outline"
+                                      className={`text-xs ${
+                                        req.status === 'compliant' ? 'border-green-300 text-green-700' :
+                                        req.status === 'warning' ? 'border-yellow-300 text-yellow-700' :
+                                        req.status === 'non_compliant' ? 'border-red-300 text-red-700' :
+                                        'border-blue-300 text-blue-700'
+                                      }`}
+                                    >
+                                      {req.name}
+                                    </Badge>
+                                  ))}
+                                  {member.requirements.length > 3 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      +{member.requirements.length - 3} more
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <Button variant="outline" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <UserCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No team members found</p>
+                      <p className="text-sm">Team member compliance data will appear here</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Compliance by Team Breakdown */}
+              {complianceData.complianceByTeam.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Building2 className="h-5 w-5" />
+                      Compliance by Team
+                      <Badge variant="outline">{complianceData.complianceByTeam.length} teams</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {complianceData.complianceByTeam.map((team) => (
+                        <div key={team.team_id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                          <div>
+                            <h4 className="font-medium">{team.team_name}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {team.compliant_members}/{team.total_members} compliant members
+                            </p>
+                            <div className="flex items-center gap-4 mt-2">
+                              <div className="text-sm">
+                                <span className="font-medium">Rate: </span>
+                                <span className={`font-bold ${
+                                  team.compliance_rate >= 90 ? 'text-green-600' :
+                                  team.compliance_rate >= 70 ? 'text-yellow-600' :
+                                  'text-red-600'
+                                }`}>
+                                  {team.compliance_rate}%
+                                </span>
+                              </div>
+                              {team.pending_actions > 0 && (
+                                <div className="text-sm text-blue-600">
+                                  <Clock className="h-3 w-3 inline mr-1" />
+                                  {team.pending_actions} pending
+                                </div>
+                              )}
+                              {team.overdue_actions > 0 && (
+                                <div className="text-sm text-red-600">
+                                  <AlertTriangle className="h-3 w-3 inline mr-1" />
+                                  {team.overdue_actions} overdue
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="w-32 bg-gray-200 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full transition-all duration-300 ${
+                                  team.compliance_rate >= 90 ? 'bg-green-500' :
+                                  team.compliance_rate >= 70 ? 'bg-yellow-500' :
+                                  'bg-red-500'
+                                }`}
+                                style={{ width: `${team.compliance_rate}%` }}
+                              />
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {team.compliance_rate}%
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No compliance data available</p>
+              <p className="text-sm">Compliance information will appear once team members are assigned</p>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="performance" className="space-y-6">
