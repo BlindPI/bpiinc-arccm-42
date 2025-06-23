@@ -17,8 +17,9 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { diagnoseLocationAssignmentError, logDiagnosticResults } from '@/utils/diagnoseLocationAssignmentError';
-import type { 
-  Provider, 
+import { ComplianceService } from '@/services/compliance/complianceService';
+import type {
+  Provider,
   AuthorizedProvider,
   ProviderWithRelationships,
   ProviderTeamAssignment,
@@ -1086,6 +1087,63 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
   }
 
   /**
+   * Calculate REAL provider compliance score from team member compliance
+   * Replaces fake data implementation per Phase 1 requirements
+   */
+  private async calculateRealProviderComplianceScore(providerId: string): Promise<number> {
+    try {
+      console.log(`DEBUG: Calculating real compliance score for provider ${providerId}`);
+      
+      // Get all team members under this provider's teams
+      const teamAssignments = await this.getProviderTeamAssignments(providerId);
+      const allTeamIds = teamAssignments.map(a => a.team_id);
+      
+      if (allTeamIds.length === 0) {
+        console.log(`DEBUG: No teams found for provider ${providerId}`);
+        return 0;
+      }
+      
+      // Get all team members across provider's teams
+      const { data: teamMembers, error } = await supabase
+        .from('team_members')
+        .select('user_id, team_id')
+        .in('team_id', allTeamIds)
+        .eq('status', 'active');
+      
+      if (error || !teamMembers || teamMembers.length === 0) {
+        console.log(`DEBUG: No team members found for provider ${providerId}`);
+        return 0;
+      }
+      
+      console.log(`DEBUG: Found ${teamMembers.length} team members across ${allTeamIds.length} teams`);
+      
+      // Calculate compliance scores for all team members
+      let totalComplianceScore = 0;
+      let memberCount = 0;
+      
+      for (const member of teamMembers) {
+        try {
+          const complianceSummary = await ComplianceService.getUserComplianceSummary(member.user_id);
+          totalComplianceScore += complianceSummary.overall_score;
+          memberCount++;
+          console.log(`DEBUG: Member ${member.user_id} compliance score: ${complianceSummary.overall_score}`);
+        } catch (error) {
+          console.error(`DEBUG: Error getting compliance for member ${member.user_id}:`, error);
+          // Continue with other members
+        }
+      }
+      
+      const averageComplianceScore = memberCount > 0 ? Math.round(totalComplianceScore / memberCount) : 0;
+      console.log(`DEBUG: Provider ${providerId} average compliance score: ${averageComplianceScore} (from ${memberCount} members)`);
+      
+      return averageComplianceScore;
+    } catch (error) {
+      console.error('Error calculating provider compliance score:', error);
+      return 0;
+    }
+  }
+
+  /**
    * Calculate real provider KPIs from database tables
    * FIXED: Handles location ID mismatch for certificate counting
    */
@@ -1271,14 +1329,22 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
         console.log(`DEBUG: No teams found for provider ${providerId}`);
       }
 
+      // Calculate REAL compliance score from team member data
+      const realComplianceScore = await this.calculateRealProviderComplianceScore(providerId);
+      
+      // TODO: IMPLEMENT REAL DATA SOURCES FOR REMAINING PERFORMANCE METRICS
+      // These should come from actual data entry systems:
+      // - averageSatisfactionScore: from feedback/survey system
+      // - performanceRating: from performance evaluation system
+      
       return {
         certificatesIssued: certificateCount,
         coursesDelivered: courseCount,
         teamMembersManaged: memberCount,
         locationsServed: locationCount,
-        averageSatisfactionScore: 4.2,
-        complianceScore: 89.5,
-        performanceRating: 4.1
+        averageSatisfactionScore: 0, // TODO: Implement feedback system
+        complianceScore: realComplianceScore, // NOW REAL DATA!
+        performanceRating: 0 // TODO: Implement performance evaluation
       };
     } catch (error) {
       console.error('Error calculating real provider KPIs:', error);
