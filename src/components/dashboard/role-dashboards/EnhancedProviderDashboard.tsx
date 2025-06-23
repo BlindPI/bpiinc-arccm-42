@@ -177,7 +177,7 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
     enabled: !!(selectedProvider || userProviders?.[0]?.id)
   });
 
-  // Get location assignments (FIXED: Now actually loads real data)
+  // Get provider's primary location (FIXED: Show primary_location_id, not separate assignments table)
   const {
     data: locationAssignments,
     isLoading: locationsLoading
@@ -187,39 +187,86 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
       const providerId = selectedProvider || userProviders?.[0]?.id;
       if (!providerId) return [];
       
-      console.log('🔍 ENHANCED DASHBOARD: Loading location assignments...');
-      return await providerRelationshipService.getProviderLocationAssignments(providerId);
+      console.log('🔍 ENHANCED DASHBOARD: Loading provider primary location...');
+      
+      // Get provider's primary location from authorized_providers table
+      const { data: provider, error: providerError } = await supabase
+        .from('authorized_providers')
+        .select('primary_location_id')
+        .eq('id', providerId)
+        .single();
+      
+      if (providerError || !provider?.primary_location_id) {
+        console.log('🔍 ENHANCED DASHBOARD: No primary location found for provider');
+        return [];
+      }
+      
+      // Get location details
+      const { data: location, error: locationError } = await supabase
+        .from('locations')
+        .select('id, name, address, city, state')
+        .eq('id', provider.primary_location_id)
+        .single();
+      
+      if (locationError || !location) {
+        console.log('🔍 ENHANCED DASHBOARD: Location details not found');
+        return [];
+      }
+      
+      console.log('✅ ENHANCED DASHBOARD: Found primary location:', location.name);
+      
+      return [{
+        id: `${providerId}-${location.id}-primary`,
+        provider_id: providerId,
+        location_id: location.id,
+        assignment_role: 'primary',
+        start_date: new Date().toISOString().split('T')[0],
+        status: 'active',
+        location_name: location.name,
+        location_address: `${location.address || ''}, ${location.city || ''}, ${location.state || ''}`.replace(/^,\s*|,\s*$/g, ''),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }];
     },
     enabled: !!(selectedProvider || userProviders?.[0]?.id)
   });
 
-  // Get real performance metrics from provider_performance_metrics table
+  // Get real performance metrics from actual activity data (NO SIMULATIONS)
   const {
     data: realPerformanceMetrics,
     isLoading: performanceLoading
   } = useQuery({
-    queryKey: ['provider-performance-metrics', selectedProvider || userProviders?.[0]?.id],
+    queryKey: ['real-activity-performance-metrics', selectedProvider || userProviders?.[0]?.id],
     queryFn: async () => {
       const providerId = selectedProvider || userProviders?.[0]?.id;
       if (!providerId) return null;
       
-      console.log('🔍 ENHANCED DASHBOARD: Loading real performance metrics from database...');
+      console.log('🔍 ENHANCED DASHBOARD: Loading REAL performance metrics from actual activity data...');
       
-      // Query provider_performance_metrics table for real data
-      const { data, error } = await supabase
+      // Get current period real metrics from actual database activity
+      const currentMetrics = await providerRelationshipService.getProviderLocationKPIs(providerId);
+      
+      // Try to get historical data from provider_performance_metrics table if it exists
+      const { data: historicalData, error } = await supabase
         .from('provider_performance_metrics')
         .select('*')
         .eq('provider_id', providerId)
         .order('measurement_period', { ascending: false })
-        .limit(12); // Get last 12 months
+        .limit(12);
       
       if (error) {
-        console.error('Error loading performance metrics:', error);
-        return null;
+        console.log('🔍 ENHANCED DASHBOARD: No historical performance data found in database');
       }
       
-      console.log('✅ ENHANCED DASHBOARD: Loaded real performance metrics:', data?.length || 0, 'records');
-      return data || [];
+      console.log('✅ ENHANCED DASHBOARD: Real current metrics loaded, historical records:', historicalData?.length || 0);
+      
+      return {
+        currentPeriod: {
+          ...currentMetrics,
+          measurement_period: new Date().toISOString().split('T')[0]
+        },
+        historicalRecords: historicalData || []
+      };
     },
     enabled: !!(selectedProvider || userProviders?.[0]?.id)
   });
@@ -455,15 +502,16 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
                         <p className="text-sm text-muted-foreground">
                           Role: {assignment.assignment_role} • Since: {new Date(assignment.start_date).toLocaleDateString()}
                         </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {assignment.location_address || 'Address not available'}
+                        </p>
                         <div className="flex items-center gap-2 mt-1">
                           <Badge variant={assignment.status === 'active' ? 'default' : 'secondary'} className="text-xs">
                             {assignment.status}
                           </Badge>
-                          {assignment.end_date && (
-                            <Badge variant="outline" className="text-xs">
-                              Ends: {new Date(assignment.end_date).toLocaleDateString()}
-                            </Badge>
-                          )}
+                          <Badge variant="outline" className="text-xs">
+                            Primary Location
+                          </Badge>
                         </div>
                       </div>
                       <Button variant="outline" size="sm">
@@ -494,7 +542,7 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
             <div className="text-center py-8">
               <div className="text-center py-4">Loading performance metrics...</div>
             </div>
-          ) : realPerformanceMetrics && realPerformanceMetrics.length > 0 ? (
+          ) : realPerformanceMetrics && realPerformanceMetrics.currentPeriod ? (
             <div className="space-y-6">
               {/* Current Period Performance */}
               <div className="grid gap-6 md:grid-cols-4">
@@ -504,7 +552,7 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-gray-900">
-                      {realPerformanceMetrics[0]?.performance_rating?.toFixed(1) || 'N/A'}
+                      {realPerformanceMetrics.currentPeriod.performanceRating?.toFixed(1) || 'N/A'}
                     </div>
                     <p className="text-xs text-gray-500 mt-1">Out of 5.0</p>
                   </CardContent>
@@ -516,7 +564,7 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-green-600">
-                      {realPerformanceMetrics[0]?.compliance_score?.toFixed(1) || 'N/A'}%
+                      {realPerformanceMetrics.currentPeriod.complianceScore?.toFixed(1) || 'N/A'}%
                     </div>
                     <p className="text-xs text-gray-500 mt-1">Current compliance</p>
                   </CardContent>
@@ -528,7 +576,7 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-purple-600">
-                      {realPerformanceMetrics[0]?.average_satisfaction_score?.toFixed(1) || 'N/A'}
+                      {realPerformanceMetrics.currentPeriod.averageSatisfactionScore?.toFixed(1) || 'N/A'}
                     </div>
                     <p className="text-xs text-gray-500 mt-1">Average score</p>
                   </CardContent>
@@ -540,13 +588,13 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
                   </CardHeader>
                   <CardContent>
                     <div className="text-lg font-bold text-blue-600">
-                      {realPerformanceMetrics[0]?.measurement_period ?
-                        new Date(realPerformanceMetrics[0].measurement_period).toLocaleDateString('en-US', {
+                      {realPerformanceMetrics.currentPeriod.measurement_period ?
+                        new Date(realPerformanceMetrics.currentPeriod.measurement_period).toLocaleDateString('en-US', {
                           year: 'numeric',
                           month: 'short'
-                        }) : 'N/A'}
+                        }) : 'Current'}
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">Current period</p>
+                    <p className="text-xs text-gray-500 mt-1">Real-time data</p>
                   </CardContent>
                 </Card>
               </div>
@@ -559,9 +607,9 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-blue-600">
-                      {realPerformanceMetrics[0]?.certificates_issued || 0}
+                      {realPerformanceMetrics.currentPeriod.certificatesIssued || 0}
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">This period</p>
+                    <p className="text-xs text-gray-500 mt-1">Real count from database</p>
                   </CardContent>
                 </Card>
 
@@ -571,9 +619,9 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-green-600">
-                      {realPerformanceMetrics[0]?.courses_conducted || 0}
+                      {realPerformanceMetrics.currentPeriod.coursesDelivered || 0}
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">This period</p>
+                    <p className="text-xs text-gray-500 mt-1">Real count from database</p>
                   </CardContent>
                 </Card>
 
@@ -583,9 +631,9 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-purple-600">
-                      {realPerformanceMetrics[0]?.team_members_managed || 0}
+                      {realPerformanceMetrics.currentPeriod.teamMembersManaged || 0}
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">Managed</p>
+                    <p className="text-xs text-gray-500 mt-1">Real count from database</p>
                   </CardContent>
                 </Card>
 
@@ -595,26 +643,26 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-amber-600">
-                      {realPerformanceMetrics[0]?.locations_served || 0}
+                      {realPerformanceMetrics.currentPeriod.locationsServed || 0}
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">Active locations</p>
+                    <p className="text-xs text-gray-500 mt-1">Real count from database</p>
                   </CardContent>
                 </Card>
               </div>
 
-              {/* Historical Performance Trend */}
-              {realPerformanceMetrics.length > 1 && (
+              {/* Historical Performance Trend - Only if real historical data exists */}
+              {realPerformanceMetrics.historicalRecords && realPerformanceMetrics.historicalRecords.length > 0 && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <TrendingUp className="h-5 w-5" />
                       Performance History
-                      <Badge variant="outline">{realPerformanceMetrics.length} periods</Badge>
+                      <Badge variant="outline">{realPerformanceMetrics.historicalRecords.length} periods</Badge>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {realPerformanceMetrics.slice(0, 6).map((metric, index) => (
+                      {realPerformanceMetrics.historicalRecords.slice(0, 6).map((metric, index) => (
                         <div key={metric.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                           <div>
                             <h4 className="font-medium">
