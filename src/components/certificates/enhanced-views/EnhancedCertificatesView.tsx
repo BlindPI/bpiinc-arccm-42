@@ -293,7 +293,7 @@ export function EnhancedCertificatesView() {
           groupKey = cert.created_at?.split('T')[0] || 'Unknown Date';
           break;
         case 'batch':
-          groupKey = cert.batch_id || 'No Batch';
+          groupKey = cert.batch_name || 'No Batch';
           break;
       }
       
@@ -462,6 +462,7 @@ export function EnhancedCertificatesView() {
                     <SelectItem value="course_name">Course Name</SelectItem>
                     <SelectItem value="issue_date">Issue Date</SelectItem>
                     <SelectItem value="expiry_date">Expiry Date</SelectItem>
+                    <SelectItem value="batch_name">Batch Name</SelectItem>
                     <SelectItem value="status">Status</SelectItem>
                   </SelectContent>
                 </Select>
@@ -487,7 +488,7 @@ export function EnhancedCertificatesView() {
                     <SelectItem value="none">
                       <div className="flex items-center gap-2">
                         <List className="h-4 w-4" />
-                        No Grouping
+                        Ungrouped
                       </div>
                     </SelectItem>
                     <SelectItem value="user">
