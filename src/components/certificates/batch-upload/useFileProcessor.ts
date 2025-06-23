@@ -242,7 +242,11 @@ export function useFileProcessor() {
                 expirationMonths: bestMatch.expiration_months
               }];
               
-              console.log(`Match found for row ${rowNum}:`, processedRow.courseMatches[0]);
+              console.log(`DEBUG - Match found for row ${rowNum}:`, {
+                match: processedRow.courseMatches[0],
+                studentData: { firstAidLevel: processedRow.firstAidLevel, cprLevel: processedRow.cprLevel },
+                assessmentStatus: processedRow.assessmentStatus
+              });
             } else if (selectedCourseId && selectedCourseId !== 'none') {
               // Fallback to the manually selected course if no match was found
               const manualCourse = courses.find(c => c.id === selectedCourseId);

@@ -200,10 +200,40 @@ export function RosterReview({
                                 {row.courseMatches[0].courseName}
                                 <Badge variant={
                                   row.courseMatches[0].matchType === 'exact' ? 'success' :
-                                  row.courseMatches[0].matchType === 'partial' ? 'warning' :
+                                  row.courseMatches[0].matchType === 'partial' ? 'success' :
                                   row.courseMatches[0].matchType === 'manual' ? 'outline' : 'secondary'
                                 } className="text-[10px]">
-                                  {row.courseMatches[0].matchType}
+                                  {/* DEBUG: Log partial match details */}
+                                  {(() => {
+                                    if (row.courseMatches[0].matchType === 'partial') {
+                                      console.log(`DEBUG - Partial match for row ${row.rowNum}:`, {
+                                        studentFirstAid: row.firstAidLevel,
+                                        studentCPR: row.cprLevel,
+                                        courseFirstAid: row.courseMatches[0].certifications?.find(c => c.type === 'FIRST_AID')?.level,
+                                        courseCPR: row.courseMatches[0].certifications?.find(c => c.type === 'CPR')?.level,
+                                        courseName: row.courseMatches[0].courseName
+                                      });
+                                      
+                                      // Determine if it's CPR-only or First-Aid-only match
+                                      const hasFirstAidMatch = row.firstAidLevel &&
+                                        row.courseMatches[0].certifications?.some(c =>
+                                          c.type === 'FIRST_AID' &&
+                                          c.level?.toLowerCase() === row.firstAidLevel?.toLowerCase()
+                                        );
+                                      const hasCPRMatch = row.cprLevel &&
+                                        row.courseMatches[0].certifications?.some(c =>
+                                          c.type === 'CPR' &&
+                                          c.level?.toLowerCase() === row.cprLevel?.toLowerCase()
+                                        );
+                                      
+                                      if (hasFirstAidMatch && !hasCPRMatch) {
+                                        return 'First Aid Only';
+                                      } else if (hasCPRMatch && !hasFirstAidMatch) {
+                                        return 'CPR Only';
+                                      }
+                                    }
+                                    return row.courseMatches[0].matchType;
+                                  })()}
                                 </Badge>
                               </span>
                             </div>
@@ -261,12 +291,30 @@ export function RosterReview({
                   )}
                 </TableCell>
                 <TableCell className="text-right">
+                  {/* DEBUG: Log assessment status for debugging */}
+                  {(() => {
+                    console.log(`DEBUG - Row ${row.rowNum} status:`, {
+                      assessmentStatus: row.assessmentStatus,
+                      error: row.error,
+                      isProcessed: row.isProcessed,
+                      name: row.name
+                    });
+                    return null;
+                  })()}
+                  
                   {row.error ? (
                     <Badge variant="destructive" className="ml-auto">Error</Badge>
-                  ) : row.isProcessed ? (
-                    <Badge variant="success" className="ml-auto">OK</Badge>
-                  ) : (
+                  ) : !row.isProcessed ? (
                     <Badge variant="outline" className="ml-auto">Pending</Badge>
+                  ) : row.assessmentStatus === 'FAIL' ? (
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant="destructive" className="ml-auto">FAILED</Badge>
+                      <span className="text-xs text-red-600">Will be skipped</span>
+                    </div>
+                  ) : row.assessmentStatus === 'PENDING' ? (
+                    <Badge variant="outline" className="ml-auto bg-yellow-50 text-yellow-700 border-yellow-300">PENDING</Badge>
+                  ) : (
+                    <Badge variant="success" className="ml-auto">PASSED</Badge>
                   )}
                 </TableCell>
               </TableRow>
