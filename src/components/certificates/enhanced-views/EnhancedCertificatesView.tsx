@@ -5,15 +5,24 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { 
-  Search, 
-  Filter, 
-  Download, 
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Search,
+  Filter,
+  Download,
   Award,
   Mail,
   Grid,
   List,
-  SlidersHorizontal
+  SlidersHorizontal,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Users,
+  MapPin,
+  Calendar,
+  Package
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,20 +41,31 @@ export function EnhancedCertificatesView() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedCertificates, setSelectedCertificates] = useState<Set<string>>(new Set());
   const [emailDialogCert, setEmailDialogCert] = useState<Certificate | null>(null);
+  
+  // **PAGINATION STATE**
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [sortBy, setSortBy] = useState<keyof Certificate>('created_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [groupBy, setGroupBy] = useState<'none' | 'user' | 'location' | 'date' | 'batch'>('none');
 
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
 
-  const { data: certificates, isLoading } = useQuery({
-    queryKey: ['enhanced-certificates', isAdmin, statusFilter, profile?.id],
+  const { data: paginatedData, isLoading } = useQuery({
+    queryKey: ['enhanced-certificates', isAdmin, statusFilter, profile?.id, currentPage, pageSize, sortBy, sortDirection, searchQuery],
     queryFn: async () => {
       // 🔍 PAGINATION DIAGNOSTIC: Log query start time
       const queryStart = performance.now();
-      console.log('🔍 Certificate Query Starting - fetching ALL records without pagination');
+      console.log(`🔍 Certificate Query Starting - Page ${currentPage}, Size ${pageSize} with server-side pagination`);
+      
+      // Calculate pagination offset
+      const offset = (currentPage - 1) * pageSize;
       
       let query = supabase
         .from('certificates')
-        .select('*');
+        .select('*', { count: 'exact' });
 
+      // **PRESERVE EXISTING SECURITY MODEL - CRITICAL**
       if (!isAdmin && profile?.id) {
         // AP users: Don't filter by user_id - let RLS handle location-based visibility
         if (profile?.role === 'AP') {
@@ -61,26 +81,39 @@ export function EnhancedCertificatesView() {
         query = query.eq('status', statusFilter);
       }
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      // **SERVER-SIDE SEARCH FILTERING**
+      if (searchQuery.trim()) {
+        const searchTerm = `%${searchQuery.trim()}%`;
+        query = query.or(
+          `recipient_name.ilike.${searchTerm},course_name.ilike.${searchTerm},verification_code.ilike.${searchTerm}`
+        );
+      }
+
+      // **SERVER-SIDE SORTING**
+      query = query.order(sortBy, { ascending: sortDirection === 'asc' });
+
+      // **APPLY PAGINATION**
+      query = query.range(offset, offset + pageSize - 1);
+
+      const { data, error, count } = await query;
       
       // 🔍 PAGINATION DIAGNOSTIC: Log query completion
       const queryTime = performance.now() - queryStart;
       const recordCount = data?.length || 0;
-      console.log(`🔍 Certificate Query Complete: ${recordCount} records fetched in ${queryTime.toFixed(2)}ms`);
-      
-      // 🔍 PAGINATION DIAGNOSTIC: Log performance issues
-      if (queryTime > 500) {
-        console.warn('⚠️ SLOW QUERY: Certificate fetch took over 500ms - pagination needed!');
-      }
-      if (recordCount > 100) {
-        console.warn(`⚠️ LARGE DATASET: Fetching ${recordCount} records without pagination affects performance`);
-      }
+      console.log(`🔍 Certificate Query Complete: ${recordCount} records fetched in ${queryTime.toFixed(2)}ms (Total: ${count})`);
       
       if (error) throw error;
-      return (data || []) as Certificate[];
+      return {
+        certificates: (data || []) as Certificate[],
+        totalCount: count || 0
+      };
     },
     enabled: !!profile
   });
+
+  const certificates = paginatedData?.certificates || [];
+  const totalCount = paginatedData?.totalCount || 0;
+  const totalPages = Math.ceil(totalCount / pageSize);
 
   // Fetch locations for display
   const { data: locations } = useQuery({
@@ -95,40 +128,43 @@ export function EnhancedCertificatesView() {
     }
   });
 
-  const filteredCertificates = (() => {
-    // 🔍 PAGINATION DIAGNOSTIC: Log filtering start time
-    const filterStart = performance.now();
+  // **SERVER-SIDE FILTERING REPLACES CLIENT-SIDE - NO ADDITIONAL FILTERING NEEDED**
+  const filteredCertificates = certificates;
+  
+  // **GROUPING LOGIC FOR ORGANIZATION**
+  const groupedCertificates = React.useMemo(() => {
+    if (!filteredCertificates || groupBy === 'none') {
+      return { ungrouped: filteredCertificates };
+    }
+
+    const groups: Record<string, Certificate[]> = {};
     
-    if (!certificates) return [];
-    
-    const totalRecords = certificates.length;
-    console.log(`🔍 Client-Side Filtering Starting: ${totalRecords} records to filter`);
-    
-    const filtered = certificates.filter(cert => {
-      if (!searchQuery) return true;
-      const searchLower = searchQuery.toLowerCase();
-      return (
-        cert.recipient_name?.toLowerCase().includes(searchLower) ||
-        cert.course_name?.toLowerCase().includes(searchLower) ||
-        cert.verification_code?.toLowerCase().includes(searchLower)
-      );
+    filteredCertificates.forEach(cert => {
+      let groupKey = 'Other';
+      
+      switch (groupBy) {
+        case 'user':
+          groupKey = cert.recipient_name || 'Unknown User';
+          break;
+        case 'location':
+          groupKey = cert.location_id || 'No Location';
+          break;
+        case 'date':
+          groupKey = cert.created_at?.split('T')[0] || 'Unknown Date';
+          break;
+        case 'batch':
+          groupKey = cert.batch_id || 'No Batch';
+          break;
+      }
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
+      }
+      groups[groupKey].push(cert);
     });
     
-    // 🔍 PAGINATION DIAGNOSTIC: Log filtering completion
-    const filterTime = performance.now() - filterStart;
-    const filteredCount = filtered.length;
-    console.log(`🔍 Client-Side Filtering Complete: ${filteredCount}/${totalRecords} records in ${filterTime.toFixed(2)}ms`);
-    
-    // 🔍 PAGINATION DIAGNOSTIC: Log filtering performance issues
-    if (filterTime > 50) {
-      console.warn('⚠️ SLOW FILTERING: Client-side filtering is taking too long - consider server-side filtering');
-    }
-    if (totalRecords > 100 && searchQuery) {
-      console.warn(`⚠️ INEFFICIENT FILTERING: Filtering ${totalRecords} records client-side is inefficient`);
-    }
-    
-    return filtered;
-  })();
+    return groups;
+  }, [filteredCertificates, groupBy]);
 
   const handleSelectCertificate = (certId: string, selected: boolean) => {
     const newSelection = new Set(selectedCertificates);
@@ -141,11 +177,44 @@ export function EnhancedCertificatesView() {
   };
 
   const handleSelectAll = () => {
-    if (selectedCertificates.size === filteredCertificates.length) {
+    const currentPageCerts = Object.values(groupedCertificates).flat();
+    if (selectedCertificates.size === currentPageCerts.length) {
       setSelectedCertificates(new Set());
     } else {
-      setSelectedCertificates(new Set(filteredCertificates.map(c => c.id)));
+      setSelectedCertificates(new Set(currentPageCerts.map(c => c.id)));
     }
+  };
+
+  // **PAGINATION HANDLERS**
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    setSelectedCertificates(new Set()); // Clear selections on page change
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset to first page
+    setSelectedCertificates(new Set()); // Clear selections
+  };
+
+  const handleSortChange = (field: keyof Certificate) => {
+    if (sortBy === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortDirection('asc');
+    }
+    setCurrentPage(1); // Reset to first page
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(1); // Reset to first page on search
+  };
+
+  const handleStatusFilterChange = (status: string) => {
+    setStatusFilter(status);
+    setCurrentPage(1); // Reset to first page on filter change
   };
 
   const handleExport = () => {
@@ -190,8 +259,11 @@ export function EnhancedCertificatesView() {
             </CardTitle>
             
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-sm">
-                {filteredCertificates.length} certificates
+              <Badge variant="outline" className="text-sm font-medium">
+                {totalCount} certificates
+              </Badge>
+              <Badge variant="secondary" className="text-sm">
+                Page {currentPage} of {totalPages}
               </Badge>
               {selectedCertificates.size > 0 && (
                 <Badge variant="default" className="text-sm">
@@ -210,7 +282,7 @@ export function EnhancedCertificatesView() {
               <Input
                 placeholder="Search certificates by name, course, or verification code..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-10"
               />
             </div>
@@ -221,7 +293,7 @@ export function EnhancedCertificatesView() {
                 <Button
                   key={status}
                   variant={statusFilter === status ? 'default' : 'outline'}
-                  onClick={() => setStatusFilter(status)}
+                  onClick={() => handleStatusFilterChange(status)}
                   size="sm"
                   className="capitalize"
                 >
@@ -231,43 +303,87 @@ export function EnhancedCertificatesView() {
             </div>
           </div>
           
-          {/* Action Bar */}
+          {/* Advanced Controls */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              {filteredCertificates.length > 0 && (
+            <div className="flex items-center gap-3">
+              {/* Sorting Controls */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Sort by:</span>
+                <Select value={sortBy} onValueChange={(value) => handleSortChange(value as keyof Certificate)}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="created_at">Date Created</SelectItem>
+                    <SelectItem value="recipient_name">Recipient Name</SelectItem>
+                    <SelectItem value="course_name">Course Name</SelectItem>
+                    <SelectItem value="issue_date">Issue Date</SelectItem>
+                    <SelectItem value="expiry_date">Expiry Date</SelectItem>
+                    <SelectItem value="status">Status</SelectItem>
+                  </SelectContent>
+                </Select>
+                
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleSelectAll}
+                  onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+                  className="px-3"
                 >
-                  {selectedCertificates.size === filteredCertificates.length ? 'Deselect All' : 'Select All'}
+                  {sortDirection === 'asc' ? '↑' : '↓'}
                 </Button>
-              )}
+              </div>
               
-              {selectedCertificates.size > 0 && (
-                <>
-                  <BatchEmailAction
-                    selectedCertificates={Array.from(selectedCertificates)}
-                    certificates={filteredCertificates}
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExport}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Export Selected
-                  </Button>
-                </>
-              )}
+              {/* Grouping Controls */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Group by:</span>
+                <Select value={groupBy} onValueChange={(value) => setGroupBy(value as typeof groupBy)}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">
+                      <div className="flex items-center gap-2">
+                        <List className="h-4 w-4" />
+                        No Grouping
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="user">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        By User
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="location">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        By Location
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="date">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        By Date
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="batch">
+                      <div className="flex items-center gap-2">
+                        <Package className="h-4 w-4" />
+                        By Batch
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
             <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700">View:</span>
               <div className="flex border rounded-lg">
                 <Button
                   variant={viewMode === 'grid' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('grid')}
+                  className="px-3"
                 >
                   <Grid className="h-4 w-4" />
                 </Button>
@@ -275,15 +391,11 @@ export function EnhancedCertificatesView() {
                   variant={viewMode === 'list' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('list')}
+                  className="px-3"
                 >
                   <List className="h-4 w-4" />
                 </Button>
               </div>
-              
-              <Button variant="outline" size="sm">
-                <SlidersHorizontal className="h-4 w-4 mr-2" />
-                Filters
-              </Button>
             </div>
           </div>
         </CardContent>
@@ -304,23 +416,108 @@ export function EnhancedCertificatesView() {
               <p className="text-gray-600">No certificates match your current search criteria.</p>
             </div>
           ) : (
-            <div className={
-              viewMode === 'grid' 
-                ? 'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6'
-                : 'space-y-4'
-            }>
-              {filteredCertificates.map((certificate) => (
-                <EnhancedCertificateCard
-                  key={certificate.id}
-                  certificate={certificate}
-                  isSelected={selectedCertificates.has(certificate.id)}
-                  onSelect={(selected) => handleSelectCertificate(certificate.id, selected)}
-                  onEmail={() => setEmailDialogCert(certificate)}
-                  onRevoke={() => handleRevokeCertificate(certificate.id)}
-                  locationName={getLocationName(certificate.location_id)}
-                  showActions={isAdmin}
-                />
+            <div className="space-y-6">
+              {/* Render grouped or ungrouped certificates */}
+              {Object.entries(groupedCertificates).map(([groupKey, certificates]) => (
+                <div key={groupKey}>
+                  {groupBy !== 'none' && (
+                    <div className="mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                        {groupKey} ({certificates.length})
+                      </h3>
+                      <hr className="border-gray-200" />
+                    </div>
+                  )}
+                  
+                  <div className={
+                    viewMode === 'grid'
+                      ? 'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6'
+                      : 'space-y-4'
+                  }>
+                    {certificates.map((certificate) => (
+                      <EnhancedCertificateCard
+                        key={certificate.id}
+                        certificate={certificate}
+                        isSelected={selectedCertificates.has(certificate.id)}
+                        onSelect={(selected) => handleSelectCertificate(certificate.id, selected)}
+                        onEmail={() => setEmailDialogCert(certificate)}
+                        onRevoke={() => handleRevokeCertificate(certificate.id)}
+                        locationName={getLocationName(certificate.location_id)}
+                        showActions={isAdmin}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
+              
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="mt-6 pt-6 border-t">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">
+                        Showing {((currentPage - 1) * pageSize) + 1} to{' '}
+                        {Math.min(currentPage * pageSize, totalCount)} of{' '}
+                        {totalCount} certificates
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
+                        <SelectTrigger className="w-20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="10">10</SelectItem>
+                          <SelectItem value="20">20</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                          <SelectItem value="100">100</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(1)}
+                          disabled={currentPage === 1}
+                        >
+                          <ChevronsLeft className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          disabled={currentPage === 1}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        
+                        <span className="px-3 py-1 text-sm">
+                          {currentPage} of {totalPages}
+                        </span>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(totalPages)}
+                          disabled={currentPage === totalPages}
+                        >
+                          <ChevronsRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>

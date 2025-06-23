@@ -19,7 +19,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EnhancedPendingRequestsView } from "@/components/certificates/enhanced-requests/EnhancedPendingRequestsView";
 import { EnhancedRostersView } from "@/components/certificates/enhanced-views/EnhancedRostersView";
-import { PaginatedCertificatesView } from "@/components/certificates/enhanced-views/PaginatedCertificatesView";
+import { EnhancedCertificatesView } from "@/components/certificates/enhanced-views/EnhancedCertificatesView";
 import { MobileTabNavigation } from "@/components/certificates/mobile/MobileTabNavigation";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
@@ -173,7 +173,7 @@ export default function EnhancedCertifications() {
 
             <div className="mt-6">
               <TabContent tabId="certificates">
-                <PaginatedCertificatesView />
+                <EnhancedCertificatesView />
               </TabContent>
 
               <TabContent tabId="requests">
