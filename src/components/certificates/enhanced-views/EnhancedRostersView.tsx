@@ -65,7 +65,14 @@ export function EnhancedRostersView() {
         .select('*');
 
       if (!isAdmin && profile?.id) {
-        query = query.eq('created_by', profile.id);
+        // AP users: Don't filter by created_by - let RLS handle location-based visibility
+        if (profile?.role === 'AP') {
+          console.log('AP user: Relying on RLS for location-based roster visibility');
+          // RLS policy will filter rosters based on AP user's location assignments
+        } else {
+          // Other roles: Filter by created_by (existing behavior)
+          query = query.eq('created_by', profile.id);
+        }
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
