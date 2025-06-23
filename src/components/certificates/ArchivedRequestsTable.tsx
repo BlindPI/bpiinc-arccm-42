@@ -126,7 +126,7 @@ export function ArchivedRequestsTable({
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={canManageRequests ? 6 : 5} className="text-center py-8">
+                <TableCell colSpan={canManageRequests ? 7 : 6} className="text-center py-8">
                   <div className="flex justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
@@ -135,7 +135,7 @@ export function ArchivedRequestsTable({
               </TableRow>
             ) : filteredRequests?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={canManageRequests ? 6 : 5} className="text-center py-8">
+                <TableCell colSpan={canManageRequests ? 7 : 6} className="text-center py-8">
                   <div className="flex justify-center">
                     <ArchiveX className="h-8 w-8 text-muted-foreground" />
                   </div>
@@ -147,48 +147,170 @@ export function ArchivedRequestsTable({
                 </TableCell>
               </TableRow>
             ) : (
-              filteredRequests?.map((request) => (
-                <TableRow key={request.id}>
-                  <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
-                    {request.recipient_name}
-                  </TableCell>
-                  <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
-                    {request.course_name}
-                  </TableCell>
-                  <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
-                    {request.created_at && formatDate(request.created_at)}
-                  </TableCell>
-                  <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
-                    <div className="flex items-center">
-                      <Clock className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-                      {request.updated_at && formatDate(request.updated_at)}
-                    </div>
-                  </TableCell>
-                  {canManageRequests && (
-                    <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
-                      {/* Handle the case where reviewer_name is not available */}
-                      {request.reviewer_name || 'System'}
-                    </TableCell>
-                  )}
-                  <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
-                    {request.rejection_reason ? (
-                      <div className="flex flex-col">
-                        <Badge variant="destructive">Rejected</Badge>
-                        <span className="text-xs mt-1 text-gray-500">
-                          {request.rejection_reason.length > 30 
-                            ? `${request.rejection_reason.substring(0, 30)}...` 
-                            : request.rejection_reason
-                          }
-                        </span>
-                      </div>
-                    ) : request.assessment_status === 'FAIL' ? (
-                      <Badge variant="destructive">Failed Assessment</Badge>
-                    ) : (
-                      <Badge variant="success">Approved</Badge>
+              filteredRequests?.map((request) => {
+                const isExpanded = expandedRows.has(request.id);
+                const additionalData = hasAdditionalData(request);
+                const extendedRequest = request as any;
+                
+                return (
+                  <React.Fragment key={request.id}>
+                    <TableRow>
+                      <TableCell>
+                        {additionalData && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleRowExpansion(request.id)}
+                            className="h-6 w-6 p-0"
+                          >
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                      </TableCell>
+                      <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                        {request.recipient_name}
+                      </TableCell>
+                      <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                        {request.course_name}
+                      </TableCell>
+                      <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                        {request.created_at && formatDate(request.created_at)}
+                      </TableCell>
+                      <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                        <div className="flex items-center">
+                          <Clock className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                          {request.updated_at && formatDate(request.updated_at)}
+                        </div>
+                      </TableCell>
+                      {canManageRequests && (
+                        <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                          {request.reviewer_name || 'System'}
+                        </TableCell>
+                      )}
+                      <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                        {request.rejection_reason ? (
+                          <div className="flex flex-col">
+                            <Badge variant="destructive">Rejected</Badge>
+                            <span className="text-xs mt-1 text-gray-500">
+                              {request.rejection_reason.length > 30
+                                ? `${request.rejection_reason.substring(0, 30)}...`
+                                : request.rejection_reason
+                              }
+                            </span>
+                          </div>
+                        ) : request.assessment_status === 'FAIL' ? (
+                          <Badge variant="destructive">Failed Assessment</Badge>
+                        ) : (
+                          <Badge variant="success">Approved</Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                    
+                    {/* Expanded details row */}
+                    {isExpanded && additionalData && (
+                      <TableRow>
+                        <TableCell colSpan={canManageRequests ? 7 : 6} className="bg-gray-50 p-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {/* Contact Information */}
+                            {(request.phone || request.company) && (
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-sm text-gray-700 flex items-center gap-1">
+                                  <User className="h-4 w-4" />
+                                  Contact Information
+                                </h4>
+                                {request.phone && (
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <Phone className="h-3 w-3 text-gray-400" />
+                                    <span>{request.phone}</span>
+                                  </div>
+                                )}
+                                {request.company && (
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <Building className="h-3 w-3 text-gray-400" />
+                                    <span>{request.company}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* Address Information */}
+                            {(request.city || request.province || request.postal_code) && (
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-sm text-gray-700 flex items-center gap-1">
+                                  <MapPin className="h-4 w-4" />
+                                  Address
+                                </h4>
+                                <div className="text-sm text-gray-600">
+                                  {[request.city, request.province, request.postal_code]
+                                    .filter(Boolean)
+                                    .join(', ')}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Instructor Information */}
+                            {(request.instructor_name || request.instructor_level) && (
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-sm text-gray-700 flex items-center gap-1">
+                                  <User className="h-4 w-4" />
+                                  Instructor
+                                </h4>
+                                {request.instructor_name && (
+                                  <div className="text-sm text-gray-600">
+                                    <span className="font-medium">Name:</span> {request.instructor_name}
+                                  </div>
+                                )}
+                                {request.instructor_level && (
+                                  <div className="text-sm text-gray-600">
+                                    <span className="font-medium">Level:</span> {request.instructor_level}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* Certification Details */}
+                            {(request.cpr_level || request.first_aid_level) && (
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-sm text-gray-700 flex items-center gap-1">
+                                  <Package className="h-4 w-4" />
+                                  Certification Details
+                                </h4>
+                                {request.cpr_level && (
+                                  <div className="text-sm text-gray-600">
+                                    <span className="font-medium">CPR Level:</span> {request.cpr_level}
+                                  </div>
+                                )}
+                                {request.first_aid_level && (
+                                  <div className="text-sm text-gray-600">
+                                    <span className="font-medium">First Aid Level:</span> {request.first_aid_level}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Notes Section - Always full width if present */}
+                          {extendedRequest.notes && (
+                            <div className="mt-4 space-y-2">
+                              <h4 className="font-medium text-sm text-gray-700 flex items-center gap-1">
+                                <StickyNote className="h-4 w-4" />
+                                Notes
+                              </h4>
+                              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                                <p className="text-sm text-gray-700 whitespace-pre-wrap">{extendedRequest.notes}</p>
+                              </div>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </TableCell>
-                </TableRow>
-              ))
+                  </React.Fragment>
+                );
+              })
             )}
           </TableBody>
         </Table>
