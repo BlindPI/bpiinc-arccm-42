@@ -99,14 +99,7 @@ serve(async (req) => {
         location_id,
         locations:location_id (
           id,
-          name,
-          email_templates (
-            id,
-            name,
-            subject_template,
-            body_template,
-            is_default
-          )
+          name
         )
       `)
       .in('id', certificateIds);
@@ -282,29 +275,37 @@ async function sendSingleEmail(
   supabase?: any
 ): Promise<{ success: boolean; emailId?: string; error?: any }> {
   try {
-    // Get email template
+    // Get email template from location_email_templates table
     let template = null;
-    if (certificate.locations?.email_templates?.length > 0) {
-      template = certificate.locations.email_templates.find((t: any) => t.is_default) ||
-                 certificate.locations.email_templates[0];
+    if (certificate.location_id && supabase) {
+      const { data: templates } = await supabase
+        .from('location_email_templates')
+        .select('*')
+        .eq('location_id', certificate.location_id)
+        .eq('is_default', true)
+        .limit(1);
+      
+      if (templates && templates.length > 0) {
+        template = templates[0];
+      }
     }
 
     const locationName = certificate.locations?.name || 'Your Training Provider';
     
-    const subject = template?.subject_template?.replace(/\{\{recipientName\}\}/g, certificate.recipient_name)
-                                               .replace(/\{\{courseName\}\}/g, certificate.course_name)
-                                               .replace(/\{\{locationName\}\}/g, locationName) ||
+    const subject = template?.subject_template?.replace(/\{\{recipient_name\}\}/g, certificate.recipient_name)
+                                               .replace(/\{\{course_name\}\}/g, certificate.course_name)
+                                               .replace(/\{\{location_name\}\}/g, locationName) ||
                    `Your ${certificate.course_name} Certificate`;
 
     let emailBody = '';
     if (template?.body_template) {
       emailBody = template.body_template
-        .replace(/\{\{recipientName\}\}/g, certificate.recipient_name)
-        .replace(/\{\{courseName\}\}/g, certificate.course_name)
-        .replace(/\{\{locationName\}\}/g, locationName)
-        .replace(/\{\{issueDate\}\}/g, new Date(certificate.issue_date).toLocaleDateString())
-        .replace(/\{\{expiryDate\}\}/g, new Date(certificate.expiry_date).toLocaleDateString())
-        .replace(/\{\{verificationCode\}\}/g, certificate.verification_code);
+        .replace(/\{\{recipient_name\}\}/g, certificate.recipient_name)
+        .replace(/\{\{course_name\}\}/g, certificate.course_name)
+        .replace(/\{\{location_name\}\}/g, locationName)
+        .replace(/\{\{issue_date\}\}/g, new Date(certificate.issue_date).toLocaleDateString())
+        .replace(/\{\{expiry_date\}\}/g, new Date(certificate.expiry_date).toLocaleDateString())
+        .replace(/\{\{verification_code\}\}/g, certificate.verification_code);
     } else {
       emailBody = `
         <h1>Your ${certificate.course_name} Certificate</h1>
