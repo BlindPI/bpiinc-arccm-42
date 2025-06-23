@@ -27,8 +27,21 @@ export function useCertificateRequests({ isAdmin, statusFilter, profileId }: Use
         
         // Only filter by user_id if not an admin
         if (!isAdmin && profileId) {
-          console.log('Filtering requests by user_id:', profileId);
-          query = query.eq('user_id', profileId);
+          // AP users: Don't filter by user_id - let RLS handle location-based visibility
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', profileId)
+            .single();
+            
+          if (profile?.role === 'AP') {
+            console.log('AP user: Relying on RLS for location-based certificate request visibility');
+            // RLS policy will filter certificate requests based on AP user's location assignments
+          } else {
+            // Other roles: Filter by user_id (existing behavior)
+            console.log('Filtering requests by user_id:', profileId);
+            query = query.eq('user_id', profileId);
+          }
         } else {
           console.log('User is admin, fetching all requests');
         }

@@ -43,7 +43,14 @@ export function EnhancedCertificatesView() {
         .select('*');
 
       if (!isAdmin && profile?.id) {
-        query = query.eq('user_id', profile.id);
+        // AP users: Don't filter by user_id - let RLS handle location-based visibility
+        if (profile?.role === 'AP') {
+          console.log('AP user: Relying on RLS for location-based certificate visibility');
+          // RLS policy will filter certificates based on AP user's location assignments
+        } else {
+          // Other roles: Filter by user_id (existing behavior)
+          query = query.eq('user_id', profile.id);
+        }
       }
 
       if (statusFilter !== 'all') {
