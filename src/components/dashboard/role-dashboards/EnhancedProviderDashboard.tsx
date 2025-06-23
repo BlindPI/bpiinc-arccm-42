@@ -16,6 +16,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { providerRelationshipService } from '@/services/provider/providerRelationshipService';
@@ -42,7 +43,9 @@ import {
   AlertCircle,
   Clock,
   FileText,
-  Target
+  Target,
+  Edit,
+  ChevronRight
 } from 'lucide-react';
 import { WorkingDashboardActionButton } from '../ui/WorkingDashboardActionButton';
 import { InlineLoader } from '@/components/ui/LoadingStates';
@@ -68,6 +71,8 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
   const { data: userProfile } = useProfile();
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [validationResults, setValidationResults] = useState<any[]>([]);
+  const [selectedMember, setSelectedMember] = useState<any | null>(null);
+  const [isComplianceDialogOpen, setIsComplianceDialogOpen] = useState(false);
   
   // Role-based access control (aligned with UnifiedProviderDashboard)
   const userRole = userProfile?.role as DatabaseUserRole;
@@ -326,6 +331,18 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
 
   const handleRefresh = async () => {
     await refetchProviders();
+  };
+
+  const handleViewMemberCompliance = (member: any) => {
+    console.log('🔍 Opening compliance details for member:', member.member_name);
+    setSelectedMember(member);
+    setIsComplianceDialogOpen(true);
+  };
+
+  const handleEditMemberCompliance = (member: any) => {
+    console.log('✏️ Editing compliance requirements for member:', member.member_name);
+    setSelectedMember(member);
+    setIsComplianceDialogOpen(true);
   };
 
   return (
@@ -799,9 +816,26 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
                               </div>
                             )}
                           </div>
-                          <Button variant="outline" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewMemberCompliance(member)}
+                              title="View compliance details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {roleBasedActions.canEdit && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditMemberCompliance(member)}
+                                title="Edit compliance requirements"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1052,6 +1086,146 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Member Compliance Dialog */}
+      <Dialog open={isComplianceDialogOpen} onOpenChange={setIsComplianceDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserCheck className="h-5 w-5" />
+              Compliance Details - {selectedMember?.member_name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedMember && (
+            <div className="space-y-6">
+              {/* Member Summary */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Member Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Name</label>
+                      <p className="text-sm">{selectedMember.member_name}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Email</label>
+                      <p className="text-sm">{selectedMember.member_email}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Team</label>
+                      <p className="text-sm">{selectedMember.team_name}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Role</label>
+                      <p className="text-sm">{selectedMember.member_role}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Compliance Score</label>
+                      <p className={`text-lg font-bold ${
+                        selectedMember.compliance_score >= 90 ? 'text-green-600' :
+                        selectedMember.compliance_score >= 70 ? 'text-yellow-600' :
+                        'text-red-600'
+                      }`}>
+                        {selectedMember.compliance_score}%
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Pending Actions</label>
+                      <p className="text-lg font-bold text-blue-600">{selectedMember.pending_actions}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Overdue Actions</label>
+                      <p className="text-lg font-bold text-red-600">{selectedMember.overdue_actions}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Compliance Requirements */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Compliance Requirements</span>
+                    <Badge variant="outline">
+                      {selectedMember.requirements?.length || 0} requirements
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {selectedMember.requirements && selectedMember.requirements.length > 0 ? (
+                    <div className="space-y-3">
+                      {selectedMember.requirements.map((requirement: any, index: number) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-medium">{requirement.name}</h4>
+                              <Badge
+                                variant={
+                                  requirement.status === 'compliant' ? 'default' :
+                                  requirement.status === 'warning' ? 'secondary' :
+                                  requirement.status === 'non_compliant' ? 'destructive' :
+                                  'outline'
+                                }
+                                className={`text-xs ${
+                                  requirement.status === 'compliant' ? 'bg-green-100 text-green-800 border-green-300' :
+                                  requirement.status === 'warning' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                                  requirement.status === 'non_compliant' ? 'bg-red-100 text-red-800 border-red-300' :
+                                  'bg-blue-100 text-blue-800 border-blue-300'
+                                }`}
+                              >
+                                {requirement.status}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Category: {requirement.category}
+                            </p>
+                            {requirement.due_date && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Due: {new Date(requirement.due_date).toLocaleDateString()}
+                              </p>
+                            )}
+                          </div>
+                          {roleBasedActions.canEdit && (
+                            <Button variant="outline" size="sm">
+                              <Edit className="h-3 w-3 mr-1" />
+                              Edit
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No compliance requirements found</p>
+                      <p className="text-sm">Requirements will appear here when assigned</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsComplianceDialogOpen(false)}>
+                  Close
+                </Button>
+                {roleBasedActions.canEdit && (
+                  <Button>
+                    <Edit className="h-4 w-4 mr-1" />
+                    Edit Requirements
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
