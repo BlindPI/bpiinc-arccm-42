@@ -60,9 +60,9 @@ export function CourseMatchDisplay({
   const getMatchDescription = () => {
     switch (matchedCourse.matchType) {
       case 'exact':
-        return 'Exact match on both First Aid and CPR levels';
+        return 'Combined match - both First Aid and CPR levels matched exactly';
       case 'partial':
-        return 'Exact match on either First Aid or CPR level';
+        return 'Single certification match - either First Aid or CPR level matched';
       case 'manual':
         return 'Course selected manually';
       default:
@@ -86,7 +86,7 @@ export function CourseMatchDisplay({
   // Format the match type text for display
   const formatMatchType = (type: string) => {
     switch (type) {
-      case 'exact': return 'Exact';
+      case 'exact': return 'Combined';
       case 'partial': return 'Partial';
       case 'default': return 'Default';
       case 'manual': return 'Manual';

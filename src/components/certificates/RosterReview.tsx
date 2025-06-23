@@ -198,22 +198,26 @@ export function RosterReview({
                               )}
                               <span className="font-medium flex items-center gap-1">
                                 {row.courseMatches[0].courseName}
-                                <Badge variant={
-                                  row.courseMatches[0].matchType === 'exact' ? 'success' :
-                                  row.courseMatches[0].matchType === 'partial' ? 'success' :
-                                  row.courseMatches[0].matchType === 'manual' ? 'outline' : 'secondary'
-                                } className="text-[10px]">
-                                  {/* DEBUG: Log partial match details */}
+                                <Badge
+                                  variant={
+                                    row.courseMatches[0].matchType === 'exact' ? 'success' :
+                                    row.courseMatches[0].matchType === 'partial' ? 'success' :
+                                    row.courseMatches[0].matchType === 'manual' ? 'outline' : 'secondary'
+                                  }
+                                  className={`text-[10px] ${
+                                    row.courseMatches[0].matchType === 'exact'
+                                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300 font-semibold'
+                                      : ''
+                                  }`}
+                                >
                                   {(() => {
+                                    // Handle exact matches (combined CPR + First Aid)
+                                    if (row.courseMatches[0].matchType === 'exact') {
+                                      return 'Combined';
+                                    }
+                                    
+                                    // Handle partial matches (single certification)
                                     if (row.courseMatches[0].matchType === 'partial') {
-                                      console.log(`DEBUG - Partial match for row ${row.rowNum}:`, {
-                                        studentFirstAid: row.firstAidLevel,
-                                        studentCPR: row.cprLevel,
-                                        courseFirstAid: row.courseMatches[0].certifications?.find(c => c.type === 'FIRST_AID')?.level,
-                                        courseCPR: row.courseMatches[0].certifications?.find(c => c.type === 'CPR')?.level,
-                                        courseName: row.courseMatches[0].courseName
-                                      });
-                                      
                                       // Determine if it's CPR-only or First-Aid-only match
                                       const hasFirstAidMatch = row.firstAidLevel &&
                                         row.courseMatches[0].certifications?.some(c =>
@@ -231,8 +235,13 @@ export function RosterReview({
                                       } else if (hasCPRMatch && !hasFirstAidMatch) {
                                         return 'CPR Only';
                                       }
+                                      
+                                      // Fallback for partial matches
+                                      return 'Partial Match';
                                     }
-                                    return row.courseMatches[0].matchType;
+                                    
+                                    // Handle other match types
+                                    return row.courseMatches[0].matchType === 'manual' ? 'Manual' : 'Default';
                                   })()}
                                 </Badge>
                               </span>
