@@ -18,6 +18,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { diagnoseLocationAssignmentError, logDiagnosticResults } from '@/utils/diagnoseLocationAssignmentError';
 import { ComplianceService } from '@/services/compliance/complianceService';
+import { TeamMemberComplianceService } from '@/services/compliance/teamMemberComplianceService';
 import type {
   Provider,
   AuthorizedProvider,
@@ -32,6 +33,10 @@ import type {
   ProviderFilters,
   ProviderPerformanceMetrics
 } from '@/types/provider-management';
+import type {
+  TeamMemberComplianceStatus,
+  ProviderComplianceSummary
+} from '@/services/compliance/teamMemberComplianceService';
 
 // =====================================================================================
 // REAL DATA INTERFACES (Replace Mock Data)
@@ -1725,6 +1730,94 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
       console.log(`DEBUG: Successfully updated team member role`);
     } catch (error) {
       console.error('Error updating team member role:', error);
+      throw await this.standardizeErrorMessage(error);
+    }
+  }
+
+  // =====================================================================================
+  // TEAM MEMBER COMPLIANCE OPERATIONS (NEW - Phase 2)
+  // =====================================================================================
+
+  /**
+   * Get comprehensive team member compliance status for AP users
+   * Returns REAL compliance data for all team members under provider
+   */
+  async getProviderTeamMemberCompliance(providerId: string): Promise<TeamMemberComplianceStatus[]> {
+    try {
+      console.log(`DEBUG: Getting team member compliance for AP user - provider ${providerId}`);
+      
+      if (!await this.validateProviderUUID(providerId)) {
+        throw new Error(`Provider ${providerId} not found`);
+      }
+      
+      return await TeamMemberComplianceService.getProviderTeamMemberCompliance(providerId);
+    } catch (error) {
+      console.error('Error getting provider team member compliance:', error);
+      throw await this.standardizeErrorMessage(error);
+    }
+  }
+
+  /**
+   * Get aggregated compliance summary for AP users
+   * Returns REAL compliance statistics
+   */
+  async getProviderComplianceSummary(providerId: string): Promise<ProviderComplianceSummary> {
+    try {
+      console.log(`DEBUG: Getting compliance summary for AP user - provider ${providerId}`);
+      
+      if (!await this.validateProviderUUID(providerId)) {
+        throw new Error(`Provider ${providerId} not found`);
+      }
+      
+      return await TeamMemberComplianceService.getProviderComplianceSummary(providerId);
+    } catch (error) {
+      console.error('Error getting provider compliance summary:', error);
+      throw await this.standardizeErrorMessage(error);
+    }
+  }
+
+  /**
+   * Get team members with overdue compliance actions
+   * Returns REAL data for immediate attention by AP users
+   */
+  async getOverdueComplianceMembers(providerId: string): Promise<TeamMemberComplianceStatus[]> {
+    try {
+      console.log(`DEBUG: Getting overdue compliance members for AP user - provider ${providerId}`);
+      
+      if (!await this.validateProviderUUID(providerId)) {
+        throw new Error(`Provider ${providerId} not found`);
+      }
+      
+      return await TeamMemberComplianceService.getOverdueComplianceMembers(providerId);
+    } catch (error) {
+      console.error('Error getting overdue compliance members:', error);
+      throw await this.standardizeErrorMessage(error);
+    }
+  }
+
+  /**
+   * Get compliance statistics broken down by team
+   * Returns REAL data for AP users to manage team-level compliance
+   */
+  async getComplianceByTeam(providerId: string): Promise<Array<{
+    team_id: string;
+    team_name: string;
+    total_members: number;
+    compliant_members: number;
+    compliance_rate: number;
+    pending_actions: number;
+    overdue_actions: number;
+  }>> {
+    try {
+      console.log(`DEBUG: Getting compliance by team for AP user - provider ${providerId}`);
+      
+      if (!await this.validateProviderUUID(providerId)) {
+        throw new Error(`Provider ${providerId} not found`);
+      }
+      
+      return await TeamMemberComplianceService.getComplianceByTeam(providerId);
+    } catch (error) {
+      console.error('Error getting compliance by team:', error);
       throw await this.standardizeErrorMessage(error);
     }
   }
