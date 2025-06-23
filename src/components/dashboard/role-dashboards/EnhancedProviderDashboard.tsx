@@ -316,6 +316,89 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
     refetchInterval: 60000 // Refresh every minute for real-time compliance monitoring
   });
 
+  // Get detailed compliance requirements for selected member
+  const {
+    data: selectedMemberCompliance,
+    isLoading: memberComplianceLoading,
+    refetch: refetchMemberCompliance
+  } = useQuery({
+    queryKey: ['member-compliance-details', selectedMember?.user_id],
+    queryFn: async () => {
+      if (!selectedMember?.user_id) return null;
+      
+      console.log('🔍 Loading detailed compliance for member:', selectedMember.member_name);
+      
+      // Import services
+      const { ComplianceService } = await import('@/services/compliance/complianceService');
+      const { ComplianceRequirementsService } = await import('@/services/compliance/complianceRequirementsService');
+      
+      // Get user's existing compliance records
+      const complianceRecords = await ComplianceService.getUserComplianceRecords(selectedMember.user_id);
+      
+      // Get the actual USER ROLE (IT/IP/IC/AP) from the profiles table, not the team role
+      // member_role is the TEAM ROLE (MEMBER/ADMIN), we need the USER ROLE for compliance
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', selectedMember.user_id)
+        .single();
+      
+      if (profileError) {
+        console.error('Error fetching user profile:', profileError);
+        return null;
+      }
+      
+      // Use the actual USER ROLE (IT/IP/IC/AP) for compliance requirements
+      const complianceRole = userProfile?.role;
+      
+      console.log(`🔍 User ${selectedMember.member_name}: Team Role = ${selectedMember.member_role}, User Role = ${complianceRole}`);
+      const roleTemplate = ComplianceRequirementsService.getRequirementsTemplate(complianceRole as 'AP' | 'IC' | 'IP' | 'IT');
+      
+      // Get role-based metrics from database
+      const roleMetrics = await ComplianceService.getComplianceMetricsForRole(complianceRole);
+      
+      console.log(`🔍 Found ${roleMetrics.length} role requirements and ${complianceRecords.length} existing records for role ${complianceRole}`);
+      
+      // Combine template requirements with existing records
+      const requirementsWithStatus = roleTemplate?.requirements.map(req => {
+        const existingRecord = complianceRecords.find(record =>
+          record.compliance_metrics?.name === req.name
+        );
+        
+        const correspondingMetric = roleMetrics.find(metric => metric.name === req.name);
+        
+        return {
+          name: req.name,
+          description: req.description,
+          category: req.category,
+          measurement_type: req.measurement_type,
+          target_value: req.target_value,
+          weight: req.weight,
+          is_required: req.is_required,
+          renewal_period_days: req.renewal_period_days,
+          document_requirements: req.document_requirements,
+          metric_id: correspondingMetric?.id,
+          current_value: existingRecord?.current_value,
+          compliance_status: existingRecord?.compliance_status || 'pending',
+          last_checked_at: existingRecord?.last_checked_at,
+          next_check_due: existingRecord?.next_check_due,
+          notes: existingRecord?.notes,
+          record_id: existingRecord?.id
+        };
+      }) || [];
+      
+      return {
+        member: selectedMember,
+        complianceRole,
+        roleTemplate,
+        requirementsWithStatus,
+        hasExistingRecords: complianceRecords.length > 0
+      };
+    },
+    enabled: !!selectedMember?.user_id,
+    refetchOnWindowFocus: false
+  });
+
   // Loading state
   if (providersLoading || metricsLoading) {
     return <InlineLoader message="Loading enhanced provider dashboard..." />;
@@ -343,6 +426,75 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
     console.log('✏️ Editing compliance requirements for member:', member.member_name);
     setSelectedMember(member);
     setIsComplianceDialogOpen(true);
+  };
+
+  const handleUpdateComplianceStatus = async (
+    metricId: string,
+    status: 'compliant' | 'non_compliant' | 'warning' | 'pending',
+    value?: any,
+    notes?: string
+  ) => {
+    if (!selectedMember?.user_id) return;
+    
+    try {
+      console.log(`🔄 Updating compliance status for metric ${metricId} to ${status}`);
+      
+      const { ComplianceService } = await import('@/services/compliance/complianceService');
+      
+      await ComplianceService.updateComplianceRecord(
+        selectedMember.user_id,
+        metricId,
+        value,
+        status,
+        notes
+      );
+      
+      // Refresh the member compliance data
+      await refetchMemberCompliance();
+      
+      console.log('✅ Compliance status updated successfully');
+    } catch (error) {
+      console.error('❌ Error updating compliance status:', error);
+    }
+  };
+
+  const handleAssignRoleRequirements = async () => {
+    if (!selectedMember?.user_id) return;
+    
+    try {
+      console.log(`🔄 Assigning role requirements to member ${selectedMember.member_name}`);
+      
+      const { ComplianceRequirementsService } = await import('@/services/compliance/complianceRequirementsService');
+      
+      // Get the actual USER ROLE (IT/IP/IC/AP) from the profiles table, not the team role
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', selectedMember.user_id)
+        .single();
+      
+      if (profileError) {
+        console.error('Error fetching user profile for role assignment:', profileError);
+        return;
+      }
+      
+      // Use the actual USER ROLE (IT/IP/IC/AP) for compliance requirements
+      const complianceRole = userProfile?.role;
+      
+      console.log(`🔄 Assigning ${complianceRole} requirements to ${selectedMember.member_name} (Team Role: ${selectedMember.member_role})`);
+      
+      await ComplianceRequirementsService.assignRoleRequirementsToUser(
+        selectedMember.user_id,
+        complianceRole
+      );
+      
+      // Refresh the member compliance data
+      await refetchMemberCompliance();
+      
+      console.log('✅ Role requirements assigned successfully');
+    } catch (error) {
+      console.error('❌ Error assigning role requirements:', error);
+    }
   };
 
   return (
@@ -1089,20 +1241,26 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
 
       {/* Member Compliance Dialog */}
       <Dialog open={isComplianceDialogOpen} onOpenChange={setIsComplianceDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserCheck className="h-5 w-5" />
-              Compliance Details - {selectedMember?.member_name}
+              Compliance Management - {selectedMember?.member_name}
+              {memberComplianceLoading && <InlineLoader message="Loading..." />}
             </DialogTitle>
           </DialogHeader>
           
-          {selectedMember && (
+          {selectedMember && selectedMemberCompliance && (
             <div className="space-y-6">
               {/* Member Summary */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Member Summary</CardTitle>
+                  <CardTitle className="text-lg flex items-center justify-between">
+                    <span>Member Summary</span>
+                    <Badge variant="outline">
+                      Role: {selectedMemberCompliance.complianceRole} ({selectedMember.member_role})
+                    </Badge>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4">
@@ -1144,83 +1302,181 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
                       <p className="text-lg font-bold text-red-600">{selectedMember.overdue_actions}</p>
                     </div>
                   </div>
+
+                  {!selectedMemberCompliance.hasExistingRecords && (
+                    <Alert className="mt-4">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        No compliance records found. This member needs role-based requirements assigned.
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="ml-2"
+                          onClick={handleAssignRoleRequirements}
+                        >
+                          Assign Requirements
+                        </Button>
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </CardContent>
               </Card>
 
-              {/* Compliance Requirements */}
+              {/* Role-Based Compliance Requirements */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
-                    <span>Compliance Requirements</span>
+                    <span>
+                      {selectedMemberCompliance.roleTemplate?.role_name || 'Compliance'} Requirements
+                    </span>
                     <Badge variant="outline">
-                      {selectedMember.requirements?.length || 0} requirements
+                      {selectedMemberCompliance.requirementsWithStatus?.length || 0} requirements
                     </Badge>
                   </CardTitle>
+                  {selectedMemberCompliance.roleTemplate && (
+                    <p className="text-sm text-gray-600">
+                      {selectedMemberCompliance.roleTemplate.description}
+                    </p>
+                  )}
                 </CardHeader>
                 <CardContent>
-                  {selectedMember.requirements && selectedMember.requirements.length > 0 ? (
-                    <div className="space-y-3">
-                      {selectedMember.requirements.map((requirement: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-medium">{requirement.name}</h4>
-                              <Badge
-                                variant={
-                                  requirement.status === 'compliant' ? 'default' :
-                                  requirement.status === 'warning' ? 'secondary' :
-                                  requirement.status === 'non_compliant' ? 'destructive' :
-                                  'outline'
-                                }
-                                className={`text-xs ${
-                                  requirement.status === 'compliant' ? 'bg-green-100 text-green-800 border-green-300' :
-                                  requirement.status === 'warning' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
-                                  requirement.status === 'non_compliant' ? 'bg-red-100 text-red-800 border-red-300' :
-                                  'bg-blue-100 text-blue-800 border-blue-300'
-                                }`}
-                              >
-                                {requirement.status}
-                              </Badge>
+                  {selectedMemberCompliance.requirementsWithStatus && selectedMemberCompliance.requirementsWithStatus.length > 0 ? (
+                    <div className="space-y-4">
+                      {selectedMemberCompliance.requirementsWithStatus.map((requirement: any, index: number) => (
+                        <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <h4 className="font-medium text-lg">{requirement.name}</h4>
+                                <Badge
+                                  variant={
+                                    requirement.compliance_status === 'compliant' ? 'default' :
+                                    requirement.compliance_status === 'warning' ? 'secondary' :
+                                    requirement.compliance_status === 'non_compliant' ? 'destructive' :
+                                    'outline'
+                                  }
+                                  className={`${
+                                    requirement.compliance_status === 'compliant' ? 'bg-green-100 text-green-800 border-green-300' :
+                                    requirement.compliance_status === 'warning' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                                    requirement.compliance_status === 'non_compliant' ? 'bg-red-100 text-red-800 border-red-300' :
+                                    'bg-blue-100 text-blue-800 border-blue-300'
+                                  }`}
+                                >
+                                  {requirement.compliance_status === 'compliant' ? '✅ Compliant' :
+                                   requirement.compliance_status === 'warning' ? '⚠️ Warning' :
+                                   requirement.compliance_status === 'non_compliant' ? '❌ Non-Compliant' :
+                                   '⏳ Pending'}
+                                </Badge>
+                                {requirement.is_required && (
+                                  <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                                    Required
+                                  </Badge>
+                                )}
+                              </div>
+                              
+                              <p className="text-sm text-gray-700 mb-2">{requirement.description}</p>
+                              
+                              <div className="grid grid-cols-2 gap-4 text-xs text-gray-600 mb-3">
+                                <div>Category: <span className="font-medium">{requirement.category}</span></div>
+                                <div>Weight: <span className="font-medium">{requirement.weight}%</span></div>
+                                <div>Type: <span className="font-medium">{requirement.measurement_type}</span></div>
+                                <div>Target: <span className="font-medium">{String(requirement.target_value)}</span></div>
+                              </div>
+
+                              {requirement.current_value && (
+                                <div className="text-xs text-gray-600 mb-2">
+                                  Current Value: <span className="font-medium">{String(requirement.current_value)}</span>
+                                </div>
+                              )}
+
+                              {requirement.last_checked_at && (
+                                <div className="text-xs text-gray-500">
+                                  Last Updated: {new Date(requirement.last_checked_at).toLocaleDateString()}
+                                </div>
+                              )}
+
+                              {requirement.notes && (
+                                <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+                                  <strong>Notes:</strong> {requirement.notes}
+                                </div>
+                              )}
+
+                              {/* Document Requirements */}
+                              {requirement.document_requirements && (
+                                <div className="mt-3 p-3 bg-white rounded border">
+                                  <h5 className="font-medium text-sm mb-2">📋 Document Requirements</h5>
+                                  <p className="text-xs text-gray-600 mb-2">{requirement.document_requirements.description}</p>
+                                  <div className="flex flex-wrap gap-2 text-xs">
+                                    <span>Accepted: {requirement.document_requirements.required_file_types.join(', ')}</span>
+                                    <span>Max Size: {requirement.document_requirements.max_file_size_mb}MB</span>
+                                    {requirement.document_requirements.requires_expiry_date && (
+                                      <span className="text-red-600">Expiry Date Required</span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                            <p className="text-sm text-gray-600 mt-1">
-                              Category: {requirement.category}
-                            </p>
-                            {requirement.due_date && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                Due: {new Date(requirement.due_date).toLocaleDateString()}
-                              </p>
+                            
+                            {/* AP User Actions */}
+                            {roleBasedActions.canEdit && requirement.metric_id && (
+                              <div className="flex flex-col gap-2 ml-4">
+                                <select
+                                  className="text-xs border rounded px-2 py-1"
+                                  value={requirement.compliance_status}
+                                  onChange={(e) => handleUpdateComplianceStatus(
+                                    requirement.metric_id,
+                                    e.target.value as any,
+                                    requirement.current_value,
+                                    `Updated by AP user on ${new Date().toLocaleDateString()}`
+                                  )}
+                                >
+                                  <option value="pending">⏳ Pending</option>
+                                  <option value="compliant">✅ Compliant</option>
+                                  <option value="warning">⚠️ Warning</option>
+                                  <option value="non_compliant">❌ Non-Compliant</option>
+                                </select>
+                                <Button variant="outline" size="sm" className="text-xs">
+                                  <FileText className="h-3 w-3 mr-1" />
+                                  Upload Doc
+                                </Button>
+                              </div>
                             )}
                           </div>
-                          {roleBasedActions.canEdit && (
-                            <Button variant="outline" size="sm">
-                              <Edit className="h-3 w-3 mr-1" />
-                              Edit
-                            </Button>
-                          )}
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No compliance requirements found</p>
-                      <p className="text-sm">Requirements will appear here when assigned</p>
+                    <div className="text-center py-12 text-gray-500">
+                      <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg font-medium">No Requirements Template Found</p>
+                      <p className="text-sm">
+                        Role "{selectedMember.member_role}" doesn't have default compliance requirements.
+                      </p>
+                      <p className="text-sm mt-2">
+                        Contact your administrator to set up requirements for this role.
+                      </p>
                     </div>
                   )}
                 </CardContent>
               </Card>
 
               {/* Action Buttons */}
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-between">
                 <Button variant="outline" onClick={() => setIsComplianceDialogOpen(false)}>
                   Close
                 </Button>
-                {roleBasedActions.canEdit && (
-                  <Button>
-                    <Edit className="h-4 w-4 mr-1" />
-                    Edit Requirements
+                <div className="flex gap-2">
+                  {roleBasedActions.canEdit && !selectedMemberCompliance.hasExistingRecords && (
+                    <Button onClick={handleAssignRoleRequirements}>
+                      <Plus className="h-4 w-4 mr-1" />
+                      Assign Role Requirements
+                    </Button>
+                  )}
+                  <Button variant="outline" onClick={() => refetchMemberCompliance()}>
+                    <RefreshCw className="h-4 w-4 mr-1" />
+                    Refresh
                   </Button>
-                )}
+                </div>
               </div>
             </div>
           )}
