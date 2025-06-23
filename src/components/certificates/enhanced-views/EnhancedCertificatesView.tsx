@@ -38,6 +38,10 @@ export function EnhancedCertificatesView() {
   const { data: certificates, isLoading } = useQuery({
     queryKey: ['enhanced-certificates', isAdmin, statusFilter, profile?.id],
     queryFn: async () => {
+      // 🔍 PAGINATION DIAGNOSTIC: Log query start time
+      const queryStart = performance.now();
+      console.log('🔍 Certificate Query Starting - fetching ALL records without pagination');
+      
       let query = supabase
         .from('certificates')
         .select('*');
@@ -59,6 +63,19 @@ export function EnhancedCertificatesView() {
 
       const { data, error } = await query.order('created_at', { ascending: false });
       
+      // 🔍 PAGINATION DIAGNOSTIC: Log query completion
+      const queryTime = performance.now() - queryStart;
+      const recordCount = data?.length || 0;
+      console.log(`🔍 Certificate Query Complete: ${recordCount} records fetched in ${queryTime.toFixed(2)}ms`);
+      
+      // 🔍 PAGINATION DIAGNOSTIC: Log performance issues
+      if (queryTime > 500) {
+        console.warn('⚠️ SLOW QUERY: Certificate fetch took over 500ms - pagination needed!');
+      }
+      if (recordCount > 100) {
+        console.warn(`⚠️ LARGE DATASET: Fetching ${recordCount} records without pagination affects performance`);
+      }
+      
       if (error) throw error;
       return (data || []) as Certificate[];
     },
@@ -78,15 +95,40 @@ export function EnhancedCertificatesView() {
     }
   });
 
-  const filteredCertificates = certificates?.filter(cert => {
-    if (!searchQuery) return true;
-    const searchLower = searchQuery.toLowerCase();
-    return (
-      cert.recipient_name?.toLowerCase().includes(searchLower) ||
-      cert.course_name?.toLowerCase().includes(searchLower) ||
-      cert.verification_code?.toLowerCase().includes(searchLower)
-    );
-  }) || [];
+  const filteredCertificates = (() => {
+    // 🔍 PAGINATION DIAGNOSTIC: Log filtering start time
+    const filterStart = performance.now();
+    
+    if (!certificates) return [];
+    
+    const totalRecords = certificates.length;
+    console.log(`🔍 Client-Side Filtering Starting: ${totalRecords} records to filter`);
+    
+    const filtered = certificates.filter(cert => {
+      if (!searchQuery) return true;
+      const searchLower = searchQuery.toLowerCase();
+      return (
+        cert.recipient_name?.toLowerCase().includes(searchLower) ||
+        cert.course_name?.toLowerCase().includes(searchLower) ||
+        cert.verification_code?.toLowerCase().includes(searchLower)
+      );
+    });
+    
+    // 🔍 PAGINATION DIAGNOSTIC: Log filtering completion
+    const filterTime = performance.now() - filterStart;
+    const filteredCount = filtered.length;
+    console.log(`🔍 Client-Side Filtering Complete: ${filteredCount}/${totalRecords} records in ${filterTime.toFixed(2)}ms`);
+    
+    // 🔍 PAGINATION DIAGNOSTIC: Log filtering performance issues
+    if (filterTime > 50) {
+      console.warn('⚠️ SLOW FILTERING: Client-side filtering is taking too long - consider server-side filtering');
+    }
+    if (totalRecords > 100 && searchQuery) {
+      console.warn(`⚠️ INEFFICIENT FILTERING: Filtering ${totalRecords} records client-side is inefficient`);
+    }
+    
+    return filtered;
+  })();
 
   const handleSelectCertificate = (certId: string, selected: boolean) => {
     const newSelection = new Set(selectedCertificates);
