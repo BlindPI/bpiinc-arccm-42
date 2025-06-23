@@ -78,73 +78,46 @@ export class TeamMemberComplianceService {
    */
   static async getProviderTeamMemberCompliance(providerId: string): Promise<TeamMemberComplianceStatus[]> {
     try {
-      console.log(`DEBUG: Getting team member compliance for provider ${providerId}`);
+      console.log(`DEBUG: Getting team member compliance for provider ${providerId} using proven working approach`);
       
-      // Get all team assignments for this provider
-      const { data: teamAssignments, error: assignmentsError } = await supabase
-        .from('provider_team_assignments')
-        .select('team_id, teams!inner(id, name)')
-        .eq('provider_id', providerId)
-        .eq('status', 'active');
-
-      if (assignmentsError) {
-        console.error('Error fetching team assignments:', assignmentsError);
-        return [];
-      }
-
+      // FIXED: Use the same proven approach as working Team Assignments tab
+      const { providerRelationshipService } = await import('@/services/provider/providerRelationshipService');
+      
+      // Get team assignments using the working method
+      const teamAssignments = await providerRelationshipService.getProviderTeamAssignments(providerId);
+      
       if (!teamAssignments || teamAssignments.length === 0) {
-        console.log(`DEBUG: No team assignments found for provider ${providerId}`);
+        console.log(`DEBUG: No team assignments found for provider ${providerId} (using working method)`);
         return [];
       }
 
       const teamIds = teamAssignments.map(a => a.team_id);
-      console.log(`DEBUG: Found ${teamIds.length} teams for provider ${providerId}`);
+      console.log(`DEBUG: Found ${teamIds.length} teams for provider ${providerId} using working method:`, teamAssignments.map(t => t.team_name));
 
-      // Get all team members across provider's teams - FIXED: Better query structure
-      console.log(`DEBUG: Querying team members for team IDs:`, teamIds);
+      // FIXED: Use proven working approach to get team members
+      console.log(`DEBUG: Getting team members for ${teamIds.length} teams using working method`);
       
-      const { data: teamMembers, error: membersError } = await supabase
-        .from('team_members')
-        .select(`
-          user_id,
-          team_id,
-          role,
-          status,
-          updated_at
-        `)
-        .in('team_id', teamIds)
-        .eq('status', 'active');
+      let allTeamMembers: any[] = [];
+      
+      // Get team members for each team using the working method
+      for (const teamId of teamIds) {
+        try {
+          const teamMembers = await providerRelationshipService.getTeamMembers(teamId);
+          console.log(`DEBUG: Found ${teamMembers.length} members in team ${teamId}`);
+          allTeamMembers.push(...teamMembers);
+        } catch (error) {
+          console.error(`DEBUG: Error getting members for team ${teamId}:`, error);
+          // Continue with other teams
+        }
+      }
 
-      if (membersError) {
-        console.error('DEBUG: Error fetching team members:', membersError);
-        // Try fallback query without complex joins
-        console.log('DEBUG: Attempting fallback team member query...');
-        
-        const fallbackQuery = await supabase
-          .from('team_members')
-          .select('user_id, team_id, role, status, updated_at')
-          .in('team_id', teamIds);
-          
-        if (fallbackQuery.error) {
-          console.error('DEBUG: Fallback query also failed:', fallbackQuery.error);
-          return [];
-        }
-        
-        console.log(`DEBUG: Fallback found ${fallbackQuery.data?.length || 0} team members`);
-        // Use fallback data if main query failed
-        if (fallbackQuery.data && fallbackQuery.data.length > 0) {
-          console.log(`DEBUG: Using fallback data with ${fallbackQuery.data.length} members`);
-          // Override teamMembers with fallback data
-          const teamMembers = fallbackQuery.data;
-        } else {
-          return [];
-        }
-      } else if (!teamMembers || teamMembers.length === 0) {
-        console.log(`DEBUG: No team members found for provider ${providerId}`);
+      if (allTeamMembers.length === 0) {
+        console.log(`DEBUG: No team members found for provider ${providerId} using working method`);
         return [];
       }
 
-      console.log(`DEBUG: Found ${teamMembers.length} team members across ${teamIds.length} teams`);
+      console.log(`DEBUG: Found ${allTeamMembers.length} team members across ${teamIds.length} teams using working method`);
+      const teamMembers = allTeamMembers;
 
       // Get compliance data for each team member
       const memberCompliancePromises = teamMembers.map(async (member) => {
@@ -187,25 +160,18 @@ export class TeamMemberComplianceService {
             complianceStatus = 'non_compliant';
           }
 
-          // Get profile data for this member
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('id, email, display_name, role')
-            .eq('id', member.user_id)
-            .single();
-
-          // Get team data from team assignments
+          // Get team data from team assignments (using working data structure)
           const teamAssignment = teamAssignments.find(ta => ta.team_id === member.team_id);
-          const teamName = teamAssignment?.teams?.name || 'Unknown Team';
+          const teamName = teamAssignment?.team_name || 'Unknown Team';
 
-          console.log(`DEBUG: Processing member ${member.user_id} from team ${teamName}`);
+          console.log(`DEBUG: Processing member ${member.user_id} (${member.display_name || member.email}) from team ${teamName}`);
           
           return {
             user_id: member.user_id,
             team_id: member.team_id,
             team_name: teamName,
-            member_name: profile?.display_name || profile?.email || 'Unknown',
-            member_email: profile?.email || '',
+            member_name: member.display_name || member.email || 'Unknown',
+            member_email: member.email || '',
             member_role: member.role,
             compliance_score: complianceSummary.overall_score,
             compliance_status: complianceStatus,
@@ -218,23 +184,16 @@ export class TeamMemberComplianceService {
         } catch (error) {
           console.error(`Error getting compliance data for member ${member.user_id}:`, error);
           
-          // Get basic profile info for error case
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('id, email, display_name, role')
-            .eq('id', member.user_id)
-            .single();
-
-          // Get team data from team assignments
+          // Get team data from team assignments (using working data structure)
           const teamAssignment = teamAssignments.find(ta => ta.team_id === member.team_id);
-          const teamName = teamAssignment?.teams?.name || 'Unknown Team';
+          const teamName = teamAssignment?.team_name || 'Unknown Team';
           
           return {
             user_id: member.user_id,
             team_id: member.team_id,
             team_name: teamName,
-            member_name: profile?.display_name || profile?.email || 'Unknown',
-            member_email: profile?.email || '',
+            member_name: member.display_name || member.email || 'Unknown',
+            member_email: member.email || '',
             member_role: member.role,
             compliance_score: 0,
             compliance_status: 'pending' as const,
