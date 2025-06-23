@@ -162,9 +162,9 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
   });
 
   // Get team assignments (missing in original dashboard)
-  const { 
-    data: teamAssignments, 
-    isLoading: teamsLoading 
+  const {
+    data: teamAssignments,
+    isLoading: teamsLoading
   } = useQuery({
     queryKey: ['enhanced-provider-teams', selectedProvider || userProviders?.[0]?.id],
     queryFn: async () => {
@@ -173,6 +173,53 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
       
       console.log('🔍 ENHANCED DASHBOARD: Loading team assignments...');
       return await providerRelationshipService.getProviderTeamAssignments(providerId);
+    },
+    enabled: !!(selectedProvider || userProviders?.[0]?.id)
+  });
+
+  // Get location assignments (FIXED: Now actually loads real data)
+  const {
+    data: locationAssignments,
+    isLoading: locationsLoading
+  } = useQuery({
+    queryKey: ['enhanced-provider-locations', selectedProvider || userProviders?.[0]?.id],
+    queryFn: async () => {
+      const providerId = selectedProvider || userProviders?.[0]?.id;
+      if (!providerId) return [];
+      
+      console.log('🔍 ENHANCED DASHBOARD: Loading location assignments...');
+      return await providerRelationshipService.getProviderLocationAssignments(providerId);
+    },
+    enabled: !!(selectedProvider || userProviders?.[0]?.id)
+  });
+
+  // Get real performance metrics from provider_performance_metrics table
+  const {
+    data: realPerformanceMetrics,
+    isLoading: performanceLoading
+  } = useQuery({
+    queryKey: ['provider-performance-metrics', selectedProvider || userProviders?.[0]?.id],
+    queryFn: async () => {
+      const providerId = selectedProvider || userProviders?.[0]?.id;
+      if (!providerId) return null;
+      
+      console.log('🔍 ENHANCED DASHBOARD: Loading real performance metrics from database...');
+      
+      // Query provider_performance_metrics table for real data
+      const { data, error } = await supabase
+        .from('provider_performance_metrics')
+        .select('*')
+        .eq('provider_id', providerId)
+        .order('measurement_period', { ascending: false })
+        .limit(12); // Get last 12 months
+      
+      if (error) {
+        console.error('Error loading performance metrics:', error);
+        return null;
+      }
+      
+      console.log('✅ ENHANCED DASHBOARD: Loaded real performance metrics:', data?.length || 0, 'records');
+      return data || [];
     },
     enabled: !!(selectedProvider || userProviders?.[0]?.id)
   });
@@ -393,50 +440,215 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="h-5 w-5" />
                 Location Assignments
+                <Badge variant="outline">{locationAssignments?.length || 0}</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Location assignment management</p>
-                <p className="text-sm">Integrated with proven location service</p>
-              </div>
+              {locationsLoading ? (
+                <div className="text-center py-4">Loading location assignments...</div>
+              ) : locationAssignments && locationAssignments.length > 0 ? (
+                <div className="space-y-3">
+                  {locationAssignments.map((assignment) => (
+                    <div key={assignment.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div>
+                        <h4 className="font-medium">{assignment.location_name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Role: {assignment.assignment_role} • Since: {new Date(assignment.start_date).toLocaleDateString()}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant={assignment.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+                            {assignment.status}
+                          </Badge>
+                          {assignment.end_date && (
+                            <Badge variant="outline" className="text-xs">
+                              Ends: {new Date(assignment.end_date).toLocaleDateString()}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No location assignments found</p>
+                  <p className="text-sm">Contact your administrator to assign locations</p>
+                  {roleBasedActions.canEdit && (
+                    <Button className="mt-2">
+                      <Plus className="h-4 w-4 mr-1" />
+                      Assign Location
+                    </Button>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="performance" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-3">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">Performance Rating</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-gray-900">{metrics?.performanceRating?.toFixed(1) || 'N/A'}</div>
-                <p className="text-xs text-gray-500 mt-1">Out of 5.0</p>
-              </CardContent>
-            </Card>
+          {performanceLoading ? (
+            <div className="text-center py-8">
+              <div className="text-center py-4">Loading performance metrics...</div>
+            </div>
+          ) : realPerformanceMetrics && realPerformanceMetrics.length > 0 ? (
+            <div className="space-y-6">
+              {/* Current Period Performance */}
+              <div className="grid gap-6 md:grid-cols-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Performance Rating</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {realPerformanceMetrics[0]?.performance_rating?.toFixed(1) || 'N/A'}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Out of 5.0</p>
+                  </CardContent>
+                </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">Compliance Score</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{metrics?.complianceScore?.toFixed(1) || 'N/A'}%</div>
-                <p className="text-xs text-gray-500 mt-1">Current compliance</p>
-              </CardContent>
-            </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Compliance Score</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">
+                      {realPerformanceMetrics[0]?.compliance_score?.toFixed(1) || 'N/A'}%
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Current compliance</p>
+                  </CardContent>
+                </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">Satisfaction</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-purple-600">{metrics?.averageSatisfactionScore?.toFixed(1) || 'N/A'}</div>
-                <p className="text-xs text-gray-500 mt-1">Average score</p>
-              </CardContent>
-            </Card>
-          </div>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Satisfaction Score</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-purple-600">
+                      {realPerformanceMetrics[0]?.average_satisfaction_score?.toFixed(1) || 'N/A'}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Average score</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Period</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-lg font-bold text-blue-600">
+                      {realPerformanceMetrics[0]?.measurement_period ?
+                        new Date(realPerformanceMetrics[0].measurement_period).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short'
+                        }) : 'N/A'}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Current period</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Performance Metrics Grid */}
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Certificates Issued</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {realPerformanceMetrics[0]?.certificates_issued || 0}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">This period</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Courses Conducted</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">
+                      {realPerformanceMetrics[0]?.courses_conducted || 0}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">This period</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Team Members</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-purple-600">
+                      {realPerformanceMetrics[0]?.team_members_managed || 0}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Managed</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Locations Served</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-amber-600">
+                      {realPerformanceMetrics[0]?.locations_served || 0}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Active locations</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Historical Performance Trend */}
+              {realPerformanceMetrics.length > 1 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5" />
+                      Performance History
+                      <Badge variant="outline">{realPerformanceMetrics.length} periods</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {realPerformanceMetrics.slice(0, 6).map((metric, index) => (
+                        <div key={metric.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div>
+                            <h4 className="font-medium">
+                              {new Date(metric.measurement_period).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'long'
+                              })}
+                            </h4>
+                            <p className="text-sm text-muted-foreground">
+                              {metric.certificates_issued} certificates • {metric.courses_conducted} courses • {metric.team_members_managed} members
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-medium">
+                              Rating: {metric.performance_rating?.toFixed(1) || 'N/A'}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Compliance: {metric.compliance_score?.toFixed(1) || 'N/A'}%
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No performance metrics available</p>
+              <p className="text-sm">Performance data will appear once metrics are recorded</p>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
