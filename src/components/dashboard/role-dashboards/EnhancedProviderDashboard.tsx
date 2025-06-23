@@ -464,8 +464,6 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
     try {
       console.log(`🔄 Assigning role requirements to member ${selectedMember.member_name}`);
       
-      const { ComplianceRequirementsService } = await import('@/services/compliance/complianceRequirementsService');
-      
       // Get the actual USER ROLE (IT/IP/IC/AP) from the profiles table, not the team role
       const { data: userProfile, error: profileError } = await supabase
         .from('profiles')
@@ -483,6 +481,11 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
       
       console.log(`🔄 Assigning ${complianceRole} requirements to ${selectedMember.member_name} (Team Role: ${selectedMember.member_role})`);
       
+      // First, initialize default requirements if they don't exist
+      const { ComplianceRequirementsService } = await import('@/services/compliance/complianceRequirementsService');
+      await ComplianceRequirementsService.initializeDefaultRequirements();
+      
+      // Then assign requirements to the user
       await ComplianceRequirementsService.assignRoleRequirementsToUser(
         selectedMember.user_id,
         complianceRole
@@ -494,7 +497,51 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
       console.log('✅ Role requirements assigned successfully');
     } catch (error) {
       console.error('❌ Error assigning role requirements:', error);
+      alert(`Error assigning requirements: ${error.message}`);
     }
+  };
+
+  const handleUploadDocument = async (requirementId: string, metricId: string) => {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.pdf,.jpg,.jpeg,.png';
+    
+    fileInput.onchange = async (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (!file || !selectedMember?.user_id) return;
+      
+      try {
+        console.log(`🔄 Uploading document for requirement ${requirementId}`);
+        
+        const { ComplianceService } = await import('@/services/compliance/complianceService');
+        
+        await ComplianceService.uploadComplianceDocument(
+          selectedMember.user_id,
+          metricId,
+          file
+        );
+        
+        // Update the requirement status to pending review
+        await ComplianceService.updateComplianceRecord(
+          selectedMember.user_id,
+          metricId,
+          file.name,
+          'warning', // Pending review
+          `Document uploaded: ${file.name} on ${new Date().toLocaleDateString()}`
+        );
+        
+        // Refresh the member compliance data
+        await refetchMemberCompliance();
+        
+        console.log('✅ Document uploaded successfully');
+        alert('Document uploaded successfully!');
+      } catch (error) {
+        console.error('❌ Error uploading document:', error);
+        alert(`Error uploading document: ${error.message}`);
+      }
+    };
+    
+    fileInput.click();
   };
 
   return (
@@ -1483,7 +1530,13 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
                                   <option value="warning">⚠️ Warning</option>
                                   <option value="non_compliant">❌ Non-Compliant</option>
                                 </select>
-                                <Button variant="outline" size="sm" className="text-xs">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs"
+                                  onClick={() => handleUploadDocument(requirement.name, requirement.metric_id)}
+                                  disabled={!requirement.metric_id}
+                                >
                                   <FileText className="h-3 w-3 mr-1" />
                                   Upload Doc
                                 </Button>
