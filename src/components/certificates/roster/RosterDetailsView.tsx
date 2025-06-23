@@ -20,7 +20,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { Roster } from '@/types/roster';
 import { Certificate } from '@/types/certificates';
-import { BatchCertificateEmailForm } from '../BatchCertificateEmailForm';
+import { EnhancedBatchCertificateEmailForm } from '../EnhancedBatchCertificateEmailForm';
 
 interface RosterDetailsViewProps {
   roster: Roster;
@@ -331,7 +331,7 @@ export function RosterDetailsView({
           <DialogHeader>
             <DialogTitle>Send Batch Certificate Emails</DialogTitle>
           </DialogHeader>
-          <BatchCertificateEmailForm
+          <EnhancedBatchCertificateEmailForm
             certificateIds={selectedCerts.map(cert => cert.id)}
             certificates={selectedCerts}
             onClose={handleCloseEmailDialog}
