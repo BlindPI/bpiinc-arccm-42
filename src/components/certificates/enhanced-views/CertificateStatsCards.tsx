@@ -13,13 +13,28 @@ import {
 import { Certificate } from '@/types/certificates';
 
 interface CertificateStatsCardsProps {
-  certificates: Certificate[];
+  certificates?: Certificate[]; // Keep for backward compatibility
+  totalCounts?: {
+    total: number;
+    active: number;
+    expired: number;
+    revoked: number;
+    emailed: number;
+    emailRate: number;
+  };
 }
 
 export const CertificateStatsCards: React.FC<CertificateStatsCardsProps> = ({
-  certificates
+  certificates = [],
+  totalCounts
 }) => {
   const stats = React.useMemo(() => {
+    // **FIXED: Use totalCounts if provided (for accurate totals), otherwise fall back to certificates array**
+    if (totalCounts) {
+      return totalCounts;
+    }
+    
+    // Fallback to calculating from certificates array (for backward compatibility)
     const total = certificates.length;
     const active = certificates.filter(c => c.status === 'ACTIVE').length;
     const expired = certificates.filter(c => c.status === 'EXPIRED').length;
@@ -34,7 +49,7 @@ export const CertificateStatsCards: React.FC<CertificateStatsCardsProps> = ({
       emailed,
       emailRate: total > 0 ? Math.round((emailed / total) * 100) : 0
     };
-  }, [certificates]);
+  }, [certificates, totalCounts]);
 
   const statsCards = [
     {

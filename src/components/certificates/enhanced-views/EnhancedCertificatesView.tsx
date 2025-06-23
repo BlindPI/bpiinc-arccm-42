@@ -75,7 +75,7 @@ export function EnhancedCertificatesView() {
           
         if (apError || !apUser) {
           console.error('🔍 Could not find provider for AP user:', apError);
-          return { certificates: [], totalCount: 0 };
+          return { certificates: [], totalCount: 0, allCertificates: [] };
         }
         
         const providerId = apUser.id;
@@ -90,62 +90,93 @@ export function EnhancedCertificatesView() {
           
         if (providerError || !provider?.primary_location_id) {
           console.error('🔍 Could not get provider primary location:', providerError);
-          return { certificates: [], totalCount: 0 };
+          return { certificates: [], totalCount: 0, allCertificates: [] };
         }
         
         const primaryLocationId = provider.primary_location_id;
         console.log(`🔍 Provider primary location: ${primaryLocationId}`);
         
-        // **STEP 2: Get certificates using same multi-approach logic as service**
-        // Approach 1: Direct location match
-        let query = supabase
+        // **STEP 2: Get ALL certificates first (for stats), then apply search and pagination**
+        let baseQuery = supabase
+          .from('certificates')
+          .select('*')
+          .eq('location_id', primaryLocationId);
+
+        // Get all certificates for stats calculation (no search filter)
+        const { data: allCertificates, error: allError } = await baseQuery;
+        
+        if (allError) {
+          console.error('🔍 Failed to get all certificates for stats:', allError);
+          return { certificates: [], totalCount: 0, allCertificates: [] };
+        }
+        
+        // **STEP 3: Apply filters for display data**
+        let filteredQuery = supabase
           .from('certificates')
           .select('*')
           .eq('location_id', primaryLocationId);
 
         // Apply status filter
         if (statusFilter !== 'all') {
-          query = query.eq('status', statusFilter);
+          filteredQuery = filteredQuery.eq('status', statusFilter);
         }
 
         // **SERVER-SIDE SEARCH FILTERING**
         if (searchQuery.trim()) {
           const searchTerm = `%${searchQuery.trim()}%`;
-          query = query.or(
+          filteredQuery = filteredQuery.or(
             `recipient_name.ilike.${searchTerm},course_name.ilike.${searchTerm},verification_code.ilike.${searchTerm}`
           );
         }
 
         // **SERVER-SIDE SORTING**
-        query = query.order(sortBy, { ascending: sortDirection === 'asc' });
+        filteredQuery = filteredQuery.order(sortBy, { ascending: sortDirection === 'asc' });
 
-        const { data: allData, error } = await query;
+        const { data: filteredData, error } = await filteredQuery;
         
         if (error) {
           console.error('🔍 Location-based certificate query failed:', error);
-          return { certificates: [], totalCount: 0 };
+          return { certificates: [], totalCount: 0, allCertificates: allCertificates || [] };
         }
         
-        const totalCount = allData?.length || 0;
-        console.log(`🔍 Found ${totalCount} certificates using location-based filtering (matching AP dashboard logic)`);
+        const totalCount = filteredData?.length || 0;
+        console.log(`🔍 Found ${totalCount} filtered certificates, ${allCertificates?.length || 0} total certificates`);
         
         // **CLIENT-SIDE PAGINATION** (since we need to maintain location-based filtering)
         const offset = (currentPage - 1) * pageSize;
-        const paginatedData = allData?.slice(offset, offset + pageSize) || [];
+        const paginatedData = filteredData?.slice(offset, offset + pageSize) || [];
         
         const queryTime = performance.now() - queryStart;
-        console.log(`🔍 AP Certificate Query Complete: ${paginatedData.length} records (${totalCount} total) in ${queryTime.toFixed(2)}ms`);
+        console.log(`🔍 AP Certificate Query Complete: ${paginatedData.length} records (${totalCount} filtered, ${allCertificates?.length || 0} total) in ${queryTime.toFixed(2)}ms`);
         console.log(`✅ SUCCESS: AP certificate page now uses same location-based logic as AP dashboard`);
         
         return {
           certificates: paginatedData as Certificate[],
-          totalCount
+          totalCount,
+          allCertificates: allCertificates as Certificate[]
         };
       }
       
       // **NON-AP USERS: Use original server-side pagination**
       const offset = (currentPage - 1) * pageSize;
       
+      // **STEP 1: Get all certificates for stats calculation**
+      let allQuery = supabase
+        .from('certificates')
+        .select('*');
+
+      if (!isAdmin && profile?.id) {
+        // Other roles: Filter by user_id (existing behavior)
+        allQuery = allQuery.eq('user_id', profile.id);
+      }
+
+      const { data: allCertificates, error: allError } = await allQuery;
+      
+      if (allError) {
+        console.error('🔍 Failed to get all certificates for stats:', allError);
+      }
+      
+      // **STEP 2: Get paginated data with filters**
       let query = supabase
         .from('certificates')
         .select('*', { count: 'exact' });
@@ -183,7 +214,8 @@ export function EnhancedCertificatesView() {
       if (error) throw error;
       return {
         certificates: (data || []) as Certificate[],
-        totalCount: count || 0
+        totalCount: count || 0,
+        allCertificates: (allCertificates || []) as Certificate[]
       };
     },
     enabled: !!profile
@@ -192,6 +224,36 @@ export function EnhancedCertificatesView() {
   const certificates = paginatedData?.certificates || [];
   const totalCount = paginatedData?.totalCount || 0;
   const totalPages = Math.ceil(totalCount / pageSize);
+  const allCertificates = paginatedData?.allCertificates || [];
+  
+  // **FIXED: Calculate actual total stats from all certificates, not just current page**
+  const totalStats = React.useMemo(() => {
+    if (allCertificates.length === 0) {
+      return {
+        total: 0,
+        active: 0,
+        expired: 0,
+        revoked: 0,
+        emailed: 0,
+        emailRate: 0
+      };
+    }
+    
+    const total = allCertificates.length;
+    const active = allCertificates.filter(c => c.status === 'ACTIVE').length;
+    const expired = allCertificates.filter(c => c.status === 'EXPIRED').length;
+    const revoked = allCertificates.filter(c => c.status === 'REVOKED').length;
+    const emailed = allCertificates.filter(c => c.email_status === 'SENT' || c.is_batch_emailed).length;
+    
+    return {
+      total,
+      active,
+      expired,
+      revoked,
+      emailed,
+      emailRate: total > 0 ? Math.round((emailed / total) * 100) : 0
+    };
+  }, [allCertificates]);
 
   // Fetch locations for display
   const { data: locations } = useQuery({
@@ -324,8 +386,11 @@ export function EnhancedCertificatesView() {
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <CertificateStatsCards certificates={certificates || []} />
+      {/* Stats Cards - FIXED: Pass actual total stats, not just current page */}
+      <CertificateStatsCards
+        certificates={certificates || []}
+        totalCounts={totalStats}
+      />
 
       {/* Header and Controls */}
       <Card className="border-0 shadow-md">
