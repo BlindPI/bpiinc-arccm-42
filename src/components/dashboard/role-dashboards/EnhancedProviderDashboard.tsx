@@ -1286,36 +1286,84 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({ c
                     <div>
                       <label className="text-sm font-medium text-gray-600">Compliance Score</label>
                       <p className={`text-lg font-bold ${
-                        selectedMember.compliance_score >= 90 ? 'text-green-600' :
-                        selectedMember.compliance_score >= 70 ? 'text-yellow-600' :
-                        'text-red-600'
+                        (() => {
+                          // Calculate score from actual template requirements
+                          const requirements = selectedMemberCompliance.requirementsWithStatus || [];
+                          if (requirements.length === 0) return 'text-gray-600';
+                          
+                          const totalWeight = requirements.reduce((sum, req) => sum + req.weight, 0);
+                          const weightedScore = requirements.reduce((sum, req) => {
+                            const score = req.compliance_status === 'compliant' ? 100 :
+                                         req.compliance_status === 'warning' ? 75 :
+                                         req.compliance_status === 'non_compliant' ? 0 : 50;
+                            return sum + (score * req.weight / 100);
+                          }, 0);
+                          
+                          const finalScore = totalWeight > 0 ? Math.round(weightedScore / totalWeight * 100) : 0;
+                          
+                          return finalScore >= 90 ? 'text-green-600' :
+                                 finalScore >= 70 ? 'text-yellow-600' :
+                                 'text-red-600';
+                        })()
                       }`}>
-                        {selectedMember.compliance_score}%
+                        {(() => {
+                          // Calculate score from actual template requirements
+                          const requirements = selectedMemberCompliance.requirementsWithStatus || [];
+                          if (requirements.length === 0) return '0';
+                          
+                          const totalWeight = requirements.reduce((sum, req) => sum + req.weight, 0);
+                          const weightedScore = requirements.reduce((sum, req) => {
+                            const score = req.compliance_status === 'compliant' ? 100 :
+                                         req.compliance_status === 'warning' ? 75 :
+                                         req.compliance_status === 'non_compliant' ? 0 : 50;
+                            return sum + (score * req.weight / 100);
+                          }, 0);
+                          
+                          return totalWeight > 0 ? Math.round(weightedScore / totalWeight * 100) : 0;
+                        })()}%
                       </p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Pending Actions</label>
-                      <p className="text-lg font-bold text-blue-600">{selectedMember.pending_actions}</p>
+                      <p className="text-lg font-bold text-blue-600">
+                        {selectedMemberCompliance.requirementsWithStatus?.filter(req => req.compliance_status === 'pending').length || 0}
+                      </p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Overdue Actions</label>
-                      <p className="text-lg font-bold text-red-600">{selectedMember.overdue_actions}</p>
+                      <p className="text-lg font-bold text-red-600">
+                        {selectedMemberCompliance.requirementsWithStatus?.filter(req =>
+                          req.compliance_status === 'non_compliant' && req.is_required
+                        ).length || 0}
+                      </p>
                     </div>
                   </div>
 
-                  {!selectedMemberCompliance.hasExistingRecords && (
+                  {selectedMemberCompliance.requirementsWithStatus && selectedMemberCompliance.requirementsWithStatus.length > 0 ? (
+                    <Alert className="mt-4">
+                      <CheckCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>{selectedMemberCompliance.requirementsWithStatus.length} role-based requirements loaded.</strong>
+                        {!selectedMemberCompliance.hasExistingRecords && (
+                          <>
+                            {" "}These are template requirements. Click "Assign Requirements" to create compliance records.
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="ml-2"
+                              onClick={handleAssignRoleRequirements}
+                            >
+                              Assign Requirements
+                            </Button>
+                          </>
+                        )}
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
                     <Alert className="mt-4">
                       <AlertTriangle className="h-4 w-4" />
                       <AlertDescription>
-                        No compliance records found. This member needs role-based requirements assigned.
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="ml-2"
-                          onClick={handleAssignRoleRequirements}
-                        >
-                          Assign Requirements
-                        </Button>
+                        No compliance requirements found for role "{selectedMemberCompliance.complianceRole}". Contact your administrator to set up requirements.
                       </AlertDescription>
                     </Alert>
                   )}
