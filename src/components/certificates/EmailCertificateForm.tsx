@@ -34,6 +34,10 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
 
   const originalEmail = certificate.recipient_email;
   const recipientName = certificate.recipient_name;
+  
+  // AP users can only use original recipient email
+  const isAPUser = profile?.role === 'AP';
+  const canCustomizeEmail = !isAPUser && profile?.role && ['SA', 'AD'].includes(profile.role);
 
   // Get location details if certificate has location_id
   const locationQuery = useQuery({
@@ -278,9 +282,10 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
             </div>
           </div>
 
-          {/* Custom Email Option */}
-          <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-            <RadioGroupItem value="custom" id="custom" className="mt-1" />
+          {/* Custom Email Option - Only for SA/AD users */}
+          {canCustomizeEmail && (
+            <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+              <RadioGroupItem value="custom" id="custom" className="mt-1" />
             <div className="flex-1">
               <Label htmlFor="custom" className="flex items-center gap-2 cursor-pointer">
                 <Edit3 className="h-4 w-4" />
@@ -320,6 +325,19 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
               )}
             </div>
           </div>
+          )}
+          
+          {/* AP User Notice */}
+          {isAPUser && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5" />
+                <div className="text-sm text-blue-800">
+                  <strong>Provider Access:</strong> You can only send certificates to the original recipient email address for security and compliance purposes.
+                </div>
+              </div>
+            </div>
+          )}
         </RadioGroup>
       </div>
       
