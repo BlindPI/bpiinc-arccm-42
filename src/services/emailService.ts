@@ -72,10 +72,32 @@ export class EmailService {
     batchName
   }: BatchEmailParams) {
     try {
-      console.log('Sending batch certificate emails:', {
+      console.log('🔧 [EmailService] Starting batch certificate emails:', {
         certificateCount: certificateIds.length,
         batchName
       });
+
+      // Get current user for debugging
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      console.log('🔧 [EmailService] Current user:', {
+        userId: user?.id,
+        email: user?.email,
+        userError: userError?.message
+      });
+
+      // Get user profile for debugging
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('user_id', user?.id)
+        .single();
+      
+      console.log('🔧 [EmailService] User profile:', {
+        role: profile?.role,
+        profileError: profileError?.message
+      });
+
+      console.log('🔧 [EmailService] Attempting to create batch operation record...');
 
       // Create batch operation record
       const { data: batchRecord, error: batchError } = await supabase
@@ -87,6 +109,12 @@ export class EmailService {
         })
         .select()
         .single();
+
+      console.log('🔧 [EmailService] Batch operation insert result:', {
+        success: !batchError,
+        batchRecordId: batchRecord?.id,
+        error: batchError
+      });
 
       if (batchError) throw batchError;
 
