@@ -37,6 +37,9 @@ import {
 // Import our proven working dashboards
 import EnhancedProviderDashboard from './role-dashboards/EnhancedProviderDashboard';
 import { EnhancedTeamProviderDashboard } from './team/EnhancedTeamProviderDashboard';
+import { ITDashboard } from './role-dashboards/ITDashboard'; // Import IT Dashboard
+import { IPDashboard } from './role-dashboards/IPDashboard'; // Import IP Dashboard
+import { ICDashboard } from './role-dashboards/ICDashboard'; // Import IC Dashboard
 
 export function SimpleRoleRouter() {
   const { user } = useAuth();
@@ -138,9 +141,22 @@ export function SimpleRoleRouter() {
     return <AdminQuickDashboard profile={profile} />;
   }
 
-  // Instructor Dashboard (IC/IP/IT users)
-  if (['IC', 'IP', 'IT'].includes(userRole)) {
-    return <InstructorQuickDashboard profile={profile} />;
+  // Instructor Dashboard (IT users specifically for now)
+  if (userRole === 'IT') {
+    console.log('🎯 ROUTING: IT user to ITDashboard');
+    return <ITDashboard />; // Render the specific IT Dashboard
+  }
+
+  // IP Instructor Dashboard - Now specific handler
+  if (userRole === 'IP') {
+    console.log('🎯 ROUTING: IP user to IPDashboard');
+    return <IPDashboard />;
+  }
+
+  // IC Instructor Dashboard - Now specific handler
+  if (userRole === 'IC') {
+    console.log('🎯 ROUTING: IC user to ICDashboard');
+    return <ICDashboard />;
   }
 
   // Default dashboard for other roles
@@ -257,21 +273,22 @@ function AdminQuickDashboard({ profile }: { profile: any }) {
   );
 }
 
-// Simple Instructor Dashboard
+// Simple Instructor Dashboard (Fallback for IP/IC until specific dashboards are built)
 function InstructorQuickDashboard({ profile }: { profile: any }) {
+  const userRole = profile?.role || 'unknown'; // Ensure profile and role exist
   return (
     <div className="space-y-6">
       <Alert className="bg-green-50 border-green-200">
         <CheckCircle className="h-4 w-4 text-green-600" />
         <AlertDescription className="text-green-800">
-          ✅ Instructor Dashboard: Ready for teaching management
+          ✅ Instructor Dashboard: Base view for {userRole}
         </AlertDescription>
       </Alert>
 
       <Alert className="bg-blue-50 border-blue-200">
         <BookOpen className="h-4 w-4 text-blue-600" />
         <AlertDescription className="text-blue-800">
-          <strong>Instructor Dashboard</strong> - Teaching and certification management
+          <strong>Instructor Dashboard ({userRole})</strong> - Teaching and certification management
         </AlertDescription>
       </Alert>
 

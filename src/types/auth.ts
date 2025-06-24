@@ -15,6 +15,7 @@ export interface UserProfile {
   display_name?: string;
   role: UserRole;
   status: 'ACTIVE' | 'INACTIVE' | 'PENDING';
+  compliance_tier?: 'basic' | 'robust'; // Added compliance_tier
   organization?: string;
   job_title?: string;
   phone?: string;

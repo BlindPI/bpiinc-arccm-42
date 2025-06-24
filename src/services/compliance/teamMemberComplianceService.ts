@@ -27,6 +27,7 @@ export interface TeamMemberComplianceStatus {
   member_name: string;
   member_email: string;
   member_role: string;
+  compliance_tier?: string; // Added compliance_tier
   compliance_score: number;
   compliance_status: 'compliant' | 'warning' | 'non_compliant' | 'pending';
   pending_actions: number;
@@ -35,7 +36,7 @@ export interface TeamMemberComplianceStatus {
   requirements: Array<{
     name: string;
     category: string;
-    status: 'compliant' | 'non_compliant' | 'warning' | 'pending';
+    status: 'compliant' | 'non_compliant' | 'warning' | 'pending' | 'not_applicable';
     due_date?: string;
   }>;
 }

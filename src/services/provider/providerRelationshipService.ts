@@ -803,7 +803,7 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
                 
                 const criticalIssues = diagnostics.filter(d => d.detected && d.severity === 'critical');
                 const diagnosticSummary = criticalIssues.length > 0
-                  ? `\n\nDIAGNOSTIC FINDINGS: ${criticalIssues.map(i => i.issue_type).join(', ')}`
+                  ? `\n\nDIAGNOSTIC FINDINGS: ${criticalIssues.map(i => i.issue).join(', ')}`
                   : '\n\nDIAGNOSTICS: Run complete - check console for detailed results';
                 
                 throw new Error(`Location assignment failed: ${updateError.message} (Code: ${updateError.code})${diagnosticSummary}`);
@@ -1239,12 +1239,15 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
       // Get courses conducted - simplified count query
       let courseCount = 0;
       if (teamIds.length > 0) {
-        const courseResult = await supabase
+        const { count, error } = await supabase
           .from('courses')
-          .select('id', { count: 'exact' })
+          .select('*', { count: 'exact', head: true }) // Simpler select to avoid deep type inference
           .in('team_id', teamIds);
         
-        courseCount = courseResult.count || 0;
+        if (error) {
+          console.error('Error fetching course count:', error);
+        }
+        courseCount = count || 0;
       }
 
       // FIXED: Get team members managed - DEDUPLICATED to avoid double counting
@@ -1615,10 +1618,18 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
   // TEAM MEMBER MANAGEMENT OPERATIONS (NEW - for AP users)
   // =====================================================================================
 
+  interface ProfileDataForTeamMember {
+    id: string;
+    email: string | null;
+    display_name: string | null;
+    role: string | null;
+    compliance_tier: 'basic' | 'robust' | null;
+  }
+
   /**
    * Get team members for a specific team (AP user compatible)
    */
-  async getTeamMembers(teamId: string): Promise<any[]> {
+  async getTeamMembers(teamId: string): Promise<any[]> { // Return type will be refined later
     try {
       console.log(`DEBUG: Getting team members for team ${teamId}`);
       
@@ -1630,7 +1641,8 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
             id,
             email,
             display_name,
-            role
+            role,
+            compliance_tier
           )
         `)
         .eq('team_id', teamId)
@@ -1642,20 +1654,25 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
         return [];
       }
 
-      return (data || []).map(member => ({
-        id: member.id,
-        user_id: member.user_id,
-        team_id: member.team_id,
-        role: member.role,
-        status: member.status,
-        joined_date: member.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
-        created_at: member.created_at,
-        email: member.profiles?.email || null, // Allow null emails for AP users
-        display_name: member.profiles?.display_name || null, // Include display_name
-        first_name: null, // profiles table doesn't have this field
-        last_name: null,  // profiles table doesn't have this field
-        user_role: member.profiles?.role || 'Unknown'
-      }));
+      return (data || []).map(member => {
+        const profile = member.profiles as ProfileDataForTeamMember | null; // Explicitly cast
+        
+        return {
+          id: member.id,
+          user_id: member.user_id,
+          team_id: member.team_id,
+          role: member.role, // This is the team_members table role, not user_profile role
+          status: member.status,
+          joined_date: member.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+          created_at: member.created_at,
+          email: profile?.email || null,
+          display_name: profile?.display_name || null,
+          first_name: null,
+          last_name: null,
+          user_role: profile?.role || 'Unknown', // This is the user's role from profiles table
+          compliance_tier: profile?.compliance_tier || null, // New: compliance tier from profiles
+        };
+      });
     } catch (error) {
       console.error('Error fetching team members:', error);
       return [];
@@ -1835,16 +1852,16 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
    * Initialize default compliance requirements for all roles
    * Sets up AP, IC, IP, IT role-based compliance templates
    */
-  async initializeComplianceRequirements(): Promise<void> {
-    try {
-      console.log('DEBUG: Initializing compliance requirements via ProviderRelationshipService');
-      await ComplianceRequirementsService.initializeDefaultRequirements();
-      console.log('DEBUG: Successfully initialized compliance requirements');
-    } catch (error) {
-      console.error('Error initializing compliance requirements:', error);
-      throw await this.standardizeErrorMessage(error);
-    }
-  }
+   async initializeComplianceRequirements(): Promise<void> {
+     try {
+       console.log('DEBUG: Initializing compliance requirements via ProviderRelationshipService (now initializing all tiers)');
+       await ComplianceRequirementsService.initializeAllComplianceRequirements();
+       console.log('DEBUG: Successfully initialized all compliance requirements');
+     } catch (error) {
+       console.error('Error initializing compliance requirements:', error);
+       throw await this.standardizeErrorMessage(error);
+     }
+   }
 
   /**
    * Get role-based compliance template
@@ -1862,10 +1879,14 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
    * Assign role-based requirements to team member
    * Called when AP users add team members or change roles
    */
-  async assignRoleRequirementsToTeamMember(userId: string, userRole: string): Promise<UserRoleRequirements> {
+  async assignRoleRequirementsToTeamMember(
+    userId: string,
+    userRole: 'AP' | 'IC' | 'IP' | 'IT',
+    userTier: 'basic' | 'robust'
+  ): Promise<UserRoleRequirements> {
     try {
-      console.log(`DEBUG: Assigning role requirements to team member ${userId} with role ${userRole}`);
-      return await ComplianceRequirementsService.assignRoleRequirementsToUser(userId, userRole);
+      console.log(`DEBUG: Assigning role requirements to team member ${userId} with role ${userRole} and tier ${userTier}`);
+      return await ComplianceRequirementsService.assignRoleRequirementsToUser(userId, userRole, userTier);
     } catch (error) {
       console.error('Error assigning role requirements to team member:', error);
       throw await this.standardizeErrorMessage(error);
@@ -1873,12 +1894,18 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
   }
 
   /**
-   * Update team member role requirements when role changes
+   * Update team member role requirements when role or tier changes
    */
-  async updateTeamMemberRoleRequirements(userId: string, oldRole: string, newRole: string): Promise<void> {
+  async updateTeamMemberRoleRequirements(
+    userId: string,
+    oldRole: 'AP' | 'IC' | 'IP' | 'IT',
+    newRole: 'AP' | 'IC' | 'IP' | 'IT',
+    oldTier: 'basic' | 'robust',
+    newTier: 'basic' | 'robust'
+  ): Promise<void> {
     try {
-      console.log(`DEBUG: Updating team member ${userId} role requirements from ${oldRole} to ${newRole}`);
-      await ComplianceRequirementsService.updateUserRoleRequirements(userId, oldRole, newRole);
+      console.log(`DEBUG: Updating team member ${userId} role requirements from ${oldRole}:${oldTier} to ${newRole}:${newTier}`);
+      await ComplianceRequirementsService.updateUserRoleRequirements(userId, oldRole, newRole, oldTier, newTier);
     } catch (error) {
       console.error('Error updating team member role requirements:', error);
       throw await this.standardizeErrorMessage(error);
@@ -1890,11 +1917,11 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
    */
   async getRoleComplianceStatistics(): Promise<Array<{
     role: string;
+    tier: 'basic' | 'robust' | 'overall';
     total_users: number;
     compliant_users: number;
     compliance_rate: number;
-    common_issues: string[];
-  }>> {
+  }>> { // Removed common_issues as it's not provided by the actual implementation
     try {
       console.log('DEBUG: Getting role compliance statistics for provider oversight');
       return await ComplianceRequirementsService.getRoleComplianceStatistics();
