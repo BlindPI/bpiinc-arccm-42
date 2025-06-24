@@ -63,7 +63,7 @@ export interface ProviderComplianceSummary {
 export interface ComplianceRequirement {
   name: string;
   category: string;
-  status: 'compliant' | 'non_compliant' | 'warning' | 'pending';
+  status: 'compliant' | 'non_compliant' | 'warning' | 'pending' | 'not_applicable';
   due_date?: string;
 }
 

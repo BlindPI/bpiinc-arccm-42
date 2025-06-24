@@ -103,7 +103,7 @@ export interface ProviderLocationAssignment {
   updated_at: string;
 }
 
-// Simplified interfaces to avoid TypeScript depth issues
+// Interfaces for data transformations/projections in this service
 interface SimpleRecord {
   id: string;
   [key: string]: any;
@@ -119,6 +119,15 @@ interface SimpleCourse {
 
 interface SimpleTeam {
   location_id: string;
+}
+
+// Interface for joined profile data in getTeamMembers
+export interface ProfileDataForTeamMember {
+  id: string;
+  email: string | null;
+  display_name: string | null;
+  role: string | null;
+  compliance_tier: 'basic' | 'robust' | null;
 }
 
 // =====================================================================================
@@ -1617,14 +1626,6 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
   // =====================================================================================
   // TEAM MEMBER MANAGEMENT OPERATIONS (NEW - for AP users)
   // =====================================================================================
-
-  interface ProfileDataForTeamMember {
-    id: string;
-    email: string | null;
-    display_name: string | null;
-    role: string | null;
-    compliance_tier: 'basic' | 'robust' | null;
-  }
 
   /**
    * Get team members for a specific team (AP user compatible)
