@@ -81,26 +81,24 @@ import type { DatabaseUserRole } from '@/types/database-roles'; // Import Databa
      );
    }
  
-   if (userProfile.role !== 'IC') { // Use userProfile.role here
-
-  if (currentUser.role !== 'IC') {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-red-500" />
-            IC Compliance Dashboard
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AlertCircle className="h-4 w-4 text-red-500" />
-          <AlertDescription className="text-red-700">
-            Access Denied: This dashboard is only for Instructor Certified (IC) users.
-          </AlertDescription>
-        </CardContent>
-      </Card>
-    );
-  }
+   if (userProfile.role !== 'IC') { // This handles access control.
+     return (
+       <Card className="w-full">
+         <CardHeader>
+           <CardTitle className="flex items-center gap-2">
+             <ShieldCheck className="h-5 w-5 text-red-500" />
+             IC Compliance Dashboard
+           </CardTitle>
+         </CardHeader>
+         <CardContent>
+           <AlertCircle className="h-4 w-4" />
+           <AlertDescription>
+             Access Denied: This dashboard is only for Instructor Certified (IC) users.
+           </AlertDescription>
+         </CardContent>
+       </Card>
+     );
+   }
 
   const getStatusBadge = (status: UserComplianceRecord['compliance_status']) => {
     switch (status) {
@@ -119,7 +117,7 @@ import type { DatabaseUserRole } from '@/types/database-roles'; // Import Databa
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5" />
-            IC Compliance Dashboard - {currentUser.display_name}
+            IC Compliance Dashboard - {userProfile.display_name || user?.email}
           </CardTitle>
           <CardDescription>
             Overview of your compliance status as an Instructor Certified.
@@ -192,7 +190,7 @@ import type { DatabaseUserRole } from '@/types/database-roles'; // Import Databa
                     {/* Placeholder for Document Upload/Management Component */}
                     {record.compliance_metrics?.category === 'documentation' && (
                         <Badge variant="secondary">Upload Document (TODO)</Badge>
-                        // <DocumentUploadComponent metricId={record.metric_id} userId={currentUser.id} />
+                        // <DocumentUploadComponent metricId={record.metric_id} userId={user?.id} />
                     )}
                     {/* Additional UI elements for different measurement types (e.g., numeric input) */}
                   </div>
