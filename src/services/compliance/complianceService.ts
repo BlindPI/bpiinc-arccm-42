@@ -10,6 +10,7 @@ export interface ComplianceMetric {
   target_value: any;
   weight: number;
   is_active: boolean;
+  applicable_tiers?: string; 
   created_at: string;
   updated_at: string;
 }
@@ -19,7 +20,7 @@ export interface UserComplianceRecord {
   user_id: string;
   metric_id: string;
   current_value: any;
-  compliance_status: 'compliant' | 'non_compliant' | 'warning' | 'pending';
+  compliance_status: 'compliant' | 'non_compliant' | 'warning' | 'pending' | 'not_applicable'; 
   last_checked_at: string;
   next_check_due: string;
   notes: string;
@@ -27,7 +28,7 @@ export interface UserComplianceRecord {
   verified_at: string;
   created_at: string;
   updated_at: string;
-  compliance_metrics?: ComplianceMetric;
+  compliance_metrics?: ComplianceMetric; 
 }
 
 export interface ComplianceAction {
@@ -40,9 +41,9 @@ export interface ComplianceAction {
   due_date: string;
   priority: 'low' | 'medium' | 'high' | 'critical';
   status: 'open' | 'in_progress' | 'completed' | 'dismissed';
-  assigned_by: string;
-  completed_by: string;
-  completed_at: string;
+  assigned_by?: string; 
+  completed_by?: string;
+  completed_at?: string;
   created_at: string;
   updated_at: string;
   compliance_metrics?: ComplianceMetric;
@@ -77,7 +78,7 @@ export interface ComplianceDocument {
   is_current: boolean;
   created_at: string;
   updated_at: string;
-  compliance_metrics?: ComplianceMetric;
+  compliance_metrics?: ComplianceMetric; 
 }
 
 export interface DocumentRequirement {
@@ -96,16 +97,25 @@ export interface DocumentRequirement {
 
 export class ComplianceService {
   // Get all compliance metrics
-  static async getComplianceMetrics(): Promise<ComplianceMetric[]> {
-    const { data, error } = await supabase
+  static async getComplianceMetrics(filters?: { role?: string, tier?: 'basic' | 'robust' }): Promise<ComplianceMetric[]> {
+    let query = supabase
       .from('compliance_metrics')
       .select('*')
       .eq('is_active', true)
       .order('category', { ascending: true })
       .order('name', { ascending: true });
 
+    if (filters?.role) {
+      query = query.or(`required_for_roles.cs.{${filters.role}},required_for_roles.eq.{}`);
+    }
+
+    if (filters?.tier) {
+      query = query.like('applicable_tiers', `%${filters.tier}%`);
+    }
+
+    const { data, error } = await query;
     if (error) throw error;
-    return data || [];
+    return data as unknown as ComplianceMetric[] || [];
   }
 
   // Get compliance metrics for a specific role
@@ -119,22 +129,33 @@ export class ComplianceService {
       .order('name', { ascending: true });
 
     if (error) throw error;
-    return data || [];
+    return data as unknown as ComplianceMetric[] || [];
   }
 
   // Create or update compliance metric (SA/AD only)
   static async upsertComplianceMetric(metric: Partial<ComplianceMetric>): Promise<ComplianceMetric> {
+    const upsertData: any = { 
+      ...metric,
+      name: metric.name || 'Untitled Metric', 
+      description: metric.description || '',
+      category: metric.category || 'general',
+      required_for_roles: metric.required_for_roles || [],
+      measurement_type: metric.measurement_type || 'boolean', 
+      target_value: metric.target_value ?? true, 
+      weight: metric.weight ?? 0,
+      is_active: metric.is_active ?? true,
+      applicable_tiers: metric.applicable_tiers || 'basic,robust',
+      updated_at: new Date().toISOString()
+    };
+
     const { data, error } = await supabase
       .from('compliance_metrics')
-      .upsert({
-        ...metric,
-        updated_at: new Date().toISOString()
-      })
+      .upsert(upsertData)
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    return data as unknown as ComplianceMetric;
   }
 
   // Delete compliance metric (SA/AD only)
@@ -160,14 +181,15 @@ export class ComplianceService {
           category,
           measurement_type,
           target_value,
-          weight
+          weight,
+          applicable_tiers 
         )
       `)
       .eq('user_id', userId)
       .order('updated_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return data as unknown as UserComplianceRecord[] || [];
   }
 
   // Get compliance records for all users (SA/AD only)
@@ -183,27 +205,29 @@ export class ComplianceService {
           category,
           measurement_type,
           target_value,
-          weight
+          weight,
+          applicable_tiers
         ),
         profiles!user_compliance_records_user_id_fkey (
           id,
           display_name,
           email,
-          role
+          role,
+          compliance_tier 
         )
       `)
       .order('updated_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return data as unknown as UserComplianceRecord[] || [];
   }
 
-  // Update compliance record
+  // Update compliance record (includes 'not_applicable' status)
   static async updateComplianceRecord(
     userId: string,
     metricId: string,
     currentValue: any,
-    complianceStatus: 'compliant' | 'non_compliant' | 'warning' | 'pending',
+    complianceStatus: 'compliant' | 'non_compliant' | 'warning' | 'pending' | 'not_applicable',
     notes?: string
   ): Promise<string> {
     const { data, error } = await supabase.rpc('update_compliance_record', {
@@ -212,7 +236,7 @@ export class ComplianceService {
       p_current_value: currentValue,
       p_compliance_status: complianceStatus,
       p_notes: notes || null
-    });
+    } as any); 
 
     if (error) throw error;
     return data;
@@ -254,24 +278,32 @@ export class ComplianceService {
       .order('due_date', { ascending: true });
 
     if (error) throw error;
-    return data || [];
+    return data as unknown as ComplianceAction[] || []; 
   }
 
   // Create compliance action
   static async createComplianceAction(action: Partial<ComplianceAction>): Promise<ComplianceAction> {
+    const insertData: any = {
+      ...action,
+      action_type: action.action_type || 'general', 
+      title: action.title || 'New Action', 
+      metric_id: action.metric_id!, 
+      user_id: action.user_id!, 
+      priority: action.priority || 'medium', 
+      status: action.status || 'open', 
+      assigned_by: (await supabase.auth.getUser()).data.user?.id || 'system',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
     const { data, error } = await supabase
       .from('compliance_actions')
-      .insert({
-        ...action,
-        assigned_by: (await supabase.auth.getUser()).data.user?.id,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
+      .insert(insertData)
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    return data as unknown as ComplianceAction;
   }
 
   // Update compliance action status
@@ -321,28 +353,33 @@ export class ComplianceService {
 
     const { data, error } = await query;
     if (error) throw error;
-    return data || [];
+    return data || []; 
   }
 
   // Calculate overall compliance score for provider
   static async getProviderComplianceScore(providerId: string): Promise<number> {
-    // Get all users associated with this provider
     const { data: providerUsers, error: usersError } = await supabase
       .from('profiles')
-      .select('id')
-      .eq('id', providerId); // For now, just the provider user
+      .select('id, compliance_tier'); 
 
-    if (usersError) throw usersError;
+    if (usersError) {
+      console.error('Error fetching provider users with compliance tier:', usersError);
+      // Return 0 or throw, depending on desired error handling
+      return 0; 
+    }
 
-    if (!providerUsers || providerUsers.length === 0) {
+    // Explicitly cast to the expected array type
+    // Explicitly cast to unknown first to bypass strict overlap checking, then to the specific type
+    const typedProviderUsers: { id: string; compliance_tier: 'basic' | 'robust' | null }[] = providerUsers as unknown as { id: string; compliance_tier: 'basic' | 'robust' | null }[];
+
+    if (!typedProviderUsers || typedProviderUsers.length === 0) {
       return 0;
     }
 
-    // Calculate average compliance score
     let totalScore = 0;
     let userCount = 0;
 
-    for (const user of providerUsers) {
+    for (const user of typedProviderUsers) {
       const summary = await this.getUserComplianceSummary(user.id);
       totalScore += summary.overall_score;
       userCount++;
@@ -356,19 +393,18 @@ export class ComplianceService {
     requirements: Array<{
       name: string;
       category: string;
-      status: 'compliant' | 'non_compliant' | 'warning' | 'pending';
+      status: 'compliant' | 'non_compliant' | 'warning' | 'pending' | 'not_applicable'; 
       score: number;
     }>;
     actions: ComplianceAction[];
   }> {
-    // Get user compliance records for provider
     const records = await this.getUserComplianceRecords(providerId);
     const actions = await this.getUserComplianceActions(providerId);
 
     const requirements = records.map(record => ({
       name: record.compliance_metrics?.name || 'Unknown',
       category: record.compliance_metrics?.category || 'general',
-      status: record.compliance_status,
+      status: record.compliance_status, 
       score: this.calculateMetricScore(record)
     }));
 
@@ -385,6 +421,7 @@ export class ComplianceService {
       case 'non_compliant':
         return 0;
       case 'pending':
+      case 'not_applicable': 
       default:
         return 50;
     }
@@ -400,8 +437,8 @@ export class ComplianceService {
       .eq('metric_id', metricId)
       .single();
 
-    if (error && error.code !== 'PGRST116') throw error; // Ignore "not found" errors
-    return data;
+    if (error && error.code !== 'PGRST116') throw error; 
+    return data as unknown as DocumentRequirement;
   }
 
   // Get user's compliance documents
@@ -425,7 +462,7 @@ export class ComplianceService {
 
     const { data, error } = await query;
     if (error) throw error;
-    return data || [];
+    return data as unknown as ComplianceDocument[] || [];
   }
 
   // Upload compliance document
@@ -468,7 +505,7 @@ export class ComplianceService {
   // Verify compliance document (SA/AD only)
   static async verifyComplianceDocument(
     documentId: string,
-    verificationStatus: 'approved' | 'rejected',
+    verificationStatus: 'approved' | 'rejected', 
     notes?: string,
     rejectionReason?: string
   ): Promise<void> {
@@ -477,8 +514,7 @@ export class ComplianceService {
       p_verification_status: verificationStatus,
       p_verification_notes: notes || null,
       p_rejection_reason: rejectionReason || null
-    });
-
+    } as any); 
     if (error) throw error;
   }
 
@@ -530,23 +566,31 @@ export class ComplianceService {
       .order('upload_date', { ascending: true });
 
     if (error) throw error;
-    return data || [];
+    return data as unknown as ComplianceDocument[] || [];
   }
 
   // Create document requirement (SA/AD only)
   static async createDocumentRequirement(requirement: Partial<DocumentRequirement>): Promise<DocumentRequirement> {
+    const insertData: any = {
+      ...requirement,
+      document_type: requirement.document_type || 'general', 
+      metric_id: requirement.metric_id!, 
+      required_file_types: requirement.required_file_types || [],
+      max_file_size_mb: requirement.max_file_size_mb || 0,
+      requires_expiry_date: requirement.requires_expiry_date || false,
+      description: requirement.description || 'No description',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
     const { data, error } = await supabase
       .from('compliance_document_requirements')
-      .insert({
-        ...requirement,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
+      .insert(insertData)
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    return data as unknown as DocumentRequirement;
   }
 
   // Update document requirement (SA/AD only)
@@ -559,12 +603,25 @@ export class ComplianceService {
       .update({
         ...updates,
         updated_at: new Date().toISOString()
-      })
+      } as any) 
       .eq('id', requirementId)
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    return data as unknown as DocumentRequirement;
+  }
+
+  // Delete all user compliance records (helper for tier switching)
+  static async deleteUserComplianceRecords(userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('user_compliance_records')
+      .delete()
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Error deleting user compliance records:', error);
+      throw error;
+    }
   }
 }

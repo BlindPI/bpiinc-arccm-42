@@ -4,12 +4,19 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MoreHorizontal, User as UserIcon, UserCog, ShieldCheck } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Profile } from '@/types/supabase-schema';
+import { Profile } from '@/types/supabase-schema'; // Keep original Profile import
 import { UserCredentialsHoverCard } from './UserCredentialsHoverCard';
 import { hasRequiredRole } from '@/utils/roleUtils';
+import { ComplianceTierManager } from '@/components/compliance/ComplianceTierManager'; // New import
+import { FileText, Shield } from 'lucide-react'; // New: Icons for tiers
+
+// Extend Profile type locally to include compliance_tier if not already present in supabase-schema
+interface UserWithCompliance extends Profile {
+  compliance_tier: 'basic' | 'robust' | null;
+}
 
 interface UserTableRowProps {
-  user: Profile;
+  user: UserWithCompliance; // Use the extended type
   isSelected: boolean;
   onSelect: (userId: string, selected: boolean) => void;
   onEdit: (userId: string) => void;
@@ -19,6 +26,8 @@ interface UserTableRowProps {
   onChangeRole: (userId: string) => void;
   canManageUsers?: boolean;
   onViewDetail?: (userId: string) => void;
+  // New prop to indicate if the tier manager should be shown in a modal from this row
+  showTierManagerInModal?: (userId: string, userName: string, userRole: string, canManage: boolean) => void;
 }
 
 function getInitials(name?: string, email?: string) {
@@ -112,6 +121,28 @@ export function UserTableRow({
       <td className="p-4">
         {getComplianceBadge()}
       </td>
+      {/* New: Compliance Tier column */}
+      <td className="p-4">
+        {user.compliance_tier && (
+          <Badge
+            variant="outline"
+            className={`${user.compliance_tier === 'robust' ? 'bg-green-50 text-green-800 border-green-300' : 'bg-blue-50 text-blue-800 border-blue-300'} gap-1`}
+            title={`Compliance Tier: ${user.compliance_tier.charAt(0).toUpperCase() + user.compliance_tier.slice(1)}`}
+          >
+            {user.compliance_tier === 'robust' ? (
+              <Shield className="w-3 h-3 mr-1" />
+            ) : (
+              <FileText className="w-3 h-3 mr-1" />
+            )}
+            {user.compliance_tier.charAt(0).toUpperCase() + user.compliance_tier.slice(1)}
+          </Badge>
+        )}
+        {!user.compliance_tier && (
+          <Badge variant="secondary" className="gap-1">
+            N/A
+          </Badge>
+        )}
+      </td>
       <td className="p-4">
         {formatDate(user.created_at)}
       </td>
@@ -132,6 +163,16 @@ export function UserTableRow({
             <DropdownMenuItem onClick={() => onEdit(user.id)}>
               Edit User
             </DropdownMenuItem>
+            {/* New: Add option to manage compliance tier */}
+            {canManageUsers && user.role !== 'SA' && user.role !== 'AD' && ( // Only allow for non-admin roles
+              <DropdownMenuItem
+                onClick={() => showTierManagerInModal &&
+                  showTierManagerInModal(user.id, user.display_name || user.email || 'User', user.role, canManageUsers)}
+              >
+                <ShieldCheck className="mr-2 h-4 w-4" />
+                Manage Compliance Tier
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             {canManageUsers && <>
               {userStatus === 'INACTIVE' ?
