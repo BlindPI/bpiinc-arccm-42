@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import SignIn from '@/pages/SignIn';
 import SignUp from '@/pages/SignUp';
+import ResetPassword from '@/pages/ResetPassword';
 import Dashboard from '@/pages/Dashboard';
 import LandingPage from '@/pages/LandingPage';
 import CertificateVerification from '@/pages/CertificateVerification';
@@ -51,6 +51,7 @@ export function AppRoutes() {
     <Routes>
       <Route path="/auth/signin" element={<SignIn />} />
       <Route path="/auth/signup" element={<SignUp />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/landing" element={<LandingPage />} />
       <Route path="/verify" element={<CertificateVerification />} />
       
