@@ -1,10 +1,10 @@
-
 // Route configuration for the application
 export const ALWAYS_PUBLIC_PAGES = [
   "/landing", 
   "/auth", 
   "/auth/signin", 
-  "/auth/signup"
+  "/auth/signup",
+  "/reset-password"
 ];
 
 export const MIXED_ACCESS_PAGES = [

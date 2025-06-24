@@ -2848,6 +2848,7 @@ export type Database = {
       }
       compliance_metrics: {
         Row: {
+          applicable_tiers: string | null
           category: string
           created_at: string | null
           created_by: string | null
@@ -2862,6 +2863,7 @@ export type Database = {
           weight: number | null
         }
         Insert: {
+          applicable_tiers?: string | null
           category: string
           created_at?: string | null
           created_by?: string | null
@@ -2876,6 +2878,7 @@ export type Database = {
           weight?: number | null
         }
         Update: {
+          applicable_tiers?: string | null
           category?: string
           created_at?: string | null
           created_by?: string | null
@@ -3060,6 +3063,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      compliance_templates: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          role: string
+          template_name: string
+          tier: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          role: string
+          template_name: string
+          tier: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          role?: string
+          template_name?: string
+          tier?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       compliance_violations: {
         Row: {
@@ -7496,6 +7532,7 @@ export type Database = {
         Row: {
           certifications_count: number | null
           compliance_status: boolean | null
+          compliance_tier: string | null
           created_at: string
           department: string | null
           display_name: string | null
@@ -7518,6 +7555,7 @@ export type Database = {
         Insert: {
           certifications_count?: number | null
           compliance_status?: boolean | null
+          compliance_tier?: string | null
           created_at?: string
           department?: string | null
           display_name?: string | null
@@ -7540,6 +7578,7 @@ export type Database = {
         Update: {
           certifications_count?: number | null
           compliance_status?: boolean | null
+          compliance_tier?: string | null
           created_at?: string
           department?: string | null
           display_name?: string | null
@@ -13212,6 +13251,26 @@ export type Database = {
           email: string
         }[]
       }
+      current_user_can_manage_compliance_documents: {
+        Args: { target_user_id: string }
+        Returns: boolean
+      }
+      current_user_can_manage_teams: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      current_user_can_view_compliance_documents: {
+        Args: { target_user_id: string }
+        Returns: boolean
+      }
+      current_user_has_management_access: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      current_user_is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       evaluate_progression_eligibility: {
         Args: { p_user_id: string; p_target_role: string }
         Returns: Json
@@ -13887,6 +13946,10 @@ export type Database = {
         Args: { p_ap_user_id: string; p_location_id: string }
         Returns: boolean
       }
+      remove_provider_from_team_safe: {
+        Args: { p_provider_id: string; p_team_id: string }
+        Returns: string
+      }
       remove_provider_location_safe: {
         Args: { p_provider_id: string }
         Returns: Json
@@ -13954,6 +14017,10 @@ export type Database = {
         Returns: string
       }
       test_profiles_recursion_fix: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      test_provider_team_assignment_permissions: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
