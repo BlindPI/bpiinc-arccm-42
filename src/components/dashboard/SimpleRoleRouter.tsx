@@ -20,19 +20,7 @@ import { useTeamContext } from '@/hooks/useTeamContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { providerRelationshipService } from '@/services/provider/providerRelationshipService';
-import { 
-  Shield, 
-  MapPin, 
-  Users, 
-  AlertTriangle, 
-  CheckCircle,
-  Crown,
-  Building2,
-  Award,
-  BookOpen,
-  Activity,
-  RefreshCw
-} from 'lucide-react';
+import { Shield, MapPin, Users, AlertTriangle, CheckCircle, Crown, Building2, Award, BookOpen, Activity, RefreshCw } from 'lucide-react';
 
 // Import our proven working dashboards
 import EnhancedProviderDashboard from './role-dashboards/EnhancedProviderDashboard';
@@ -42,98 +30,78 @@ import { IPDashboard } from './role-dashboards/IPDashboard'; // Import IP Dashbo
 import { ICDashboard } from './role-dashboards/ICDashboard'; // Import IC Dashboard
 
 export function SimpleRoleRouter() {
-  const { user } = useAuth();
-  const { data: profile, isLoading: profileLoading } = useProfile();
-  const { primaryTeam, teamLocation } = useTeamContext();
-
+  const {
+    user
+  } = useAuth();
+  const {
+    data: profile,
+    isLoading: profileLoading
+  } = useProfile();
+  const {
+    primaryTeam,
+    teamLocation
+  } = useTeamContext();
   if (profileLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
+    return <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
           <p className="text-muted-foreground">Loading your dashboard...</p>
         </div>
-      </div>
-    );
+      </div>;
   }
-
   if (!user || !profile) {
-    return (
-      <Alert variant="destructive">
+    return <Alert variant="destructive">
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>
           Authentication required. Please log in to access your dashboard.
         </AlertDescription>
-      </Alert>
-    );
+      </Alert>;
   }
-
   const userRole = profile.role;
   console.log('🎯 SIMPLE ROLE ROUTER: User role:', userRole, 'Team:', !!primaryTeam);
 
   // Success banner for all users
-  const SuccessBanner = () => (
-    <Alert className="bg-green-50 border-green-200">
+  const SuccessBanner = () => <Alert className="bg-green-50 border-green-200">
       <CheckCircle className="h-4 w-4 text-green-600" />
       <AlertDescription className="text-green-800">
         ✅ Dashboard Fixed: Now using proven data services with real-time updates and proper role-based functionality
       </AlertDescription>
-    </Alert>
-  );
+    </Alert>;
 
   // AP (Authorized Provider) Dashboard - Now with proper user-provider lookup
   if (userRole === 'AP') {
     console.log('🎯 ROUTING: AP user to EnhancedProviderDashboard with fixed lookup');
-    return (
-      <div className="space-y-6">
-        <Alert className="bg-green-50 border-green-200">
-          <CheckCircle className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800">
-            ✅ <strong>Provider Lookup Fixed:</strong> Now properly links your user account to provider record via user_id relationship
-          </AlertDescription>
-        </Alert>
-        <Alert className="bg-blue-50 border-blue-200">
-          <Shield className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-blue-800">
-            <strong>Authorized Provider Dashboard</strong> - Complete provider management with team assignments, location management, and performance metrics
-          </AlertDescription>
-        </Alert>
-        <EnhancedProviderDashboard
-          config={{
-            welcomeMessage: `Welcome, ${profile.display_name || user.email}`,
-            subtitle: 'Authorized Provider Dashboard',
-            widgets: []
-          }}
-          profile={{
-            ...profile,
-            status: profile.status || 'ACTIVE'
-          }}
-        />
-      </div>
-    );
+    return <div className="space-y-6">
+        
+        
+        <EnhancedProviderDashboard config={{
+        welcomeMessage: `Welcome, ${profile.display_name || user.email}`,
+        subtitle: 'Authorized Provider Dashboard',
+        widgets: []
+      }} profile={{
+        ...profile,
+        status: profile.status || 'ACTIVE'
+      }} />
+      </div>;
   }
 
   // Team Member Dashboard (for users with team assignments)
   if (primaryTeam) {
     console.log('🎯 ROUTING: Team member to EnhancedTeamProviderDashboard');
-    return (
-      <div className="space-y-6">
+    return <div className="space-y-6">
         <SuccessBanner />
         <Alert className="bg-blue-50 border-blue-200">
           <Users className="h-4 w-4 text-blue-600" />
           <AlertDescription className="text-blue-800">
             <strong>Team Dashboard</strong> - {primaryTeam.teams?.name || 'Your Team'}
-            {teamLocation?.name && (
-              <span className="ml-2">
+            {teamLocation?.name && <span className="ml-2">
                 <MapPin className="h-3 w-3 inline mr-1" />
                 {teamLocation.name}
-              </span>
-            )}
+              </span>}
           </AlertDescription>
         </Alert>
         <EnhancedTeamProviderDashboard />
-      </div>
-    );
+      </div>;
   }
 
   // Admin Dashboard (AD/SA users)
@@ -164,14 +132,19 @@ export function SimpleRoleRouter() {
 }
 
 // Simple Admin Dashboard with real data
-function AdminQuickDashboard({ profile }: { profile: any }) {
-  const { data: adminStats } = useQuery({
+function AdminQuickDashboard({
+  profile
+}: {
+  profile: any;
+}) {
+  const {
+    data: adminStats
+  } = useQuery({
     queryKey: ['admin-quick-stats'],
     queryFn: async () => {
       // Get basic system stats using our proven service
       const providers = await providerRelationshipService.getProviders({});
       const activeProviders = providers.filter(p => p.status === 'active');
-      
       return {
         totalProviders: providers.length,
         activeProviders: activeProviders.length,
@@ -180,9 +153,7 @@ function AdminQuickDashboard({ profile }: { profile: any }) {
     },
     refetchInterval: 60000
   });
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       <Alert className="bg-green-50 border-green-200">
         <CheckCircle className="h-4 w-4 text-green-600" />
         <AlertDescription className="text-green-800">
@@ -269,15 +240,17 @@ function AdminQuickDashboard({ profile }: { profile: any }) {
           </div>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 }
 
 // Simple Instructor Dashboard (Fallback for IP/IC until specific dashboards are built)
-function InstructorQuickDashboard({ profile }: { profile: any }) {
+function InstructorQuickDashboard({
+  profile
+}: {
+  profile: any;
+}) {
   const userRole = profile?.role || 'unknown'; // Ensure profile and role exist
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       <Alert className="bg-green-50 border-green-200">
         <CheckCircle className="h-4 w-4 text-green-600" />
         <AlertDescription className="text-green-800">
@@ -333,14 +306,18 @@ function InstructorQuickDashboard({ profile }: { profile: any }) {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 }
 
 // Default dashboard for unrecognized roles
-function DefaultRoleDashboard({ profile, userRole }: { profile: any; userRole: string }) {
-  return (
-    <div className="space-y-6">
+function DefaultRoleDashboard({
+  profile,
+  userRole
+}: {
+  profile: any;
+  userRole: string;
+}) {
+  return <div className="space-y-6">
       <Alert className="bg-yellow-50 border-yellow-200">
         <AlertTriangle className="h-4 w-4 text-yellow-600" />
         <AlertDescription className="text-yellow-800">
@@ -367,8 +344,6 @@ function DefaultRoleDashboard({ profile, userRole }: { profile: any; userRole: s
           </div>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 }
-
 export default SimpleRoleRouter;
