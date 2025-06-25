@@ -66,7 +66,156 @@ export interface SubmissionResult {
   autoApproved?: boolean;
 }
 
+export interface ComplianceTemplate {
+  id: string;
+  role: 'AP' | 'IC' | 'IP' | 'IT';
+  tier: 'basic' | 'robust';
+  template_name: string;
+  description: string;
+  requirements_count: number;
+  total_weight: number;
+  is_active: boolean;
+  ui_config: any;
+}
+
+export interface ComplianceRequirement {
+  id: string;
+  template_id: string;
+  name: string;
+  description: string;
+  category: string;
+  requirement_type: string;
+  ui_component_type: string;
+  validation_rules: any;
+  display_order: number;
+  is_mandatory: boolean;
+  points_value: number;
+  due_days_from_assignment: number;
+  help_text?: string;
+}
+
 export class ComplianceRequirementsService {
+  // Get template by role and tier
+  static async getRequirementsTemplateByTier(
+    role: 'AP' | 'IC' | 'IP' | 'IT',
+    tier: 'basic' | 'robust'
+  ): Promise<ComplianceTemplate | null> {
+    try {
+      const { data, error } = await supabase
+        .from('compliance_templates')
+        .select('*')
+        .eq('role', role)
+        .eq('tier', tier)
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error fetching compliance template:', error);
+      return null;
+    }
+  }
+  
+  // Get requirements for a specific template
+  static async getRequirementsByTemplate(templateId: string): Promise<ComplianceRequirement[]> {
+    try {
+      const { data, error } = await supabase
+        .from('compliance_requirements')
+        .select('*')
+        .eq('template_id', templateId)
+        .order('display_order', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching requirements:', error);
+      return [];
+    }
+  }
+  
+  // Get requirements by role and tier directly
+  static async getRequirementsByRoleTier(
+    role: string,
+    tier: string
+  ): Promise<ComplianceRequirement[]> {
+    try {
+      const { data, error } = await supabase
+        .from('compliance_requirements')
+        .select(`
+          *,
+          compliance_templates!inner(id, role, tier)
+        `)
+        .eq('compliance_templates.role', role)
+        .eq('compliance_templates.tier', tier)
+        .order('display_order', { ascending: true });
+
+      if (error) throw error;
+      
+      // Extract requirements from the join result
+      return (data || []).map(item => ({
+        ...item,
+        template_id: item.compliance_templates.id
+      }));
+    } catch (error) {
+      console.error('Error fetching requirements by role/tier:', error);
+      return [];
+    }
+  }
+  
+  // Initialize tier requirements for a user
+  static async initializeTierRequirements(
+    userId: string,
+    role: string,
+    tier: string
+  ): Promise<{success: boolean; count: number}> {
+    try {
+      // Get requirements for this role/tier
+      const requirements = await this.getRequirementsByRoleTier(role, tier);
+      
+      if (requirements.length === 0) {
+        console.warn(`No requirements found for ${role}/${tier}`);
+        return { success: true, count: 0 };
+      }
+      
+      // Remove existing requirements (clean slate approach)
+      const { error: deleteError } = await supabase
+        .from('user_compliance_records')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (deleteError) throw deleteError;
+      
+      // Create new compliance records
+      const records = requirements.map(req => ({
+        user_id: userId,
+        requirement_id: req.id,
+        status: 'pending',
+        submission_data: {},
+        ui_state: {},
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }));
+      
+      const { error: insertError } = await supabase
+        .from('user_compliance_records')
+        .insert(records);
+      
+      if (insertError) throw insertError;
+      
+      // Log activity
+      await this.logRequirementsActivity(userId, 'requirements_initialized', {
+        role,
+        tier,
+        count: requirements.length
+      });
+      
+      return { success: true, count: requirements.length };
+    } catch (error) {
+      console.error('Error initializing tier requirements:', error);
+      return { success: false, count: 0 };
+    }
+  }
+  
   // Get requirements formatted for UI display (From Currentplan2.md)
   static async getUIRequirements(
     userId: string,

@@ -1,17 +1,20 @@
 // File: src/components/dialogs/TierSwitchDialog.tsx (From Currentplan1.5.md)
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Progress } from '@/components/ui/progress';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ArrowRight, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './components/ui/dialog';
+import { Button } from './components/ui/button';
+import { Card, CardContent } from './components/ui/card';
+import { Badge } from './components/ui/badge';
+import { Label } from './components/ui/label';
+import { Textarea } from './components/ui/textarea';
+import { Checkbox } from './components/ui/checkbox';
+import { Progress } from './components/ui/progress';
+import { Alert, AlertDescription, AlertTitle } from './components/ui/alert';
+import { ArrowRight, AlertCircle, CheckCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from './contexts/AuthContext';
+import { useTierSwitchValidation } from './hooks/useComplianceTier';
+import { ComplianceTierService } from './services/compliance/complianceTierService';
 
 interface TierSwitchDialogProps {
   isOpen: boolean;
@@ -19,6 +22,8 @@ interface TierSwitchDialogProps {
   currentTier?: string;
   targetTier?: string;
   onConfirm: (targetTier: string, reason: string) => Promise<void>;
+  role?: string;
+  userId?: string;
 }
 
 export function TierSwitchDialog({
@@ -26,13 +31,31 @@ export function TierSwitchDialog({
   onClose,
   currentTier,
   targetTier,
-  onConfirm
+  onConfirm,
+  role = 'IT', // Default to IT role if not provided
+  userId
 }: TierSwitchDialogProps) {
   const [step, setStep] = useState<'comparison' | 'confirmation' | 'processing'>('comparison');
   const [reason, setReason] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [impactData, setImpactData] = useState<any>({
+    requirementsToAdd: 0,
+    requirementsToRemove: 0,
+    requirementsToPreserve: 0,
+    estimatedTimeToComplete: ''
+  });
+  const [switchAllowed, setSwitchAllowed] = useState(true);
+  
+  const { user } = useAuth();
+  const actualUserId = userId || user?.id;
+  
+  // Use the validation hook
+  const { data: validationData, isLoading: validationLoading } = useTierSwitchValidation(
+    actualUserId!,
+    targetTier!
+  );
   
   // Load impact analysis when dialog opens
   useEffect(() => {
@@ -43,8 +66,32 @@ export function TierSwitchDialog({
   
   const loadImpactAnalysis = async () => {
     try {
-      // Analysis would be loaded from backend
-      console.log('Loading impact analysis...');
+      if (!actualUserId || !targetTier) {
+        return;
+      }
+      
+      // Get validation data from the service directly if not available from hook
+      const validation = validationData || await ComplianceTierService.validateTierSwitch(
+        actualUserId,
+        targetTier
+      );
+      
+      if (validation) {
+        setImpactData(validation.impact || {
+          requirementsToAdd: 0,
+          requirementsToRemove: 0,
+          requirementsToPreserve: 0,
+          estimatedTimeToComplete: targetTier === 'robust' ? '6-12 weeks' : '2-4 weeks'
+        });
+        
+        setSwitchAllowed(validation.allowed);
+        
+        if (!validation.allowed) {
+          setValidationErrors([validation.reason]);
+        } else {
+          setValidationErrors([]);
+        }
+      }
     } catch (error) {
       console.error('Failed to load impact analysis:', error);
       toast.error('Unable to analyze tier switch impact');
@@ -98,19 +145,34 @@ export function TierSwitchDialog({
               <AlertTitle>Impact Summary</AlertTitle>
               <AlertDescription>
                 <ul className="list-disc list-inside space-y-1 mt-2">
-                  <li>5 new requirements will be added</li>
-                  <li>2 requirements will be removed</li>
-                  <li>3 requirements will be preserved</li>
-                  <li>Estimated time to complete new requirements: 4-6 weeks</li>
+                  <li>{impactData.requirementsToAdd} new requirements will be added</li>
+                  <li>{impactData.requirementsToRemove} requirements will be removed</li>
+                  <li>{impactData.requirementsToPreserve} requirements will be preserved</li>
+                  <li>Estimated time to complete new requirements: {impactData.estimatedTimeToComplete}</li>
                 </ul>
               </AlertDescription>
             </Alert>
+            
+            {!switchAllowed && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Switch Not Allowed</AlertTitle>
+                <AlertDescription>
+                  {validationErrors.map((error, idx) => (
+                    <p key={idx}>{error}</p>
+                  ))}
+                </AlertDescription>
+              </Alert>
+            )}
             
             <div className="flex justify-end gap-3">
               <Button variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button onClick={() => setStep('confirmation')}>
+              <Button
+                onClick={() => setStep('confirmation')}
+                disabled={!switchAllowed}
+              >
                 Continue to Confirmation
               </Button>
             </div>
@@ -247,33 +309,105 @@ export function TierSwitchDialog({
   );
 }
 
-function TierComparisonTable({ currentTier, targetTier, highlightDifferences }: any) {
+function TierComparisonTable({ currentTier, targetTier, highlightDifferences, role = 'IT' }: any) {
+  // Use the comparison hook for actual data if available
+  // For demo, we'll use static data that could be replaced with useComplianceTierComparison hook
+  const tierFeatures = {
+    'basic': {
+      'Requirements Count': {
+        'IT': '3-5',
+        'IP': '3-4',
+        'IC': '4-6',
+        'AP': '3'
+      },
+      'Time to Complete': {
+        'IT': '2-4 weeks',
+        'IP': '2-3 weeks',
+        'IC': '4-6 weeks',
+        'AP': '2-4 weeks'
+      },
+      'Advanced Features': false,
+      'Mentoring Support': false,
+      'Progress Tracking': 'Basic',
+      'Dashboard Features': 'Standard',
+      'Document Requirements': 'Basic',
+      'Reporting': 'Basic'
+    },
+    'robust': {
+      'Requirements Count': {
+        'IT': '6-8',
+        'IP': '5-6',
+        'IC': '7-9',
+        'AP': '5-7'
+      },
+      'Time to Complete': {
+        'IT': '6-12 weeks',
+        'IP': '8-10 weeks',
+        'IC': '10-14 weeks',
+        'AP': '8-12 weeks'
+      },
+      'Advanced Features': true,
+      'Mentoring Support': true,
+      'Progress Tracking': 'Advanced',
+      'Dashboard Features': 'Enhanced',
+      'Document Requirements': 'Comprehensive',
+      'Reporting': 'Advanced'
+    }
+  };
+  
+  // Generate table rows based on features
+  const featureRows = Object.keys(tierFeatures.basic).map(feature => {
+    let basicValue: any = tierFeatures.basic[feature];
+    let robustValue: any = tierFeatures.robust[feature];
+    
+    // Handle role-specific values
+    if (typeof basicValue === 'object' && basicValue[role]) {
+      basicValue = basicValue[role];
+    }
+    
+    if (typeof robustValue === 'object' && robustValue[role]) {
+      robustValue = robustValue[role];
+    }
+    
+    // Handle boolean values
+    if (typeof basicValue === 'boolean') {
+      basicValue = basicValue ? '✅' : '❌';
+    }
+    
+    if (typeof robustValue === 'boolean') {
+      robustValue = robustValue ? '✅' : '❌';
+    }
+    
+    // Determine if the row should be highlighted
+    const isHighlighted = highlightDifferences &&
+      ((currentTier === 'basic' && targetTier === 'robust') ||
+       (currentTier === 'robust' && targetTier === 'basic'));
+    
+    return (
+      <tr key={feature} className={isHighlighted ? 'bg-blue-50' : ''}>
+        <td className="border border-gray-200 p-3 font-medium">{feature}</td>
+        <td className={`border border-gray-200 p-3 text-center ${currentTier === 'basic' && isHighlighted ? 'bg-green-100' : ''}`}>
+          {basicValue}
+        </td>
+        <td className={`border border-gray-200 p-3 text-center ${currentTier === 'robust' && isHighlighted ? 'bg-green-100' : ''}`}>
+          {robustValue}
+        </td>
+      </tr>
+    );
+  });
+  
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse border border-gray-200">
         <thead>
           <tr className="bg-gray-50">
             <th className="border border-gray-200 p-3 text-left">Feature</th>
-            <th className="border border-gray-200 p-3 text-center">Essential</th>
-            <th className="border border-gray-200 p-3 text-center">Comprehensive</th>
+            <th className="border border-gray-200 p-3 text-center">Essential (Basic)</th>
+            <th className="border border-gray-200 p-3 text-center">Comprehensive (Robust)</th>
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td className="border border-gray-200 p-3">Requirements Count</td>
-            <td className="border border-gray-200 p-3 text-center">3-5</td>
-            <td className="border border-gray-200 p-3 text-center">6-8</td>
-          </tr>
-          <tr>
-            <td className="border border-gray-200 p-3">Time to Complete</td>
-            <td className="border border-gray-200 p-3 text-center">2-4 weeks</td>
-            <td className="border border-gray-200 p-3 text-center">6-12 weeks</td>
-          </tr>
-          <tr>
-            <td className="border border-gray-200 p-3">Advanced Features</td>
-            <td className="border border-gray-200 p-3 text-center">❌</td>
-            <td className="border border-gray-200 p-3 text-center">✅</td>
-          </tr>
+          {featureRows}
         </tbody>
       </table>
     </div>

@@ -15,6 +15,7 @@ import { EnhancedProviderDashboard } from './EnhancedProviderDashboard';
 // Import context providers
 import { ComplianceTierProvider } from '@/contexts/ComplianceTierContext';
 import { DashboardUIProvider } from '@/contexts/DashboardUIContext';
+import { DashboardDataProvider } from '@/providers/DashboardDataProvider';
 
 // Import UI components  
 import { DashboardSidebar } from './DashboardSidebar';
@@ -71,15 +72,13 @@ export function FixedRoleBasedDashboard() {
     console.log('Requirement updated:', requirementId);
   };
   
-  // Enhanced role-specific dashboard rendering with UI context
+  // Enhanced role-specific dashboard rendering with DashboardDataProvider
   const renderRoleSpecificDashboard = () => {
     if (!userRole || !tierInfo) {
       return <DashboardSkeleton />;
     }
     
     const dashboardProps = {
-      tierInfo,
-      uiConfig: tierInfo.ui_config,
       dashboardView,
       onViewChange: setDashboardView,
       activeRequirement,
@@ -89,34 +88,28 @@ export function FixedRoleBasedDashboard() {
     switch (userRole) {
       case 'IT':
         return (
-          <ComplianceTierProvider tier={tierInfo.tier}>
-            <DashboardUIProvider config={tierInfo.ui_config}>
-              <ITDashboard {...dashboardProps} />
-            </DashboardUIProvider>
-          </ComplianceTierProvider>
+          <DashboardDataProvider userId={user?.id} role={userRole}>
+            <ITDashboard {...dashboardProps} />
+          </DashboardDataProvider>
         );
         
       case 'IP':
         return (
-          <ComplianceTierProvider tier={tierInfo.tier}>
-            <DashboardUIProvider config={tierInfo.ui_config}>
-              <IPDashboard {...dashboardProps} />
-            </DashboardUIProvider>
-          </ComplianceTierProvider>
+          <DashboardDataProvider userId={user?.id} role={userRole}>
+            <IPDashboard {...dashboardProps} />
+          </DashboardDataProvider>
         );
         
       case 'IC':
         return (
-          <ComplianceTierProvider tier={tierInfo.tier}>
-            <DashboardUIProvider config={tierInfo.ui_config}>
-              <ICDashboard {...dashboardProps} />
-            </DashboardUIProvider>
-          </ComplianceTierProvider>
+          <DashboardDataProvider userId={user?.id} role={userRole}>
+            <ICDashboard {...dashboardProps} />
+          </DashboardDataProvider>
         );
         
       case 'AP':
         return (
-          <ComplianceTierProvider tier={tierInfo.tier}>
+          <DashboardDataProvider userId={user?.id} role={userRole}>
             <EnhancedProviderDashboard 
               {...dashboardProps}
               config={{
@@ -124,7 +117,7 @@ export function FixedRoleBasedDashboard() {
                 tierInfo: tierInfo
               }}
             />
-          </ComplianceTierProvider>
+          </DashboardDataProvider>
         );
         
       default:

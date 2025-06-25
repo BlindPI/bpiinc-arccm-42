@@ -1,301 +1,251 @@
 // File: src/hooks/useComplianceRequirements.ts
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/contexts/AuthContext';
-import { ComplianceRequirementsService, UIRequirement, SubmissionData } from '@/services/compliance/complianceRequirementsService';
-import { supabase } from '@/lib/supabase';
-import { toast } from 'sonner';
+import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ComplianceRequirementsService } from '@/services/compliance/complianceRequirementsService';
 
-export function useUIRequirements(userId: string, role: string, tier: string) {
-  return useQuery({
-    queryKey: ['ui-requirements', userId, role, tier],
-    queryFn: () => ComplianceRequirementsService.getUIRequirements(userId, role, tier),
-    enabled: !!userId && !!role && !!tier,
-    staleTime: 60000, // 1 minute
-    refetchOnWindowFocus: true,
-    onError: (error) => {
-      console.error('Error fetching requirements:', error);
-      toast.error('Failed to load compliance requirements');
-    },
-  });
+// Define the requirement interface 
+export interface Requirement {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  tier: 'basic' | 'robust';
+  status: 'pending' | 'in_progress' | 'completed' | 'waived';
+  due_date?: string;
+  completion_date?: string;
+  type: 'form' | 'upload' | 'external' | 'mixed';
+  assigned_roles: string[];
+  metadata?: Record<string, any>;
 }
 
-export function useRequirementSubmission() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ 
-      userId, 
-      requirementId, 
-      submissionData 
-    }: { 
-      userId: string; 
-      requirementId: string; 
-      submissionData: SubmissionData;
-    }) => {
-      return ComplianceRequirementsService.submitRequirement(userId, requirementId, submissionData);
-    },
-    onSuccess: (data, variables) => {
-      // Invalidate related queries
-      queryClient.invalidateQueries(['ui-requirements', variables.userId]);
-      queryClient.invalidateQueries(['compliance-tier', variables.userId]);
-      queryClient.invalidateQueries(['compliance-progress', variables.userId]);
-      
-      if (data.autoApproved) {
-        toast.success('Requirement automatically approved!');
-      } else {
-        toast.success('Requirement submitted successfully');
-      }
-    },
-    onError: (error: any) => {
-      console.error('Submission error:', error);
-      toast.error('Failed to submit requirement. Please try again.');
-    },
-  });
+export interface UIRequirement extends Requirement {
+  // UI-specific properties
+  isOverdue?: boolean;
+  completionPercentage?: number;
+  isVisible?: boolean;
 }
 
-export function useRequirementUpdate() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ 
-      userId, 
-      requirementId, 
-      status,
-      additionalData
-    }: { 
-      userId: string; 
-      requirementId: string; 
-      status: string;
-      additionalData?: any;
-    }) => {
-      return ComplianceRequirementsService.updateRequirementStatus(
-        userId, 
-        requirementId, 
-        status, 
-        additionalData
+/**
+ * Hook to fetch all compliance requirements
+ * @param userId - The user ID
+ * @returns Query result with requirements data
+ */
+export function useComplianceRequirements(userId: string) {
+  return useQuery(
+    ['compliance-requirements', userId],
+    () => ComplianceRequirementsService.getUserRequirements(userId),
+    {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: true,
+      retry: 2,
+      enabled: !!userId
+    }
+  );
+}
+
+/**
+ * Hook to fetch requirements filtered by role
+ * @param userId - The user ID
+ * @param role - The user's role (IT, IC, IP, AP)
+ * @returns Query result with role-specific requirements
+ */
+export function useRoleRequirements(userId: string, role: string) {
+  return useQuery(
+    ['role-requirements', userId, role],
+    async () => {
+      const requirements = await ComplianceRequirementsService.getUserRequirements(userId);
+      return requirements.filter(req => 
+        req.assigned_roles.includes(role)
       );
     },
-    onSuccess: (data, variables) => {
-      queryClient.invalidateQueries(['ui-requirements', variables.userId]);
-      queryClient.invalidateQueries(['compliance-progress', variables.userId]);
-      
-      toast.success('Requirement updated successfully');
-    },
-    onError: (error: any) => {
-      console.error('Update error:', error);
-      toast.error('Failed to update requirement. Please try again.');
-    },
-  });
+    {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: true,
+      retry: 2,
+      enabled: !!userId && !!role
+    }
+  );
 }
 
-export function useRequirementsByCategory(role: string, tier: string) {
-  return useQuery({
-    queryKey: ['requirements-by-category', role, tier],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('compliance_requirements')
-        .select(`
-          *,
-          compliance_templates!inner(role, tier)
-        `)
-        .eq('compliance_templates.role', role)
-        .eq('compliance_templates.tier', tier)
-        .order('category', { ascending: true })
-        .order('display_order', { ascending: true });
+/**
+ * Hook to fetch requirements with UI enhancements
+ * @param userId - The user ID
+ * @param role - The user's role (IT, IC, IP, AP)
+ * @returns Query result with enhanced UI requirements
+ */
+export function useUIRequirements(userId: string, role: string) {
+  const queryClient = useQueryClient();
+  
+  return useQuery(
+    ['ui-requirements', userId, role],
+    async () => {
+      const requirements = await ComplianceRequirementsService.getUserRequirements(userId);
       
-      if (error) throw error;
-      
-      // Group by category
+      // Filter by role and enhance with UI properties
+      return requirements
+        .filter(req => req.assigned_roles.includes(role))
+        .map(req => enhanceRequirementForUI(req));
+    },
+    {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: true,
+      retry: 2,
+      enabled: !!userId && !!role,
+      onSuccess: (data) => {
+        // Cache individual requirements for quick access
+        data.forEach(req => {
+          queryClient.setQueryData(
+            ['requirement', req.id],
+            req
+          );
+        });
+      }
+    }
+  );
+}
+
+/**
+ * Hook to fetch a single requirement by ID
+ * @param requirementId - The requirement ID
+ * @returns Query result with single requirement
+ */
+export function useRequirement(requirementId: string) {
+  return useQuery(
+    ['requirement', requirementId],
+    () => ComplianceRequirementsService.getRequirementById(requirementId),
+    {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      enabled: !!requirementId, // Only run query if requirementId exists
+    }
+  );
+}
+
+/**
+ * Adds UI-specific properties to a requirement
+ * @param requirement - The base requirement
+ * @returns Enhanced requirement with UI properties
+ */
+function enhanceRequirementForUI(requirement: Requirement): UIRequirement {
+  const today = new Date();
+  const dueDate = requirement.due_date ? new Date(requirement.due_date) : null;
+  
+  // Calculate if requirement is overdue
+  const isOverdue = dueDate ? 
+    (today > dueDate && requirement.status !== 'completed' && requirement.status !== 'waived') : 
+    false;
+  
+  // Calculate completion percentage based on status
+  let completionPercentage = 0;
+  switch (requirement.status) {
+    case 'pending':
+      completionPercentage = 0;
+      break;
+    case 'in_progress':
+      completionPercentage = 50;
+      break;
+    case 'completed':
+    case 'waived':
+      completionPercentage = 100;
+      break;
+  }
+  
+  // Add UI properties
+  return {
+    ...requirement,
+    isOverdue,
+    completionPercentage,
+    isVisible: true
+  };
+}
+
+/**
+ * Custom hook to provide categorized requirements
+ * @param userId - The user ID
+ * @param role - The user's role
+ * @returns Object with requirements grouped by category
+ */
+export function useCategorizedRequirements(userId: string, role: string) {
+  const { data, isLoading, error } = useUIRequirements(userId, role);
+  const [categorized, setCategorized] = useState<Record<string, UIRequirement[]>>({});
+  
+  useEffect(() => {
+    if (data) {
+      // Group requirements by category
       const grouped = data.reduce((acc, req) => {
-        const category = req.category || 'General';
-        if (!acc[category]) {
-          acc[category] = [];
+        if (!acc[req.category]) {
+          acc[req.category] = [];
         }
-        acc[category].push(req);
+        acc[req.category].push(req);
         return acc;
-      }, {} as Record<string, any[]>);
+      }, {} as Record<string, UIRequirement[]>);
       
-      return grouped;
-    },
-    enabled: !!role && !!tier,
-    staleTime: 300000, // 5 minutes
-  });
-}
-
-export function useBulkRequirementUpdate() {
-  const queryClient = useQueryClient();
+      setCategorized(grouped);
+    }
+  }, [data]);
   
-  return useMutation({
-    mutationFn: async ({ 
-      userId,
-      requirementIds, 
-      updates 
-    }: { 
-      userId: string;
-      requirementIds: string[]; 
-      updates: Record<string, any>;
-    }) => {
-      // Bulk update implementation
-      const { error } = await supabase
-        .from('user_compliance_records')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', userId)
-        .in('requirement_id', requirementIds);
-      
-      if (error) throw error;
-      
-      return { success: true, updated: requirementIds.length };
-    },
-    onSuccess: (data, variables) => {
-      // Invalidate all requirement-related queries
-      queryClient.invalidateQueries(['ui-requirements', variables.userId]);
-      queryClient.invalidateQueries(['compliance-progress', variables.userId]);
-      
-      toast.success('Bulk update completed successfully');
-    },
-    onError: (error: any) => {
-      console.error('Bulk update error:', error);
-      toast.error('Failed to perform bulk update. Please try again.');
-    },
-  });
+  return { categorized, isLoading, error };
 }
 
-// Hook for requirement review (admin functionality)
-export function useRequirementReview() {
-  const queryClient = useQueryClient();
+/**
+ * Hook to fetch upcoming requirement deadlines
+ * @param userId - The user ID
+ * @param role - The user's role
+ * @param limit - Maximum number of upcoming requirements to return
+ * @returns Array of upcoming requirements sorted by due date
+ */
+export function useUpcomingRequirements(userId: string, role: string, limit: number = 5) {
+  const { data, isLoading, error } = useUIRequirements(userId, role);
   
-  return useMutation({
-    mutationFn: async ({ 
-      submissionId, 
-      reviewerId, 
-      decision, 
-      reviewData 
-    }: {
-      submissionId: string;
-      reviewerId: string;
-      decision: 'approve' | 'reject';
-      reviewData: any;
-    }) => {
-      // Implementation would call ComplianceService.reviewSubmission
-      const { data, error } = await supabase
-        .from('user_compliance_records')
-        .update({
-          status: decision === 'approve' ? 'approved' : 'rejected',
-          reviewed_at: new Date().toISOString(),
-          reviewed_by: reviewerId,
-          review_notes: reviewData.notes,
-          review_data: reviewData.metadata || {},
-          updated_at: new Date().toISOString()
+  const upcomingRequirements = data
+    ? data
+        .filter(req => 
+          req.due_date && 
+          req.status !== 'completed' && 
+          req.status !== 'waived'
+        )
+        .sort((a, b) => {
+          if (!a.due_date || !b.due_date) return 0;
+          return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
         })
-        .eq('id', submissionId)
-        .select(`
-          *,
-          profiles!user_id(id, display_name, email)
-        `)
-        .single();
-      
-      if (error) throw error;
-      
-      return { record: data };
-    },
-    onSuccess: (data, variables) => {
-      // Get user ID from the record returned
-      const userId = data.record.user_id;
-      
-      queryClient.invalidateQueries(['ui-requirements', userId]);
-      queryClient.invalidateQueries(['compliance-progress', userId]);
-      queryClient.invalidateQueries(['submissions-to-review']);
-      
-      toast.success(
-        variables.decision === 'approve'
-          ? 'Requirement approved successfully'
-          : 'Requirement returned for revision'
-      );
-    },
-    onError: (error: any) => {
-      console.error('Review error:', error);
-      toast.error('Failed to submit review. Please try again.');
-    },
-  });
+        .slice(0, limit)
+    : [];
+  
+  return { 
+    upcomingRequirements, 
+    isLoading, 
+    error 
+  };
 }
 
-// Hook for getting submissions that need review
-export function useSubmissionsToReview(filters: any, reviewerRole: string) {
-  return useQuery({
-    queryKey: ['submissions-to-review', filters, reviewerRole],
-    queryFn: async () => {
-      let query = supabase
-        .from('user_compliance_records')
-        .select(`
-          *,
-          compliance_requirements!inner(
-            id,
-            name,
-            requirement_type,
-            category
-          ),
-          profiles!user_id!inner(
-            id,
-            display_name,
-            email,
-            role
-          )
-        `)
-        .eq('status', 'submitted');
-      
-      // Apply filters
-      if (filters.requirementType && filters.requirementType !== 'all') {
-        query = query.eq('compliance_requirements.requirement_type', filters.requirementType);
-      }
-      
-      if (filters.dateRange && filters.dateRange !== 'all') {
-        const now = new Date();
-        let startDate;
-        
-        switch (filters.dateRange) {
-          case 'today':
-            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            break;
-          case 'week':
-            startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            break;
-          case 'month':
-            startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-            break;
-        }
-        
-        if (startDate) {
-          query = query.gte('submitted_at', startDate.toISOString());
-        }
-      }
-      
-      const { data, error } = await query
-        .order('submitted_at', { ascending: true });
-      
-      if (error) throw error;
-      
-      return data?.map(record => ({
-        id: record.id,
-        requirement_id: record.requirement_id,
-        requirement_name: record.compliance_requirements.name,
-        requirement_type: record.compliance_requirements.requirement_type,
-        user_id: record.user_id,
-        user_name: record.profiles.display_name,
-        user_email: record.profiles.email,
-        user_role: record.profiles.role,
-        status: record.status,
-        submitted_at: record.submitted_at,
-        submission_data: record.submission_data,
-        files: record.submission_data?.files || [],
-        notes: record.submission_data?.notes
-      })) || [];
-    },
-    enabled: !!reviewerRole,
-    staleTime: 30000, // 30 seconds
-    refetchInterval: 60000, // 1 minute
-  });
+/**
+ * Hook to get requirement completion statistics
+ * @param userId - The user ID
+ * @param role - The user's role
+ * @returns Object with completion statistics
+ */
+export function useRequirementStats(userId: string, role: string) {
+  const { data, isLoading, error } = useUIRequirements(userId, role);
+  
+  const stats = {
+    total: 0,
+    completed: 0,
+    inProgress: 0,
+    pending: 0,
+    overdue: 0,
+    completionPercentage: 0
+  };
+  
+  if (data) {
+    stats.total = data.length;
+    stats.completed = data.filter(req => req.status === 'completed' || req.status === 'waived').length;
+    stats.inProgress = data.filter(req => req.status === 'in_progress').length;
+    stats.pending = data.filter(req => req.status === 'pending').length;
+    stats.overdue = data.filter(req => req.isOverdue).length;
+    stats.completionPercentage = stats.total > 0 
+      ? Math.round((stats.completed / stats.total) * 100) 
+      : 0;
+  }
+  
+  return { stats, isLoading, error };
 }
