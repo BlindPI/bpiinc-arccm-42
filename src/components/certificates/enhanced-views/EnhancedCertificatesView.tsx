@@ -55,10 +55,10 @@ export function EnhancedCertificatesView() {
   const { data: paginatedData, isLoading, error: queryError } = useQuery({
     queryKey: ['enhanced-certificates', isAdmin, statusFilter, profile?.id, currentPage, pageSize, sortBy, sortDirection, searchQuery],
     queryFn: async () => {
-      // 🔍 PAGINATION DIAGNOSTIC: Log query start time
+      // � PAGINATION DIAGNOSTIC: Log query start time
       const queryStart = performance.now();
-      console.log(`🔍 Certificate Query Starting - Page ${currentPage}, Size ${pageSize} with server-side pagination`);
-      console.log(`🔍 Profile state:`, { profile, isAdmin, profileId: profile?.id, role: profile?.role });
+      console.log(`� Certificate Query Starting - Page ${currentPage}, Size ${pageSize} with server-side pagination`);
+      console.log(`� Profile state:`, { profile, isAdmin, profileId: profile?.id, role: profile?.role });
       
       // **FIXED: For AP users, get certificates using proper location-based filtering service**
       if (!isAdmin && profile?.role === 'AP' && profile?.id) {
@@ -207,10 +207,10 @@ export function EnhancedCertificatesView() {
 
       const { data, error, count } = await query;
       
-      // 🔍 PAGINATION DIAGNOSTIC: Log query completion
+      // � PAGINATION DIAGNOSTIC: Log query completion
       const queryTime = performance.now() - queryStart;
       const recordCount = data?.length || 0;
-      console.log(`🔍 Certificate Query Complete: ${recordCount} records fetched in ${queryTime.toFixed(2)}ms (Total: ${count})`);
+      console.log(`� Certificate Query Complete: ${recordCount} records fetched in ${queryTime.toFixed(2)}ms (Total: ${count})`);
       
       if (error) throw error;
       return {
