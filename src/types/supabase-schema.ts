@@ -1,3 +1,4 @@
+
 export type UserRole = 'SA' | 'AD' | 'AP' | 'IT' | 'IC' | 'IP' | 'IN';
 
 // Additional types that were missing
