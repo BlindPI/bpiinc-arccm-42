@@ -13,11 +13,54 @@ import { EnhancedCertificatesView } from "@/components/certificates/enhanced-vie
 import { EnhancedRostersView } from "@/components/certificates/enhanced-views/EnhancedRostersView";
 import { EnhancedArchivedView } from "@/components/certificates/enhanced-views/EnhancedArchivedView";
 import { CertificateRecoveryDashboard } from "@/components/certificates/CertificateRecoveryDashboard";
+import { debugLog } from "@/utils/debugUtils";
 
 export default function Certifications() {
-  const { data: profile } = useProfile();
+  const { data: profile, isLoading: profileLoading } = useProfile();
   const isMobile = useIsMobile();
+  
+  // Debug profile loading
+  debugLog("Certifications: Profile data", {
+    profile,
+    isLoading: profileLoading,
+    role: profile?.role
+  });
+  
   const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
+  
+  debugLog("Certifications: Access control", {
+    role: profile?.role,
+    canManageRequests
+  });
+
+  // Show loading state while profile is loading
+  if (profileLoading) {
+    return (
+      <div className="flex flex-col gap-6 w-full animate-fade-in">
+        <div className="h-32 bg-gray-200 rounded animate-pulse" />
+        <div className="h-96 bg-gray-200 rounded animate-pulse" />
+      </div>
+    );
+  }
+
+  // Show error state if no profile
+  if (!profile) {
+    return (
+      <div className="flex flex-col gap-6 w-full animate-fade-in">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Profile Not Found</h3>
+              <p className="text-muted-foreground">
+                Unable to load your profile. Please try refreshing the page or contact support.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 w-full animate-fade-in">
