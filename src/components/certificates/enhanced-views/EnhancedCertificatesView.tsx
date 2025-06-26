@@ -28,6 +28,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
 import { Certificate } from '@/types/certificates';
+import { Profile } from '@/types/supabase-schema';
 import { CertificateStatsCards } from './CertificateStatsCards';
 import { EnhancedCertificateCard } from './EnhancedCertificateCard';
 import { EmailCertificateForm } from '../EmailCertificateForm';
@@ -53,18 +54,19 @@ export function EnhancedCertificatesView() {
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
 
   const { data: paginatedData, isLoading } = useQuery({
-    queryKey: ['enhanced-certificates', isAdmin, statusFilter, profile?.id, currentPage, pageSize, sortBy, sortDirection, searchQuery],
+    queryKey: ['enhanced-certificates', isAdmin, statusFilter, profile?.id, (profile as any)?.compliance_tier, currentPage, pageSize, sortBy, sortDirection, searchQuery],
     queryFn: async () => {
       // 🔍 PAGINATION DIAGNOSTIC: Log query start time
       const queryStart = performance.now();
-      console.log(`🔍 Certificate Query Starting - Page ${currentPage}, Size ${pageSize} with server-side pagination`);
+      console.log(`🔍 Certificate Query Starting - Page ${currentPage}, Size ${pageSize} with DUAL TIER COMPLIANCE filtering`);
+      
+      // **CRITICAL: Get user's compliance tier for filtering**
+      const userComplianceTier = (profile as any)?.compliance_tier || 'basic';
+      console.log(`🔍 User compliance tier: ${userComplianceTier}`);
       
       // **FIXED: For AP users, get certificates using proper location-based filtering service**
       if (!isAdmin && profile?.role === 'AP' && profile?.id) {
-        console.log('🔍 AP user detected - using proper location-based certificate service (same as AP dashboard)');
-        
-        // **CRITICAL FIX: Use the SAME service as AP dashboard for consistent certificate counts**
-        // This ensures AP users see the same 347 certificates in both dashboard and certificate pages
+        console.log('🔍 AP user detected - using location-based certificate service with DUAL TIER COMPLIANCE');
         
         // First, get the provider ID for this AP user
         const { data: apUser, error: apError } = await supabase
@@ -96,11 +98,12 @@ export function EnhancedCertificatesView() {
         const primaryLocationId = provider.primary_location_id;
         console.log(`🔍 Provider primary location: ${primaryLocationId}`);
         
-        // **STEP 2: Get ALL certificates first (for stats), then apply search and pagination**
+        // **STEP 2: Get ALL certificates with DUAL TIER COMPLIANCE FILTERING**
         let baseQuery = supabase
           .from('certificates')
-          .select('*')
-          .eq('location_id', primaryLocationId);
+          .select('*, profiles!inner(compliance_tier)')
+          .eq('location_id', primaryLocationId)
+          .eq('profiles.compliance_tier', userComplianceTier);
 
         // Get all certificates for stats calculation (no search filter)
         const { data: allCertificates, error: allError } = await baseQuery;
@@ -110,11 +113,14 @@ export function EnhancedCertificatesView() {
           return { certificates: [], totalCount: 0, allCertificates: [] };
         }
         
-        // **STEP 3: Apply filters for display data**
+        console.log(`🔍 DUAL TIER COMPLIANCE: Found ${allCertificates?.length || 0} certificates for ${userComplianceTier} tier`);
+        
+        // **STEP 3: Apply filters for display data with DUAL TIER COMPLIANCE**
         let filteredQuery = supabase
           .from('certificates')
-          .select('*')
-          .eq('location_id', primaryLocationId);
+          .select('*, profiles!inner(compliance_tier)')
+          .eq('location_id', primaryLocationId)
+          .eq('profiles.compliance_tier', userComplianceTier);
 
         // Apply status filter
         if (statusFilter !== 'all') {
@@ -140,7 +146,7 @@ export function EnhancedCertificatesView() {
         }
         
         const totalCount = filteredData?.length || 0;
-        console.log(`🔍 Found ${totalCount} filtered certificates, ${allCertificates?.length || 0} total certificates`);
+        console.log(`🔍 DUAL TIER COMPLIANCE: Found ${totalCount} filtered certificates (${userComplianceTier} tier)`);
         
         // **CLIENT-SIDE PAGINATION** (since we need to maintain location-based filtering)
         const offset = (currentPage - 1) * pageSize;
@@ -148,7 +154,7 @@ export function EnhancedCertificatesView() {
         
         const queryTime = performance.now() - queryStart;
         console.log(`🔍 AP Certificate Query Complete: ${paginatedData.length} records (${totalCount} filtered, ${allCertificates?.length || 0} total) in ${queryTime.toFixed(2)}ms`);
-        console.log(`✅ SUCCESS: AP certificate page now uses same location-based logic as AP dashboard`);
+        console.log(`✅ SUCCESS: AP certificate page with DUAL TIER COMPLIANCE (${userComplianceTier})`);
         
         return {
           certificates: paginatedData as Certificate[],
@@ -157,13 +163,14 @@ export function EnhancedCertificatesView() {
         };
       }
       
-      // **NON-AP USERS: Use original server-side pagination**
+      // **NON-AP USERS: Use server-side pagination with DUAL TIER COMPLIANCE**
       const offset = (currentPage - 1) * pageSize;
       
-      // **STEP 1: Get all certificates for stats calculation**
+      // **STEP 1: Get all certificates for stats calculation with DUAL TIER COMPLIANCE**
       let allQuery = supabase
         .from('certificates')
-        .select('*');
+        .select('*, profiles!inner(compliance_tier)')
+        .eq('profiles.compliance_tier', userComplianceTier);
 
       if (!isAdmin && profile?.id) {
         // Other roles: Filter by user_id (existing behavior)
@@ -176,10 +183,13 @@ export function EnhancedCertificatesView() {
         console.error('🔍 Failed to get all certificates for stats:', allError);
       }
       
-      // **STEP 2: Get paginated data with filters**
+      console.log(`🔍 DUAL TIER COMPLIANCE: Found ${allCertificates?.length || 0} total certificates for ${userComplianceTier} tier`);
+      
+      // **STEP 2: Get paginated data with filters and DUAL TIER COMPLIANCE**
       let query = supabase
         .from('certificates')
-        .select('*', { count: 'exact' });
+        .select('*, profiles!inner(compliance_tier)', { count: 'exact' })
+        .eq('profiles.compliance_tier', userComplianceTier);
 
       if (!isAdmin && profile?.id) {
         // Other roles: Filter by user_id (existing behavior)
@@ -209,7 +219,8 @@ export function EnhancedCertificatesView() {
       // 🔍 PAGINATION DIAGNOSTIC: Log query completion
       const queryTime = performance.now() - queryStart;
       const recordCount = data?.length || 0;
-      console.log(`🔍 Certificate Query Complete: ${recordCount} records fetched in ${queryTime.toFixed(2)}ms (Total: ${count})`);
+      console.log(`🔍 Certificate Query Complete: ${recordCount} records fetched in ${queryTime.toFixed(2)}ms (Total: ${count}) for ${userComplianceTier} tier`);
+      console.log(`✅ SUCCESS: DUAL TIER COMPLIANCE filtering applied to certificates`);
       
       if (error) throw error;
       return {
