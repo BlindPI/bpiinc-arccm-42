@@ -1,24 +1,93 @@
 import * as React from "react";
 
+interface DialogContextValue {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+const DialogContext = React.createContext<DialogContextValue>({
+  open: false,
+  onOpenChange: () => {}
+});
+
 interface DialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   children?: React.ReactNode;
 }
 
-export function Dialog({ open, onOpenChange, children }: DialogProps) {
-  if (!open) return null;
-  
+export function Dialog({ open = false, onOpenChange = () => {}, children }: DialogProps) {
+  const contextValue = React.useMemo(() => ({
+    open,
+    onOpenChange
+  }), [open, onOpenChange]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div 
-        className="fixed inset-0 bg-black/50" 
-        onClick={() => onOpenChange?.(false)}
-      />
-      <div className="relative z-50">
-        {children}
-      </div>
-    </div>
+    <DialogContext.Provider value={contextValue}>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="fixed inset-0 bg-black/50"
+            onClick={() => onOpenChange(false)}
+          />
+          <div className="relative z-50">
+            {children}
+          </div>
+        </div>
+      )}
+    </DialogContext.Provider>
+  );
+}
+
+interface DialogTriggerProps {
+  asChild?: boolean;
+  children: React.ReactNode;
+}
+
+export function DialogTrigger({ asChild = false, children }: DialogTriggerProps) {
+  const { onOpenChange } = React.useContext(DialogContext);
+  
+  const handleClick = () => {
+    onOpenChange(true);
+  };
+
+  if (asChild && React.isValidElement(children)) {
+    return React.cloneElement(children, {
+      onClick: handleClick,
+      ...children.props
+    });
+  }
+
+  return (
+    <button onClick={handleClick}>
+      {children}
+    </button>
+  );
+}
+
+interface DialogCloseProps {
+  asChild?: boolean;
+  children: React.ReactNode;
+}
+
+export function DialogClose({ asChild = false, children }: DialogCloseProps) {
+  const { onOpenChange } = React.useContext(DialogContext);
+  
+  const handleClick = () => {
+    onOpenChange(false);
+  };
+
+  if (asChild && React.isValidElement(children)) {
+    return React.cloneElement(children, {
+      onClick: handleClick,
+      ...children.props
+    });
+  }
+
+  return (
+    <button onClick={handleClick}>
+      {children}
+    </button>
   );
 }
 

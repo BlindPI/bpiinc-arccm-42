@@ -5,7 +5,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -73,9 +72,9 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
     return <Badge variant="outline" className="capitalize">{roleNames[role] || role}</Badge>;
   };
   const getStatusBadge = (status: string) => (
-    <Badge 
-      variant={status === 'ACTIVE' ? 'success' : status === 'PENDING' ? 'warning' : 'outline'} 
-      className="capitalize"
+    <Badge
+      variant={status === 'ACTIVE' ? 'default' : status === 'PENDING' ? 'secondary' : 'outline'}
+      className={`capitalize ${status === 'ACTIVE' ? 'bg-green-100 text-green-800 border-green-300' : status === 'PENDING' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : ''}`}
     >
       {status}
     </Badge>
@@ -240,9 +239,9 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
               </TabsContent>
             </Tabs>
             <DialogFooter className="mt-4">
-              <DialogClose asChild>
-                <Button variant="outline">Close</Button>
-              </DialogClose>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Close
+              </Button>
             </DialogFooter>
           </div>
         </div>

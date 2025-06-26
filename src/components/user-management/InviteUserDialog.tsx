@@ -103,7 +103,7 @@ export function InviteUserDialog() {
           Invite User
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>
@@ -179,7 +179,7 @@ export function InviteUserDialog() {
             </Button>
           </DialogFooter>
         </form>
-      </DialogContent>
+        </DialogContent>
     </Dialog>
   );
 }
