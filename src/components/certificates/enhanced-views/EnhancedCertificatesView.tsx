@@ -52,12 +52,13 @@ export function EnhancedCertificatesView() {
 
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
 
-  const { data: paginatedData, isLoading } = useQuery({
+  const { data: paginatedData, isLoading, error: queryError } = useQuery({
     queryKey: ['enhanced-certificates', isAdmin, statusFilter, profile?.id, currentPage, pageSize, sortBy, sortDirection, searchQuery],
     queryFn: async () => {
       // 🔍 PAGINATION DIAGNOSTIC: Log query start time
       const queryStart = performance.now();
       console.log(`🔍 Certificate Query Starting - Page ${currentPage}, Size ${pageSize} with server-side pagination`);
+      console.log(`🔍 Profile state:`, { profile, isAdmin, profileId: profile?.id, role: profile?.role });
       
       // **FIXED: For AP users, get certificates using proper location-based filtering service**
       if (!isAdmin && profile?.role === 'AP' && profile?.id) {
@@ -548,7 +549,21 @@ export function EnhancedCertificatesView() {
       {/* Certificates Display */}
       <Card className="border-0 shadow-md">
         <CardContent className="p-6">
-          {isLoading ? (
+          {queryError ? (
+            <div className="text-center py-12">
+              <div className="text-red-500 mb-4">
+                <Award className="h-12 w-12 mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">Error Loading Certificates</h3>
+                <p className="text-sm mb-4">{queryError.message}</p>
+                <div className="text-xs bg-red-50 p-3 rounded border text-left max-w-md mx-auto">
+                  <strong>Debug Info:</strong>
+                  <br />Profile: {profile ? `${profile.role} (${profile.id})` : 'Not loaded'}
+                  <br />Admin: {isAdmin ? 'Yes' : 'No'}
+                  <br />Query Key: enhanced-certificates-{profile?.id || 'no-id'}
+                </div>
+              </div>
+            </div>
+          ) : isLoading ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
               <p className="text-gray-600">Loading certificates...</p>
@@ -558,6 +573,13 @@ export function EnhancedCertificatesView() {
               <Award className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No certificates found</h3>
               <p className="text-gray-600">No certificates match your current search criteria.</p>
+              <div className="text-xs text-gray-500 mt-4 bg-gray-50 p-3 rounded border">
+                <strong>Debug Info:</strong>
+                <br />Profile: {profile ? `${profile.role} (${profile.id})` : 'Not loaded'}
+                <br />Admin: {isAdmin ? 'Yes' : 'No'}
+                <br />Total Records: {paginatedData?.totalCount || 0}
+                <br />Filtered Records: {filteredCertificates.length}
+              </div>
             </div>
           ) : (
             <div className="space-y-6">

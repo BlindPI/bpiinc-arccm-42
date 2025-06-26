@@ -132,10 +132,13 @@ export function TabsContent({
     return null;
   }
 
+  // Extract selectedValue from props to prevent it from being passed to DOM
+  const { selectedValue: _, ...domProps } = props as any;
+
   return (
     <div
       className={`mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${className || ""}`}
-      {...props}
+      {...domProps}
     >
       {children}
     </div>
