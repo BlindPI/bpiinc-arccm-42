@@ -13,8 +13,7 @@ export function useProfile() {
     userId: user?.id || "none",
     authLoading,
     authReady,
-    hasUserProfile: !!user?.profile,
-    userProfileData: user?.profile ? { role: user.profile.role, email: user.profile.email } : null
+    hasUser: !!user
   });
 
   const result = useQuery({
@@ -25,12 +24,6 @@ export function useProfile() {
       if (!user?.id) {
         debugLog('useProfile: No user ID provided');
         return null;
-      }
-
-      // If user already has profile data, use it but still verify with database
-      if (user.profile && user.profile.role) {
-        debugLog('useProfile: Using existing user.profile data:', user.profile);
-        return user.profile as Profile;
       }
 
       try {
@@ -48,79 +41,63 @@ export function useProfile() {
         if (error) {
           debugError('useProfile: Error fetching profile:', error.message, error.code);
           
-          // If profile doesn't exist, try with maybeSingle
+          // If profile doesn't exist, create a basic one
           if (error.code === 'PGRST116') {
-            debugLog('useProfile: Profile not found, trying maybeSingle');
-            const { data: maybeProfile, error: maybeError } = await supabase
+            debugLog('useProfile: Profile not found, creating default profile');
+            const { data: newProfile, error: createError } = await supabase
               .from('profiles')
-              .select('*')
-              .eq('id', user.id)
-              .maybeSingle();
-            
-            if (maybeError) {
-              debugError('useProfile: MaybeSingle also failed:', maybeError);
-              return null;
-            }
-            
-            if (!maybeProfile) {
-              debugLog('useProfile: No profile found for user:', user.id);
-              // Create a basic profile if none exists
-              const { data: newProfile, error: createError } = await supabase
-                .from('profiles')
-                .insert({
-                  id: user.id,
-                  role: 'IT', // Default role
-                  display_name: user.email?.split('@')[0] || 'User',
-                  email: user.email,
-                  status: 'ACTIVE',
-                  compliance_tier: 'basic'
-                })
-                .select()
-                .single();
-                
-              if (createError) {
-                debugError('useProfile: Failed to create profile:', createError);
-                return null;
-              }
+              .insert({
+                id: user.id,
+                role: 'IT', // Default role
+                display_name: user.email?.split('@')[0] || 'User',
+                email: user.email,
+                status: 'ACTIVE',
+                compliance_tier: 'basic'
+              })
+              .select()
+              .single();
               
-              debugLog('useProfile: Created new profile:', newProfile);
-              return newProfile as Profile;
+            if (createError) {
+              debugError('useProfile: Failed to create profile:', createError);
+              throw createError;
             }
             
-            debugLog('useProfile: Found profile with maybeSingle');
-            return maybeProfile as Profile;
+            debugLog('useProfile: Created new profile:', newProfile);
+            return newProfile as Profile;
           }
           
-          debugError('useProfile: Non-recoverable error:', error);
-          return null;
+          throw error;
         }
 
         if (!profile) {
-          debugLog('useProfile: No profile found for user:', user.id, 'Duration:', Math.round(duration) + 'ms');
-          return null;
+          debugLog('useProfile: No profile found for user:', user.id);
+          throw new Error('Profile not found');
         }
 
-        debugLog('useProfile: Successfully fetched profile for user:', user.id, 'Role:', profile.role, 'Duration:', Math.round(duration) + 'ms');
+        debugLog('useProfile: Successfully fetched profile:', {
+          userId: user.id,
+          role: profile.role,
+          duration: Math.round(duration) + 'ms'
+        });
+        
         return profile as Profile;
       } catch (error) {
         debugError('useProfile: Unexpected error:', error);
-        return null;
+        throw error;
       }
     },
     enabled: !!user?.id && authReady && !authLoading,
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 10, // 10 minutes
     retry: (failureCount, error: any) => {
-      // Don't retry for missing profiles
+      // Don't retry for missing profiles that couldn't be created
       if (error?.code === 'PGRST116') {
         return false;
       }
-      // Only retry once for other errors
+      // Retry once for other errors
       return failureCount < 1;
     },
     retryDelay: 1000,
-    // Make query more resilient by not throwing on error
-    throwOnError: false,
   });
 
   debugLog('useProfile: Query result:', {
@@ -130,12 +107,8 @@ export function useProfile() {
     dataRole: result.data?.role
   });
 
-  // Add the mutate function to the result
   return {
     ...result,
-    mutate: () => {
-      // This will trigger a refetch of the profile data
-      return result.refetch();
-    }
+    mutate: () => result.refetch()
   } as UseQueryResult<Profile, Error> & { mutate: () => Promise<any> };
 }
