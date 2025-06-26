@@ -1,310 +1,401 @@
-import { supabase } from '@/integrations/supabase/client';
-import { ComplianceRequirementsService } from './complianceRequirementsService';
-import { ComplianceService } from './complianceService';
-import { ComplianceMetric, UserComplianceRecord } from './complianceService'; // Import necessary types
+// File: src/services/compliance/complianceTierService.ts
 
-export interface ComplianceTierInfo {
+import { supabase } from '@/lib/supabase';
+
+export interface UIComplianceTierInfo {
+  user_id: string;
+  role: 'AP' | 'IC' | 'IP' | 'IT';
   tier: 'basic' | 'robust';
   template_name: string;
   description: string;
-  total_requirements: number;
+  requirements_count: number;
   completed_requirements: number;
   completion_percentage: number;
+  ui_config: {
+    theme_color: string;
+    icon: string;
+    dashboard_layout: 'grid' | 'list' | 'kanban' | 'timeline';
+    welcome_message?: string;
+    progress_visualization?: string;
+    quick_actions?: string[];
+  };
+  next_requirement: {
+    id: string;
+    name: string;
+    due_date: string;
+    type: string;
+  } | null;
+  can_advance_tier: boolean;
+  advancement_blocked_reason?: string;
 }
 
 export interface TierSwitchResult {
   success: boolean;
-  message: string;
-  requirements_added: number;
-  requirements_removed: number;
+  message?: string;
+  requirements_affected?: number;
+  old_tier?: string;
+  new_tier?: string;
 }
 
 export class ComplianceTierService {
-  
-  /**
-   * Assign compliance tier to user and apply appropriate requirements
-   */
-  static async assignComplianceTier(
-    userId: string, 
-    role: 'AP' | 'IC' | 'IP' | 'IT', 
-    tier: 'basic' | 'robust'
-  ): Promise<TierSwitchResult> {
-    
+  // UI-specific method for dashboard display (From Currentplan1.5.md)
+  static async getUIComplianceTierInfo(userId: string): Promise<UIComplianceTierInfo> {
     try {
-      console.log(`DEBUG: Assigning ${tier} compliance tier to user ${userId} with role ${role}`);
+      const basicInfo = await this.getUserTierInfo(userId);
       
-      // Update user's compliance tier in profiles table
-      // Cast the object to 'any' to bypass strict type checking for `compliance_tier`
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ compliance_tier: tier } as any)
-        .eq('id', userId);
+      // Fetch additional UI-specific data
+      const { data: template } = await supabase
+        .from('compliance_templates')
+        .select('ui_config, icon_name, color_scheme')
+        .eq('role', basicInfo.role)
+        .eq('tier', basicInfo.tier)
+        .single();
       
-      if (profileError) throw profileError;
-      
-      // Assign the new tier's requirements to the user. This also clears old requirements.
-      const assignedResult = await ComplianceRequirementsService.assignRoleRequirementsToUser(userId, role, tier);
+      // Get next due requirement
+      const { data: nextReq } = await supabase
+        .from('user_compliance_records')
+        .select(`
+          requirement_id,
+          compliance_requirements!inner(
+            id,
+            name,
+            requirement_type,
+            due_days_from_assignment
+          )
+        `)
+        .eq('user_id', userId)
+        .eq('status', 'pending')
+        .order('created_at')
+        .limit(1)
+        .single();
       
       return {
-        success: true,
-        message: `Successfully assigned ${tier} compliance tier and updated requirements`,
-        requirements_added: assignedResult.assigned_requirements.length,
-        requirements_removed: 0 // Deletion logic is handled inside assignRoleRequirementsToUser via ComplianceService.deleteUserComplianceRecords
+        ...basicInfo,
+        ui_config: template?.ui_config || this.getDefaultUIConfig(),
+        next_requirement: nextReq ? {
+          id: nextReq.requirement_id,
+          name: nextReq.compliance_requirements.name,
+          due_date: this.calculateDueDate(nextReq),
+          type: nextReq.compliance_requirements.requirement_type
+        } : null,
+        can_advance_tier: basicInfo.tier === 'basic' && basicInfo.completion_percentage >= 80,
+        advancement_blocked_reason: this.getAdvancementBlockedReason(basicInfo)
       };
-      
     } catch (error) {
-      console.error('Error assigning compliance tier:', error);
-      return {
-        success: false,
-        message: `Failed to assign compliance tier: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        requirements_added: 0,
-        requirements_removed: 0
-      };
+      console.error('Error getting UI tier info:', error);
+      throw error;
     }
   }
   
-  /**
-   * Get user's current compliance tier information and progress
-   */
-  static async getUserComplianceTierInfo(userId: string): Promise<ComplianceTierInfo | null> {
+  // Core tier info method
+  static async getUserTierInfo(userId: string): Promise<UIComplianceTierInfo> {
     try {
-      // Define local interface for profile data
-      interface UserProfileData {
-        compliance_tier: 'basic' | 'robust' | null;
-        role: 'AP' | 'IC' | 'IP' | 'IT';
-      }
-
+      // Get user profile with tier info
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('compliance_tier, role')
+        .select('id, role, compliance_tier, display_name')
         .eq('id', userId)
         .single();
       
       if (profileError) throw profileError;
-      if (!profile) return null; // User not found
-
-      // Cast the profile data to our local interface for type safety
-      // Cast the profile data to unknown first, then to our local interface for type safety
-      const typedProfile: UserProfileData = profile as unknown as UserProfileData;
+      if (!profile) throw new Error('User profile not found');
       
-      const tier = typedProfile.compliance_tier || 'basic';
-      const role = typedProfile.role;
+      // Get template info
+      const { data: template, error: templateError } = await supabase
+        .from('compliance_templates')
+        .select('*')
+        .eq('role', profile.role)
+        .eq('tier', profile.compliance_tier)
+        .single();
       
-      // Get template information
-      const template = ComplianceRequirementsService.getRequirementsTemplateByTier(role, tier);
+      if (templateError) throw templateError;
+      if (!template) throw new Error('Template not found');
       
-      if (!template) {
-        console.warn(`No compliance template found for role ${role} and tier ${tier} for user ${userId}`);
-        return null;
-      }
+      // Get user's compliance records with requirement details
+      const { data: records, error: recordsError } = await supabase
+        .from('user_compliance_records')
+        .select(`
+          id,
+          status,
+          created_at,
+          compliance_requirements!inner(
+            id,
+            name,
+            requirement_type,
+            due_days_from_assignment,
+            points_value
+          )
+        `)
+        .eq('user_id', userId);
       
-      // Get user's compliance records
-      const userRecords: UserComplianceRecord[] = await ComplianceService.getUserComplianceRecords(userId);
-      const relevantRecords = userRecords.filter(record => 
-        record.compliance_metrics?.applicable_tiers?.includes(tier) && record.compliance_metrics?.required_for_roles.includes(role)
-      );
-
-      const completedCount = relevantRecords.filter(record =>
-        record.compliance_status === 'compliant'
-      ).length;
+      if (recordsError) throw recordsError;
+      
+      // Calculate completion metrics
+      const totalRequirements = records?.length || 0;
+      const completedRequirements = records?.filter(r => r.status === 'approved').length || 0;
+      const completionPercentage = totalRequirements > 0 
+        ? Math.round((completedRequirements / totalRequirements) * 100) 
+        : 0;
       
       return {
-        tier: tier,
-        template_name: template.role_name,
+        user_id: userId,
+        role: profile.role,
+        tier: profile.compliance_tier,
+        template_name: template.template_name,
         description: template.description,
-        total_requirements: template.requirements.length,
-        completed_requirements: completedCount,
-        completion_percentage: template.requirements.length > 0 
-          ? Math.round((completedCount / template.requirements.length) * 100)
-          : 0
+        requirements_count: totalRequirements,
+        completed_requirements: completedRequirements,
+        completion_percentage: completionPercentage,
+        ui_config: template.ui_config || this.getDefaultUIConfig(),
+        next_requirement: null, // Will be populated by getUIComplianceTierInfo
+        can_advance_tier: false, // Will be calculated by getUIComplianceTierInfo
       };
-      
     } catch (error) {
-      console.error('Error getting user compliance tier info:', error);
-      return null;
+      console.error('Error getting user tier info:', error);
+      throw error;
     }
   }
   
-  /**
-   * Switch user between compliance tiers.
-   * This updates the profile and re-assigns requirements based on the new tier.
-   */
-  static async switchComplianceTier(
+  // Switch user's compliance tier (From Currentplan1.5.md)
+  static async switchUserTier(
     userId: string,
-    newTier: 'basic' | 'robust'
+    newTier: 'basic' | 'robust',
+    changedBy: string,
+    reason: string = 'User requested tier change'
   ): Promise<TierSwitchResult> {
-    
     try {
-      // Get user's current role and tier
-      interface UserProfileSwitch {
-        role: 'AP' | 'IC' | 'IP' | 'IT';
-        compliance_tier: 'basic' | 'robust' | null;
-      }
-
-      const { data: profile, error: profileError } = await supabase
+      // Get current user info
+      const { data: currentProfile, error: profileError } = await supabase
         .from('profiles')
         .select('role, compliance_tier')
         .eq('id', userId)
         .single();
       
       if (profileError) throw profileError;
-      if (!profile) throw new Error('User not found');
+      if (!currentProfile) throw new Error('User not found');
       
-      // Cast the profile data to unknown first, then to our local interface for type safety
-      const typedProfile: UserProfileSwitch = profile as unknown as UserProfileSwitch;
-
-      const currentTier = typedProfile.compliance_tier || 'basic';
-      const userRole = typedProfile.role;
+      const oldTier = currentProfile.compliance_tier;
       
-      if (currentTier === newTier) {
+      // Validate tier switch
+      if (oldTier === newTier) {
         return {
-          success: true,
-          message: `User is already on ${newTier} tier`,
-          requirements_added: 0,
-          requirements_removed: 0
+          success: false,
+          message: 'User is already in the requested tier'
         };
       }
       
-      console.log(`DEBUG: Switching user ${userId} from ${currentTier} to ${newTier} tier`);
+      // Check role-specific restrictions
+      if (currentProfile.role === 'IC' && newTier === 'basic') {
+        return {
+          success: false,
+          message: 'Certified instructors must maintain comprehensive tier'
+        };
+      }
       
-      // Update compliance tier in the profile
-      // Cast the object to 'any' to bypass strict type checking for `compliance_tier`
+      // Begin transaction-like operations
+      
+      // 1. Update user's tier
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ compliance_tier: newTier } as any)
+        .update({ 
+          compliance_tier: newTier,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', userId);
       
       if (updateError) throw updateError;
-
-      // Update user requirements based on the new tier (this also handles deactivating old ones)
-      await ComplianceRequirementsService.updateUserRoleRequirements(
-        userId, 
-        userRole, // old role (same)
-        userRole, // new role (same)
-        currentTier, 
+      
+      // 2. Create history record
+      const { error: historyError } = await supabase
+        .from('compliance_tier_history')
+        .insert({
+          user_id: userId,
+          old_tier: oldTier,
+          new_tier: newTier,
+          changed_by: changedBy,
+          change_reason: reason,
+          requirements_affected: 0, // Will be updated after requirement assignment
+          created_at: new Date().toISOString()
+        });
+      
+      if (historyError) throw historyError;
+      
+      // 3. Assign new tier requirements
+      const requirementsAffected = await this.assignTierRequirements(
+        userId,
+        currentProfile.role,
         newTier
       );
       
-      // Recalculate requirements added/removed for reporting
-      const newRequirementsCount = (ComplianceRequirementsService.getRequirementsTemplateByTier(userRole, newTier)?.requirements.length || 0);
-      const oldRequirementsCount = (ComplianceRequirementsService.getRequirementsTemplateByTier(userRole, currentTier)?.requirements.length || 0);
-
+      // 4. Update history with requirements affected count
+      const { error: updateHistoryError } = await supabase
+        .from('compliance_tier_history')
+        .update({ requirements_affected: requirementsAffected })
+        .eq('user_id', userId)
+        .eq('new_tier', newTier)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      if (updateHistoryError) {
+        console.warn('Failed to update history with requirements count:', updateHistoryError);
+      }
+      
+      // 5. Log activity
+      await this.logComplianceActivity(userId, {
+        action: 'tier_switched',
+        metadata: {
+          oldTier,
+          newTier,
+          changedBy,
+          reason,
+          requirementsAffected
+        }
+      });
+      
       return {
         success: true,
-        message: `Successfully switched user ${userId} to ${newTier} tier`,
-        requirements_added: newRequirementsCount,
-        requirements_removed: oldRequirementsCount // Simplified for reporting
+        message: `Successfully switched from ${oldTier} to ${newTier} tier`,
+        requirements_affected: requirementsAffected,
+        old_tier: oldTier,
+        new_tier: newTier
       };
-      
     } catch (error) {
-      console.error('Error switching compliance tier:', error);
+      console.error('Error switching user tier:', error);
       return {
         success: false,
-        message: `Failed to switch compliance tier: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        requirements_added: 0,
-        requirements_removed: 0
+        message: `Failed to switch tier: ${error.message}`
       };
     }
   }
   
-  /**
-   * Get all users with their compliance tier information.
-   * This is intended for admin/reporting dashboards.
-   */
-  static async getAllUsersComplianceTiers(): Promise<Array<{
-    user_id: string;
-    display_name: string;
-    email: string;
-    role: string;
-    compliance_tier: 'basic' | 'robust';
-    completion_percentage: number;
-  }>> {
+  // Assign requirements based on role and tier
+  static async assignTierRequirements(
+    userId: string,
+    role: string,
+    tier: string
+  ): Promise<number> {
     try {
-      // Define local interface for profile data
-      interface UserProfileWithAllData {
-        id: string;
-        display_name: string | null;
-        email: string | null;
-        role: 'AP' | 'IC' | 'IP' | 'IT';
-        compliance_tier: 'basic' | 'robust' | null;
+      // Get requirements for the role/tier combination
+      const { data: requirements, error: reqError } = await supabase
+        .from('compliance_requirements')
+        .select(`
+          id,
+          name,
+          requirement_type,
+          is_mandatory,
+          due_days_from_assignment,
+          compliance_templates!inner(role, tier)
+        `)
+        .eq('compliance_templates.role', role)
+        .eq('compliance_templates.tier', tier);
+      
+      if (reqError) throw reqError;
+      
+      if (!requirements || requirements.length === 0) {
+        console.warn(`No requirements found for role ${role}, tier ${tier}`);
+        return 0;
       }
-
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('id, display_name, email, role, compliance_tier')
-        .in('role', ['AP', 'IC', 'IP', 'IT']);
       
-      if (error) throw error;
+      // Remove existing requirements for this user (clean slate)
+      const { error: deleteError } = await supabase
+        .from('user_compliance_records')
+        .delete()
+        .eq('user_id', userId);
       
-      const results: Array<{
-        user_id: string;
-        display_name: string;
-        email: string;
-        role: string;
-        compliance_tier: 'basic' | 'robust';
-        completion_percentage: number;
-      }> = []; // Explicitly type the results array
-
-      // Cast profiles data to unknown first, then to our local interface for type safety
-      for (const profile of (profiles as unknown as UserProfileWithAllData[]) || []) {
-        const tierInfo = await this.getUserComplianceTierInfo(profile.id);
-        
-        results.push({
-          user_id: profile.id,
-          display_name: profile.display_name || 'Unknown',
-          email: profile.email || '',
-          role: profile.role,
-          compliance_tier: profile.compliance_tier || 'basic',
-          completion_percentage: tierInfo?.completion_percentage || 0
+      if (deleteError) throw deleteError;
+      
+      // Create new compliance records
+      const newRecords = requirements.map(req => ({
+        user_id: userId,
+        requirement_id: req.id,
+        status: 'pending',
+        submission_data: {},
+        ui_state: {},
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }));
+      
+      const { error: insertError } = await supabase
+        .from('user_compliance_records')
+        .insert(newRecords);
+      
+      if (insertError) throw insertError;
+      
+      return requirements.length;
+    } catch (error) {
+      console.error('Error assigning tier requirements:', error);
+      throw error;
+    }
+  }
+  
+  // Real-time subscription for tier changes (From Currentplan1.5.md)
+  static subscribeToTierChanges(
+    userId: string,
+    callback: (update: UIComplianceTierInfo) => void
+  ): any {
+    return supabase
+      .channel(`tier_changes_${userId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'profiles',
+        filter: `id=eq.${userId}`
+      }, async () => {
+        try {
+          const updated = await this.getUIComplianceTierInfo(userId);
+          callback(updated);
+        } catch (error) {
+          console.error('Error fetching updated tier info:', error);
+        }
+      })
+      .subscribe();
+  }
+  
+  // Helper methods
+  private static calculateDueDate(record: any): string {
+    const dueDays = record.compliance_requirements?.due_days_from_assignment || 30;
+    const createdDate = new Date(record.created_at || new Date());
+    const dueDate = new Date(createdDate.getTime() + (dueDays * 24 * 60 * 60 * 1000));
+    return dueDate.toISOString();
+  }
+  
+  private static getDefaultUIConfig() {
+    return {
+      theme_color: '#3B82F6',
+      icon: 'Award',
+      dashboard_layout: 'grid' as const,
+      welcome_message: 'Welcome to your compliance dashboard',
+      progress_visualization: 'circular',
+      quick_actions: ['view_requirements', 'upload_document', 'contact_support']
+    };
+  }
+  
+  private static getAdvancementBlockedReason(basicInfo: any): string | undefined {
+    if (basicInfo.role === 'IC') {
+      return 'Certified instructors must maintain comprehensive tier';
+    }
+    
+    if (basicInfo.tier === 'basic' && basicInfo.completion_percentage < 80) {
+      return `Complete ${80 - basicInfo.completion_percentage}% more requirements to advance`;
+    }
+    
+    return undefined;
+  }
+  
+  private static async logComplianceActivity(userId: string, activity: any): Promise<void> {
+    try {
+      await supabase
+        .from('compliance_activity_log')
+        .insert({
+          user_id: userId,
+          action: activity.action,
+          requirement_id: activity.requirementId || null,
+          metadata: activity.metadata || {},
+          created_at: new Date().toISOString()
         });
-      }
-      
-      return results;
-      
     } catch (error) {
-      console.error('Error getting all users compliance tiers:', error);
-      return [];
-    }
-  }
-  
-  /**
-   * Get compliance tier statistics for reporting dashboards.
-   */
-  static async getComplianceTierStatistics(): Promise<{
-    basic_tier_users: number;
-    robust_tier_users: number;
-    basic_completion_avg: number;
-    robust_completion_avg: number;
-  }> {
-    try {
-      const allUsers = await this.getAllUsersComplianceTiers(); // Uses the improved getAllUsersComplianceTiers
-
-      const basicUsers = allUsers.filter(user => user.compliance_tier === 'basic');
-      const robustUsers = allUsers.filter(user => user.compliance_tier === 'robust');
-      
-      const basicCompletionAvg = basicUsers.length > 0
-        ? Math.round(basicUsers.reduce((sum, user) => sum + user.completion_percentage, 0) / basicUsers.length)
-        : 0;
-      
-      const robustCompletionAvg = robustUsers.length > 0
-        ? Math.round(robustUsers.reduce((sum, user) => sum + user.completion_percentage, 0) / robustUsers.length)
-        : 0;
-      
-      return {
-        basic_tier_users: basicUsers.length,
-        robust_tier_users: robustUsers.length,
-        basic_completion_avg: basicCompletionAvg,
-        robust_completion_avg: robustCompletionAvg
-      };
-      
-    } catch (error) {
-      console.error('Error getting compliance tier statistics:', error);
-      return {
-        basic_tier_users: 0,
-        robust_tier_users: 0,
-        basic_completion_avg: 0,
-        robust_completion_avg: 0
-      };
+      console.warn('Failed to log compliance activity:', error);
+      // Don't throw - activity logging failure shouldn't break main functionality
     }
   }
 }
