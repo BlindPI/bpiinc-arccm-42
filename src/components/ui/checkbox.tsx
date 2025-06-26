@@ -16,6 +16,9 @@ export function Checkbox({
     onCheckedChange?.(event.target.checked);
   };
 
+  // Filter out custom props that shouldn't be passed to DOM
+  const { onCheckedChange: _, ...domProps } = props as any;
+
   return (
     <div className="relative flex items-center">
       <input
@@ -25,7 +28,7 @@ export function Checkbox({
         } ${className || ""}`}
         checked={checked}
         onChange={handleChange}
-        {...props}
+        {...domProps}
       />
       {checked && (
         <svg

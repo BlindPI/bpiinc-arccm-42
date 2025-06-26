@@ -31,8 +31,11 @@ export function Tabs({
     onValueChange?.(newValue);
   };
 
+  // Filter out non-DOM props before passing to div
+  const { value: _, onValueChange: __, defaultValue: ___, ...domProps } = props as any;
+  
   return (
-    <div className={`${className || ""}`} {...props}>
+    <div className={`${className || ""}`} {...domProps}>
       {React.Children.map(children, (child) => {
         if (React.isValidElement(child)) {
           return React.cloneElement(child as React.ReactElement<any>, {
@@ -60,10 +63,13 @@ export function TabsList({
   onValueChange,
   ...props
 }: TabsListProps) {
+  // Filter out custom props that shouldn't be passed to DOM
+  const { selectedValue: _, onValueChange: __, ...domProps } = props as any;
+  
   return (
     <div
       className={`inline-flex h-10 items-center justify-center rounded-md bg-gray-100 p-1 text-gray-500 ${className || ""}`}
-      {...props}
+      {...domProps}
     >
       {React.Children.map(children, (child) => {
         if (React.isValidElement(child)) {
@@ -132,7 +138,7 @@ export function TabsContent({
     return null;
   }
 
-  // Extract selectedValue from props to prevent it from being passed to DOM
+  // Filter out custom props that shouldn't be passed to DOM
   const { selectedValue: _, ...domProps } = props as any;
 
   return (

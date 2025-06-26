@@ -16,10 +16,13 @@ export function Progress({
 }: ProgressProps) {
   const percentage = Math.min(Math.max(0, (value / max) * 100), 100);
 
+  // Filter out custom props that shouldn't be passed to DOM
+  const { value: _, max: __, indicatorClassName: ___, ...domProps } = props as any;
+
   return (
     <div
       className={`relative h-2 w-full overflow-hidden rounded-full bg-gray-200 ${className || ""}`}
-      {...props}
+      {...domProps}
     >
       <div
         className={`h-full w-full flex-1 bg-blue-600 transition-all ${indicatorClassName || ""}`}

@@ -69,14 +69,18 @@ export function CollapsibleTrigger({
   };
 
   if (asChild && React.isValidElement(children)) {
+    // Filter out asChild prop before passing to cloned element
+    const { asChild: _, ...domProps } = props as any;
     return React.cloneElement(children as React.ReactElement, {
-      ...props,
+      ...domProps,
       onClick: handleClick,
     });
   }
 
+  // Filter out asChild prop before passing to button
+  const { asChild: _, ...domProps } = props as any;
   return (
-    <button type="button" {...props} onClick={handleClick}>
+    <button type="button" {...domProps} onClick={handleClick}>
       {children}
     </button>
   );
