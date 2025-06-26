@@ -47,6 +47,14 @@ export function AppRoutes() {
   const { user } = useAuth();
   const location = useLocation();
 
+  // Debug: Log routing state
+  console.log('🐛 ROUTING-DEBUG: AppRoutes rendering with:', {
+    pathname: location.pathname,
+    search: location.search,
+    hasUser: !!user,
+    userId: user?.id
+  });
+
   return (
     <Routes>
       <Route path="/auth/signin" element={<SignIn />} />

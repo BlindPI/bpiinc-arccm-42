@@ -43,19 +43,24 @@ export class ComplianceTierService {
     try {
       const basicInfo = await this.getUserTierInfo(userId);
       
-      // Fetch additional UI-specific data
-      const { data: template } = await supabase
+      // Fetch additional UI-specific data - using type assertion for new schema
+      const { data: template, error: templateError } = await (supabase as any)
         .from('compliance_templates')
         .select('ui_config, icon_name, color_scheme')
         .eq('role', basicInfo.role)
         .eq('tier', basicInfo.tier)
         .single();
       
-      // Get next due requirement
-      const { data: nextReq } = await supabase
+      if (templateError) {
+        console.warn('Template not found, using defaults:', templateError);
+      }
+      
+      // Get next due requirement - using type assertion for new schema
+      const { data: nextReq, error: nextReqError } = await (supabase as any)
         .from('user_compliance_records')
         .select(`
           requirement_id,
+          due_date,
           compliance_requirements!inner(
             id,
             name,
@@ -67,7 +72,11 @@ export class ComplianceTierService {
         .eq('status', 'pending')
         .order('created_at')
         .limit(1)
-        .single();
+        .maybeSingle();
+      
+      if (nextReqError) {
+        console.warn('Could not fetch next requirement:', nextReqError);
+      }
       
       return {
         ...basicInfo,
@@ -75,7 +84,7 @@ export class ComplianceTierService {
         next_requirement: nextReq ? {
           id: nextReq.requirement_id,
           name: nextReq.compliance_requirements.name,
-          due_date: this.calculateDueDate(nextReq),
+          due_date: nextReq.due_date || this.calculateDueDate(nextReq),
           type: nextReq.compliance_requirements.requirement_type
         } : null,
         can_advance_tier: basicInfo.tier === 'basic' && basicInfo.completion_percentage >= 80,
@@ -100,8 +109,8 @@ export class ComplianceTierService {
       if (profileError) throw profileError;
       if (!profile) throw new Error('User profile not found');
       
-      // Get template info
-      const { data: template, error: templateError } = await supabase
+      // Get template info - using type assertion for new schema
+      const { data: template, error: templateError } = await (supabase as any)
         .from('compliance_templates')
         .select('*')
         .eq('role', profile.role)
@@ -111,8 +120,8 @@ export class ComplianceTierService {
       if (templateError) throw templateError;
       if (!template) throw new Error('Template not found');
       
-      // Get user's compliance records with requirement details
-      const { data: records, error: recordsError } = await supabase
+      // Get user's compliance records with requirement details - using type assertion
+      const { data: records, error: recordsError } = await (supabase as any)
         .from('user_compliance_records')
         .select(`
           id,
@@ -132,15 +141,15 @@ export class ComplianceTierService {
       
       // Calculate completion metrics
       const totalRequirements = records?.length || 0;
-      const completedRequirements = records?.filter(r => r.status === 'approved').length || 0;
-      const completionPercentage = totalRequirements > 0 
-        ? Math.round((completedRequirements / totalRequirements) * 100) 
+      const completedRequirements = records?.filter((r: any) => r.status === 'approved').length || 0;
+      const completionPercentage = totalRequirements > 0
+        ? Math.round((completedRequirements / totalRequirements) * 100)
         : 0;
       
       return {
         user_id: userId,
-        role: profile.role,
-        tier: profile.compliance_tier,
+        role: profile.role as 'AP' | 'IC' | 'IP' | 'IT',
+        tier: profile.compliance_tier as 'basic' | 'robust',
         template_name: template.template_name,
         description: template.description,
         requirements_count: totalRequirements,
@@ -205,8 +214,8 @@ export class ComplianceTierService {
       
       if (updateError) throw updateError;
       
-      // 2. Create history record
-      const { error: historyError } = await supabase
+      // 2. Create history record - using type assertion for new schema
+      const { error: historyError } = await (supabase as any)
         .from('compliance_tier_history')
         .insert({
           user_id: userId,
@@ -227,8 +236,8 @@ export class ComplianceTierService {
         newTier
       );
       
-      // 4. Update history with requirements affected count
-      const { error: updateHistoryError } = await supabase
+      // 4. Update history with requirements affected count - using type assertion
+      const { error: updateHistoryError } = await (supabase as any)
         .from('compliance_tier_history')
         .update({ requirements_affected: requirementsAffected })
         .eq('user_id', userId)
@@ -275,29 +284,40 @@ export class ComplianceTierService {
     tier: string
   ): Promise<number> {
     try {
-      // Get requirements for the role/tier combination
-      const { data: requirements, error: reqError } = await supabase
-        .from('compliance_requirements')
+      // Get requirements for the role/tier combination - using a different approach
+      const { data: template, error: templateError } = await (supabase as any)
+        .from('compliance_templates')
+        .select('id')
+        .eq('role', role)
+        .eq('tier', tier)
+        .single();
+      
+      if (templateError) throw templateError;
+      
+      // Get requirements linked to this template
+      const { data: templateReqs, error: reqError } = await (supabase as any)
+        .from('compliance_requirements_templates')
         .select(`
-          id,
-          name,
-          requirement_type,
-          is_mandatory,
-          due_days_from_assignment,
-          compliance_templates!inner(role, tier)
+          requirement_id,
+          compliance_requirements!inner(
+            id,
+            name,
+            requirement_type,
+            is_mandatory,
+            due_days_from_assignment
+          )
         `)
-        .eq('compliance_templates.role', role)
-        .eq('compliance_templates.tier', tier);
+        .eq('template_id', template.id);
       
       if (reqError) throw reqError;
       
-      if (!requirements || requirements.length === 0) {
+      if (!templateReqs || templateReqs.length === 0) {
         console.warn(`No requirements found for role ${role}, tier ${tier}`);
         return 0;
       }
       
-      // Remove existing requirements for this user (clean slate)
-      const { error: deleteError } = await supabase
+      // Remove existing requirements for this user (clean slate) - using type assertion
+      const { error: deleteError } = await (supabase as any)
         .from('user_compliance_records')
         .delete()
         .eq('user_id', userId);
@@ -305,9 +325,9 @@ export class ComplianceTierService {
       if (deleteError) throw deleteError;
       
       // Create new compliance records
-      const newRecords = requirements.map(req => ({
+      const newRecords = templateReqs.map((req: any) => ({
         user_id: userId,
-        requirement_id: req.id,
+        requirement_id: req.requirement_id,
         status: 'pending',
         submission_data: {},
         ui_state: {},
@@ -315,13 +335,13 @@ export class ComplianceTierService {
         updated_at: new Date().toISOString()
       }));
       
-      const { error: insertError } = await supabase
+      const { error: insertError } = await (supabase as any)
         .from('user_compliance_records')
         .insert(newRecords);
       
       if (insertError) throw insertError;
       
-      return requirements.length;
+      return templateReqs.length;
     } catch (error) {
       console.error('Error assigning tier requirements:', error);
       throw error;
@@ -384,7 +404,7 @@ export class ComplianceTierService {
   
   private static async logComplianceActivity(userId: string, activity: any): Promise<void> {
     try {
-      await supabase
+      await (supabase as any)
         .from('compliance_activity_log')
         .insert({
           user_id: userId,
@@ -397,5 +417,106 @@ export class ComplianceTierService {
       console.warn('Failed to log compliance activity:', error);
       // Don't throw - activity logging failure shouldn't break main functionality
     }
+  }
+
+  // Get compliance tier statistics for dashboard
+  static async getComplianceTierStatistics(): Promise<any> {
+    try {
+      // Get tier distribution across all users
+      const { data: tierDistribution, error: tierError } = await supabase
+        .from('profiles')
+        .select('compliance_tier, role')
+        .not('compliance_tier', 'is', null);
+
+      if (tierError) throw tierError;
+
+      // Get compliance completion rates - using type assertion for new RPC
+      const { data: completionStats, error: completionError } = await (supabase as any)
+        .rpc('get_compliance_completion_stats');
+
+      if (completionError) {
+        console.warn('Could not fetch completion stats:', completionError);
+      }
+
+      // Calculate tier statistics
+      const stats = {
+        totalUsers: tierDistribution?.length || 0,
+        tierDistribution: this.calculateTierDistribution(tierDistribution || []),
+        roleDistribution: this.calculateRoleDistribution(tierDistribution || []),
+        completionRates: completionStats || [],
+        lastUpdated: new Date().toISOString()
+      };
+
+      return stats;
+    } catch (error) {
+      console.error('Error getting compliance tier statistics:', error);
+      // Return fallback data instead of throwing
+      return {
+        totalUsers: 0,
+        tierDistribution: { basic: 0, robust: 0 },
+        roleDistribution: { AP: 0, IC: 0, IP: 0, IT: 0 },
+        completionRates: [],
+        lastUpdated: new Date().toISOString(),
+        error: error.message
+      };
+    }
+  }
+
+  // Get all users' compliance tier information
+  static async getAllUsersComplianceTiers(): Promise<UIComplianceTierInfo[]> {
+    try {
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, role, compliance_tier, display_name')
+        .not('compliance_tier', 'is', null);
+
+      if (error) throw error;
+
+      // Get tier info for each user
+      const userTierInfos = await Promise.all(
+        (profiles || []).map(async (profile) => {
+          try {
+            return await this.getUserTierInfo(profile.id);
+          } catch (error) {
+            console.warn(`Failed to get tier info for user ${profile.id}:`, error);
+            return null;
+          }
+        })
+      );
+
+      // Filter out failed requests
+      return userTierInfos.filter(info => info !== null) as UIComplianceTierInfo[];
+    } catch (error) {
+      console.error('Error getting all users compliance tiers:', error);
+      return [];
+    }
+  }
+
+  // Helper method to calculate tier distribution
+  private static calculateTierDistribution(profiles: any[]): Record<string, number> {
+    const distribution = { basic: 0, robust: 0 };
+    
+    profiles.forEach(profile => {
+      if (profile.compliance_tier === 'basic') {
+        distribution.basic++;
+      } else if (profile.compliance_tier === 'robust') {
+        distribution.robust++;
+      }
+    });
+
+    return distribution;
+  }
+
+  // Helper method to calculate role distribution
+  private static calculateRoleDistribution(profiles: any[]): Record<string, number> {
+    const distribution = { AP: 0, IC: 0, IP: 0, IT: 0 };
+    
+    profiles.forEach(profile => {
+      if (profile.role && distribution.hasOwnProperty(profile.role)) {
+        distribution[profile.role]++;
+      }
+    });
+
+    return distribution;
   }
 }
