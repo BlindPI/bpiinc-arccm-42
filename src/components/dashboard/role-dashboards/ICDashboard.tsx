@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUIRequirements } from '@/hooks/useComplianceRequirements';
-import { useDashboardUI } from '@/contexts/DashboardUIContext';
+import { useDashboardUI } from '@/hooks/useDashboardUI';
 
 // Import UI components
 import {
