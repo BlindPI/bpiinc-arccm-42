@@ -9,21 +9,23 @@ export const validateSupabaseConfiguration = (): ConfigurationValidation => {
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  // Check if Supabase URL is configured
-  const supabaseUrl = 'https://seaxchrsbldrppupupbw.supabase.co';
-  if (!supabaseUrl || supabaseUrl === 'your-project-url') {
-    errors.push('Supabase URL is not configured properly');
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl) {
+    errors.push('VITE_SUPABASE_URL is not configured');
   }
 
-  // Check if Supabase anon key is configured
-  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlYXhjaHJzYmxkcnBwdXB1cGJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyMTUyMDMsImV4cCI6MjA1OTc5MTIwM30._3sOX2_EkBFp4mzC0_MjBkAlAHxHWitsMShszmLITOQ';
-  if (!supabaseKey || supabaseKey === 'your-anon-key') {
-    errors.push('Supabase anon key is not configured properly');
+  if (!supabaseKey) {
+    errors.push('VITE_SUPABASE_ANON_KEY is not configured');
   }
 
-  // Check if we're in development mode with proper configuration
-  if (import.meta.env.DEV && errors.length === 0) {
-    warnings.push('Running in development mode with live Supabase configuration');
+  if (supabaseUrl && !supabaseUrl.includes('.supabase.co')) {
+    warnings.push('Supabase URL format appears invalid');
+  }
+
+  if (supabaseKey && !supabaseKey.startsWith('eyJ')) {
+    warnings.push('Supabase API key format appears invalid');
   }
 
   return {
@@ -37,12 +39,12 @@ export const logConfigurationStatus = () => {
   const validation = validateSupabaseConfiguration();
   
   if (validation.isValid) {
-    console.log('✅ Supabase configuration is valid');
-    if (validation.warnings.length > 0) {
-      validation.warnings.forEach(warning => console.warn('⚠️', warning));
-    }
+    console.log('✅ Supabase configuration validated successfully');
   } else {
-    console.error('❌ Supabase configuration errors:');
-    validation.errors.forEach(error => console.error('  -', error));
+    console.error('❌ Supabase configuration errors:', validation.errors);
+  }
+  
+  if (validation.warnings.length > 0) {
+    console.warn('⚠️ Supabase configuration warnings:', validation.warnings);
   }
 };
