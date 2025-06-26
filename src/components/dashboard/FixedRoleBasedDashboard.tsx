@@ -10,7 +10,7 @@ import { useComplianceRealtimeUpdates } from '@/hooks/useComplianceRealtimeUpdat
 import { ITDashboard } from './role-dashboards/ITDashboard';
 import { IPDashboard } from './role-dashboards/IPDashboard';
 import { ICDashboard } from './role-dashboards/ICDashboard';
-import { EnhancedProviderDashboard } from './EnhancedProviderDashboard';
+import EnhancedProviderDashboard from './role-dashboards/EnhancedProviderDashboard';
 
 // Import context providers
 import { ComplianceTierProvider } from '@/contexts/ComplianceTierContext';

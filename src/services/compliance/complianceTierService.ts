@@ -1,6 +1,6 @@
 // File: src/services/compliance/complianceTierService.ts
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface UIComplianceTierInfo {
   user_id: string;
