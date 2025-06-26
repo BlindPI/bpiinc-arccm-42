@@ -1,7 +1,6 @@
-
+// Type definitions that match the actual Supabase schema
 export type UserRole = 'SA' | 'AD' | 'AP' | 'IT' | 'IC' | 'IP' | 'IN';
 
-// Additional types that were missing
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
 export type LeadSource = 'website' | 'referral' | 'cold_call' | 'email' | 'social_media' | 'trade_show' | 'other';
 export type LeadType = 'individual' | 'corporate';
@@ -21,6 +20,29 @@ export type ActivityType = 'call' | 'email' | 'meeting' | 'task' | 'note';
 
 export type CampaignStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'paused' | 'cancelled';
 export type AssignmentType = 'round_robin' | 'load_balanced' | 'criteria_based';
+
+// Basic Profile interface
+export interface Profile {
+  id: string;
+  email?: string;
+  display_name?: string;
+  phone?: string;
+  organization?: string;
+  job_title?: string;
+  role: UserRole;
+  status?: 'ACTIVE' | 'INACTIVE' | 'PENDING';
+  compliance_status?: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Extended Profile with additional fields
+export interface ExtendedProfile extends Profile {
+  last_login?: string;
+  total_hours?: number;
+  compliance_score?: number;
+  bio?: string;
+}
 
 // Location interface matching actual schema
 export interface Location {
@@ -154,53 +176,124 @@ export interface CertificateRequest {
   updated_at: string;
 }
 
-export interface Profile {
-  id: string;
-  role: UserRole;
-  display_name?: string;
-  email?: string;
-  created_at?: string;
-  updated_at?: string;
-  status?: 'ACTIVE' | 'INACTIVE' | 'PENDING';
-  phone?: string;
-  organization?: string;
-  job_title?: string;
-  compliance_tier?: 'basic' | 'robust';
+// Type guard functions
+export function isValidUserRole(role: string): role is UserRole {
+  return ['SA', 'AD', 'AP', 'IT', 'IC', 'IP', 'IN'].includes(role);
+}
+
+export function isValidLeadStatus(status: string): status is LeadStatus {
+  return ['new', 'contacted', 'qualified', 'converted', 'lost'].includes(status);
+}
+
+export function isValidLeadSource(source: string): source is LeadSource {
+  return ['website', 'referral', 'cold_call', 'email', 'social_media', 'trade_show', 'other'].includes(source);
+}
+
+export function isValidLeadType(type: string): type is LeadType {
+  return ['individual', 'corporate'].includes(type);
+}
+
+export function isValidTrainingUrgency(urgency: string): urgency is TrainingUrgency {
+  return ['immediate', 'within_month', 'within_quarter', 'planning'].includes(urgency);
+}
+
+export function isValidPreferredTrainingFormat(format: string): format is PreferredTrainingFormat {
+  return ['in_person', 'virtual', 'hybrid'].includes(format);
+}
+
+export function isValidContactStatus(status: string): status is ContactStatus {
+  return ['active', 'inactive'].includes(status);
+}
+
+export function isValidPreferredContactMethod(method: string): method is PreferredContactMethod {
+  return ['email', 'phone', 'mobile'].includes(method);
+}
+
+export function isValidAccountType(type: string): type is AccountType {
+  return ['prospect', 'customer', 'partner', 'competitor'].includes(type);
+}
+
+export function isValidAccountStatus(status: string): status is AccountStatus {
+  return ['active', 'inactive'].includes(status);
+}
+
+export function isValidOpportunityStage(stage: string): stage is OpportunityStage {
+  return ['prospect', 'proposal', 'negotiation', 'closed_won', 'closed_lost'].includes(stage);
+}
+
+export function isValidOpportunityStatus(status: string): status is OpportunityStatus {
+  return ['open', 'closed'].includes(status);
+}
+
+export function isValidActivityType(type: string): type is ActivityType {
+  return ['call', 'email', 'meeting', 'task', 'note'].includes(type);
+}
+
+export function isValidCampaignStatus(status: string): status is CampaignStatus {
+  return ['draft', 'scheduled', 'sending', 'sent', 'paused', 'cancelled'].includes(status);
+}
+
+export function isValidAssignmentType(type: string): type is AssignmentType {
+  return ['round_robin', 'load_balanced', 'criteria_based'].includes(type);
 }
 
 // Safe casting functions with fallbacks
 export function safeUserRole(role: string): UserRole {
-  const validRoles: UserRole[] = ['SA', 'AD', 'AP', 'IT', 'IC', 'IP', 'IN'];
-  return validRoles.includes(role as UserRole) ? (role as UserRole) : 'IT';
+  return isValidUserRole(role) ? role : 'IT';
 }
 
-export function safeAssignmentType(type: string): AssignmentType {
-  const validTypes: AssignmentType[] = ['round_robin', 'load_balanced', 'criteria_based'];
-  return validTypes.includes(type as AssignmentType) ? (type as AssignmentType) : 'round_robin';
+export function safeLeadStatus(status: string): LeadStatus {
+  return isValidLeadStatus(status) ? status : 'new';
+}
+
+export function safeLeadSource(source: string): LeadSource {
+  return isValidLeadSource(source) ? source : 'other';
+}
+
+export function safeLeadType(type: string): LeadType | undefined {
+  return isValidLeadType(type) ? type : undefined;
+}
+
+export function safeTrainingUrgency(urgency: string): TrainingUrgency | undefined {
+  return isValidTrainingUrgency(urgency) ? urgency : undefined;
+}
+
+export function safePreferredTrainingFormat(format: string): PreferredTrainingFormat | undefined {
+  return isValidPreferredTrainingFormat(format) ? format : undefined;
 }
 
 export function safeContactStatus(status: string): ContactStatus {
-  return status === 'inactive' ? 'inactive' : 'active';
+  return isValidContactStatus(status) ? status : 'active';
+}
+
+export function safePreferredContactMethod(method: string): PreferredContactMethod {
+  return isValidPreferredContactMethod(method) ? method : 'email';
 }
 
 export function safeAccountType(type: string): AccountType {
-  const validTypes: AccountType[] = ['prospect', 'customer', 'partner', 'competitor'];
-  return validTypes.includes(type as AccountType) ? (type as AccountType) : 'prospect';
+  return isValidAccountType(type) ? type : 'prospect';
 }
 
 export function safeAccountStatus(status: string): AccountStatus {
-  return status === 'inactive' ? 'inactive' : 'active';
+  return isValidAccountStatus(status) ? status : 'active';
 }
 
-// Database types
-export interface Database {
-  public: {
-    Tables: {
-      profiles: {
-        Row: Profile;
-        Insert: Omit<Profile, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<Profile, 'id' | 'created_at' | 'updated_at'>>;
-      };
-    };
-  };
+export function safeOpportunityStage(stage: string): OpportunityStage {
+  return isValidOpportunityStage(stage) ? stage : 'prospect';
+}
+
+export function safeOpportunityStatus(status: string): OpportunityStatus {
+  return isValidOpportunityStatus(status) ? status : 'open';
+}
+
+export function safeActivityType(type: string): ActivityType {
+  return isValidActivityType(type) ? type : 'task';
+}
+
+export function safeCampaignStatus(status: string): CampaignStatus {
+  return isValidCampaignStatus(status) ? status : 'draft';
+}
+
+export function safeAssignmentType(type: string): AssignmentType {
+  return isValidAssignmentType(type) ? type : 'round_robin';
 }
