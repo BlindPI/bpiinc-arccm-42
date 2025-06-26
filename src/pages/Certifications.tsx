@@ -1,10 +1,11 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CertificateForm } from "@/components/CertificateForm";
 import { BatchCertificateUpload } from "@/components/certificates/BatchCertificateUpload";
 import { TemplateManager } from "@/components/certificates/TemplateManager";
 import { useProfile } from "@/hooks/useProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Award, History, Archive, Plus, FileCheck, Upload, AlertTriangle, Loader2 } from "lucide-react";
+import { Award, History, Archive, Plus, FileCheck, Upload, AlertTriangle } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { CertificateRequestsContainer } from "@/components/certificates/CertificateRequestsContainer";
@@ -13,23 +14,19 @@ import { EnhancedRostersView } from "@/components/certificates/enhanced-views/En
 import { EnhancedArchivedView } from "@/components/certificates/enhanced-views/EnhancedArchivedView";
 import { CertificateRecoveryDashboard } from "@/components/certificates/CertificateRecoveryDashboard";
 import { debugLog } from "@/utils/debugUtils";
-import { useState } from "react";
 
 export default function Certifications() {
-  const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
+  const { data: profile, isLoading: profileLoading } = useProfile();
   const isMobile = useIsMobile();
-  const [activeTab, setActiveTab] = useState("batch");
   
   // Debug profile loading
   debugLog("Certifications: Profile data", {
     profile,
     isLoading: profileLoading,
-    error: profileError,
     role: profile?.role
   });
   
-  // Check if user can manage requests (SA, AD, or AP users)
-  const canManageRequests = profile?.role && ['SA', 'AD', 'AP'].includes(profile.role);
+  const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
   
   debugLog("Certifications: Access control", {
     role: profile?.role,
@@ -40,37 +37,24 @@ export default function Certifications() {
   if (profileLoading) {
     return (
       <div className="flex flex-col gap-6 w-full animate-fade-in">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Loading Certificate Management</h3>
-            <p className="text-muted-foreground">
-              Please wait while we load your certificate management interface...
-            </p>
-          </div>
-        </div>
+        <div className="h-32 bg-gray-200 rounded animate-pulse" />
+        <div className="h-96 bg-gray-200 rounded animate-pulse" />
       </div>
     );
   }
 
-  // Show error state if profile failed to load
-  if (profileError || !profile) {
+  // Show error state if no profile
+  if (!profile) {
     return (
       <div className="flex flex-col gap-6 w-full animate-fade-in">
         <Card>
           <CardContent className="p-6">
             <div className="text-center">
               <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Unable to Load Profile</h3>
-              <p className="text-muted-foreground mb-4">
-                We couldn't load your profile information. This might be a temporary issue.
+              <h3 className="text-lg font-semibold mb-2">Profile Not Found</h3>
+              <p className="text-muted-foreground">
+                Unable to load your profile. Please try refreshing the page or contact support.
               </p>
-              <button 
-                onClick={() => window.location.reload()} 
-                className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
-              >
-                Retry
-              </button>
             </div>
           </CardContent>
         </Card>
@@ -95,7 +79,7 @@ export default function Certifications() {
       />
       
       <div className="bg-gradient-to-r from-white via-gray-50/50 to-white dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 border rounded-xl shadow-sm p-6 w-full">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs defaultValue="batch" className="w-full">
           <TabsList 
             className="flex flex-nowrap w-full mb-6 bg-gradient-to-r from-primary/90 to-primary p-1 rounded-lg shadow-md overflow-x-auto"
           >
