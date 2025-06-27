@@ -117,16 +117,30 @@ export function RequirementReviewQueue() {
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {submissionsToReview?.map((submission) => (
-                <SubmissionReviewCard
-                  key={submission.id}
-                  submission={submission}
-                  onReview={() => openReviewDialog(submission)}
-                />
-              ))}
-            </div>
-          )}
+           <div className="space-y-4">
+             {(() => {
+               console.log('🐛 REVIEW-MAP-DEBUG: About to map submissionsToReview:', {
+                 submissionsToReview: submissionsToReview,
+                 isArray: Array.isArray(submissionsToReview),
+                 length: submissionsToReview?.length,
+                 type: typeof submissionsToReview
+               });
+               
+               if (!Array.isArray(submissionsToReview)) {
+                 console.error('🔥 REVIEW-MAP-ERROR: submissionsToReview is not an array!', submissionsToReview);
+                 return <div className="text-red-500">Error: Submissions data is not properly loaded</div>;
+               }
+               
+               return submissionsToReview.map((submission) => (
+                 <SubmissionReviewCard
+                   key={submission.id}
+                   submission={submission}
+                   onReview={() => openReviewDialog(submission)}
+                 />
+               ));
+             })()}
+           </div>
+         )}
         </CardContent>
       </Card>
       
@@ -174,18 +188,31 @@ function SubmissionReviewCard({ submission, onReview }: { submission: any; onRev
       </div>
       
       <div className="mt-2 flex flex-wrap gap-2">
-        {submission.files?.map((file: any, i: number) => (
-          <a
-            key={i}
-            href={file.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 text-xs p-1 bg-gray-100 rounded hover:bg-gray-200"
-          >
-            <FileIcon className="h-3 w-3" />
-            {file.name}
-          </a>
-        ))}
+        {(() => {
+          console.log('🐛 FILES-MAP-DEBUG: About to map submission.files:', {
+            files: submission.files,
+            isArray: Array.isArray(submission.files),
+            length: submission.files?.length,
+            type: typeof submission.files
+          });
+          
+          if (!submission.files || !Array.isArray(submission.files)) {
+            return null;
+          }
+          
+          return submission.files.map((file: any, i: number) => (
+            <a
+              key={i}
+              href={file.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-xs p-1 bg-gray-100 rounded hover:bg-gray-200"
+            >
+              <FileIcon className="h-3 w-3" />
+              {file.name}
+            </a>
+          ));
+        })()}
       </div>
       
       {submission.notes && (
@@ -217,7 +244,7 @@ function SubmissionReviewDialog({
   const { user } = useAuth();
   const [reviewNotes, setReviewNotes] = useState('');
   const [reviewTab, setReviewTab] = useState('files');
-  const { mutate: reviewSubmission, isLoading: isSubmitting } = useRequirementReview();
+  const { mutate: reviewSubmission, isPending: isSubmitting } = useRequirementReview();
   
   const handleApprove = () => {
     if (!user?.id) {

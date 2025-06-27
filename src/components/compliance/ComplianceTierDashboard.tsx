@@ -42,7 +42,16 @@ export function ComplianceTierDashboard() {
         ComplianceTierService.getAllUsersComplianceTiers()
       ]);
       
-      console.log('🔧 DEBUG: Statistics loaded:', stats);
+      console.log('🐛 MAP-DEBUG: Raw service results:', {
+        stats: stats,
+        statsType: typeof stats,
+        users: users,
+        usersType: typeof users,
+        usersIsArray: Array.isArray(users),
+        usersLength: users?.length
+      });
+      
+      console.log(' DEBUG: Statistics loaded:', stats);
       console.log('🔧 DEBUG: Statistics structure:', stats ? Object.keys(stats) : 'Stats is null/undefined');
       console.log('🔧 DEBUG: Users loaded:', users);
       console.log('🔧 DEBUG: Users type:', Array.isArray(users) ? 'Array' : typeof users);
@@ -175,8 +184,21 @@ export function ComplianceTierDashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {allUsers.map((user) => (
-              <div key={user.user_id} className="flex items-center justify-between p-3 border rounded-lg">
+            {(() => {
+              console.log('🐛 MAP-DEBUG: About to map allUsers:', {
+                allUsers: allUsers,
+                isArray: Array.isArray(allUsers),
+                length: allUsers?.length,
+                type: typeof allUsers
+              });
+              
+              if (!Array.isArray(allUsers)) {
+                console.error('🔥 MAP-ERROR: allUsers is not an array!', allUsers);
+                return <div className="text-red-500">Error: User data is not properly loaded</div>;
+              }
+              
+              return allUsers.map((user) => (
+                <div key={user.user_id} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center gap-3">
                   <div>
                     <div className="font-medium">{user.display_name}</div>
@@ -206,7 +228,8 @@ export function ComplianceTierDashboard() {
                   </div>
                 </div>
               </div>
-            ))}
+              ));
+            })()}
           </div>
         </CardContent>
       </Card>
