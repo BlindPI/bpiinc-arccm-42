@@ -57,6 +57,14 @@ export function AppRoutes() {
     userId: user?.id
   });
 
+  // Check specific route matching
+  const isComplianceAdminRoute = location.pathname === '/compliance-dashboard/admin';
+  console.log('🐛 ROUTING-DEBUG: Compliance admin route check:', {
+    pathname: location.pathname,
+    matches: isComplianceAdminRoute,
+    exact: location.pathname === '/compliance-dashboard/admin'
+  });
+
   return (
     <Routes>
       <Route path="/auth/signin" element={<SignIn />} />
@@ -240,7 +248,17 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      {/* Compliance & Automation Routes */}
+      {/* DEBUG: Add a simple compliance route to test */}
+      <Route path="/compliance-test" element={
+        <ProtectedRoute>
+          <div>
+            <h1>Compliance Test Route</h1>
+            <p>This is a test route to verify routing works</p>
+          </div>
+        </ProtectedRoute>
+      } />
+
+      {/* Compliance & Automation Routes - MOVED UP */}
       <Route path="/compliance-dashboard/admin" element={
         <ProtectedRoute>
           <ComplianceAdminDashboard />
