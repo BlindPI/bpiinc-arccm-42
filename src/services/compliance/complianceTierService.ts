@@ -99,6 +99,8 @@ export class ComplianceTierService {
   // Core tier info method
   static async getUserTierInfo(userId: string): Promise<UIComplianceTierInfo> {
     try {
+      console.log('🔧 DEBUG: getUserTierInfo called for user:', userId);
+      
       // Get user profile with tier info
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -106,19 +108,38 @@ export class ComplianceTierService {
         .eq('id', userId)
         .single();
       
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('🔥 ERROR: Profile fetch failed:', profileError);
+        throw profileError;
+      }
       if (!profile) throw new Error('User profile not found');
+      
+      console.log('🔧 DEBUG: Profile found:', { role: profile.role, tier: profile.compliance_tier });
+      
+      // Ensure tier has a fallback value
+      const userTier = profile.compliance_tier || 'basic';
       
       // Get template info - using type assertion for new schema
       const { data: template, error: templateError } = await (supabase as any)
         .from('compliance_templates')
         .select('*')
         .eq('role', profile.role)
-        .eq('tier', profile.compliance_tier)
-        .single();
+        .eq('tier', userTier)
+        .maybeSingle();
       
-      if (templateError) throw templateError;
-      if (!template) throw new Error('Template not found');
+      if (templateError) {
+        console.error('🔥 ERROR: Template fetch failed:', templateError);
+        // Continue with fallback instead of throwing
+      }
+      
+      // Use template data if available, otherwise fallback
+      const templateData = template || {
+        template_name: `${profile.role} - ${userTier}`,
+        description: `Default ${userTier} tier for ${profile.role}`,
+        ui_config: this.getDefaultUIConfig()
+      };
+      
+      console.log('🔧 DEBUG: Template data:', templateData);
       
       // Get user's compliance records with requirement details - using type assertion
       const { data: records, error: recordsError } = await (supabase as any)
@@ -137,25 +158,35 @@ export class ComplianceTierService {
         `)
         .eq('user_id', userId);
       
-      if (recordsError) throw recordsError;
+      if (recordsError) {
+        console.error('🔥 ERROR: Records fetch failed:', recordsError);
+        // Continue with empty records instead of throwing
+      }
       
-      // Calculate completion metrics
-      const totalRequirements = records?.length || 0;
-      const completedRequirements = records?.filter((r: any) => r.status === 'approved').length || 0;
+      // Calculate completion metrics with safe fallbacks
+      const safeRecords = records || [];
+      const totalRequirements = safeRecords.length;
+      const completedRequirements = safeRecords.filter((r: any) => r.status === 'approved').length;
       const completionPercentage = totalRequirements > 0
         ? Math.round((completedRequirements / totalRequirements) * 100)
         : 0;
       
+      console.log('🔧 DEBUG: Completion metrics:', {
+        total: totalRequirements,
+        completed: completedRequirements,
+        percentage: completionPercentage
+      });
+      
       return {
         user_id: userId,
         role: profile.role as 'AP' | 'IC' | 'IP' | 'IT',
-        tier: profile.compliance_tier as 'basic' | 'robust',
-        template_name: template.template_name,
-        description: template.description,
+        tier: userTier as 'basic' | 'robust',
+        template_name: templateData.template_name,
+        description: templateData.description,
         requirements_count: totalRequirements,
         completed_requirements: completedRequirements,
         completion_percentage: completionPercentage,
-        ui_config: template.ui_config || this.getDefaultUIConfig(),
+        ui_config: templateData.ui_config || this.getDefaultUIConfig(),
         next_requirement: null, // Will be populated by getUIComplianceTierInfo
         can_advance_tier: false, // Will be calculated by getUIComplianceTierInfo
       };
@@ -465,29 +496,58 @@ export class ComplianceTierService {
   // Get all users' compliance tier information
   static async getAllUsersComplianceTiers(): Promise<UIComplianceTierInfo[]> {
     try {
+      console.log('🔧 DEBUG: Getting all users compliance tiers...');
+      
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select('id, role, compliance_tier, display_name')
         .not('compliance_tier', 'is', null);
 
-      if (error) throw error;
+      if (error) {
+        console.error('🔥 ERROR: Failed to fetch profiles:', error);
+        throw error;
+      }
 
-      // Get tier info for each user
+      console.log('🔧 DEBUG: Found profiles:', profiles?.length || 0);
+
+      // Get tier info for each user with better error handling
       const userTierInfos = await Promise.all(
         (profiles || []).map(async (profile) => {
           try {
-            return await this.getUserTierInfo(profile.id);
+            const tierInfo = await this.getUserTierInfo(profile.id);
+            // Ensure tier is properly set
+            if (!tierInfo.tier) {
+              tierInfo.tier = 'basic';
+            }
+            return tierInfo;
           } catch (error) {
-            console.warn(`Failed to get tier info for user ${profile.id}:`, error);
-            return null;
+            console.warn(`🔥 WARN: Failed to get tier info for user ${profile.id}:`, error);
+            // Return a fallback object instead of null
+            return {
+              user_id: profile.id,
+              role: profile.role as 'AP' | 'IC' | 'IP' | 'IT',
+              tier: (profile.compliance_tier || 'basic') as 'basic' | 'robust',
+              template_name: `${profile.role} - ${profile.compliance_tier || 'basic'}`,
+              description: 'Fallback tier information',
+              requirements_count: 0,
+              completed_requirements: 0,
+              completion_percentage: 0,
+              ui_config: this.getDefaultUIConfig(),
+              next_requirement: null,
+              can_advance_tier: false
+            };
           }
         })
       );
 
-      // Filter out failed requests
-      return userTierInfos.filter(info => info !== null) as UIComplianceTierInfo[];
+      // Filter out any remaining null values and ensure all have valid tier property
+      const validTierInfos = userTierInfos.filter(info => info !== null && info.tier) as UIComplianceTierInfo[];
+      
+      console.log('🔧 DEBUG: Valid tier infos:', validTierInfos.length);
+      
+      return validTierInfos;
     } catch (error) {
-      console.error('Error getting all users compliance tiers:', error);
+      console.error('🔥 ERROR: getAllUsersComplianceTiers failed:', error);
       return [];
     }
   }

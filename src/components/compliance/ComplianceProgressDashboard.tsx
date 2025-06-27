@@ -88,7 +88,7 @@ export function ComplianceProgressDashboard() {
     if (!progressData?.byType) return [];
     
     return Object.entries(progressData.byType).map(([type, data]) => ({
-      name: type.charAt(0).toUpperCase() + type.slice(1),
+      name: type ? type.charAt(0).toUpperCase() + type.slice(1) : 'Unknown',
       completed: data.completed,
       remaining: data.total - data.completed,
     }));

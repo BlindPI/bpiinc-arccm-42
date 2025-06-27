@@ -20,10 +20,10 @@ export function ComplianceTierDashboard() {
   });
   const [allUsers, setAllUsers] = useState<Array<{
     user_id: string;
-    display_name: string;
-    email: string;
+    display_name?: string;
+    email?: string;
     role: string;
-    compliance_tier: 'basic' | 'robust';
+    tier: 'basic' | 'robust';
     completion_percentage: number;
   }>>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,15 +35,32 @@ export function ComplianceTierDashboard() {
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
+      console.log('🔧 DEBUG: Loading dashboard data...');
+      
       const [stats, users] = await Promise.all([
         ComplianceTierService.getComplianceTierStatistics(),
         ComplianceTierService.getAllUsersComplianceTiers()
       ]);
       
+      console.log('🔧 DEBUG: Statistics loaded:', stats);
+      console.log('🔧 DEBUG: Users loaded:', users);
+      console.log('🔧 DEBUG: Users with missing tier:',
+        users.filter(user => !user || !user.tier));
+      
+      // Transform UIComplianceTierInfo to expected format
+      const transformedUsers = users.map(user => ({
+        user_id: user.user_id,
+        display_name: user.user_id, // Fallback since UIComplianceTierInfo doesn't have display_name
+        email: user.user_id, // Fallback since UIComplianceTierInfo doesn't have email
+        role: user.role,
+        tier: user.tier,
+        completion_percentage: user.completion_percentage
+      }));
+      
       setStatistics(stats);
-      setAllUsers(users);
+      setAllUsers(transformedUsers);
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      console.error('🔥 ERROR: Dashboard data loading failed:', error);
     } finally {
       setIsLoading(false);
     }
@@ -154,16 +171,16 @@ export function ComplianceTierDashboard() {
                 </div>
                 
                 <div className="flex items-center gap-3">
-                  <Badge 
-                    variant="outline" 
-                    className={user.compliance_tier === 'robust' ? 'bg-green-50' : 'bg-blue-50'}
+                  <Badge
+                    variant="outline"
+                    className={user.tier === 'robust' ? 'bg-green-50' : 'bg-blue-50'}
                   >
-                    {user.compliance_tier === 'robust' ? (
+                    {user.tier === 'robust' ? (
                       <Shield className="h-3 w-3 mr-1" />
                     ) : (
                       <FileText className="h-3 w-3 mr-1" />
                     )}
-                    {user.compliance_tier.charAt(0).toUpperCase() + user.compliance_tier.slice(1)}
+                    {user.tier?.charAt(0).toUpperCase() + user.tier?.slice(1) || 'Unknown'}
                   </Badge>
                   
                   <div className="flex items-center gap-2 min-w-[100px]">
