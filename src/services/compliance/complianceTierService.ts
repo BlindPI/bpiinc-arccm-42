@@ -114,7 +114,13 @@ export class ComplianceTierService {
       }
       if (!profile) throw new Error('User profile not found');
       
-      console.log('🔧 DEBUG: Profile found:', { role: profile.role, tier: profile.compliance_tier });
+      console.log('🔧 DEBUG: Profile found:', {
+        id: profile.id,
+        role: profile.role,
+        tier: profile.compliance_tier,
+        display_name: profile.display_name,
+        has_display_name: !!profile.display_name
+      });
       
       // Ensure tier has a fallback value
       const userTier = profile.compliance_tier || 'basic';
@@ -478,6 +484,7 @@ export class ComplianceTierService {
         lastUpdated: new Date().toISOString()
       };
 
+      console.log('🔧 DEBUG: getComplianceTierStatistics returning:', stats);
       return stats;
     } catch (error) {
       console.error('Error getting compliance tier statistics:', error);

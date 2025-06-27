@@ -43,7 +43,9 @@ export function ComplianceTierDashboard() {
       ]);
       
       console.log('🔧 DEBUG: Statistics loaded:', stats);
+      console.log('🔧 DEBUG: Statistics structure:', Object.keys(stats));
       console.log('🔧 DEBUG: Users loaded:', users);
+      console.log('🔧 DEBUG: First user structure:', users[0] ? Object.keys(users[0]) : 'No users');
       console.log('🔧 DEBUG: Users with missing tier:',
         users.filter(user => !user || !user.tier));
       
