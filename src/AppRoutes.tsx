@@ -42,6 +42,8 @@ import AuthorizedProviders from '@/pages/AuthorizedProviders';
 import ModernTeams from '@/pages/ModernTeams';
 import CRMDiagnostics from '@/pages/CRMDiagnostics';
 import EmailWorkflowsPage from '@/app/crm/email-workflows/page';
+import ComplianceAdminDashboard from '@/pages/ComplianceAdminDashboard';
+import ComplianceProviderDashboard from '@/pages/ComplianceProviderDashboard';
 
 export function AppRoutes() {
   const { user } = useAuth();
@@ -239,6 +241,18 @@ export function AppRoutes() {
       } />
 
       {/* Compliance & Automation Routes */}
+      <Route path="/compliance-dashboard/admin" element={
+        <ProtectedRoute>
+          <ComplianceAdminDashboard />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/compliance-dashboard/provider" element={
+        <ProtectedRoute>
+          <ComplianceProviderDashboard />
+        </ProtectedRoute>
+      } />
+
       <Route path="/automation" element={
         <ProtectedRoute>
           <Automation />
