@@ -270,86 +270,115 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({
   const {
     data: selectedMemberCompliance,
     isLoading: memberComplianceLoading,
-    refetch: refetchMemberCompliance
+    refetch: refetchMemberCompliance,
+    error: memberComplianceError
   } = useQuery({
-    queryKey: ['member-compliance-details', selectedMember?.user_id],
+    queryKey: ['member-compliance-details', selectedMember?.user_id, selectedMember?.member_name],
     queryFn: async () => {
-      if (!selectedMember?.user_id) return null;
-      console.log('🐛 DEBUG: Loading detailed compliance for member:', selectedMember.member_name);
-      console.log('🐛 DEBUG: Query trigger count for user_id:', selectedMember.user_id);
-      console.log('🐛 DEBUG: Current selectedMember state:', JSON.stringify(selectedMember, null, 2));
-
-      // Import services
-      const {
-        ComplianceService
-      } = await import('@/services/compliance/complianceService');
-      const {
-        ComplianceRequirementsService
-      } = await import('@/services/compliance/complianceRequirementsService');
-
-      // Get user's existing compliance records
-      const complianceRecords = await ComplianceService.getUserComplianceRecords(selectedMember.user_id);
-
-      // Get the actual USER ROLE (IT/IP/IC/AP) from the profiles table, not the team role
-      // member_role is the TEAM ROLE (MEMBER/ADMIN), we need the USER ROLE for compliance
-      const {
-        data: userProfile,
-        error: profileError
-      } = await supabase.from('profiles').select('role').eq('id', selectedMember.user_id).single();
-      if (profileError) {
-        console.error('Error fetching user profile:', profileError);
+      if (!selectedMember?.user_id) {
+        console.log('🐛 DEBUG: No selectedMember user_id, returning null');
         return null;
       }
+      
+      console.log('🐛 DEBUG: Loading detailed compliance for member:', selectedMember.member_name);
+      console.log('🐛 DEBUG: Query trigger for user_id:', selectedMember.user_id);
 
-      // Use the actual USER ROLE (IT/IP/IC/AP) for compliance requirements
-      const complianceRole = userProfile?.role;
-      console.log(`🔍 User ${selectedMember.member_name}: Team Role = ${selectedMember.member_role}, User Role = ${complianceRole}`);
-      const roleTemplate = ComplianceRequirementsService.getRequirementsTemplate(complianceRole as 'AP' | 'IC' | 'IP' | 'IT');
+      try {
+        // Import services with error handling
+        const { ComplianceService } = await import('@/services/compliance/complianceService');
+        const { ComplianceRequirementsService } = await import('@/services/compliance/complianceRequirementsService');
 
-      // Get role-based metrics from database
-      const roleMetrics = await ComplianceService.getComplianceMetricsForRole(complianceRole);
-      console.log(`🔍 Found ${roleMetrics.length} role requirements and ${complianceRecords.length} existing records for role ${complianceRole}`);
+        // Get user's existing compliance records with error handling
+        let complianceRecords = [];
+        try {
+          complianceRecords = await ComplianceService.getUserComplianceRecords(selectedMember.user_id);
+          console.log('🐛 DEBUG: Found', complianceRecords.length, 'existing compliance records');
+        } catch (error) {
+          console.error('🐛 DEBUG: Error fetching compliance records:', error);
+          complianceRecords = [];
+        }
 
-      // Combine template requirements with existing records
-      const requirementsWithStatus = roleTemplate?.requirements.map(req => {
-        const existingRecord = complianceRecords.find(record => record.compliance_metrics?.name === req.name);
-        const correspondingMetric = roleMetrics.find(metric => metric.name === req.name);
+        // Get the actual USER ROLE with better error handling
+        const { data: userProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', selectedMember.user_id)
+          .single();
+          
+        if (profileError) {
+          console.error('🐛 DEBUG: Error fetching user profile:', profileError);
+          throw new Error(`Failed to fetch user profile: ${profileError.message}`);
+        }
+
+        if (!userProfile?.role) {
+          console.error('🐛 DEBUG: No role found in user profile');
+          throw new Error('No role found in user profile');
+        }
+
+        const complianceRole = userProfile.role;
+        console.log(`🔍 User ${selectedMember.member_name}: Team Role = ${selectedMember.member_role}, User Role = ${complianceRole}`);
+
+        // Get role template with error handling
+        let roleTemplate = null;
+        try {
+          roleTemplate = ComplianceRequirementsService.getRequirementsByTemplate(complianceRole as 'AP' | 'IC' | 'IP' | 'IT');
+          console.log('🐛 DEBUG: Role template found:', !!roleTemplate);
+        } catch (error) {
+          console.error('🐛 DEBUG: Error getting role template:', error);
+        }
+
+        // Get role-based metrics with error handling
+        let roleMetrics = [];
+        try {
+          roleMetrics = await ComplianceService.getComplianceMetricsForRole(complianceRole);
+          console.log(`🐛 DEBUG: Found ${roleMetrics.length} role requirements`);
+        } catch (error) {
+          console.error('🐛 DEBUG: Error fetching role metrics:', error);
+        }
+
+        // Combine template requirements with existing records
+        const requirementsWithStatus = roleTemplate?.requirements?.map(req => {
+          const existingRecord = complianceRecords.find(record => record.compliance_metrics?.name === req.name);
+          const correspondingMetric = roleMetrics.find(metric => metric.name === req.name);
+          return {
+            name: req.name,
+            description: req.description,
+            category: req.category,
+            measurement_type: req.measurement_type,
+            target_value: req.target_value,
+            weight: req.weight,
+            is_required: req.is_required,
+            renewal_period_days: req.renewal_period_days,
+            document_requirements: req.document_requirements,
+            metric_id: correspondingMetric?.id,
+            current_value: existingRecord?.current_value,
+            compliance_status: existingRecord?.compliance_status || 'pending',
+            last_checked_at: existingRecord?.last_checked_at,
+            next_check_due: existingRecord?.next_check_due,
+            notes: existingRecord?.notes,
+            record_id: existingRecord?.id
+          };
+        }) || [];
+
+        console.log('🐛 DEBUG: Member compliance query completed successfully');
         return {
-          name: req.name,
-          description: req.description,
-          category: req.category,
-          measurement_type: req.measurement_type,
-          target_value: req.target_value,
-          weight: req.weight,
-          is_required: req.is_required,
-          renewal_period_days: req.renewal_period_days,
-          document_requirements: req.document_requirements,
-          metric_id: correspondingMetric?.id,
-          current_value: existingRecord?.current_value,
-          compliance_status: existingRecord?.compliance_status || 'pending',
-          last_checked_at: existingRecord?.last_checked_at,
-          next_check_due: existingRecord?.next_check_due,
-          notes: existingRecord?.notes,
-          record_id: existingRecord?.id
+          member: selectedMember,
+          complianceRole,
+          roleTemplate,
+          requirementsWithStatus,
+          hasExistingRecords: complianceRecords.length > 0
         };
-      }) || [];
-      return {
-        member: selectedMember,
-        complianceRole,
-        roleTemplate,
-        requirementsWithStatus,
-        hasExistingRecords: complianceRecords.length > 0
-      };
+      } catch (error) {
+        console.error('🐛 DEBUG: Member compliance query failed:', error);
+        throw error; // Re-throw to let React Query handle it
+      }
     },
-    enabled: !!selectedMember?.user_id,
+    enabled: !!selectedMember?.user_id && !!selectedMember?.member_name,
     refetchOnWindowFocus: false,
-    staleTime: 30000, // 30 seconds to prevent excessive refetching
-    onSuccess: (data) => {
-      console.log('🐛 DEBUG: Member compliance query completed successfully');
-    },
-    onError: (error) => {
-      console.error('🐛 DEBUG: Member compliance query failed:', error);
-    }
+    staleTime: 60000, // 1 minute to prevent excessive refetching
+    gcTime: 300000, // 5 minutes cache (gcTime replaces cacheTime in newer React Query)
+    retry: 1, // Only retry once on failure
+    retryDelay: 2000 // 2 second delay between retries
   });
 
   // Loading state
@@ -415,10 +444,10 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({
       const {
         ComplianceRequirementsService
       } = await import('@/services/compliance/complianceRequirementsService');
-      await ComplianceRequirementsService.initializeDefaultRequirements();
+      await ComplianceRequirementsService.initializeTierRequirements();
 
-      // Then assign requirements to the user
-      await ComplianceRequirementsService.assignRoleRequirementsToUser(selectedMember.user_id, complianceRole);
+      // Then assign requirements to the user (using available method)
+      await ComplianceRequirementsService.createRequirementForUser(selectedMember.user_id, complianceRole);
 
       // Refresh the member compliance data
       await refetchMemberCompliance();
