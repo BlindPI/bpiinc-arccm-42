@@ -2,103 +2,102 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-export interface TierAnalyticsData {
-  distribution: Array<{ name: string; value: number; }>;
-  performance: Array<{ name: string; basic: number; robust: number; }>;
-  metrics: Array<{ metric: string; basic: number; robust: number; }>;
-  completionTime: Array<{ name: string; basic: number; robust: number; }>;
+export interface ComplianceAnalyticsData {
+  distribution: Array<{
+    name: string;
+    value: number;
+  }>;
+  completionTime: Array<{
+    name: string;
+    basic: number;
+    robust: number;
+  }>;
+  metrics: Array<{
+    metric: string;
+    basic: number;
+    robust: number;
+  }>;
+  performance: Array<{
+    name: string;
+    basic: number;
+    robust: number;
+  }>;
   total: number;
 }
 
 export function useComplianceTierAnalytics() {
   return useQuery({
     queryKey: ['compliance-tier-analytics'],
-    queryFn: async (): Promise<TierAnalyticsData> => {
+    queryFn: async (): Promise<ComplianceAnalyticsData> => {
       try {
-        // Get real tier distribution from profiles
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('compliance_tier');
-
-        if (profileError) throw profileError;
-
-        const basicUsers = profileData?.filter(p => p.compliance_tier === 'basic') || [];
-        const robustUsers = profileData?.filter(p => p.compliance_tier === 'robust') || [];
-        const total = profileData?.length || 0;
-        
-        const distribution = [
-          { name: 'Basic Tier', value: basicUsers.length },
-          { name: 'Robust Tier', value: robustUsers.length }
-        ];
-
-        // Get real completion statistics if available
-        let completionStats;
-        try {
-          const { data: statsData, error: statsError } = await supabase
-            .rpc('get_compliance_completion_stats');
-          
-          if (statsError) {
-            console.warn('Completion stats function not available:', statsError);
-            completionStats = null;
-          } else {
-            completionStats = statsData;
-          }
-        } catch (err) {
-          console.warn('Error getting completion stats:', err);
-          completionStats = null;
+        // Get tier distribution
+        const { data: tierData, error: tierError } = await supabase.rpc('get_tier_distribution');
+        if (tierError) {
+          console.error('Tier distribution error:', tierError);
+          throw tierError;
         }
 
-        // Build performance data based on real stats or reasonable defaults
-        const performance = Array.from({ length: 6 }, (_, i) => {
-          const basicRate = completionStats?.find(s => s.tier === 'basic')?.avg_completion_percentage || 75;
-          const robustRate = completionStats?.find(s => s.tier === 'robust')?.avg_completion_percentage || 90;
-          
-          return {
-            name: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'][i],
-            basic: Math.max(50, basicRate + (Math.random() * 10 - 5)),
-            robust: Math.max(70, robustRate + (Math.random() * 10 - 5))
-          };
-        });
+        // Get compliance analytics
+        const { data: analyticsData, error: analyticsError } = await supabase.rpc('get_compliance_analytics');
+        if (analyticsError) {
+          console.error('Analytics error:', analyticsError);
+          throw analyticsError;
+        }
 
-        // Build metrics comparison based on real data
-        const metrics = [
-          { metric: 'Documentation', basic: basicUsers.length > 0 ? 85 : 0, robust: robustUsers.length > 0 ? 95 : 0 },
-          { metric: 'Training', basic: basicUsers.length > 0 ? 70 : 0, robust: robustUsers.length > 0 ? 90 : 0 },
-          { metric: 'Compliance', basic: basicUsers.length > 0 ? 75 : 0, robust: robustUsers.length > 0 ? 88 : 0 },
-          { metric: 'Assessment', basic: basicUsers.length > 0 ? 68 : 0, robust: robustUsers.length > 0 ? 85 : 0 },
-          { metric: 'Certification', basic: basicUsers.length > 0 ? 60 : 0, robust: robustUsers.length > 0 ? 80 : 0 }
+        console.log('Raw tier data:', tierData);
+        console.log('Raw analytics data:', analyticsData);
+
+        // Transform data for charts
+        const distribution = (tierData || []).map((tier: any) => ({
+          name: tier.tier_name === 'unassigned' ? 'Unassigned' : 
+                tier.tier_name === 'basic' ? 'Basic Tier' : 'Robust Tier',
+          value: Number(tier.user_count) || 0
+        }));
+
+        const completionTime = [
+          {
+            name: 'Overall Completion',
+            basic: tierData?.find((t: any) => t.tier_name === 'basic')?.completion_percentage || 0,
+            robust: tierData?.find((t: any) => t.tier_name === 'robust')?.completion_percentage || 0
+          }
         ];
 
-        const completionTime = Array.from({ length: 6 }, (_, i) => ({
-          name: `Week ${i + 1}`,
-          basic: Math.min(100, 15 + (i * 15) + (Math.random() * 10)),
-          robust: Math.min(100, 10 + (i * 15) + (Math.random() * 10))
+        const metrics = (analyticsData || []).map((metric: any) => ({
+          metric: metric.metric_name || 'Unknown',
+          basic: Number(metric.basic_completion_rate) || 0,
+          robust: Number(metric.robust_completion_rate) || 0
         }));
+
+        const performance = [
+          {
+            name: 'Completion Rate',
+            basic: metrics.reduce((sum, m) => sum + m.basic, 0) / Math.max(metrics.length, 1),
+            robust: metrics.reduce((sum, m) => sum + m.robust, 0) / Math.max(metrics.length, 1)
+          },
+          {
+            name: 'User Coverage',
+            basic: Number(analyticsData?.[0]?.total_users_basic) || 0,
+            robust: Number(analyticsData?.[0]?.total_users_robust) || 0
+          }
+        ];
+
+        const total = distribution.reduce((sum, item) => sum + item.value, 0);
 
         return {
           distribution,
-          performance,
-          metrics,
           completionTime,
+          metrics,
+          performance,
           total
         };
       } catch (error) {
-        console.error('Error fetching tier analytics:', error);
-        
-        // Return minimal data structure if error occurs
-        return {
-          distribution: [
-            { name: 'Basic Tier', value: 0 },
-            { name: 'Robust Tier', value: 0 }
-          ],
-          performance: [],
-          metrics: [],
-          completionTime: [],
-          total: 0
-        };
+        console.error('Error fetching compliance tier analytics:', error);
+        throw error;
       }
     },
-    refetchInterval: 300000,
-    staleTime: 120000
+    refetchInterval: 300000, // Refresh every 5 minutes
+    staleTime: 120000, // Consider data stale after 2 minutes
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)
   });
 }

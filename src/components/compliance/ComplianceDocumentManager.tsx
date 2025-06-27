@@ -5,156 +5,135 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { 
-  FileText, 
-  Upload, 
-  Download, 
-  Eye, 
-  Trash2, 
-  Search,
-  Filter,
-  CheckCircle,
-  XCircle,
-  Clock
-} from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { FileText, Search, Filter, Download, Eye, Trash2, Upload } from 'lucide-react';
 
 interface ComplianceDocument {
   id: string;
   user_id: string;
-  document_name: string;
+  user_name: string;
+  metric_name: string;
   document_type: string;
+  file_name?: string;
   file_url?: string;
-  file_size?: number;
-  upload_date: string;
-  status: 'pending' | 'approved' | 'rejected';
-  reviewed_by?: string;
+  status: string;
+  submitted_at: string;
   reviewed_at?: string;
-  review_notes?: string;
-  user_name?: string;
+  reviewer_notes?: string;
 }
 
 export function ComplianceDocumentManager() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [selectedDocument, setSelectedDocument] = useState<ComplianceDocument | null>(null);
-  
-  const queryClient = useQueryClient();
 
-  const { data: documents, isLoading } = useQuery({
+  const { data: documents, isLoading, error } = useQuery({
     queryKey: ['compliance-documents', searchTerm, statusFilter],
     queryFn: async () => {
+      // Query user compliance records with document information
       let query = supabase
-        .from('compliance_documents')
+        .from('user_compliance_records')
         .select(`
-          *,
-          profiles!inner(display_name, email)
+          id,
+          user_id,
+          compliance_status,
+          current_value,
+          submitted_at,
+          reviewed_at,
+          review_notes,
+          profiles!user_id (display_name),
+          compliance_metrics!metric_id (name, category, measurement_type)
         `)
-        .order('upload_date', { ascending: false });
+        .order('submitted_at', { ascending: false });
 
       if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
+        query = query.eq('compliance_status', statusFilter);
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Error fetching compliance documents:', error);
+        return [];
+      }
 
-      return data.map(doc => ({
-        ...doc,
-        user_name: doc.profiles?.display_name || doc.profiles?.email || 'Unknown User'
-      }));
+      // Transform the data to match our interface
+      return (data || []).map((record: any) => ({
+        id: record.id,
+        user_id: record.user_id,
+        user_name: record.profiles?.display_name || 'Unknown User',
+        metric_name: record.compliance_metrics?.name || 'Unknown Metric',
+        document_type: record.compliance_metrics?.measurement_type || 'document',
+        file_name: record.current_value ? `${record.compliance_metrics?.name || 'document'}.pdf` : null,
+        file_url: null, // Would need to be populated from storage
+        status: record.compliance_status,
+        submitted_at: record.submitted_at,
+        reviewed_at: record.reviewed_at,
+        reviewer_notes: record.review_notes
+      })) as ComplianceDocument[];
     }
   });
 
-  const { mutate: updateDocumentStatus } = useMutation({
-    mutationFn: async ({ 
-      documentId, 
-      status, 
-      notes 
-    }: { 
-      documentId: string; 
-      status: 'approved' | 'rejected'; 
-      notes?: string;
-    }) => {
-      const { error } = await supabase
-        .from('compliance_documents')
-        .update({
-          status,
-          reviewed_at: new Date().toISOString(),
-          reviewed_by: (await supabase.auth.getUser()).data.user?.id,
-          review_notes: notes
-        })
-        .eq('id', documentId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success('Document status updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['compliance-documents'] });
-      setSelectedDocument(null);
-    },
-    onError: (error) => {
-      toast.error(`Failed to update document: ${error.message}`);
-    }
-  });
-
-  const { mutate: deleteDocument } = useMutation({
-    mutationFn: async (documentId: string) => {
-      const { error } = await supabase
-        .from('compliance_documents')
-        .delete()
-        .eq('id', documentId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success('Document deleted successfully');
-      queryClient.invalidateQueries({ queryKey: ['compliance-documents'] });
-    },
-    onError: (error) => {
-      toast.error(`Failed to delete document: ${error.message}`);
-    }
-  });
+  const filteredDocuments = documents?.filter(doc => {
+    const matchesSearch = doc.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         doc.metric_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
+  }) || [];
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Approved</Badge>;
-      case 'rejected':
-        return <Badge className="bg-red-100 text-red-800"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
+        return <Badge className="bg-green-100 text-green-800 border-green-300">Approved</Badge>;
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">Pending</Badge>;
+      case 'rejected':
+        return <Badge className="bg-red-100 text-red-800 border-red-300">Rejected</Badge>;
+      case 'overdue':
+        return <Badge className="bg-red-100 text-red-800 border-red-300">Overdue</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline">Unknown</Badge>;
     }
   };
-
-  const filteredDocuments = documents?.filter(doc => {
-    const matchesSearch = doc.document_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doc.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doc.document_type.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
-  }) || [];
 
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="h-32 bg-gray-100 rounded animate-pulse" />
-        <div className="h-64 bg-gray-100 rounded animate-pulse" />
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-16 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center text-red-500">
+            <FileText className="h-8 w-8 mx-auto mb-2" />
+            <p>Failed to load compliance documents</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {error.message}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header with Search and Filters */}
+      {/* Header with Controls */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Document Management</h3>
+          <h3 className="text-lg font-semibold">Compliance Document Management</h3>
           <p className="text-sm text-muted-foreground">
-            Manage and review compliance documents system-wide
+            Review and manage user-submitted compliance documents
           </p>
         </div>
         <div className="flex gap-2">
@@ -176,21 +155,87 @@ export function ComplianceDocumentManager() {
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
             <option value="rejected">Rejected</option>
+            <option value="overdue">Overdue</option>
           </select>
         </div>
       </div>
 
-      {/* Document Statistics */}
+      {/* Documents Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Compliance Documents ({filteredDocuments.length})
+          </CardTitle>
+          <CardDescription>
+            Manage user-submitted compliance documents and evidence
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {filteredDocuments.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No compliance documents found</p>
+              <p className="text-sm">Documents will appear here when users submit compliance evidence</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Compliance Metric</TableHead>
+                  <TableHead>Document Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Submitted</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredDocuments.map((doc) => (
+                  <TableRow key={doc.id}>
+                    <TableCell className="font-medium">
+                      {doc.user_name}
+                    </TableCell>
+                    <TableCell>{doc.metric_name}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        <span className="capitalize">{doc.document_type}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{getStatusBadge(doc.status)}</TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {new Date(doc.submitted_at).toLocaleDateString()}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm">
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                        {doc.file_url && (
+                          <Button variant="outline" size="sm">
+                            <Download className="h-4 w-4 mr-1" />
+                            Download
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Summary Stats */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{documents?.length || 0}</div>
-            <p className="text-xs text-muted-foreground">Total Documents</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-yellow-600">
+            <div className="text-2xl font-bold">
               {documents?.filter(d => d.status === 'pending').length || 0}
             </div>
             <p className="text-xs text-muted-foreground">Pending Review</p>
@@ -212,109 +257,15 @@ export function ComplianceDocumentManager() {
             <p className="text-xs text-muted-foreground">Rejected</p>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Documents Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Compliance Documents
-          </CardTitle>
-          <CardDescription>
-            Review and manage all compliance-related documents
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {filteredDocuments.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No documents found matching your criteria
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-2xl font-bold text-orange-600">
+              {documents?.filter(d => d.status === 'overdue').length || 0}
             </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Document</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Upload Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredDocuments.map((document) => (
-                  <TableRow key={document.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{document.document_name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{document.user_name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{document.document_type}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(document.upload_date).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(document.status)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        {document.file_url && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => window.open(document.file_url, '_blank')}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {document.status === 'pending' && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-green-600 hover:text-green-700"
-                              onClick={() => updateDocumentStatus({
-                                documentId: document.id,
-                                status: 'approved'
-                              })}
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-600 hover:text-red-700"
-                              onClick={() => updateDocumentStatus({
-                                documentId: document.id,
-                                status: 'rejected'
-                              })}
-                            >
-                              <XCircle className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-600 hover:text-red-700"
-                          onClick={() => deleteDocument(document.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+            <p className="text-xs text-muted-foreground">Overdue</p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
