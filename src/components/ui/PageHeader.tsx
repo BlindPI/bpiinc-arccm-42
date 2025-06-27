@@ -8,9 +8,10 @@ interface PageHeaderProps {
   subtitle?: string;
   badge?: {
     text: string;
-    variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'info';
+    variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'info' | 'warning';
   };
   children?: React.ReactNode;
+  actions?: React.ReactNode;
 }
 
 export const PageHeader: React.FC<PageHeaderProps> = ({
@@ -18,14 +19,17 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   title,
   subtitle,
   badge,
-  children
+  children,
+  actions
 }) => {
   const getBadgeVariant = (variant: string) => {
     switch (variant) {
       case 'success':
-        return 'bg-green-100 text-green-800 hover:bg-green-200';
+        return 'success';
       case 'info':
-        return 'bg-blue-100 text-blue-800 hover:bg-blue-200';
+        return 'info';
+      case 'warning':
+        return 'warning';
       default:
         return variant as 'default' | 'secondary' | 'destructive' | 'outline';
     }
@@ -41,10 +45,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
               {title}
             </h1>
             {badge && (
-              <Badge 
-                variant={typeof getBadgeVariant(badge.variant) === 'string' ? 'default' : getBadgeVariant(badge.variant)}
-                className={typeof getBadgeVariant(badge.variant) === 'string' ? getBadgeVariant(badge.variant) : ''}
-              >
+              <Badge variant={getBadgeVariant(badge.variant)}>
                 {badge.text}
               </Badge>
             )}
@@ -56,9 +57,9 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           )}
         </div>
       </div>
-      {children && (
+      {(children || actions) && (
         <div className="flex-shrink-0">
-          {children}
+          {actions || children}
         </div>
       )}
     </div>

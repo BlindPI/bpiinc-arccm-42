@@ -5,6 +5,9 @@ export interface ConfigurationValidation {
   warnings: string[];
 }
 
+// Export alias for backward compatibility
+export type ConfigurationValidationResult = ConfigurationValidation;
+
 export const validateSupabaseConfiguration = (): ConfigurationValidation => {
   const errors: string[] = [];
   const warnings: string[] = [];
