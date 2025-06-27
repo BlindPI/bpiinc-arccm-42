@@ -2422,6 +2422,62 @@ export type Database = {
           },
         ]
       }
+      compliance_activity_log: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          requirement_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          requirement_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          requirement_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_activity_log_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_activity_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_activity_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_activity_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compliance_assessments: {
         Row: {
           assessment_name: string
@@ -2857,6 +2913,8 @@ export type Database = {
           is_active: boolean | null
           measurement_type: string
           name: string
+          required_for_basic: boolean | null
+          required_for_robust: boolean | null
           required_for_roles: string[] | null
           target_value: Json | null
           updated_at: string | null
@@ -2872,6 +2930,8 @@ export type Database = {
           is_active?: boolean | null
           measurement_type?: string
           name: string
+          required_for_basic?: boolean | null
+          required_for_robust?: boolean | null
           required_for_roles?: string[] | null
           target_value?: Json | null
           updated_at?: string | null
@@ -2887,6 +2947,8 @@ export type Database = {
           is_active?: boolean | null
           measurement_type?: string
           name?: string
+          required_for_basic?: boolean | null
+          required_for_robust?: boolean | null
           required_for_roles?: string[] | null
           target_value?: Json | null
           updated_at?: string | null
@@ -2918,39 +2980,90 @@ export type Database = {
       }
       compliance_requirements: {
         Row: {
-          applicable_roles: string[] | null
           created_at: string | null
           description: string | null
-          frequency_days: number | null
+          document_required: boolean | null
+          due_days_from_assignment: number | null
           id: string
+          is_active: boolean | null
           is_mandatory: boolean | null
-          requirement_name: string
+          name: string
+          points_value: number | null
+          renewal_frequency_months: number | null
           requirement_type: string
           updated_at: string | null
         }
         Insert: {
-          applicable_roles?: string[] | null
           created_at?: string | null
           description?: string | null
-          frequency_days?: number | null
+          document_required?: boolean | null
+          due_days_from_assignment?: number | null
           id?: string
+          is_active?: boolean | null
           is_mandatory?: boolean | null
-          requirement_name: string
+          name: string
+          points_value?: number | null
+          renewal_frequency_months?: number | null
           requirement_type: string
           updated_at?: string | null
         }
         Update: {
-          applicable_roles?: string[] | null
           created_at?: string | null
           description?: string | null
-          frequency_days?: number | null
+          document_required?: boolean | null
+          due_days_from_assignment?: number | null
           id?: string
+          is_active?: boolean | null
           is_mandatory?: boolean | null
-          requirement_name?: string
+          name?: string
+          points_value?: number | null
+          renewal_frequency_months?: number | null
           requirement_type?: string
           updated_at?: string | null
         }
         Relationships: []
+      }
+      compliance_requirements_templates: {
+        Row: {
+          created_at: string | null
+          custom_due_days: number | null
+          id: string
+          is_mandatory: boolean | null
+          requirement_id: string | null
+          template_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          custom_due_days?: number | null
+          id?: string
+          is_mandatory?: boolean | null
+          requirement_id?: string | null
+          template_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          custom_due_days?: number | null
+          id?: string
+          is_mandatory?: boolean | null
+          requirement_id?: string | null
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_requirements_templates_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_requirements_templates_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       compliance_risk_scores: {
         Row: {
@@ -3066,34 +3179,152 @@ export type Database = {
       }
       compliance_templates: {
         Row: {
+          color_scheme: string | null
           created_at: string | null
           description: string | null
+          icon_name: string | null
           id: string
           is_active: boolean | null
           role: string
           template_name: string
           tier: string
+          ui_config: Json | null
           updated_at: string | null
         }
         Insert: {
+          color_scheme?: string | null
           created_at?: string | null
           description?: string | null
+          icon_name?: string | null
           id?: string
           is_active?: boolean | null
           role: string
           template_name: string
           tier: string
+          ui_config?: Json | null
           updated_at?: string | null
         }
         Update: {
+          color_scheme?: string | null
           created_at?: string | null
           description?: string | null
+          icon_name?: string | null
           id?: string
           is_active?: boolean | null
           role?: string
           template_name?: string
           tier?: string
+          ui_config?: Json | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      compliance_tier_history: {
+        Row: {
+          change_reason: string | null
+          changed_by: string | null
+          created_at: string | null
+          id: string
+          new_tier: string
+          old_tier: string | null
+          requirements_affected: number | null
+          user_id: string | null
+        }
+        Insert: {
+          change_reason?: string | null
+          changed_by?: string | null
+          created_at?: string | null
+          id?: string
+          new_tier: string
+          old_tier?: string | null
+          requirements_affected?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          change_reason?: string | null
+          changed_by?: string | null
+          created_at?: string | null
+          id?: string
+          new_tier?: string
+          old_tier?: string | null
+          requirements_affected?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_tier_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_tier_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_tier_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_tier_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_tier_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_tier_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compliance_tiers: {
+        Row: {
+          assigned_at: string | null
+          completed_requirements: number | null
+          completion_percentage: number | null
+          id: string
+          last_updated: string | null
+          tier: string
+          total_requirements: number | null
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          completed_requirements?: number | null
+          completion_percentage?: number | null
+          id?: string
+          last_updated?: string | null
+          tier?: string
+          total_requirements?: number | null
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string | null
+          completed_requirements?: number | null
+          completion_percentage?: number | null
+          id?: string
+          last_updated?: string | null
+          tier?: string
+          total_requirements?: number | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -7143,13 +7374,6 @@ export type Database = {
             columns: ["checked_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "member_compliance_status_requirement_id_fkey"
-            columns: ["requirement_id"]
-            isOneToOne: false
-            referencedRelation: "compliance_requirements"
             referencedColumns: ["id"]
           },
           {
@@ -11961,109 +12185,127 @@ export type Database = {
       }
       user_compliance_records: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
+          completion_percentage: number | null
           compliance_status: string | null
           created_at: string | null
-          current_value: Json | null
-          document_count: number | null
+          current_value: string | null
+          due_date: string | null
           id: string
-          last_checked_at: string | null
-          last_document_upload: string | null
           metric_id: string
-          next_check_due: string | null
-          notes: string | null
-          primary_document_id: string | null
+          rejection_reason: string | null
+          requirement_id: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewer_id: string | null
+          status: string | null
+          submission_data: Json | null
+          submitted_at: string | null
+          tier: string | null
+          ui_state: Json | null
           updated_at: string | null
-          user_id: string
-          verified_at: string | null
-          verified_by: string | null
+          user_id: string | null
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          completion_percentage?: number | null
           compliance_status?: string | null
           created_at?: string | null
-          current_value?: Json | null
-          document_count?: number | null
+          current_value?: string | null
+          due_date?: string | null
           id?: string
-          last_checked_at?: string | null
-          last_document_upload?: string | null
-          metric_id: string
-          next_check_due?: string | null
-          notes?: string | null
-          primary_document_id?: string | null
+          metric_id?: string
+          rejection_reason?: string | null
+          requirement_id?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string | null
+          submission_data?: Json | null
+          submitted_at?: string | null
+          tier?: string | null
+          ui_state?: Json | null
           updated_at?: string | null
-          user_id: string
-          verified_at?: string | null
-          verified_by?: string | null
+          user_id?: string | null
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          completion_percentage?: number | null
           compliance_status?: string | null
           created_at?: string | null
-          current_value?: Json | null
-          document_count?: number | null
+          current_value?: string | null
+          due_date?: string | null
           id?: string
-          last_checked_at?: string | null
-          last_document_upload?: string | null
           metric_id?: string
-          next_check_due?: string | null
-          notes?: string | null
-          primary_document_id?: string | null
+          rejection_reason?: string | null
+          requirement_id?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string | null
+          submission_data?: Json | null
+          submitted_at?: string | null
+          tier?: string | null
+          ui_state?: Json | null
           updated_at?: string | null
-          user_id?: string
-          verified_at?: string | null
-          verified_by?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "user_compliance_records_metric_id_fkey"
+            foreignKeyName: "fk_user_compliance_records_metric_id"
             columns: ["metric_id"]
             isOneToOne: false
             referencedRelation: "compliance_metrics"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "user_compliance_records_primary_document_id_fkey"
-            columns: ["primary_document_id"]
-            isOneToOne: false
-            referencedRelation: "compliance_documents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_compliance_records_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "user_compliance_records_approved_by_fkey"
+            columns: ["approved_by"]
             isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
           {
-            foreignKeyName: "user_compliance_records_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "user_compliance_records_approved_by_fkey"
+            columns: ["approved_by"]
             isOneToOne: false
             referencedRelation: "instructor_workload_summary"
             referencedColumns: ["instructor_id"]
           },
           {
-            foreignKeyName: "user_compliance_records_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "user_compliance_records_approved_by_fkey"
+            columns: ["approved_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "user_compliance_records_verified_by_fkey"
-            columns: ["verified_by"]
+            foreignKeyName: "user_compliance_records_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_compliance_records_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
           {
-            foreignKeyName: "user_compliance_records_verified_by_fkey"
-            columns: ["verified_by"]
+            foreignKeyName: "user_compliance_records_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "instructor_workload_summary"
             referencedColumns: ["instructor_id"]
           },
           {
-            foreignKeyName: "user_compliance_records_verified_by_fkey"
-            columns: ["verified_by"]
+            foreignKeyName: "user_compliance_records_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -13474,6 +13716,16 @@ export type Database = {
           total_certificates: number
           active_certificates: number
           growth_rate: number
+        }[]
+      }
+      get_compliance_completion_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          tier: string
+          total_users: number
+          avg_completion_percentage: number
+          total_requirements: number
+          completed_requirements: number
         }[]
       }
       get_compliance_metrics: {
