@@ -106,22 +106,9 @@ export default function ComplianceAdminDashboard() {
 
       {/* Main Dashboard Content - Using REAL Enterprise Components */}
       <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-        {/* System-wide Compliance Overview */}
+        {/* System-wide Compliance Overview - Direct Component */}
         <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                System-wide Compliance Dashboard
-              </CardTitle>
-              <CardDescription>
-                Overview of all users, tiers, and compliance status across the system
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ComplianceTierDashboard />
-            </CardContent>
-          </Card>
+          <ComplianceTierDashboard />
         </div>
 
         {/* Requirement Review Queue */}

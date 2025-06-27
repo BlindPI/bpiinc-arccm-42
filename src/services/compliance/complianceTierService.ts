@@ -611,4 +611,9 @@ export class ComplianceTierService {
 
     return distribution;
   }
+
+  // Alias for getUserTierInfo - some components may call this variation
+  static async getUserComplianceTierInfo(userId: string): Promise<UIComplianceTierInfo> {
+    return await this.getUserTierInfo(userId);
+  }
 }
