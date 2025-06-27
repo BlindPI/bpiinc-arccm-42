@@ -20,6 +20,22 @@ export interface UIComplianceTierInfo {
   next_steps: string[];
 }
 
+export interface ComplianceTierStatistics {
+  totalUsers: number;
+  basicTierUsers: number;
+  robustTierUsers: number;
+  basicCompletionRate: number;
+  robustCompletionRate: number;
+}
+
+export interface UserComplianceTier {
+  userId: string;
+  tier: 'basic' | 'robust';
+  completion_percentage: number;
+  display_name: string;
+  email: string;
+}
+
 export class ComplianceTierService {
   static async getUserTier(userId: string): Promise<ComplianceTierInfo | null> {
     try {
@@ -105,6 +121,80 @@ export class ComplianceTierService {
   static async validateTierSwitch(userId: string, targetTier: 'basic' | 'robust'): Promise<boolean> {
     // Basic validation - always allow for now
     return true;
+  }
+
+  static async getComplianceTierStatistics(): Promise<ComplianceTierStatistics> {
+    try {
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('compliance_tier, id');
+
+      if (error) throw error;
+
+      const totalUsers = profiles?.length || 0;
+      const basicTierUsers = profiles?.filter(p => p.compliance_tier === 'basic').length || 0;
+      const robustTierUsers = profiles?.filter(p => p.compliance_tier === 'robust').length || 0;
+
+      // Get completion rates
+      const { data: records } = await supabase
+        .from('user_compliance_records')
+        .select('user_id, compliance_status');
+
+      const completedUsers = new Set(records?.filter(r => r.compliance_status === 'approved').map(r => r.user_id) || []);
+      
+      return {
+        totalUsers,
+        basicTierUsers,
+        robustTierUsers,
+        basicCompletionRate: totalUsers > 0 ? Math.round((completedUsers.size / totalUsers) * 100) : 0,
+        robustCompletionRate: totalUsers > 0 ? Math.round((completedUsers.size / totalUsers) * 100) : 0
+      };
+    } catch (error) {
+      console.error('Error fetching compliance tier statistics:', error);
+      return {
+        totalUsers: 0,
+        basicTierUsers: 0,
+        robustTierUsers: 0,
+        basicCompletionRate: 0,
+        robustCompletionRate: 0
+      };
+    }
+  }
+
+  static async getAllUsersComplianceTiers(): Promise<UserComplianceTier[]> {
+    try {
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, compliance_tier, display_name, email');
+
+      if (error) throw error;
+
+      const result: UserComplianceTier[] = [];
+
+      for (const profile of profiles || []) {
+        const { data: records } = await supabase
+          .from('user_compliance_records')
+          .select('compliance_status')
+          .eq('user_id', profile.id);
+
+        const totalRecords = records?.length || 0;
+        const completedRecords = records?.filter(r => r.compliance_status === 'approved').length || 0;
+        const completion_percentage = totalRecords > 0 ? Math.round((completedRecords / totalRecords) * 100) : 0;
+
+        result.push({
+          userId: profile.id,
+          tier: profile.compliance_tier || 'basic',
+          completion_percentage,
+          display_name: profile.display_name || '',
+          email: profile.email || ''
+        });
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error fetching all users compliance tiers:', error);
+      return [];
+    }
   }
 
   static subscribeToTierChanges(userId: string, callback: (update: UIComplianceTierInfo) => void) {

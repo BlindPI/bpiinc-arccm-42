@@ -1,4 +1,3 @@
-
 export interface RealPerformanceData {
   totalCertificates: number;
   activeSessions: number;
@@ -35,4 +34,32 @@ export interface UserProfile {
   compliance_score?: number;
   pending_actions?: number;
   user_id?: string;
+}
+
+export interface AnalyticsReport {
+  id: string;
+  name: string;
+  type: 'team' | 'compliance' | 'performance' | 'custom';
+  data: any;
+  generatedAt: string;
+  generatedBy: string;
+  parameters: Record<string, any>;
+}
+
+export interface AutomationRule {
+  id: string;
+  name: string;
+  description: string;
+  type: 'notification' | 'assignment' | 'escalation' | 'report';
+  trigger: {
+    event: string;
+    conditions: Record<string, any>;
+  };
+  actions: Array<{
+    type: string;
+    parameters: Record<string, any>;
+  }>;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
