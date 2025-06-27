@@ -521,51 +521,65 @@ export class ComplianceTierService {
 
       if (error) {
         console.error('🔥 ERROR: Failed to fetch profiles:', error);
-        throw error;
+        console.log('🔧 DEBUG: Returning empty array due to profile fetch error');
+        return [];
       }
 
-      console.log('🔧 DEBUG: Found profiles:', profiles?.length || 0);
+      if (!profiles || !Array.isArray(profiles)) {
+        console.warn('🔥 WARN: Profiles is not an array:', profiles);
+        console.log('🔧 DEBUG: Returning empty array due to invalid profiles data');
+        return [];
+      }
+
+      console.log('🔧 DEBUG: Found profiles:', profiles.length);
 
       // Get tier info for each user with better error handling
-      const userTierInfos = await Promise.all(
-        (profiles || []).map(async (profile) => {
-          try {
-            const tierInfo = await this.getUserTierInfo(profile.id);
-            // Ensure tier is properly set
-            if (!tierInfo.tier) {
-              tierInfo.tier = 'basic';
-            }
-            return tierInfo;
-          } catch (error) {
-            console.warn(`🔥 WARN: Failed to get tier info for user ${profile.id}:`, error);
-            // Return a fallback object instead of null
-            return {
-              user_id: profile.id,
-              display_name: profile.display_name || profile.email || `User ${profile.id.slice(0, 8)}`,
-              email: profile.email,
-              role: profile.role as 'AP' | 'IC' | 'IP' | 'IT',
-              tier: (profile.compliance_tier || 'basic') as 'basic' | 'robust',
-              template_name: `${profile.role} - ${profile.compliance_tier || 'basic'}`,
-              description: 'Fallback tier information',
-              requirements_count: 0,
-              completed_requirements: 0,
-              completion_percentage: 0,
-              ui_config: this.getDefaultUIConfig(),
-              next_requirement: null,
-              can_advance_tier: false
-            };
+      const userTierInfoPromises = profiles.map(async (profile) => {
+        try {
+          const tierInfo = await this.getUserTierInfo(profile.id);
+          // Ensure tier is properly set
+          if (!tierInfo.tier) {
+            tierInfo.tier = 'basic';
           }
-        })
-      );
+          return tierInfo;
+        } catch (error) {
+          console.warn(`🔥 WARN: Failed to get tier info for user ${profile.id}:`, error);
+          // Return a fallback object instead of null
+          return {
+            user_id: profile.id,
+            display_name: profile.display_name || profile.email || `User ${profile.id.slice(0, 8)}`,
+            email: profile.email || 'No email',
+            role: profile.role as 'AP' | 'IC' | 'IP' | 'IT',
+            tier: (profile.compliance_tier || 'basic') as 'basic' | 'robust',
+            template_name: `${profile.role} - ${profile.compliance_tier || 'basic'}`,
+            description: 'Fallback tier information',
+            requirements_count: 0,
+            completed_requirements: 0,
+            completion_percentage: 0,
+            ui_config: this.getDefaultUIConfig(),
+            next_requirement: null,
+            can_advance_tier: false
+          };
+        }
+      });
 
-      // Filter out any remaining null values and ensure all have valid tier property
-      const validTierInfos = userTierInfos.filter(info => info !== null && info.tier) as UIComplianceTierInfo[];
+      const userTierInfos = await Promise.all(userTierInfoPromises);
+
+      // Filter out any remaining null/undefined values and ensure all have valid tier property
+      const validTierInfos = userTierInfos.filter(info =>
+        info !== null &&
+        info !== undefined &&
+        info.tier &&
+        info.user_id
+      ) as UIComplianceTierInfo[];
       
       console.log('🔧 DEBUG: Valid tier infos:', validTierInfos.length);
+      console.log('🔧 DEBUG: Returning array with length:', validTierInfos.length);
       
       return validTierInfos;
     } catch (error) {
       console.error('🔥 ERROR: getAllUsersComplianceTiers failed:', error);
+      console.log('🔧 DEBUG: Returning empty array due to catch block');
       return [];
     }
   }

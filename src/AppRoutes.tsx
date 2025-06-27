@@ -248,24 +248,7 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      {/* DEBUG: Add a simple compliance route to test */}
-      <Route path="/compliance-test" element={
-        <ProtectedRoute>
-          <div>
-            <h1>Compliance Test Route</h1>
-            <p>This is a test route to verify routing works</p>
-          </div>
-        </ProtectedRoute>
-      } />
-
-      {/* DEBUG: Try simple path structure */}
-      <Route path="/compliance-admin" element={
-        <ProtectedRoute>
-          <ComplianceAdminDashboard />
-        </ProtectedRoute>
-      } />
-
-      {/* Compliance & Automation Routes - MOVED UP */}
+      {/* Compliance & Automation Routes */}
       <Route path="/compliance-dashboard/admin" element={
         <ProtectedRoute>
           <ComplianceAdminDashboard />

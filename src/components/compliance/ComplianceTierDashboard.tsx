@@ -42,20 +42,7 @@ export function ComplianceTierDashboard() {
         ComplianceTierService.getAllUsersComplianceTiers()
       ]);
       
-      console.log('🐛 MAP-DEBUG: Raw service results:', {
-        stats: stats,
-        statsType: typeof stats,
-        users: users,
-        usersType: typeof users,
-        usersIsArray: Array.isArray(users),
-        usersLength: users?.length
-      });
-      
-      console.log(' DEBUG: Statistics loaded:', stats);
-      console.log('🔧 DEBUG: Statistics structure:', stats ? Object.keys(stats) : 'Stats is null/undefined');
-      console.log('🔧 DEBUG: Users loaded:', users);
-      console.log('🔧 DEBUG: Users type:', Array.isArray(users) ? 'Array' : typeof users);
-      console.log('🔧 DEBUG: First user structure:', users?.[0] ? Object.keys(users[0]) : 'No users');
+      console.log('🔧 DEBUG: Dashboard data loaded - Stats:', stats ? 'loaded' : 'null', 'Users:', users?.length || 0);
       
       // DEFENSIVE: Handle undefined/null returns from services
       const safeStats = stats || {
@@ -65,11 +52,20 @@ export function ComplianceTierDashboard() {
         robust_completion_avg: 0
       };
       
+      // DEFENSIVE: Ensure users is always an array
       const safeUsers = Array.isArray(users) ? users : [];
       console.log('🔧 DEBUG: Safe users count:', safeUsers.length);
       
+      if (!Array.isArray(users)) {
+        console.error('🔥 ERROR: ComplianceTierService.getAllUsersComplianceTiers returned non-array:', users);
+      }
+      
       // Filter out invalid users and transform
-      const validUsers = safeUsers.filter(user => user && user.user_id);
+      const validUsers = safeUsers.filter(user =>
+        user &&
+        typeof user === 'object' &&
+        user.user_id
+      );
       console.log('🔧 DEBUG: Valid users after filtering:', validUsers.length);
       
       const transformedUsers = validUsers.map(user => ({
@@ -80,6 +76,8 @@ export function ComplianceTierDashboard() {
         tier: user.tier || 'basic',
         completion_percentage: user.completion_percentage || 0
       }));
+      
+      console.log('🔧 DEBUG: Transformed users:', transformedUsers.length);
       
       setStatistics(safeStats);
       setAllUsers(transformedUsers);
@@ -185,16 +183,13 @@ export function ComplianceTierDashboard() {
         <CardContent>
           <div className="space-y-4">
             {(() => {
-              console.log('🐛 MAP-DEBUG: About to map allUsers:', {
-                allUsers: allUsers,
-                isArray: Array.isArray(allUsers),
-                length: allUsers?.length,
-                type: typeof allUsers
-              });
-              
               if (!Array.isArray(allUsers)) {
-                console.error('🔥 MAP-ERROR: allUsers is not an array!', allUsers);
+                console.error('🔥 ERROR: allUsers is not an array!', allUsers);
                 return <div className="text-red-500">Error: User data is not properly loaded</div>;
+              }
+              
+              if (allUsers.length === 0) {
+                return <div className="text-muted-foreground">No compliance users found</div>;
               }
               
               return allUsers.map((user) => (
