@@ -67,16 +67,24 @@ export function useRoleRequirements(userId: string, role: string) {
   return useQuery({
     queryKey: ['role-requirements', userId, role],
     queryFn: async () => {
-      const requirements = await ComplianceRequirementsService.getUserRequirements(userId);
-      return requirements.filter(req =>
-        req.assigned_roles.includes(role)
-      );
+      if (!userId || !role) return [];
+      
+      const { data, error } = await supabase
+        .from('user_compliance_records')
+        .select(`
+          *,
+          compliance_metrics(*)
+        `)
+        .eq('user_id', userId);
+      
+      if (error) throw error;
+      return data || [];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: true,
     retry: 2,
     enabled: !!userId && !!role
-  );
+  });
 }
 
 /**
@@ -91,12 +99,18 @@ export function useUIRequirements(userId: string, role: string) {
   return useQuery({
     queryKey: ['ui-requirements', userId, role],
     queryFn: async () => {
-      const requirements = await ComplianceRequirementsService.getUserRequirements(userId);
+      if (!userId || !role) return [];
       
-      // Filter by role and enhance with UI properties
-      return requirements
-        .filter(req => req.assigned_roles.includes(role))
-        .map(req => enhanceRequirementForUI(req));
+      const { data, error } = await supabase
+        .from('user_compliance_records')
+        .select(`
+          *,
+          compliance_metrics(*)
+        `)
+        .eq('user_id', userId);
+      
+      if (error) throw error;
+      return data || [];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: true,
@@ -113,10 +127,21 @@ export function useUIRequirements(userId: string, role: string) {
 export function useRequirement(requirementId: string) {
   return useQuery({
     queryKey: ['requirement', requirementId],
-    queryFn: () => ComplianceRequirementsService.getRequirementById(requirementId),
+    queryFn: async () => {
+      if (!requirementId) return null;
+      
+      const { data, error } = await supabase
+        .from('compliance_metrics')
+        .select('*')
+        .eq('id', requirementId)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
     enabled: !!requirementId // Only run query if requirementId exists
-  );
+  });
 }
 
 /**
