@@ -908,14 +908,32 @@ export class ProviderRelationshipService {
       let courses: { id: string }[] = [];
       if (teamIds.length > 0) {
         try {
-          const courseQuery = supabase.from('courses').select('id').in('team_id', teamIds);
+          console.log('🐛 DEBUG: Fetching courses for team IDs:', teamIds);
+          console.log('🐛 DEBUG: Team IDs array length:', teamIds.length);
+          
+          // FIX: Handle single-element array case for Supabase .in() query bug
+          let courseQuery;
+          if (teamIds.length === 1) {
+            // Single element - use .eq() instead of .in() to avoid URL encoding bug
+            courseQuery = supabase.from('courses').select('id').eq('team_id', teamIds[0]);
+            console.log('🐛 DEBUG: Using .eq() for single team_id:', teamIds[0]);
+          } else {
+            // Multiple elements - .in() should work correctly
+            courseQuery = supabase.from('courses').select('id').in('team_id', teamIds);
+            console.log('🐛 DEBUG: Using .in() for multiple team_ids');
+          }
+          
           const { data: courseData, error: courseError } = await courseQuery;
           
-          if (!courseError && courseData) {
+          if (courseError) {
+            console.error('🐛 DEBUG: Course query error:', courseError);
+            courses = [];
+          } else if (courseData) {
             courses = courseData as { id: string }[];
+            console.log('🐛 DEBUG: Successfully fetched', courses.length, 'courses');
           }
         } catch (error) {
-          console.log('Error fetching courses:', error);
+          console.error('🐛 DEBUG: Error fetching courses:', error);
           courses = [];
         }
       }
@@ -923,26 +941,62 @@ export class ProviderRelationshipService {
       // Get team members managed
       let teamMembers: { id: string }[] = [];
       try {
-        const memberQuery = supabase.from('team_members').select('id').in('team_id', teamIds).eq('status', 'active');
+        console.log('🐛 DEBUG: Fetching team members for team IDs:', teamIds);
+        
+        // FIX: Handle single-element array case for Supabase .in() query bug
+        let memberQuery;
+        if (teamIds.length === 1) {
+          // Single element - use .eq() instead of .in() to avoid URL encoding bug
+          memberQuery = supabase.from('team_members').select('id').eq('team_id', teamIds[0]).eq('status', 'active');
+          console.log('🐛 DEBUG: Using .eq() for single team_id in team_members query');
+        } else {
+          // Multiple elements - .in() should work correctly
+          memberQuery = supabase.from('team_members').select('id').in('team_id', teamIds).eq('status', 'active');
+          console.log('🐛 DEBUG: Using .in() for multiple team_ids in team_members query');
+        }
+        
         const { data: memberData, error: memberError } = await memberQuery;
-        if (!memberError && memberData) {
+        
+        if (memberError) {
+          console.error('🐛 DEBUG: Team members query error:', memberError);
+          teamMembers = [];
+        } else if (memberData) {
           teamMembers = memberData as { id: string }[];
+          console.log('🐛 DEBUG: Successfully fetched', teamMembers.length, 'team members');
         }
       } catch (error) {
-        console.log('Error fetching team members:', error);
+        console.error('🐛 DEBUG: Error fetching team members:', error);
         teamMembers = [];
       }
 
       // Get unique locations served
       let teams: { location_id: string }[] = [];
       try {
-        const teamQuery = supabase.from('teams').select('location_id').in('id', teamIds).not('location_id', 'is', null);
+        console.log('🐛 DEBUG: Fetching teams for team IDs:', teamIds);
+        
+        // FIX: Handle single-element array case for Supabase .in() query bug
+        let teamQuery;
+        if (teamIds.length === 1) {
+          // Single element - use .eq() instead of .in() to avoid URL encoding bug
+          teamQuery = supabase.from('teams').select('location_id').eq('id', teamIds[0]).not('location_id', 'is', null);
+          console.log('🐛 DEBUG: Using .eq() for single team_id in teams query');
+        } else {
+          // Multiple elements - .in() should work correctly
+          teamQuery = supabase.from('teams').select('location_id').in('id', teamIds).not('location_id', 'is', null);
+          console.log('🐛 DEBUG: Using .in() for multiple team_ids in teams query');
+        }
+        
         const { data: teamData, error: teamError } = await teamQuery;
-        if (!teamError && teamData) {
+        
+        if (teamError) {
+          console.error('🐛 DEBUG: Teams query error:', teamError);
+          teams = [];
+        } else if (teamData) {
           teams = teamData as { location_id: string }[];
+          console.log('🐛 DEBUG: Successfully fetched', teams.length, 'teams');
         }
       } catch (error) {
-        console.log('Error fetching teams:', error);
+        console.error('🐛 DEBUG: Error fetching teams:', error);
         teams = [];
       }
 

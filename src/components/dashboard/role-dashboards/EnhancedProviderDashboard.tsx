@@ -275,7 +275,9 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({
     queryKey: ['member-compliance-details', selectedMember?.user_id],
     queryFn: async () => {
       if (!selectedMember?.user_id) return null;
-      console.log('🔍 Loading detailed compliance for member:', selectedMember.member_name);
+      console.log('🐛 DEBUG: Loading detailed compliance for member:', selectedMember.member_name);
+      console.log('🐛 DEBUG: Query trigger count for user_id:', selectedMember.user_id);
+      console.log('🐛 DEBUG: Current selectedMember state:', JSON.stringify(selectedMember, null, 2));
 
       // Import services
       const {
@@ -340,7 +342,14 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({
       };
     },
     enabled: !!selectedMember?.user_id,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    staleTime: 30000, // 30 seconds to prevent excessive refetching
+    onSuccess: (data) => {
+      console.log('🐛 DEBUG: Member compliance query completed successfully');
+    },
+    onError: (error) => {
+      console.error('🐛 DEBUG: Member compliance query failed:', error);
+    }
   });
 
   // Loading state
