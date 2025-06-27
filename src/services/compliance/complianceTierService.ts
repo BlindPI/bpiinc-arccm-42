@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface UIComplianceTierInfo {
   user_id: string;
+  display_name?: string;
+  email?: string;
   role: 'AP' | 'IC' | 'IP' | 'IT';
   tier: 'basic' | 'robust';
   template_name: string;
@@ -104,7 +106,7 @@ export class ComplianceTierService {
       // Get user profile with tier info
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('id, role, compliance_tier, display_name')
+        .select('id, role, compliance_tier, display_name, email')
         .eq('id', userId)
         .single();
       
@@ -185,6 +187,8 @@ export class ComplianceTierService {
       
       return {
         user_id: userId,
+        display_name: profile.display_name || profile.email || `User ${userId.slice(0, 8)}`,
+        email: profile.email,
         role: profile.role as 'AP' | 'IC' | 'IP' | 'IT',
         tier: userTier as 'basic' | 'robust',
         template_name: templateData.template_name,
@@ -459,29 +463,35 @@ export class ComplianceTierService {
   // Get compliance tier statistics for dashboard
   static async getComplianceTierStatistics(): Promise<any> {
     try {
-      // Get tier distribution across all users
-      const { data: tierDistribution, error: tierError } = await supabase
-        .from('profiles')
-        .select('compliance_tier, role')
-        .not('compliance_tier', 'is', null);
-
-      if (tierError) throw tierError;
-
-      // Get compliance completion rates - using type assertion for new RPC
-      const { data: completionStats, error: completionError } = await (supabase as any)
-        .rpc('get_compliance_completion_stats');
-
-      if (completionError) {
-        console.warn('Could not fetch completion stats:', completionError);
+      // Get all users with compliance tiers and calculate their completion rates
+      const allUsers = await this.getAllUsersComplianceTiers();
+      
+      if (!allUsers || allUsers.length === 0) {
+        return {
+          basic_tier_users: 0,
+          robust_tier_users: 0,
+          basic_completion_avg: 0,
+          robust_completion_avg: 0
+        };
       }
 
-      // Calculate tier statistics
+      // Separate users by tier
+      const basicUsers = allUsers.filter(user => user.tier === 'basic');
+      const robustUsers = allUsers.filter(user => user.tier === 'robust');
+
+      // Calculate completion averages
+      const basicCompletionSum = basicUsers.reduce((sum, user) => sum + (user.completion_percentage || 0), 0);
+      const robustCompletionSum = robustUsers.reduce((sum, user) => sum + (user.completion_percentage || 0), 0);
+      
+      const basicCompletionAvg = basicUsers.length > 0 ? Math.round(basicCompletionSum / basicUsers.length) : 0;
+      const robustCompletionAvg = robustUsers.length > 0 ? Math.round(robustCompletionSum / robustUsers.length) : 0;
+
+      // Return structure expected by dashboard
       const stats = {
-        totalUsers: tierDistribution?.length || 0,
-        tierDistribution: this.calculateTierDistribution(tierDistribution || []),
-        roleDistribution: this.calculateRoleDistribution(tierDistribution || []),
-        completionRates: completionStats || [],
-        lastUpdated: new Date().toISOString()
+        basic_tier_users: basicUsers.length,
+        robust_tier_users: robustUsers.length,
+        basic_completion_avg: basicCompletionAvg,
+        robust_completion_avg: robustCompletionAvg
       };
 
       console.log('🔧 DEBUG: getComplianceTierStatistics returning:', stats);
@@ -490,11 +500,10 @@ export class ComplianceTierService {
       console.error('Error getting compliance tier statistics:', error);
       // Return fallback data instead of throwing
       return {
-        totalUsers: 0,
-        tierDistribution: { basic: 0, robust: 0 },
-        roleDistribution: { AP: 0, IC: 0, IP: 0, IT: 0 },
-        completionRates: [],
-        lastUpdated: new Date().toISOString(),
+        basic_tier_users: 0,
+        robust_tier_users: 0,
+        basic_completion_avg: 0,
+        robust_completion_avg: 0,
         error: error.message
       };
     }
@@ -507,7 +516,7 @@ export class ComplianceTierService {
       
       const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('id, role, compliance_tier, display_name')
+        .select('id, role, compliance_tier, display_name, email')
         .not('compliance_tier', 'is', null);
 
       if (error) {
@@ -532,6 +541,8 @@ export class ComplianceTierService {
             // Return a fallback object instead of null
             return {
               user_id: profile.id,
+              display_name: profile.display_name || profile.email || `User ${profile.id.slice(0, 8)}`,
+              email: profile.email,
               role: profile.role as 'AP' | 'IC' | 'IP' | 'IT',
               tier: (profile.compliance_tier || 'basic') as 'basic' | 'robust',
               template_name: `${profile.role} - ${profile.compliance_tier || 'basic'}`,

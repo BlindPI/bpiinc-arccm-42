@@ -52,8 +52,8 @@ export function ComplianceTierDashboard() {
       // Transform UIComplianceTierInfo to expected format
       const transformedUsers = users.map(user => ({
         user_id: user.user_id,
-        display_name: user.user_id, // Fallback since UIComplianceTierInfo doesn't have display_name
-        email: user.user_id, // Fallback since UIComplianceTierInfo doesn't have email
+        display_name: user.display_name || user.email || `User ${user.user_id.slice(0, 8)}`,
+        email: user.email || 'No email',
         role: user.role,
         tier: user.tier,
         completion_percentage: user.completion_percentage
