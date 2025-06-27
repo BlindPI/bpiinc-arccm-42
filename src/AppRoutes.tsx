@@ -258,6 +258,13 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
 
+      {/* DEBUG: Try simple path structure */}
+      <Route path="/compliance-admin" element={
+        <ProtectedRoute>
+          <ComplianceAdminDashboard />
+        </ProtectedRoute>
+      } />
+
       {/* Compliance & Automation Routes - MOVED UP */}
       <Route path="/compliance-dashboard/admin" element={
         <ProtectedRoute>
