@@ -12193,6 +12193,7 @@ export type Database = {
           current_value: string | null
           due_date: string | null
           id: string
+          last_checked_at: string | null
           metric_id: string
           rejection_reason: string | null
           requirement_id: string | null
@@ -12216,6 +12217,7 @@ export type Database = {
           current_value?: string | null
           due_date?: string | null
           id?: string
+          last_checked_at?: string | null
           metric_id?: string
           rejection_reason?: string | null
           requirement_id?: string | null
@@ -12239,6 +12241,7 @@ export type Database = {
           current_value?: string | null
           due_date?: string | null
           id?: string
+          last_checked_at?: string | null
           metric_id?: string
           rejection_reason?: string | null
           requirement_id?: string | null
@@ -13224,6 +13227,16 @@ export type Database = {
           },
         ]
       }
+      system_admin_metrics: {
+        Row: {
+          avg_completion_rate: number | null
+          basic_tier_count: number | null
+          pending_reviews: number | null
+          robust_tier_count: number | null
+          total_users: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_team_member_bypass_rls: {
@@ -13787,6 +13800,18 @@ export type Database = {
         Returns: {
           month: string
           count: number
+        }[]
+      }
+      get_pending_compliance_submissions: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          user_id: string
+          user_name: string
+          metric_name: string
+          submitted_at: string
+          current_value: string
+          compliance_status: string
         }[]
       }
       get_pipeline_metrics: {

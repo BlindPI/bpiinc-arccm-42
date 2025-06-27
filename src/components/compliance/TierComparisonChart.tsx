@@ -1,10 +1,10 @@
-// File: src/components/analytics/TierComparisonChart.tsx
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Skeleton } from '../ui/skeleton';
+import { AlertTriangle } from 'lucide-react';
 import { 
   BarChart, 
   Bar, 
@@ -23,10 +23,9 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
-  RadialBarChart,
-  RadialBar
+  Legend
 } from 'recharts';
+import { useComplianceTierAnalytics } from '@/hooks/useComplianceTierAnalytics';
 
 interface TierComparisonChartProps {
   data?: any;
@@ -36,17 +35,31 @@ interface TierComparisonChartProps {
 }
 
 export function TierComparisonChart({ 
-  data, 
-  role = 'IT',
-  isLoading = false,
+  role = 'SA',
   comparisonType = 'metrics'
 }: TierComparisonChartProps) {
-  // If loading or no data, show skeleton
-  if (isLoading || !data) {
+  const { data, isLoading, error } = useComplianceTierAnalytics();
+  
+  if (isLoading) {
     return <TierComparisonSkeleton />;
   }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center text-red-500">
+            <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
+            <p>Failed to load analytics data</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {error.message}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
   
-  // Render different chart types based on comparisonType
   const renderChart = () => {
     switch (comparisonType) {
       case 'distribution':
@@ -66,9 +79,9 @@ export function TierComparisonChart({
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Tier Comparison</CardTitle>
+            <CardTitle>Compliance Tier Analytics</CardTitle>
             <CardDescription>
-              Compare metrics across basic and robust tiers
+              Compare performance and metrics across compliance tiers
             </CardDescription>
           </div>
           
@@ -79,23 +92,43 @@ export function TierComparisonChart({
       </CardHeader>
       
       <CardContent className="pt-2">
-        <div className="h-80">
-          {renderChart()}
-        </div>
+        <Tabs defaultValue={comparisonType} className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="distribution">Distribution</TabsTrigger>
+            <TabsTrigger value="metrics">Metrics</TabsTrigger>
+            <TabsTrigger value="performance">Performance</TabsTrigger>
+            <TabsTrigger value="completion">Completion</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="distribution" className="h-80">
+            <TierDistributionChart data={data} />
+          </TabsContent>
+          
+          <TabsContent value="metrics" className="h-80">
+            <TierMetricsComparisonChart data={data} role={role} />
+          </TabsContent>
+          
+          <TabsContent value="performance" className="h-80">
+            <TierPerformanceChart data={data} />
+          </TabsContent>
+          
+          <TabsContent value="completion" className="h-80">
+            <TierCompletionTimeChart data={data} />
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );
 }
 
 function TierDistributionChart({ data }: { data: any }) {
-  // Prepare data for PieChart
   const COLORS = ['#3B82F6', '#8B5CF6', '#9333EA'];
   
   return (
     <ResponsiveContainer width="100%" height="100%">
       <PieChart>
         <Pie
-          data={data.distribution}
+          data={data?.distribution || []}
           cx="50%"
           cy="50%"
           labelLine={false}
@@ -104,28 +137,14 @@ function TierDistributionChart({ data }: { data: any }) {
           fill="#8884d8"
           dataKey="value"
         >
-          {(() => {
-            console.log('🐛 CHART-MAP-DEBUG: About to map data.distribution:', {
-              distribution: data.distribution,
-              isArray: Array.isArray(data.distribution),
-              length: data.distribution?.length,
-              type: typeof data.distribution
-            });
-            
-            if (!Array.isArray(data.distribution)) {
-              console.error('🔥 CHART-MAP-ERROR: data.distribution is not an array!', data.distribution);
-              return null;
-            }
-            
-            return data.distribution.map((entry: any, index: number) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-            ));
-          })()}
+          {(data?.distribution || []).map((entry: any, index: number) => (
+            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+          ))}
         </Pie>
         <Tooltip 
-          formatter={(value: number, name: string) => [
-            `${value} users (${((value / data.total) * 100).toFixed(1)}%)`, 
-            name
+          formatter={(value: number) => [
+            `${value} users (${((value / (data?.total || 1)) * 100).toFixed(1)}%)`, 
+            'Count'
           ]} 
         />
         <Legend />
@@ -137,12 +156,12 @@ function TierDistributionChart({ data }: { data: any }) {
 function TierCompletionTimeChart({ data }: { data: any }) {
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={data.completionTime}>
+      <BarChart data={data?.completionTime || []}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="name" />
-        <YAxis label={{ value: 'Days', angle: -90, position: 'insideLeft' }} />
+        <YAxis label={{ value: 'Completion %', angle: -90, position: 'insideLeft' }} />
         <Tooltip 
-          formatter={(value: number) => [`${value} days`, 'Avg. Completion Time']} 
+          formatter={(value: number) => [`${value}%`, 'Completion Rate']} 
         />
         <Legend />
         <Bar name="Basic Tier" dataKey="basic" fill="#3B82F6" />
@@ -155,7 +174,7 @@ function TierCompletionTimeChart({ data }: { data: any }) {
 function TierMetricsComparisonChart({ data, role }: { data: any, role: string }) {
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <RadarChart outerRadius={90} data={data.metrics}>
+      <RadarChart outerRadius={90} data={data?.metrics || []}>
         <PolarGrid />
         <PolarAngleAxis dataKey="metric" />
         <PolarRadiusAxis />
@@ -183,7 +202,7 @@ function TierMetricsComparisonChart({ data, role }: { data: any, role: string })
 function TierPerformanceChart({ data }: { data: any }) {
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={data.performance}>
+      <LineChart data={data?.performance || []}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="name" />
         <YAxis />
@@ -230,9 +249,11 @@ function TierComparisonSkeleton() {
 function getRoleLabel(roleCode: string) {
   const roles = {
     'IT': 'Instructor Trainee',
-    'IP': 'Instructor Provisional',
+    'IP': 'Instructor Provisional', 
     'IC': 'Instructor Certified',
-    'AP': 'Authorized Provider'
+    'AP': 'Authorized Provider',
+    'SA': 'System Administrator',
+    'AD': 'Administrative User'
   };
   return roles[roleCode as keyof typeof roles] || roleCode;
 }

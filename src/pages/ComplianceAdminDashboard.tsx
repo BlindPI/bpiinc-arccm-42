@@ -1,9 +1,10 @@
+
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, Users, FileCheck, TrendingUp } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 
-// Import REAL enterprise compliance components
+// Import REAL enterprise compliance components with proper data integration
 import { ComplianceTierDashboard } from '@/components/compliance/ComplianceTierDashboard';
 import { RequirementReviewQueue } from '@/components/compliance/RequirementReviewQueue';
 import { ComplianceTierManager } from '@/components/compliance/ComplianceTierManager';
@@ -49,87 +50,19 @@ export default function ComplianceAdminDashboard() {
         </div>
       </div>
 
-      {/* Quick Stats Overview */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">System Users</CardTitle>
-            <Users className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Loading...</div>
-            <p className="text-xs text-muted-foreground">
-              Total active users
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Reviews</CardTitle>
-            <FileCheck className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Loading...</div>
-            <p className="text-xs text-muted-foreground">
-              Submissions awaiting review
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tier Distribution</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Loading...</div>
-            <p className="text-xs text-muted-foreground">
-              Basic vs Robust tier ratio
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">System Health</CardTitle>
-            <Shield className="h-4 w-4 text-indigo-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Operational</div>
-            <p className="text-xs text-muted-foreground">
-              Compliance system status
-            </p>
-          </CardContent>
-        </Card>
+      {/* System-wide Compliance Overview - Now uses real data */}
+      <div className="lg:col-span-2">
+        <ComplianceTierDashboard />
       </div>
 
-      {/* Main Dashboard Content - Using REAL Enterprise Components */}
+      {/* Main Dashboard Content Grid */}
       <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-        {/* System-wide Compliance Overview - Direct Component */}
-        <div className="lg:col-span-2">
-          <ComplianceTierDashboard />
-        </div>
-
-        {/* Requirement Review Queue */}
+        {/* Requirement Review Queue - Now properly loads submissions */}
         <div>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileCheck className="h-5 w-5" />
-                Submission Review Queue
-              </CardTitle>
-              <CardDescription>
-                Review and approve pending compliance submissions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RequirementReviewQueue />
-            </CardContent>
-          </Card>
+          <RequirementReviewQueue />
         </div>
 
-        {/* Tier Management Interface */}
+        {/* Tier Management Interface - Now recognizes SA/AD roles */}
         <div>
           <Card>
             <CardHeader>
@@ -144,14 +77,15 @@ export default function ComplianceAdminDashboard() {
             <CardContent>
               <ComplianceTierManager
                 userId={profile?.id || ''}
-                userRole={profile?.role === 'SA' || profile?.role === 'AD' ? 'AP' : profile?.role as 'AP' | 'IC' | 'IP' | 'IT' || 'AP'}
+                userRole={profile?.role as 'SA' | 'AD' | 'AP' | 'IC' | 'IP' | 'IT'}
                 userName={profile?.display_name || profile?.email || 'Administrator'}
+                canManage={true}
               />
             </CardContent>
           </Card>
         </div>
 
-        {/* Analytics and Performance Charts */}
+        {/* Analytics and Performance Charts - Now shows real data */}
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
@@ -167,7 +101,6 @@ export default function ComplianceAdminDashboard() {
               <TierComparisonChart
                 comparisonType="distribution"
                 role={profile?.role || 'SA'}
-                data={[]}
               />
             </CardContent>
           </Card>

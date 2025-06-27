@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,7 @@ import { toast } from 'sonner';
 
 interface ComplianceTierManagerProps {
   userId: string;
-  userRole: 'AP' | 'IC' | 'IP' | 'IT';
+  userRole: 'AP' | 'IC' | 'IP' | 'IT' | 'SA' | 'AD';
   userName: string;
   canManage?: boolean;
 }
@@ -29,11 +30,14 @@ export function ComplianceTierManager({
   userId, 
   userRole, 
   userName, 
-  canManage = false 
+  canManage 
 }: ComplianceTierManagerProps) {
   const [tierInfo, setTierInfo] = useState<ComplianceTierInfo | null>(null);
   const [isChanging, setIsChanging] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Fix: SA and AD users should have management permissions
+  const hasManagementAccess = canManage || ['SA', 'AD'].includes(userRole);
 
   useEffect(() => {
     loadTierInfo();
@@ -53,7 +57,7 @@ export function ComplianceTierManager({
   };
 
   const handleTierChange = async (newTier: 'basic' | 'robust') => {
-    if (!canManage) {
+    if (!hasManagementAccess) {
       toast.error('You do not have permission to change compliance tiers');
       return;
     }
@@ -139,6 +143,11 @@ export function ComplianceTierManager({
         </CardTitle>
         <CardDescription>
           {tierInfo.description}
+          {hasManagementAccess && (
+            <span className="block mt-1 text-green-600 font-medium">
+              ✓ Administrator Access - Can modify tiers
+            </span>
+          )}
         </CardDescription>
       </CardHeader>
       
@@ -173,7 +182,7 @@ export function ComplianceTierManager({
         </div>
 
         {/* Tier Selection (only if user can manage) */}
-        {canManage && (
+        {hasManagementAccess && (
           <div className="space-y-4 border-t pt-4">
             <Label className="text-sm font-medium">Change Compliance Tier</Label>
             
@@ -231,7 +240,7 @@ export function ComplianceTierManager({
         <Alert>
           <Users className="h-4 w-4" />
           <AlertDescription>
-            {canManage 
+            {hasManagementAccess 
               ? "Changing the compliance tier will reassign all requirements. Previous compliance progress may be affected."
               : "Only administrators can change compliance tiers. Contact your administrator if you need tier adjustments."
             }
