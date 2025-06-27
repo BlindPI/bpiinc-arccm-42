@@ -1,22 +1,22 @@
 // File: src/components/compliance/TierRequirementSection.tsx
 
 import React, { useState } from 'react';
-import { 
+import {
   Card,
   CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
   CardTitle
-} from './components/ui/card';
+} from '../ui/card';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger
-} from './components/ui/collapsible';
-import { Badge } from './components/ui/badge';
-import { Button } from './components/ui/button';
-import { Progress } from './components/ui/progress';
+} from '../ui/collapsible';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { Progress } from '../ui/progress';
 import { 
   CheckCircle2, 
   CircleDashed, 

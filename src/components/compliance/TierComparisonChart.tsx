@@ -1,10 +1,10 @@
 // File: src/components/analytics/TierComparisonChart.tsx
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './components/ui/card';
-import { Badge } from './components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
-import { Skeleton } from './components/ui/skeleton';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
+import { Badge } from '../ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { Skeleton } from '../ui/skeleton';
 import { 
   BarChart, 
   Bar, 

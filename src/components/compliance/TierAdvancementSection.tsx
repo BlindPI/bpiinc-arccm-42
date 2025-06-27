@@ -1,10 +1,10 @@
 // File: src/components/compliance/TierAdvancementSection.tsx
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './components/ui/card';
-import { Button } from './components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
+import { Button } from '../ui/button';
 import { AlertCircle, ArrowUpCircle, Award, CheckCircle, Lock } from 'lucide-react';
-import { Progress } from './components/ui/progress';
+import { Progress } from '../ui/progress';
 
 interface TierAdvancementSectionProps {
   canAdvance: boolean;

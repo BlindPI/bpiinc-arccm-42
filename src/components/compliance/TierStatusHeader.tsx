@@ -1,15 +1,12 @@
 // File: src/components/compliance/TierStatusHeader.tsx
 
 import React from 'react';
-import { Card } from './components/ui/card';
-import { Badge } from './components/ui/badge';
-import { Button } from './components/ui/button';
-import { Progress } from './components/ui/progress';
+import { Card } from '../ui/card';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { Progress } from '../ui/progress';
 import { ArrowUpCircle, Award, Clock, AlertTriangle } from 'lucide-react';
-import { TierInfo } from './hooks/useComplianceTier';
-
-// Alias for compatibility
-type UIComplianceTierInfo = TierInfo;
+import { UIComplianceTierInfo } from '@/services/compliance/complianceTierService';
 
 interface TierStatusHeaderProps {
   tierInfo: UIComplianceTierInfo;
