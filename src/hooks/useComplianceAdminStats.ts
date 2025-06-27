@@ -4,9 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface ComplianceAdminStats {
   totalUsers: number;
-  pendingReviews: number;
   basicTierCount: number;
   robustTierCount: number;
+  pendingReviews: number;
   avgCompletionRate: number;
   complianceStatus: 'good' | 'warning' | 'critical';
 }
@@ -16,69 +16,55 @@ export function useComplianceAdminStats() {
     queryKey: ['compliance-admin-stats'],
     queryFn: async (): Promise<ComplianceAdminStats> => {
       try {
-        // Try to get data from the system_admin_metrics view
-        const { data, error } = await supabase
-          .from('system_admin_metrics')
-          .select('*')
-          .single();
+        // Get tier distribution
+        const { data: tierData, error: tierError } = await supabase.rpc('get_tier_distribution');
+        if (tierError) throw tierError;
 
-        if (error) {
-          console.warn('system_admin_metrics view not available, calculating manually:', error);
-          
-          // Fallback to manual calculation using existing tables
-          const [usersResult, tiersResult, recordsResult] = await Promise.all([
-            supabase.from('profiles').select('*', { count: 'exact', head: true }),
-            supabase.from('profiles').select('compliance_tier', { count: 'exact' }),
-            supabase.from('user_compliance_records').select('compliance_status', { count: 'exact' })
-          ]);
+        // Get compliance analytics for completion rates
+        const { data: analyticsData, error: analyticsError } = await supabase.rpc('get_compliance_analytics');
+        if (analyticsError) throw analyticsError;
 
-          const totalUsers = usersResult.count || 0;
-          const tierData = tiersResult.data || [];
-          const basicTierCount = tierData.filter(t => t.compliance_tier === 'basic').length;
-          const robustTierCount = tierData.filter(t => t.compliance_tier === 'robust').length;
-          
-          const recordData = recordsResult.data || [];
-          const pendingReviews = recordData.filter(r => r.compliance_status === 'pending').length;
-          
-          // Calculate average completion rate based on existing data
-          const avgCompletionRate = totalUsers > 0 ? Math.round(((totalUsers - pendingReviews) / totalUsers) * 100) : 0;
+        // Calculate statistics
+        const totalUsers = tierData?.reduce((sum: number, tier: any) => sum + Number(tier.user_count), 0) || 0;
+        const basicTierCount = tierData?.find((tier: any) => tier.tier_name === 'basic')?.user_count || 0;
+        const robustTierCount = tierData?.find((tier: any) => tier.tier_name === 'robust')?.user_count || 0;
+        
+        const pendingReviews = analyticsData?.reduce((sum: number, metric: any) => 
+          sum + Number(metric.pending_users), 0) || 0;
+        
+        const avgCompletionRate = tierData?.reduce((sum: number, tier: any) => 
+          sum + Number(tier.completion_percentage), 0) / Math.max(tierData?.length || 1, 1) || 0;
 
-          return {
-            totalUsers,
-            pendingReviews,
-            basicTierCount,
-            robustTierCount,
-            avgCompletionRate,
-            complianceStatus: avgCompletionRate >= 80 ? 'good' : avgCompletionRate >= 60 ? 'warning' : 'critical'
-          };
+        // Determine compliance status
+        let complianceStatus: 'good' | 'warning' | 'critical' = 'good';
+        if (avgCompletionRate < 60) {
+          complianceStatus = 'critical';
+        } else if (avgCompletionRate < 80) {
+          complianceStatus = 'warning';
         }
 
-        const complianceStatus = data.avg_completion_rate >= 80 ? 'good' : 
-                                data.avg_completion_rate >= 60 ? 'warning' : 'critical';
-
         return {
-          totalUsers: data.total_users || 0,
-          pendingReviews: data.pending_reviews || 0,
-          basicTierCount: data.basic_tier_count || 0,
-          robustTierCount: data.robust_tier_count || 0,
-          avgCompletionRate: data.avg_completion_rate || 0,
+          totalUsers: Number(totalUsers),
+          basicTierCount: Number(basicTierCount),
+          robustTierCount: Number(robustTierCount),
+          pendingReviews: Number(pendingReviews),
+          avgCompletionRate: Math.round(Number(avgCompletionRate)),
           complianceStatus
         };
       } catch (error) {
-        console.error('Error fetching admin stats:', error);
-        
-        // Return safe defaults if all else fails
+        console.error('Error fetching compliance admin stats:', error);
+        // Return default values instead of throwing to prevent UI crash
         return {
           totalUsers: 0,
-          pendingReviews: 0,
           basicTierCount: 0,
           robustTierCount: 0,
+          pendingReviews: 0,
           avgCompletionRate: 0,
-          complianceStatus: 'critical'
+          complianceStatus: 'good'
         };
       }
     },
-    refetchInterval: 30000,
-    staleTime: 15000
+    refetchInterval: 300000, // Refresh every 5 minutes
+    staleTime: 120000 // Consider data stale after 2 minutes
   });
 }

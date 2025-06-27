@@ -18,6 +18,7 @@ interface AuditEvent {
   description: string;
   metadata?: any;
   created_at: string;
+  performed_by?: string;
 }
 
 export function ComplianceAuditTrail() {
@@ -27,35 +28,31 @@ export function ComplianceAuditTrail() {
   const { data: auditEvents, isLoading } = useQuery({
     queryKey: ['compliance-audit-trail', searchTerm, eventTypeFilter],
     queryFn: async () => {
-      // Get audit data from user_compliance_records with user information
+      // Get audit data from compliance_audit_events table
       const { data, error } = await supabase
-        .from('user_compliance_records')
+        .from('compliance_audit_events')
         .select(`
           id,
+          event_type,
           user_id,
-          metric_name,
-          compliance_status,
+          user_name,
+          target_user_id,
+          target_user_name,
+          description,
+          metadata,
           created_at,
-          updated_at,
-          profiles!inner(display_name, email)
+          performed_by
         `)
-        .order('updated_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(100);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching audit events:', error);
+        // Return empty array instead of throwing to prevent UI crash
+        return [];
+      }
 
-      return data.map(record => ({
-        id: record.id,
-        event_type: 'compliance_update',
-        user_id: record.user_id,
-        user_name: record.profiles?.display_name || record.profiles?.email || 'Unknown User',
-        description: `${record.compliance_status === 'approved' ? 'Approved' : record.compliance_status === 'rejected' ? 'Rejected' : 'Updated'} compliance for ${record.metric_name}`,
-        metadata: {
-          metric_name: record.metric_name,
-          status: record.compliance_status
-        },
-        created_at: record.updated_at || record.created_at
-      }));
+      return data || [];
     }
   });
 
@@ -90,8 +87,9 @@ export function ComplianceAuditTrail() {
   };
 
   const filteredEvents = auditEvents?.filter(event => {
-    const matchesSearch = event.user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         event.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = event.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         event.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         event.target_user_name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = eventTypeFilter === 'all' || event.event_type === eventTypeFilter;
     return matchesSearch && matchesFilter;
   }) || [];
@@ -101,7 +99,7 @@ export function ComplianceAuditTrail() {
       {/* Header with Controls */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Audit Trail</h3>
+          <h3 className="text-lg font-semibold">Compliance Audit Trail</h3>
           <p className="text-sm text-muted-foreground">
             Track all compliance-related activities and system changes
           </p>
@@ -135,7 +133,7 @@ export function ComplianceAuditTrail() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5" />
-            Recent Activity
+            Recent Compliance Activity
           </CardTitle>
           <CardDescription>
             Comprehensive log of all compliance-related activities
@@ -168,7 +166,9 @@ export function ComplianceAuditTrail() {
                         <span className="font-medium">#{event.id.slice(0, 8)}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="font-medium">{event.user_name}</TableCell>
+                    <TableCell className="font-medium">
+                      {event.user_name || 'System User'}
+                    </TableCell>
                     <TableCell>{event.description}</TableCell>
                     <TableCell>{getEventBadge(event.event_type)}</TableCell>
                     <TableCell>

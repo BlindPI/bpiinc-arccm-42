@@ -2535,6 +2535,109 @@ export type Database = {
         }
         Relationships: []
       }
+      compliance_audit_events: {
+        Row: {
+          created_at: string | null
+          description: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          performed_by: string | null
+          target_user_id: string | null
+          target_user_name: string | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+          target_user_id?: string | null
+          target_user_name?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+          target_user_id?: string | null
+          target_user_name?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_audit_events_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_audit_events_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_audit_events_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_audit_events_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_audit_events_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_audit_events_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_audit_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_audit_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_audit_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compliance_audit_log: {
         Row: {
           audit_type: string
@@ -2667,6 +2770,82 @@ export type Database = {
             columns: ["metric_id"]
             isOneToOne: false
             referencedRelation: "compliance_metrics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compliance_document_reviews: {
+        Row: {
+          created_at: string | null
+          document_id: string
+          id: string
+          review_notes: string | null
+          review_status: string | null
+          reviewed_at: string | null
+          reviewer_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          document_id: string
+          id?: string
+          review_notes?: string | null
+          review_status?: string | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          document_id?: string
+          id?: string
+          review_notes?: string | null
+          review_status?: string | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_document_reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_document_reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_document_reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_document_reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_document_reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_document_reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -13731,6 +13910,18 @@ export type Database = {
           growth_rate: number
         }[]
       }
+      get_compliance_analytics: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          metric_name: string
+          basic_completion_rate: number
+          robust_completion_rate: number
+          total_users: number
+          completed_users: number
+          pending_users: number
+          overdue_users: number
+        }[]
+      }
       get_compliance_completion_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -14059,6 +14250,15 @@ export type Database = {
           metadata: Json
           monthly_targets: Json
           current_metrics: Json
+        }[]
+      }
+      get_tier_distribution: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          tier_name: string
+          user_count: number
+          completion_percentage: number
+          avg_score: number
         }[]
       }
       get_top_certificate_courses: {
