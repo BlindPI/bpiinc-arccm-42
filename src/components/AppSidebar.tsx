@@ -97,7 +97,7 @@ const navigation: NavigationItem[] = [
   
   // Compliance & Automation Group - Role-based routing
   { name: 'Compliance Dashboard', href: '/compliance-dashboard/admin', icon: ClipboardCheck, group: 'Compliance & Automation', enterpriseOnly: true, roles: ['SA', 'AD'] },
-  { name: 'Compliance Dashboard', href: '/compliance-dashboard/provider', icon: ClipboardCheck, group: 'Compliance & Automation', enterpriseOnly: true, roles: ['AP'] },
+  { name: 'Provider Compliance', href: '/compliance-dashboard/provider', icon: ClipboardCheck, group: 'Compliance & Automation', enterpriseOnly: true, roles: ['AP'] },
   { name: 'Automation', href: '/automation', icon: Zap, group: 'Compliance & Automation' },
   { name: 'Progression Path Builder', href: '/progression-path-builder', icon: Target, group: 'Compliance & Automation' },
   
