@@ -157,8 +157,8 @@ export default function ComplianceAdminDashboard() {
             <CardContent>
               <ComplianceTierManager
                 userId={profile?.id || ''}
-                userRole={profile?.role || 'SA'}
-                userName={`${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Administrator'}
+                userRole={profile?.role === 'SA' || profile?.role === 'AD' ? 'AP' : profile?.role as 'AP' | 'IC' | 'IP' | 'IT' || 'AP'}
+                userName={profile?.display_name || profile?.email || 'Administrator'}
               />
             </CardContent>
           </Card>
@@ -180,7 +180,7 @@ export default function ComplianceAdminDashboard() {
               <TierComparisonChart
                 comparisonType="distribution"
                 role={profile?.role || 'SA'}
-                data={{}}
+                data={[]}
               />
             </CardContent>
           </Card>

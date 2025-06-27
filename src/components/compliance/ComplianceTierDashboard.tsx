@@ -43,23 +43,36 @@ export function ComplianceTierDashboard() {
       ]);
       
       console.log('🔧 DEBUG: Statistics loaded:', stats);
-      console.log('🔧 DEBUG: Statistics structure:', Object.keys(stats));
+      console.log('🔧 DEBUG: Statistics structure:', stats ? Object.keys(stats) : 'Stats is null/undefined');
       console.log('🔧 DEBUG: Users loaded:', users);
-      console.log('🔧 DEBUG: First user structure:', users[0] ? Object.keys(users[0]) : 'No users');
-      console.log('🔧 DEBUG: Users with missing tier:',
-        users.filter(user => !user || !user.tier));
+      console.log('🔧 DEBUG: Users type:', Array.isArray(users) ? 'Array' : typeof users);
+      console.log('🔧 DEBUG: First user structure:', users?.[0] ? Object.keys(users[0]) : 'No users');
       
-      // Transform UIComplianceTierInfo to expected format
-      const transformedUsers = users.map(user => ({
+      // DEFENSIVE: Handle undefined/null returns from services
+      const safeStats = stats || {
+        basic_tier_users: 0,
+        robust_tier_users: 0,
+        basic_completion_avg: 0,
+        robust_completion_avg: 0
+      };
+      
+      const safeUsers = Array.isArray(users) ? users : [];
+      console.log('🔧 DEBUG: Safe users count:', safeUsers.length);
+      
+      // Filter out invalid users and transform
+      const validUsers = safeUsers.filter(user => user && user.user_id);
+      console.log('🔧 DEBUG: Valid users after filtering:', validUsers.length);
+      
+      const transformedUsers = validUsers.map(user => ({
         user_id: user.user_id,
         display_name: user.display_name || user.email || `User ${user.user_id.slice(0, 8)}`,
         email: user.email || 'No email',
-        role: user.role,
-        tier: user.tier,
-        completion_percentage: user.completion_percentage
+        role: user.role || 'Unknown',
+        tier: user.tier || 'basic',
+        completion_percentage: user.completion_percentage || 0
       }));
       
-      setStatistics(stats);
+      setStatistics(safeStats);
       setAllUsers(transformedUsers);
     } catch (error) {
       console.error('🔥 ERROR: Dashboard data loading failed:', error);
