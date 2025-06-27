@@ -1,66 +1,44 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Shield, 
-  Users, 
-  TrendingUp, 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock,
-  FileText,
-  BarChart3
-} from 'lucide-react';
-import { 
-  BarChart, 
-  Bar, 
-  PieChart, 
-  Pie, 
-  Cell, 
-  ResponsiveContainer, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend 
-} from 'recharts';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertTriangle, TrendingUp, Users, Shield } from 'lucide-react';
 
-interface ComplianceAnalytics {
+interface ComplianceAnalyticsData {
   metric_name: string;
   basic_completion_rate: number;
   robust_completion_rate: number;
-  total_users: number;
-  completed_users: number;
+  total_users_basic: number;
+  total_users_robust: number;
+  completed_basic: number;
+  completed_robust: number;
   pending_users: number;
   overdue_users: number;
 }
 
-interface TierDistribution {
+interface TierDistributionData {
   tier_name: string;
   user_count: number;
   completion_percentage: number;
-  avg_score: number;
 }
 
 export function RealComplianceAnalytics() {
-  const { data: analytics, isLoading: analyticsLoading, error: analyticsError } = useQuery({
-    queryKey: ['compliance-analytics'],
-    queryFn: async (): Promise<ComplianceAnalytics[]> => {
+  const { data: analyticsData, isLoading: analyticsLoading } = useQuery({
+    queryKey: ['real-compliance-analytics'],
+    queryFn: async (): Promise<ComplianceAnalyticsData[]> => {
       const { data, error } = await supabase.rpc('get_compliance_analytics');
       if (error) throw error;
       return data || [];
     }
   });
 
-  const { data: tierData, isLoading: tierLoading, error: tierError } = useQuery({
+  const { data: tierData, isLoading: tierLoading } = useQuery({
     queryKey: ['tier-distribution'],
-    queryFn: async (): Promise<TierDistribution[]> => {
+    queryFn: async (): Promise<TierDistributionData[]> => {
       const { data, error } = await supabase.rpc('get_tier_distribution');
       if (error) throw error;
       return data || [];
@@ -71,80 +49,69 @@ export function RealComplianceAnalytics() {
     return <ComplianceAnalyticsSkeleton />;
   }
 
-  if (analyticsError || tierError) {
+  if (!analyticsData || !tierData) {
     return (
       <Alert className="border-red-200 bg-red-50">
         <AlertTriangle className="h-4 w-4 text-red-600" />
         <AlertDescription className="text-red-800">
-          <strong>Analytics Error:</strong> {analyticsError?.message || tierError?.message}
+          Failed to load compliance analytics data
         </AlertDescription>
       </Alert>
     );
   }
 
-  // Calculate summary statistics
-  const totalUsers = tierData?.reduce((sum, tier) => sum + Number(tier.user_count), 0) || 0;
-  const overallCompletionRate = totalUsers > 0 
-    ? Math.round((analytics?.reduce((sum, metric) => sum + Number(metric.completed_users), 0) || 0) / totalUsers * 100)
-    : 0;
+  // Transform data for charts
+  const comparisonData = analyticsData.map(item => ({
+    name: item.metric_name,
+    basic: Number(item.basic_completion_rate),
+    robust: Number(item.robust_completion_rate)
+  }));
 
-  // Prepare chart data
-  const tierChartData = tierData?.map(tier => ({
-    name: tier.tier_name.charAt(0).toUpperCase() + tier.tier_name.slice(1),
-    users: Number(tier.user_count),
-    completion: Number(tier.completion_percentage),
-    score: Number(tier.avg_score)
-  })) || [];
+  const tierDistributionChart = tierData.filter(t => t.tier_name !== 'unassigned').map(tier => ({
+    name: tier.tier_name === 'basic' ? 'Basic Tier' : 'Robust Tier',
+    value: Number(tier.user_count),
+    completion: Number(tier.completion_percentage)
+  }));
 
-  const metricsChartData = analytics?.slice(0, 5).map(metric => ({
-    metric: metric.metric_name,
-    basic: Number(metric.basic_completion_rate),
-    robust: Number(metric.robust_completion_rate),
-    total: Number(metric.total_users)
-  })) || [];
-
-  const COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444'];
+  const COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B'];
 
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
             <Users className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalUsers}</div>
-            <p className="text-xs text-muted-foreground">
-              Across all compliance tiers
-            </p>
+            <div className="text-2xl font-bold">
+              {tierData.reduce((sum, tier) => sum + Number(tier.user_count), 0)}
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Overall Completion</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{overallCompletionRate}%</div>
-            <Progress value={overallCompletionRate} className="mt-2" />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Reviews</CardTitle>
-            <Clock className="h-4 w-4 text-orange-600" />
+            <CardTitle className="text-sm font-medium">Pending Actions</CardTitle>
+            <Shield className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {analytics?.reduce((sum, metric) => sum + Number(metric.pending_users), 0) || 0}
+              {analyticsData.reduce((sum, item) => sum + Number(item.pending_users), 0)}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Awaiting approval
-            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Completion</CardTitle>
+            <TrendingUp className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {Math.round(tierData.reduce((sum, tier) => sum + Number(tier.completion_percentage), 0) / tierData.length)}%
+            </div>
           </CardContent>
         </Card>
 
@@ -155,87 +122,58 @@ export function RealComplianceAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {analytics?.reduce((sum, metric) => sum + Number(metric.overdue_users), 0) || 0}
+              {analyticsData.reduce((sum, item) => sum + Number(item.overdue_users), 0)}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Require attention
-            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts Section */}
+      {/* Charts */}
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Tier Distribution Pie Chart */}
+        {/* Tier Comparison Chart */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Compliance Tier Distribution
-            </CardTitle>
-            <CardDescription>
-              User distribution across compliance tiers
-            </CardDescription>
+            <CardTitle>Completion Rate by Tier</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={tierChartData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, users, percent }) => 
-                      `${name}: ${users} (${(percent * 100).toFixed(0)}%)`
-                    }
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="users"
-                  >
-                    {tierChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: number) => [value, 'Users']} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={comparisonData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip formatter={(value) => [`${value}%`, 'Completion Rate']} />
+                <Bar dataKey="basic" name="Basic Tier" fill="#3B82F6" />
+                <Bar dataKey="robust" name="Robust Tier" fill="#8B5CF6" />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Metrics Completion Bar Chart */}
+        {/* Tier Distribution */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Completion Rates by Metric
-            </CardTitle>
-            <CardDescription>
-              Comparison of basic vs robust tier completion rates
-            </CardDescription>
+            <CardTitle>User Distribution by Tier</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={metricsChartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="metric" 
-                    angle={-45}
-                    textAnchor="end"
-                    height={100}
-                    fontSize={12}
-                  />
-                  <YAxis label={{ value: 'Completion %', angle: -90, position: 'insideLeft' }} />
-                  <Tooltip formatter={(value: number) => [`${value}%`, 'Completion Rate']} />
-                  <Legend />
-                  <Bar name="Basic Tier" dataKey="basic" fill="#3B82F6" />
-                  <Bar name="Robust Tier" dataKey="robust" fill="#8B5CF6" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={tierDistributionChart}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, value }) => `${name}: ${value}`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {tierDistributionChart.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
@@ -243,52 +181,38 @@ export function RealComplianceAnalytics() {
       {/* Detailed Metrics Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Detailed Compliance Metrics
-          </CardTitle>
-          <CardDescription>
-            Comprehensive breakdown of all compliance requirements
-          </CardDescription>
+          <CardTitle>Detailed Compliance Metrics</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+            <table className="w-full text-sm">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-2 font-medium">Metric</th>
-                  <th className="text-center p-2 font-medium">Total Users</th>
-                  <th className="text-center p-2 font-medium">Basic Completion</th>
-                  <th className="text-center p-2 font-medium">Robust Completion</th>
-                  <th className="text-center p-2 font-medium">Completed</th>
-                  <th className="text-center p-2 font-medium">Pending</th>
-                  <th className="text-center p-2 font-medium">Overdue</th>
+                  <th className="text-left py-2">Metric</th>
+                  <th className="text-center py-2">Basic Tier</th>
+                  <th className="text-center py-2">Robust Tier</th>
+                  <th className="text-center py-2">Pending</th>
+                  <th className="text-center py-2">Overdue</th>
                 </tr>
               </thead>
               <tbody>
-                {analytics?.map((metric, index) => (
-                  <tr key={index} className="border-b hover:bg-gray-50">
-                    <td className="p-2 font-medium">{metric.metric_name}</td>
-                    <td className="p-2 text-center">{metric.total_users}</td>
-                    <td className="p-2 text-center">
-                      <Badge variant="outline" className="bg-blue-50">
-                        {metric.basic_completion_rate}%
-                      </Badge>
+                {analyticsData.map((item, index) => (
+                  <tr key={index} className="border-b">
+                    <td className="py-2 font-medium">{item.metric_name}</td>
+                    <td className="text-center py-2">
+                      {Number(item.basic_completion_rate).toFixed(1)}%
+                      <span className="text-xs text-muted-foreground ml-1">
+                        ({item.completed_basic}/{item.total_users_basic})
+                      </span>
                     </td>
-                    <td className="p-2 text-center">
-                      <Badge variant="outline" className="bg-purple-50">
-                        {metric.robust_completion_rate}%
-                      </Badge>
+                    <td className="text-center py-2">
+                      {Number(item.robust_completion_rate).toFixed(1)}%
+                      <span className="text-xs text-muted-foreground ml-1">
+                        ({item.completed_robust}/{item.total_users_robust})
+                      </span>
                     </td>
-                    <td className="p-2 text-center text-green-600 font-medium">
-                      {metric.completed_users}
-                    </td>
-                    <td className="p-2 text-center text-orange-600 font-medium">
-                      {metric.pending_users}
-                    </td>
-                    <td className="p-2 text-center text-red-600 font-medium">
-                      {metric.overdue_users}
-                    </td>
+                    <td className="text-center py-2">{item.pending_users}</td>
+                    <td className="text-center py-2">{item.overdue_users}</td>
                   </tr>
                 ))}
               </tbody>
@@ -303,7 +227,7 @@ export function RealComplianceAnalytics() {
 function ComplianceAnalyticsSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -311,8 +235,7 @@ function ComplianceAnalyticsSkeleton() {
               <Skeleton className="h-4 w-4 rounded" />
             </CardHeader>
             <CardContent>
-              <Skeleton className="h-8 w-16 mb-2" />
-              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-8 w-16" />
             </CardContent>
           </Card>
         ))}
@@ -321,18 +244,19 @@ function ComplianceAnalyticsSkeleton() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-6 w-32" />
           </CardHeader>
           <CardContent>
-            <Skeleton className="h-80 w-full" />
+            <Skeleton className="h-[300px] w-full" />
           </CardContent>
         </Card>
+        
         <Card>
           <CardHeader>
-            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-6 w-32" />
           </CardHeader>
           <CardContent>
-            <Skeleton className="h-80 w-full" />
+            <Skeleton className="h-[300px] w-full" />
           </CardContent>
         </Card>
       </div>

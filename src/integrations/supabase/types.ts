@@ -13916,8 +13916,10 @@ export type Database = {
           metric_name: string
           basic_completion_rate: number
           robust_completion_rate: number
-          total_users: number
-          completed_users: number
+          total_users_basic: number
+          total_users_robust: number
+          completed_basic: number
+          completed_robust: number
           pending_users: number
           overdue_users: number
         }[]
@@ -14258,7 +14260,6 @@ export type Database = {
           tier_name: string
           user_count: number
           completion_percentage: number
-          avg_score: number
         }[]
       }
       get_top_certificate_courses: {
