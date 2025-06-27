@@ -6,23 +6,14 @@ import { useProfile } from '@/hooks/useProfile';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-// Import existing sophisticated compliance components
-import { ComplianceManagement } from '@/components/compliance/ComplianceManagement';
-import { ComplianceRequirementsManager } from '@/components/compliance/ComplianceRequirementsManager';
-import { ComplianceDocumentManager } from '@/components/compliance/ComplianceDocumentManager';
-import { ComplianceAuditTrail } from '@/components/compliance/ComplianceAuditTrail';
-import { ComplianceReportsGenerator } from '@/components/compliance/ComplianceReportsGenerator';
-import { ComplianceTierManagement } from '@/components/compliance/ComplianceTierManagement';
-import { ComplianceWorkflowManager } from '@/components/compliance/ComplianceWorkflowManager';
-import { ComplianceMetricsAnalytics } from '@/components/compliance/ComplianceMetricsAnalytics';
-import { ComplianceNotificationCenter } from '@/components/compliance/ComplianceNotificationCenter';
-
-// Import the updated components that handle real data
+// Import real compliance components
 import { ComplianceTierDashboard } from '@/components/compliance/ComplianceTierDashboard';
 import { RequirementReviewQueue } from '@/components/compliance/RequirementReviewQueue';
-import { ComplianceTierManager } from '@/components/compliance/ComplianceTierManager';
-import { TierComparisonChart } from '@/components/compliance/TierComparisonChart';
 import { ComplianceTierRequirementsEditor } from '@/components/compliance/ComplianceTierRequirementsEditor';
+import { AdminUserTierManager } from '@/components/compliance/AdminUserTierManager';
+import { RealComplianceAnalytics } from '@/components/compliance/RealComplianceAnalytics';
+import { ComplianceDocumentManager } from '@/components/compliance/ComplianceDocumentManager';
+import { ComplianceAuditTrail } from '@/components/compliance/ComplianceAuditTrail';
 
 export default function ComplianceAdminDashboard() {
   const { data: profile } = useProfile();
@@ -91,25 +82,7 @@ export default function ComplianceAdminDashboard() {
         </TabsContent>
 
         <TabsContent value="tiers" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-            <ComplianceTierManager
-              userId={profile?.id || ''}
-              userRole={profile?.role as 'SA' | 'AD' | 'AP' | 'IC' | 'IP' | 'IT'}
-              userName={profile?.display_name || profile?.email || 'Administrator'}
-              canManage={true}
-            />
-            <Card>
-              <CardHeader>
-                <CardTitle>Tier Analytics</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <TierComparisonChart
-                  comparisonType="distribution"
-                  role={profile?.role || 'SA'}
-                />
-              </CardContent>
-            </Card>
-          </div>
+          <AdminUserTierManager />
         </TabsContent>
 
         <TabsContent value="reviews" className="space-y-6">
@@ -117,26 +90,22 @@ export default function ComplianceAdminDashboard() {
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-6">
-          <div className="grid gap-6">
-            <TierComparisonChart
-              comparisonType="metrics"
-              role={profile?.role || 'SA'}
-            />
-          </div>
+          <RealComplianceAnalytics />
         </TabsContent>
 
         <TabsContent value="documents" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Document Management</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <FileCheck className="h-5 w-5" />
+                Document Management System
+              </CardTitle>
               <CardDescription>
-                System-wide compliance document oversight
+                System-wide compliance document oversight and management
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">
-                Document management interface will integrate with existing ComplianceDocumentManager component
-              </p>
+              <ComplianceDocumentManager />
             </CardContent>
           </Card>
         </TabsContent>
@@ -144,15 +113,16 @@ export default function ComplianceAdminDashboard() {
         <TabsContent value="audit" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Audit Trail</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Compliance Audit Trail
+              </CardTitle>
               <CardDescription>
-                System-wide compliance audit and activity log
+                System-wide compliance audit and activity monitoring
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">
-                Audit trail interface will integrate with existing ComplianceAuditTrail component
-              </p>
+              <ComplianceAuditTrail />
             </CardContent>
           </Card>
         </TabsContent>
