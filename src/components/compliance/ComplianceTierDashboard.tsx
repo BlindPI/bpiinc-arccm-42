@@ -37,20 +37,11 @@ export function ComplianceTierDashboard() {
       setIsLoading(true);
       console.log('🔧 DEBUG: Loading dashboard data...');
       
-      const [stats, users] = await Promise.all([
-        ComplianceTierService.getComplianceTierStatistics(),
-        ComplianceTierService.getAllUsersComplianceTiers()
-      ]);
+      // FIX: Call getAllUsersComplianceTiers only once and calculate statistics locally
+      // This prevents the race condition where getComplianceTierStatistics() also calls getAllUsersComplianceTiers()
+      const users = await ComplianceTierService.getAllUsersComplianceTiers();
       
-      console.log('🔧 DEBUG: Dashboard data loaded - Stats:', stats ? 'loaded' : 'null', 'Users:', users?.length || 0);
-      
-      // DEFENSIVE: Handle undefined/null returns from services
-      const safeStats = stats || {
-        basic_tier_users: 0,
-        robust_tier_users: 0,
-        basic_completion_avg: 0,
-        robust_completion_avg: 0
-      };
+      console.log('🔧 DEBUG: Dashboard data loaded - Users:', users?.length || 0);
       
       // DEFENSIVE: Ensure users is always an array
       const safeUsers = Array.isArray(users) ? users : [];
@@ -79,7 +70,26 @@ export function ComplianceTierDashboard() {
       
       console.log('🔧 DEBUG: Transformed users:', transformedUsers.length);
       
-      setStatistics(safeStats);
+      // FIX: Calculate statistics locally from the users data to avoid race condition
+      const basicUsers = transformedUsers.filter(user => user.tier === 'basic');
+      const robustUsers = transformedUsers.filter(user => user.tier === 'robust');
+      
+      const basicCompletionSum = basicUsers.reduce((sum, user) => sum + (user.completion_percentage || 0), 0);
+      const robustCompletionSum = robustUsers.reduce((sum, user) => sum + (user.completion_percentage || 0), 0);
+      
+      const basicCompletionAvg = basicUsers.length > 0 ? Math.round(basicCompletionSum / basicUsers.length) : 0;
+      const robustCompletionAvg = robustUsers.length > 0 ? Math.round(robustCompletionSum / robustUsers.length) : 0;
+      
+      const calculatedStats = {
+        basic_tier_users: basicUsers.length,
+        robust_tier_users: robustUsers.length,
+        basic_completion_avg: basicCompletionAvg,
+        robust_completion_avg: robustCompletionAvg
+      };
+      
+      console.log('🔧 DEBUG: Calculated statistics:', calculatedStats);
+      
+      setStatistics(calculatedStats);
       setAllUsers(transformedUsers);
     } catch (error) {
       console.error('🔥 ERROR: Dashboard data loading failed:', error);

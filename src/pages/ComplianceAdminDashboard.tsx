@@ -17,7 +17,7 @@ export default function ComplianceAdminDashboard() {
 
   if (!hasAdminAccess) {
     return (
-      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      <div className="space-y-6">
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
@@ -35,14 +35,14 @@ export default function ComplianceAdminDashboard() {
   }
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between space-y-2">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Shield className="h-8 w-8 text-blue-600" />
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <Shield className="h-6 w-6 text-blue-600" />
             Compliance Administration
-          </h2>
+          </h1>
           <p className="text-muted-foreground">
             System-wide compliance management and oversight dashboard
           </p>
