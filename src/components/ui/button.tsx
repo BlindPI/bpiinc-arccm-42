@@ -38,14 +38,14 @@ export function buttonVariants({
   return `inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ${sizeClasses[size]} ${variantClasses[variant]}`;
 }
 
-export function Button({
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   variant = "default",
   size = "default",
   className,
   children,
   asChild = false,
   ...props
-}: ButtonProps) {
+}, ref) => {
   const variantClasses = {
     default: "bg-blue-600 text-white hover:bg-blue-700",
     secondary: "bg-purple-600 text-white hover:bg-purple-700",
@@ -74,10 +74,13 @@ export function Button({
 
   return (
     <button
+      ref={ref}
       className={`inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ${sizeClasses[size]} ${variantClasses[variant]} ${className || ""}`}
       {...props}
     >
       {children}
     </button>
   );
-}
+});
+
+Button.displayName = "Button";

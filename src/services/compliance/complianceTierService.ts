@@ -9,6 +9,17 @@ export interface ComplianceTierInfo {
   requirements: any[];
 }
 
+export interface UIComplianceTierInfo {
+  id: string;
+  tier: 'basic' | 'robust';
+  userId: string;
+  assignedAt: string;
+  canAdvance: boolean;
+  requirements: any[];
+  completion_percentage: number;
+  next_steps: string[];
+}
+
 export class ComplianceTierService {
   static async getUserTier(userId: string): Promise<ComplianceTierInfo | null> {
     try {
@@ -31,6 +42,41 @@ export class ComplianceTierService {
       console.error('Error fetching user tier:', error);
       return null;
     }
+  }
+
+  static async getUserComplianceTierInfo(userId: string): Promise<UIComplianceTierInfo | null> {
+    try {
+      const basicInfo = await this.getUserTier(userId);
+      if (!basicInfo) return null;
+
+      // Get completion percentage from user_compliance_records
+      const { data: records } = await supabase
+        .from('user_compliance_records')
+        .select('compliance_status')
+        .eq('user_id', userId);
+
+      const totalRecords = records?.length || 0;
+      const completedRecords = records?.filter(r => r.compliance_status === 'approved').length || 0;
+      const completion_percentage = totalRecords > 0 ? Math.round((completedRecords / totalRecords) * 100) : 0;
+
+      return {
+        id: userId,
+        tier: basicInfo.tier,
+        userId: basicInfo.userId,
+        assignedAt: basicInfo.assignedAt,
+        canAdvance: basicInfo.canAdvance,
+        requirements: basicInfo.requirements,
+        completion_percentage,
+        next_steps: completion_percentage < 100 ? ['Complete remaining requirements'] : ['All requirements completed']
+      };
+    } catch (error) {
+      console.error('Error fetching user compliance tier info:', error);
+      return null;
+    }
+  }
+
+  static async getUIComplianceTierInfo(userId: string): Promise<UIComplianceTierInfo | null> {
+    return this.getUserComplianceTierInfo(userId);
   }
 
   static async updateUserComplianceTier(userId: string, tier: 'basic' | 'robust'): Promise<boolean> {
@@ -59,5 +105,25 @@ export class ComplianceTierService {
   static async validateTierSwitch(userId: string, targetTier: 'basic' | 'robust'): Promise<boolean> {
     // Basic validation - always allow for now
     return true;
+  }
+
+  static subscribeToTierChanges(userId: string, callback: (update: UIComplianceTierInfo) => void) {
+    const subscription = supabase
+      .channel(`compliance_tier_${userId}`)
+      .on('postgres_changes', 
+        { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'profiles',
+          filter: `id=eq.${userId}`
+        }, 
+        async () => {
+          const updated = await this.getUIComplianceTierInfo(userId);
+          if (updated) callback(updated);
+        }
+      )
+      .subscribe();
+
+    return subscription;
   }
 }
