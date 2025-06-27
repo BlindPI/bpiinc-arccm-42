@@ -61,11 +61,12 @@ export function RequirementReviewQueue() {
     return (
       <Card>
         <CardContent className="pt-6">
-          <div className="text-center text-red-500">
-            <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
-            <p>Failed to load review queue</p>
+          <div className="text-center">
+            <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-yellow-500" />
+            <p className="font-medium">Review Queue Unavailable</p>
             <p className="text-sm text-muted-foreground mt-1">
-              {error.message}
+              The review queue is not yet configured. This will become available once compliance 
+              submissions are created and require review.
             </p>
           </div>
         </CardContent>

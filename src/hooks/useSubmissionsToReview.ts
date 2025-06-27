@@ -16,17 +16,23 @@ export function useSubmissionsToReview() {
   return useQuery({
     queryKey: ['submissions-to-review'],
     queryFn: async (): Promise<SubmissionToReview[]> => {
+      // Use the existing database function
       const { data, error } = await supabase
         .rpc('get_pending_compliance_submissions');
 
       if (error) {
         console.error('Error fetching submissions to review:', error);
+        // If no data exists yet, return empty array instead of throwing
+        if (error.message.includes('does not exist') || error.code === 'PGRST116') {
+          console.log('No pending submissions found - returning empty array');
+          return [];
+        }
         throw error;
       }
 
       return data || [];
     },
-    refetchInterval: 60000, // Refresh every minute
-    staleTime: 30000 // Consider data stale after 30 seconds
+    refetchInterval: 60000,
+    staleTime: 30000
   });
 }

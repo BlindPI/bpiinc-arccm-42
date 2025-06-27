@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Shield, Users, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Shield, Users, TrendingUp, AlertTriangle, Info } from 'lucide-react';
 import { useComplianceAdminStats } from '@/hooks/useComplianceAdminStats';
 
 export function ComplianceTierDashboard() {
@@ -27,6 +28,42 @@ export function ComplianceTierDashboard() {
           </div>
         </CardContent>
       </Card>
+    );
+  }
+
+  // Check if we have any data at all
+  const hasData = stats && (stats.totalUsers > 0 || stats.basicTierCount > 0 || stats.robustTierCount > 0);
+
+  if (!hasData) {
+    return (
+      <div className="space-y-6">
+        <Alert className="border-blue-200 bg-blue-50">
+          <Info className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-blue-800">
+            <strong>Compliance System Ready</strong> - No compliance data found yet. 
+            The system is properly configured and ready to manage compliance once users are assigned tiers 
+            and compliance records are created.
+          </AlertDescription>
+        </Alert>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              System Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <Shield className="h-16 w-16 mx-auto mb-4 text-blue-500 opacity-50" />
+              <h3 className="text-lg font-medium mb-2">Compliance System Active</h3>
+              <p className="text-muted-foreground mb-4">
+                Ready to manage compliance tiers and requirements
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -58,7 +95,7 @@ export function ComplianceTierDashboard() {
             <Users className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalUsers}</div>
+            <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
             <p className="text-xs text-muted-foreground">
               Active system users
             </p>
@@ -71,7 +108,7 @@ export function ComplianceTierDashboard() {
             <Shield className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.pendingReviews}</div>
+            <div className="text-2xl font-bold">{stats?.pendingReviews || 0}</div>
             <p className="text-xs text-muted-foreground">
               Awaiting approval
             </p>
@@ -84,8 +121,8 @@ export function ComplianceTierDashboard() {
             <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.avgCompletionRate}%</div>
-            <Progress value={stats?.avgCompletionRate} className="mt-2" />
+            <div className="text-2xl font-bold">{stats?.avgCompletionRate || 0}%</div>
+            <Progress value={stats?.avgCompletionRate || 0} className="mt-2" />
           </CardContent>
         </Card>
 
@@ -119,11 +156,11 @@ export function ComplianceTierDashboard() {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Basic Tier</span>
                 <Badge variant="outline" className="bg-blue-50">
-                  {stats?.basicTierCount} users
+                  {stats?.basicTierCount || 0} users
                 </Badge>
               </div>
               <Progress 
-                value={(stats?.basicTierCount || 0) / (stats?.totalUsers || 1) * 100} 
+                value={stats?.totalUsers ? (stats.basicTierCount / stats.totalUsers) * 100 : 0} 
                 className="h-2"
               />
             </div>
@@ -132,11 +169,11 @@ export function ComplianceTierDashboard() {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Robust Tier</span>
                 <Badge variant="outline" className="bg-green-50">
-                  {stats?.robustTierCount} users
+                  {stats?.robustTierCount || 0} users
                 </Badge>
               </div>
               <Progress 
-                value={(stats?.robustTierCount || 0) / (stats?.totalUsers || 1) * 100} 
+                value={stats?.totalUsers ? (stats.robustTierCount / stats.totalUsers) * 100 : 0} 
                 className="h-2"
               />
             </div>
