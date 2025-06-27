@@ -104,9 +104,23 @@ function TierDistributionChart({ data }: { data: any }) {
           fill="#8884d8"
           dataKey="value"
         >
-          {data.distribution.map((entry: any, index: number) => (
-            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-          ))}
+          {(() => {
+            console.log('🐛 CHART-MAP-DEBUG: About to map data.distribution:', {
+              distribution: data.distribution,
+              isArray: Array.isArray(data.distribution),
+              length: data.distribution?.length,
+              type: typeof data.distribution
+            });
+            
+            if (!Array.isArray(data.distribution)) {
+              console.error('🔥 CHART-MAP-ERROR: data.distribution is not an array!', data.distribution);
+              return null;
+            }
+            
+            return data.distribution.map((entry: any, index: number) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ));
+          })()}
         </Pie>
         <Tooltip 
           formatter={(value: number, name: string) => [

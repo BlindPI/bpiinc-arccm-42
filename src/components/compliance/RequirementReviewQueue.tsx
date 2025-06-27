@@ -325,7 +325,20 @@ function SubmissionReviewDialog({
                 
                 {submission.files && submission.files.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {submission.files.map((file: any, i: number) => (
+                    {(() => {
+                      console.log('🐛 DIALOG-FILES-MAP-DEBUG: About to map submission.files:', {
+                        files: submission.files,
+                        isArray: Array.isArray(submission.files),
+                        length: submission.files?.length,
+                        type: typeof submission.files
+                      });
+                      
+                      if (!Array.isArray(submission.files)) {
+                        console.error('🔥 DIALOG-FILES-MAP-ERROR: submission.files is not an array!', submission.files);
+                        return <div className="text-red-500">Error: Files data is not properly loaded</div>;
+                      }
+                      
+                      return submission.files.map((file: any, i: number) => (
                       <a
                         key={i}
                         href={file.url}
@@ -339,7 +352,8 @@ function SubmissionReviewDialog({
                         </div>
                         <span className="text-xs text-blue-600">View</span>
                       </a>
-                    ))}
+                      ));
+                    })()}
                   </div>
                 ) : (
                   <p className="text-muted-foreground text-sm">No files were submitted</p>
