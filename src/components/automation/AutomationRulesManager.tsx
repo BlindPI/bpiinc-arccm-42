@@ -17,7 +17,7 @@ export function AutomationRulesManager() {
   const [editingRule, setEditingRule] = useState<AutomationRule | null>(null);
   const queryClient = useQueryClient();
 
-  // Fetch automation rules
+  // Fetch automation rules with proper type casting
   const { data: rules = [], isLoading } = useQuery({
     queryKey: ['automation-rules'],
     queryFn: async (): Promise<AutomationRule[]> => {
@@ -31,11 +31,12 @@ export function AutomationRulesManager() {
       return data?.map(rule => ({
         ...rule,
         type: rule.rule_type,
+        rule_type: rule.rule_type as 'compliance' | 'certificate' | 'notification' | 'progression',
         isActive: rule.is_active,
         trigger: { type: 'condition', parameters: rule.trigger_conditions },
         actions: [{ type: 'action', parameters: rule.actions }],
-        createdAt: rule.created_at,
-        updatedAt: rule.updated_at
+        createdAt: rule.created_at || new Date().toISOString(),
+        updatedAt: rule.updated_at || new Date().toISOString()
       })) || [];
     }
   });

@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { useRequirementSubmission } from '../../hooks/useComplianceRequirements';
-import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 // UI Components
@@ -46,7 +46,7 @@ export function FileUploadRequirement({ requirement, onSubmit, onSave }: FileUpl
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   
-  const { mutate: submitRequirement, isLoading: isSubmitting } = useRequirementSubmission();
+  const { submitRequirement, isLoading: isSubmitting } = useRequirementSubmission();
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -111,8 +111,8 @@ export function FileUploadRequirement({ requirement, onSubmit, onSave }: FileUpl
         })
       );
       
-      // Submit requirement
-      submitRequirement({
+      // Submit requirement with proper structure
+      await submitRequirement({
         userId: user.id,
         requirementId: requirement.id,
         submissionData: {
@@ -120,18 +120,12 @@ export function FileUploadRequirement({ requirement, onSubmit, onSave }: FileUpl
           notes,
           submittedAt: new Date().toISOString()
         }
-      }, {
-        onSuccess: () => {
-          toast.success('Requirement submitted successfully');
-          setFiles([]);
-          setNotes('');
-          onSubmit?.();
-        },
-        onError: (error) => {
-          console.error('Submission error:', error);
-          toast.error('Failed to submit requirement. Please try again.');
-        }
       });
+      
+      toast.success('Requirement submitted successfully');
+      setFiles([]);
+      setNotes('');
+      onSubmit?.();
     } catch (error) {
       console.error('Error uploading files:', error);
       toast.error('Failed to upload files. Please try again.');

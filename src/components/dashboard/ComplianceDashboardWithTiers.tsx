@@ -1,198 +1,102 @@
-// File: src/components/dashboard/ComplianceDashboardWithTiers.tsx
-
-import React, { useState } from 'react';
-import { Card } from './components/ui/card';
-import { Button } from './components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
-import { useAuth } from './contexts/AuthContext';
-import { useComplianceTier } from './hooks/useComplianceTier';
-import { useComplianceRequirements } from './hooks/useComplianceRequirements';
-import { ComplianceTierService } from './services/compliance/complianceTierService';
-import { TierStatusHeader } from './TierStatusHeader';
-import { TierRequirementSection } from './TierRequirementSection';
-import { TierSwitchDialog } from './TierSwitchDialog';
-import { TierBenefitsOverview } from './TierBenefitsOverview';
-import { TierAdvancementSection } from './TierAdvancementSection';
-import { TierComparisonChart } from './TierComparisonChart';
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
+import { useComplianceTierRealtime } from '@/hooks/useComplianceTier';
+import { CheckCircle, Clock, AlertTriangle, Award } from 'lucide-react';
 
 export function ComplianceDashboardWithTiers() {
-  // State for dialogs
-  const [tierSwitchDialogOpen, setTierSwitchDialogOpen] = useState(false);
-  const [selectedRequirement, setSelectedRequirement] = useState<any>(null);
-  
-  // Get user context
   const { user } = useAuth();
-  
-  // Get tier information
-  const { data: tierInfo, isLoading: tierLoading } = useComplianceTier(user?.id);
-  
-  // Current tier and role
-  const tier = tierInfo?.tier || 'basic';
-  const role = tierInfo?.role || 'IT';
-  
-  // Get requirements for current tier and role
-  const { data: requirements, isLoading: requirementsLoading } = useComplianceRequirements(
-    user?.id,
-    role,
-    tier
-  );
-  
-  // Group requirements by category
-  const groupedRequirements = React.useMemo(() => {
-    if (!requirements) return {};
-    
-    // Group by category
-    return requirements.reduce((groups: Record<string, any[]>, item: any) => {
-      const category = item.category || 'General';
-      if (!groups[category]) {
-        groups[category] = [];
-      }
-      groups[category].push(item);
-      return groups;
-    }, {});
-  }, [requirements]);
-  
-  // Handle tier switch
-  const handleTierSwitch = async (targetTier: string, reason: string): Promise<void> => {
-    try {
-      await ComplianceTierService.switchTier(user?.id!, targetTier, reason);
-      // Don't return any value to match the Promise<void> type
-    } catch (error) {
-      console.error('Failed to switch tier:', error);
-      throw error;
-    }
-  };
-  
-  // Generate mock data for analytics dashboard
-  const getAnalyticsData = () => {
-    return {
-      metrics: [
-        { metric: 'Completion Rate', basic: 75, robust: 45 },
-        { metric: 'Documentation', basic: 60, robust: 90 },
-        { metric: 'Teaching Skills', basic: 50, robust: 85 },
-        { metric: 'Assessment', basic: 80, robust: 70 },
-        { metric: 'Mentoring', basic: 30, robust: 95 }
-      ],
-      distribution: [
-        { name: 'Basic Tier', value: 65 },
-        { name: 'Robust Tier', value: 35 }
-      ],
-      completionTime: [
-        { name: 'Documentation', basic: 14, robust: 28 },
-        { name: 'Skills', basic: 21, robust: 42 },
-        { name: 'Assessment', basic: 7, robust: 21 }
-      ],
-      performance: [
-        { name: 'Week 1', basic: 10, robust: 5 },
-        { name: 'Week 2', basic: 25, robust: 15 },
-        { name: 'Week 3', basic: 45, robust: 30 },
-        { name: 'Week 4', basic: 70, robust: 45 },
-        { name: 'Week 5', basic: 85, robust: 60 },
-        { name: 'Week 6', basic: 95, robust: 75 }
-      ],
-      total: 100
-    };
-  };
-  
-  // Loading state
-  if (tierLoading || requirementsLoading) {
-    return <div className="p-6">Loading dashboard...</div>;
+  const { data: profile } = useProfile();
+  const { data: tierInfo } = useComplianceTierRealtime(user?.id);
+
+  if (!user || !profile || !tierInfo) {
+    return (
+      <Card>
+        <CardContent className="text-center py-8">
+          <p className="text-muted-foreground">Loading compliance data...</p>
+        </CardContent>
+      </Card>
+    );
   }
-  
+
+  const overallCompletion = tierInfo?.completionPercentage || 0;
+  const totalRequirements = tierInfo?.totalRequirements || 0;
+  const completedRequirements = tierInfo?.completedRequirements || 0;
+
   return (
-    <div className="space-y-6 p-6">
-      {/* Tier Status Header */}
-      <TierStatusHeader
-        tierInfo={tierInfo!}
-        onOpenTierSwitch={() => setTierSwitchDialogOpen(true)}
-      />
-      
-      {/* Main Dashboard Tabs */}
-      <Tabs defaultValue="requirements" className="w-full">
-        <TabsList className="w-full justify-start">
-          <TabsTrigger value="requirements">Requirements</TabsTrigger>
-          <TabsTrigger value="benefits">Tier Benefits</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-        </TabsList>
-        
-        {/* Requirements Tab */}
-        <TabsContent value="requirements" className="space-y-6 mt-6">
-          {/* Requirements by Category */}
-          {Object.entries(groupedRequirements).map(([category, reqs]) => (
-            <TierRequirementSection
-              key={category}
-              title={category}
-              requirements={reqs}
-              tier={tier as 'basic' | 'robust'}
-              onRequirementClick={setSelectedRequirement}
-            />
-          ))}
-          
-          {/* Tier Advancement Section (for basic tier only) */}
-          {tier === 'basic' && (
-            <TierAdvancementSection
-              canAdvance={tierInfo?.can_advance_tier || false}
-              blockedReason={tierInfo?.advancement_blocked_reason}
-              completedRequirements={tierInfo?.completed_requirements || 0}
-              totalRequirements={tierInfo?.requirements_count || 1}
-              onRequestAdvancement={() => setTierSwitchDialogOpen(true)}
-            />
-          )}
-        </TabsContent>
-        
-        {/* Benefits Tab */}
-        <TabsContent value="benefits" className="space-y-6 mt-6">
-          <TierBenefitsOverview
-            tier={tier as 'basic' | 'robust'}
-            role={role}
-            onTierChange={(newTier) => {
-              if (newTier !== tier) {
-                setTierSwitchDialogOpen(true);
-              }
-            }}
-          />
-        </TabsContent>
-        
-        {/* Analytics Tab */}
-        <TabsContent value="analytics" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <TierComparisonChart
-              data={getAnalyticsData()}
-              role={role}
-              comparisonType="metrics"
-            />
-            
-            <TierComparisonChart
-              data={getAnalyticsData()}
-              role={role}
-              comparisonType="distribution"
-            />
-            
-            <TierComparisonChart
-              data={getAnalyticsData()}
-              role={role}
-              comparisonType="completion"
-            />
-            
-            <TierComparisonChart
-              data={getAnalyticsData()}
-              role={role}
-              comparisonType="performance"
-            />
-          </div>
-        </TabsContent>
-      </Tabs>
-      
-      {/* Tier Switch Dialog */}
-      <TierSwitchDialog
-        isOpen={tierSwitchDialogOpen}
-        onClose={() => setTierSwitchDialogOpen(false)}
-        currentTier={tier}
-        targetTier={tier === 'basic' ? 'robust' : 'basic'}
-        onConfirm={handleTierSwitch}
-        role={role}
-        userId={user?.id}
-      />
+    <div className="space-y-6">
+      {/* Overview Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Overall Progress</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{overallCompletion}%</div>
+            <Progress value={overallCompletion} className="mt-2" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">High Priority</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">70%</div>
+            <Progress value={70} className="mt-2" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Medium Priority</CardTitle>
+            <Clock className="h-4 w-4 text-yellow-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">55%</div>
+            <Progress value={55} className="mt-2" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Points Earned</CardTitle>
+            <Award className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">780/1200</div>
+            <Progress value={65} className="mt-2" />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tier Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Compliance Tier</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>Current Tier: <Badge>{tierInfo?.tier}</Badge></p>
+          <p>Requirements Completed: {completedRequirements} / {totalRequirements}</p>
+          <Progress value={overallCompletion} />
+        </CardContent>
+      </Card>
+
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Button>View Requirements</Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

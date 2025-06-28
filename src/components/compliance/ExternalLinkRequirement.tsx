@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRequirementSubmission } from '../../hooks/useComplianceRequirements';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 // UI Components
@@ -37,7 +37,7 @@ export function ExternalLinkRequirement({ requirement, onSubmit }: ExternalLinkR
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   
-  const { mutate: submitRequirement } = useRequirementSubmission();
+  const { submitRequirement } = useRequirementSubmission();
   
   const validateSubmission = (): boolean => {
     // Check minimum score if required
@@ -79,8 +79,8 @@ export function ExternalLinkRequirement({ requirement, onSubmit }: ExternalLinkR
     setIsSubmitting(true);
     
     try {
-      // Submit requirement
-      submitRequirement({
+      // Submit requirement with proper structure
+      await submitRequirement({
         userId: user.id,
         requirementId: requirement.id,
         submissionData: {
@@ -91,19 +91,13 @@ export function ExternalLinkRequirement({ requirement, onSubmit }: ExternalLinkR
           external_system: requirement.external_system,
           submittedAt: new Date().toISOString()
         }
-      }, {
-        onSuccess: () => {
-          toast.success('External completion verification submitted successfully');
-          onSubmit?.();
-        },
-        onError: (error) => {
-          console.error('Submission error:', error);
-          toast.error('Failed to submit verification. Please try again.');
-        }
       });
+      
+      toast.success('External completion verification submitted successfully');
+      onSubmit?.();
     } catch (error) {
       console.error('Error submitting external requirement:', error);
-      toast.error('Failed to submit. Please try again.');
+      toast.error('Failed to submit verification. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

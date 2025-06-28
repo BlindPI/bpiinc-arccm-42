@@ -35,7 +35,7 @@ export interface RealPerformanceData {
   averageSatisfactionScore: number;
   efficiencyRating: number;
   complianceScore: number;
-  performanceScore?: number;
+  performanceScore: number;
 }
 
 export interface RealTeamStats {
@@ -66,6 +66,9 @@ export interface ComplianceTierInfo {
   totalRequirements: number;
   completionPercentage: number;
   description?: string;
+  completed_requirements?: number;
+  total_requirements?: number;
+  completion_percentage?: number;
 }
 
 export interface UserAchievement {
@@ -84,4 +87,29 @@ export interface UserAchievement {
   created_at: string;
   updated_at: string;
   metadata: any;
+}
+
+export interface AnalyticsReport {
+  id: string;
+  name: string;
+  description?: string;
+  report_type: string;
+  configuration: Record<string, any>;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+  is_automated?: boolean;
+  schedule_config?: Record<string, any>;
+}
+
+export interface EmailCampaign {
+  id: string;
+  name: string;
+  subject: string;
+  content: string;
+  campaign_type: 'newsletter' | 'promotional' | 'drip' | 'event' | 'follow_up';
+  status: string;
+  sent_count?: number;
+  created_at: string;
+  updated_at: string;
 }

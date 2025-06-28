@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,10 +44,10 @@ export function UserManagementDashboard() {
     }
   });
 
-  // Fetch users list
+  // Fetch users list with proper type casting
   const { data: users = [], isLoading: usersLoading } = useQuery({
     queryKey: ['users-list', searchTerm],
-    queryFn: async (): Promise<UserProfile[]> => {
+    queryFn: async () => {
       let query = supabase
         .from('profiles')
         .select('id, display_name, email, role, status, compliance_status, created_at');
@@ -65,7 +64,7 @@ export function UserManagementDashboard() {
         id: profile.id,
         display_name: profile.display_name || 'Unnamed User',
         email: profile.email || '',
-        role: profile.role || 'IT',
+        role: (profile.role || 'IT') as 'IT' | 'IP' | 'IC' | 'AP' | 'SA' | 'AD',
         status: profile.status || 'INACTIVE',
         compliance_status: profile.compliance_status || false,
         created_at: profile.created_at || new Date().toISOString()

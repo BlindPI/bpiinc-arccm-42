@@ -53,7 +53,7 @@ export function RequirementDetailDrawer({
   } = useRequirementDetail(requirementId || '', user?.id || '');
   
   // Fetch requirement history
-  const { data: history } = useRequirementHistory(requirementId || '', user?.id || '');
+  const { data: history = [] } = useRequirementHistory(requirementId || '', user?.id || '');
   
   // Handle successful submission
   const handleSubmissionSuccess = () => {

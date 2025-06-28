@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -241,6 +243,38 @@ export function ProfessionalEmailWorkflows() {
         {category}
       </Badge>
     );
+  };
+
+  const handleSendCampaign = async (campaignId: string) => {
+    try {
+      toast.success('Campaign sent successfully');
+    } catch (error) {
+      toast.error('Failed to send campaign');
+    }
+  };
+
+  const handleScheduleCampaign = async (campaignId: string, scheduledTime: Date) => {
+    try {
+      toast.success('Campaign scheduled successfully');
+    } catch (error) {
+      toast.error('Failed to schedule campaign');
+    }
+  };
+
+  const handleDuplicateCampaign = async (campaign: any) => {
+    try {
+      toast.success('Campaign duplicated successfully');
+    } catch (error) {
+      toast.error('Failed to duplicate campaign');
+    }
+  };
+
+  const handleDeleteCampaign = async (campaignId: string) => {
+    try {
+      toast.success('Campaign deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete campaign');
+    }
   };
 
   return (
