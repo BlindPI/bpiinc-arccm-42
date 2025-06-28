@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,17 +18,16 @@ export function TeamKPIDashboard() {
     queryFn: async (): Promise<GlobalAnalytics> => {
       const analytics = await TeamAnalyticsService.getGlobalAnalytics();
       
-      // Transform the data to match expected interface
       return {
         totalUsers: analytics?.totalUsers || 0,
         activeSessions: analytics?.activeSessions || 0,
         completionRate: analytics?.completionRate || 0,
         complianceScore: analytics?.complianceScore || 0,
         topPerformingTeams: (analytics?.topPerformingTeams || []).map(team => ({
-          id: team.id || team.team_id || 'unknown',
-          name: team.name || team.team_name || 'Unknown Team',
-          performance: team.performance || team.average_performance || 0,
-          memberCount: team.memberCount || team.member_count || team.total_members || 0
+          id: team.id || 'unknown',
+          name: team.name || 'Unknown Team',
+          performance: team.performance || 0,
+          memberCount: team.memberCount || 0
         }))
       };
     }
@@ -40,12 +38,11 @@ export function TeamKPIDashboard() {
     queryFn: async (): Promise<TeamGoal[]> => {
       const goals = await TeamAnalyticsService.getTeamGoals(selectedTeamId === 'all' ? '1' : selectedTeamId);
       
-      // Transform goals to match expected interface
       return (goals || []).map(goal => ({
         id: goal.id,
-        title: goal.title || goal.name || 'Unnamed Goal',
-        progress: goal.progress || goal.current_value || 0,
-        target: goal.target || goal.target_value || 100,
+        title: goal.title || 'Unnamed Goal',
+        progress: goal.progress || 0,
+        target: goal.target || 100,
         status: goal.status as 'on_track' | 'at_risk' | 'behind' || 'on_track'
       }));
     },
