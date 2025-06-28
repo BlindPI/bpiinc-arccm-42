@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { TeamAnalyticsService } from '@/services/team/teamAnalyticsService';
 import { TeamKPIMetrics } from './TeamKPIMetrics';
 import { RefreshCw, Download, Filter, Users, BarChart3 } from 'lucide-react';
+import { GlobalAnalytics, TeamAnalyticsSummary, TeamGoal } from '@/types/analytics';
 
 export function TeamKPIDashboard() {
   const [selectedTeamId, setSelectedTeamId] = useState<string>('all');
@@ -15,12 +16,39 @@ export function TeamKPIDashboard() {
 
   const { data: globalAnalytics, isLoading: globalLoading, refetch: refetchGlobal } = useQuery({
     queryKey: ['global-analytics'],
-    queryFn: () => TeamAnalyticsService.getGlobalAnalytics()
+    queryFn: async (): Promise<GlobalAnalytics> => {
+      const analytics = await TeamAnalyticsService.getGlobalAnalytics();
+      
+      // Transform the data to match expected interface
+      return {
+        totalUsers: analytics?.totalUsers || 0,
+        activeSessions: analytics?.activeSessions || 0,
+        completionRate: analytics?.completionRate || 0,
+        complianceScore: analytics?.complianceScore || 0,
+        topPerformingTeams: (analytics?.topPerformingTeams || []).map(team => ({
+          id: team.id || team.team_id || 'unknown',
+          name: team.name || team.team_name || 'Unknown Team',
+          performance: team.performance || team.average_performance || 0,
+          memberCount: team.memberCount || team.member_count || team.total_members || 0
+        }))
+      };
+    }
   });
 
   const { data: teamGoals, isLoading: goalsLoading } = useQuery({
     queryKey: ['team-goals', selectedTeamId],
-    queryFn: () => TeamAnalyticsService.getTeamGoals(selectedTeamId === 'all' ? '1' : selectedTeamId),
+    queryFn: async (): Promise<TeamGoal[]> => {
+      const goals = await TeamAnalyticsService.getTeamGoals(selectedTeamId === 'all' ? '1' : selectedTeamId);
+      
+      // Transform goals to match expected interface
+      return (goals || []).map(goal => ({
+        id: goal.id,
+        title: goal.title || goal.name || 'Unnamed Goal',
+        progress: goal.progress || goal.current_value || 0,
+        target: goal.target || goal.target_value || 100,
+        status: goal.status as 'on_track' | 'at_risk' | 'behind' || 'on_track'
+      }));
+    },
     enabled: selectedTeamId !== 'all'
   });
 
@@ -30,7 +58,7 @@ export function TeamKPIDashboard() {
     setTimeout(() => setRefreshing(false), 1000);
   };
 
-  const teamSummaries = globalAnalytics?.topPerformingTeams || [];
+  const teamSummaries: TeamAnalyticsSummary[] = globalAnalytics?.topPerformingTeams || [];
 
   return (
     <div className="space-y-6">

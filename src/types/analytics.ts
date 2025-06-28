@@ -16,6 +16,34 @@ export interface RealTeamStats {
   performanceScore: number;
 }
 
+export interface GlobalAnalytics {
+  totalUsers: number;
+  activeSessions: number;
+  completionRate: number;
+  complianceScore: number;
+  topPerformingTeams: Array<{
+    id: string;
+    name: string;
+    performance: number;
+    memberCount: number;
+  }>;
+}
+
+export interface TeamAnalyticsSummary {
+  id: string;
+  name: string;
+  performance: number;
+  memberCount: number;
+}
+
+export interface TeamGoal {
+  id: string;
+  title: string;
+  progress: number;
+  target: number;
+  status: 'on_track' | 'at_risk' | 'behind';
+}
+
 export interface AnalyticsReport {
   id: string;
   name: string;
@@ -27,6 +55,7 @@ export interface AnalyticsReport {
   description?: string;
   report_type?: string;
   is_automated?: boolean;
+  configuration?: Record<string, any>;
 }
 
 export interface AutomationRule {
@@ -46,7 +75,7 @@ export interface AutomationRule {
   createdAt: string;
   updatedAt: string;
   // Database compatibility properties
-  rule_type?: string;
+  rule_type?: 'compliance' | 'notification' | 'progression' | 'certificate';
   trigger_conditions?: Record<string, any>;
   is_active?: boolean;
   created_by?: string;

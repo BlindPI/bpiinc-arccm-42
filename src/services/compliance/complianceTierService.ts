@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface ComplianceTierInfo {
@@ -18,6 +17,23 @@ export interface UIComplianceTierInfo {
   requirements: any[];
   completion_percentage: number;
   next_steps: string[];
+  role?: string;
+  template_name?: string;
+  description?: string;
+  completed_requirements?: number;
+  requirements_count?: number;
+  can_advance_tier?: boolean;
+  advancement_blocked_reason?: string;
+  next_requirement?: {
+    name: string;
+    due_date?: string;
+  };
+}
+
+export interface TierSwitchResult {
+  success: boolean;
+  message: string;
+  newTier?: 'basic' | 'robust';
 }
 
 export interface ComplianceTierStatistics {
@@ -83,7 +99,18 @@ export class ComplianceTierService {
         canAdvance: basicInfo.canAdvance,
         requirements: basicInfo.requirements,
         completion_percentage,
-        next_steps: completion_percentage < 100 ? ['Complete remaining requirements'] : ['All requirements completed']
+        next_steps: completion_percentage < 100 ? ['Complete remaining requirements'] : ['All requirements completed'],
+        role: 'SA',
+        template_name: `${basicInfo.tier === 'basic' ? 'Essential' : 'Comprehensive'} Compliance Template`,
+        description: `${basicInfo.tier === 'basic' ? 'Basic' : 'Advanced'} compliance requirements for system administrators`,
+        completed_requirements: completedRecords,
+        requirements_count: totalRecords || 3,
+        can_advance_tier: basicInfo.tier === 'basic' && completion_percentage >= 80,
+        advancement_blocked_reason: completion_percentage < 80 ? 'Complete more requirements to advance' : undefined,
+        next_requirement: completion_percentage < 100 ? {
+          name: 'Document Verification',
+          due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        } : undefined
       };
     } catch (error) {
       console.error('Error fetching user compliance tier info:', error);
@@ -116,6 +143,30 @@ export class ComplianceTierService {
 
   static async switchTier(userId: string, targetTier: 'basic' | 'robust'): Promise<boolean> {
     return this.updateUserComplianceTier(userId, targetTier);
+  }
+
+  static async switchComplianceTier(userId: string, targetTier: 'basic' | 'robust'): Promise<TierSwitchResult> {
+    try {
+      const success = await this.updateUserComplianceTier(userId, targetTier);
+      
+      if (success) {
+        return {
+          success: true,
+          message: `Successfully switched to ${targetTier} tier`,
+          newTier: targetTier
+        };
+      } else {
+        return {
+          success: false,
+          message: 'Failed to update compliance tier'
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `Error switching tier: ${error.message}`
+      };
+    }
   }
 
   static async validateTierSwitch(userId: string, targetTier: 'basic' | 'robust'): Promise<boolean> {

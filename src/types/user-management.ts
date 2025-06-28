@@ -24,7 +24,6 @@ export interface UserProfile {
   display_name?: string;
   role?: string;
   phone?: string;
-  location?: string;
   department?: string;
   job_title?: string;
   manager_id?: string;

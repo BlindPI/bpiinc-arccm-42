@@ -11,33 +11,12 @@ import {
   AlertTriangle,
   CheckCircle
 } from 'lucide-react';
+import { GlobalAnalytics, TeamAnalyticsSummary, TeamGoal } from '@/types/analytics';
 
 interface TeamKPIMetricsProps {
-  globalAnalytics?: {
-    totalUsers: number;
-    activeSessions: number;
-    completionRate: number;
-    complianceScore: number;
-    topPerformingTeams: Array<{
-      id: string;
-      name: string;
-      performance: number;
-      memberCount: number;
-    }>;
-  };
-  teamSummaries: Array<{
-    id: string;
-    name: string;
-    performance: number;
-    memberCount: number;
-  }>;
-  teamGoals: Array<{
-    id: string;
-    title: string;
-    progress: number;
-    target: number;
-    status: 'on_track' | 'at_risk' | 'behind';
-  }>;
+  globalAnalytics?: GlobalAnalytics;
+  teamSummaries: TeamAnalyticsSummary[];
+  teamGoals: TeamGoal[];
   isLoading: boolean;
 }
 
