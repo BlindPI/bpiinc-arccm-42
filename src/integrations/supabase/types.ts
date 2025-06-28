@@ -11176,6 +11176,48 @@ export type Database = {
         }
         Relationships: []
       }
+      system_usage_patterns: {
+        Row: {
+          created_at: string | null
+          error_count: number | null
+          feature_name: string
+          id: string
+          pattern_data: Json | null
+          peak_usage_hour: number | null
+          success_rate: number | null
+          total_duration_seconds: number | null
+          unique_users: number | null
+          usage_count: number | null
+          usage_date: string
+        }
+        Insert: {
+          created_at?: string | null
+          error_count?: number | null
+          feature_name: string
+          id?: string
+          pattern_data?: Json | null
+          peak_usage_hour?: number | null
+          success_rate?: number | null
+          total_duration_seconds?: number | null
+          unique_users?: number | null
+          usage_count?: number | null
+          usage_date: string
+        }
+        Update: {
+          created_at?: string | null
+          error_count?: number | null
+          feature_name?: string
+          id?: string
+          pattern_data?: Json | null
+          peak_usage_hour?: number | null
+          success_rate?: number | null
+          total_duration_seconds?: number | null
+          unique_users?: number | null
+          usage_count?: number | null
+          usage_date?: string
+        }
+        Relationships: []
+      }
       teaching_logs: {
         Row: {
           course_id: string
@@ -13026,6 +13068,73 @@ export type Database = {
           },
         ]
       }
+      user_activity_logs: {
+        Row: {
+          activity_category: string
+          activity_type: string
+          created_at: string | null
+          duration_seconds: number | null
+          id: string
+          ip_address: unknown | null
+          metadata: Json | null
+          resource_id: string | null
+          resource_type: string | null
+          session_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          activity_category: string
+          activity_type: string
+          created_at?: string | null
+          duration_seconds?: number | null
+          id?: string
+          ip_address?: unknown | null
+          metadata?: Json | null
+          resource_id?: string | null
+          resource_type?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          activity_category?: string
+          activity_type?: string
+          created_at?: string | null
+          duration_seconds?: number | null
+          id?: string
+          ip_address?: unknown | null
+          metadata?: Json | null
+          resource_id?: string | null
+          resource_type?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_activity_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_activity_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_activity_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_activity_metrics: {
         Row: {
           actions_performed: number | null
@@ -13197,6 +13306,67 @@ export type Database = {
           },
         ]
       }
+      user_engagement_scores: {
+        Row: {
+          activity_score: number | null
+          calculated_date: string
+          compliance_score: number | null
+          created_at: string | null
+          engagement_score: number
+          id: string
+          performance_score: number | null
+          score_breakdown: Json | null
+          score_trend: string | null
+          user_id: string | null
+        }
+        Insert: {
+          activity_score?: number | null
+          calculated_date: string
+          compliance_score?: number | null
+          created_at?: string | null
+          engagement_score?: number
+          id?: string
+          performance_score?: number | null
+          score_breakdown?: Json | null
+          score_trend?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          activity_score?: number | null
+          calculated_date?: string
+          compliance_score?: number | null
+          created_at?: string | null
+          engagement_score?: number
+          id?: string
+          performance_score?: number | null
+          score_breakdown?: Json | null
+          score_trend?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_engagement_scores_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_engagement_scores_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_engagement_scores_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_invitations: {
         Row: {
           created_at: string
@@ -13246,6 +13416,64 @@ export type Database = {
           {
             foreignKeyName: "user_invitations_invited_by_fkey"
             columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_performance_metrics: {
+        Row: {
+          calculated_at: string | null
+          context_data: Json | null
+          id: string
+          metric_category: string
+          metric_date: string
+          metric_type: string
+          metric_value: number
+          period_type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          calculated_at?: string | null
+          context_data?: Json | null
+          id?: string
+          metric_category: string
+          metric_date: string
+          metric_type: string
+          metric_value: number
+          period_type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          calculated_at?: string | null
+          context_data?: Json | null
+          id?: string
+          metric_category?: string
+          metric_date?: string
+          metric_type?: string
+          metric_value?: number
+          period_type?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_performance_metrics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_performance_metrics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_performance_metrics_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -13314,6 +13542,76 @@ export type Database = {
             foreignKeyName: "user_preferences_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_progress_tracking: {
+        Row: {
+          completion_percentage: number | null
+          created_at: string | null
+          current_stage: string
+          estimated_completion: string | null
+          id: string
+          last_activity: string | null
+          milestones_achieved: Json | null
+          next_milestone: Json | null
+          progress_category: string
+          progress_type: string
+          total_stages: number
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          completion_percentage?: number | null
+          created_at?: string | null
+          current_stage: string
+          estimated_completion?: string | null
+          id?: string
+          last_activity?: string | null
+          milestones_achieved?: Json | null
+          next_milestone?: Json | null
+          progress_category: string
+          progress_type: string
+          total_stages: number
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          completion_percentage?: number | null
+          created_at?: string | null
+          current_stage?: string
+          estimated_completion?: string | null
+          id?: string
+          last_activity?: string | null
+          milestones_achieved?: Json | null
+          next_milestone?: Json | null
+          progress_category?: string
+          progress_type?: string
+          total_stages?: number
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_progress_tracking_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_progress_tracking_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_progress_tracking_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -14267,6 +14565,10 @@ export type Database = {
       }
       calculate_user_compliance_score: {
         Args: { p_user_id: string }
+        Returns: number
+      }
+      calculate_user_engagement_score: {
+        Args: { p_user_id: string; p_date?: string }
         Returns: number
       }
       can_user_manage_team_enhanced: {
@@ -15250,6 +15552,14 @@ export type Database = {
       }
       update_resource_availability: {
         Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      update_system_usage_pattern: {
+        Args: {
+          p_feature_name: string
+          p_success?: boolean
+          p_duration_seconds?: number
+        }
         Returns: undefined
       }
       update_team_member_role_bypass_rls: {
