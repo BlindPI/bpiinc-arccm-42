@@ -15178,6 +15178,7 @@ export type Database = {
           metadata: Json | null
           metric_id: string
           next_review_date: string | null
+          notes: string | null
           priority: number | null
           rejection_reason: string | null
           reminder_sent_at: string | null
@@ -15206,6 +15207,7 @@ export type Database = {
           metadata?: Json | null
           metric_id: string
           next_review_date?: string | null
+          notes?: string | null
           priority?: number | null
           rejection_reason?: string | null
           reminder_sent_at?: string | null
@@ -15234,6 +15236,7 @@ export type Database = {
           metadata?: Json | null
           metric_id?: string
           next_review_date?: string | null
+          notes?: string | null
           priority?: number | null
           rejection_reason?: string | null
           reminder_sent_at?: string | null
