@@ -15,7 +15,7 @@ import EnhancedProviderDashboard from './role-dashboards/EnhancedProviderDashboa
 // Import context providers
 import { ComplianceTierProvider } from '@/contexts/ComplianceTierContext';
 import { DashboardUIProvider } from '@/contexts/DashboardUIContext';
-import { DashboardDataProvider } from '@/providers/DashboardDataProvider';
+import { DashboardDataProvider } from '@/components/providers/DashboardDataProvider';
 
 // Import UI components  
 import { DashboardSidebar } from './DashboardSidebar';
@@ -168,7 +168,7 @@ export function FixedRoleBasedDashboard() {
         activeView={dashboardView}
         onViewChange={setDashboardView}
         quickStats={{
-          compliance: tierInfo?.completion_percentage || 0,
+          compliance: tierInfo?.completionPercentage || 0,
           nextDue: tierInfo?.next_requirement?.due_date,
           tier: tierInfo?.tier
         }}
@@ -180,7 +180,7 @@ export function FixedRoleBasedDashboard() {
         <ComplianceTierBanner
           tier={tierInfo?.tier}
           canAdvance={tierInfo?.can_advance_tier}
-          completionPercentage={tierInfo?.completion_percentage}
+          completionPercentage={tierInfo?.completionPercentage}
           onTierSwitch={() => setShowTierSwitchDialog(true)}
         />
         
