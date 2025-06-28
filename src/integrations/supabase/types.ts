@@ -45,6 +45,13 @@ export type Database = {
             foreignKeyName: "access_patterns_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "access_patterns_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -208,6 +215,13 @@ export type Database = {
             foreignKeyName: "analytics_reports_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "analytics_reports_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -308,6 +322,13 @@ export type Database = {
             foreignKeyName: "ap_user_location_assignments_ap_user_id_fkey"
             columns: ["ap_user_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "ap_user_location_assignments_ap_user_id_fkey"
+            columns: ["ap_user_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -324,6 +345,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_user_location_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "ap_user_location_assignments_assigned_by_fkey"
@@ -400,6 +428,13 @@ export type Database = {
             foreignKeyName: "api_integrations_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "api_integrations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -451,6 +486,13 @@ export type Database = {
           workflow_type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "approval_chains_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "approval_chains_created_by_fkey"
             columns: ["created_by"]
@@ -523,6 +565,13 @@ export type Database = {
             foreignKeyName: "approval_requests_requested_by_fkey"
             columns: ["requested_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "approval_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -574,6 +623,13 @@ export type Database = {
           workflow_type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "approval_workflows_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "approval_workflows_created_by_fkey"
             columns: ["created_by"]
@@ -818,6 +874,13 @@ export type Database = {
             foreignKeyName: "audit_trail_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "audit_trail_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -926,6 +989,13 @@ export type Database = {
             foreignKeyName: "authorized_providers_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "authorized_providers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -949,6 +1019,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "locations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_authorized_providers_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "fk_authorized_providers_user_id"
@@ -1221,6 +1298,13 @@ export type Database = {
             foreignKeyName: "automation_rules_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "automation_rules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -1242,36 +1326,69 @@ export type Database = {
       }
       backend_function_status: {
         Row: {
+          alerts_enabled: boolean | null
           category: string | null
           created_at: string | null
+          critical_function: boolean | null
           description: string | null
           error_message: string | null
+          failed_calls: number | null
           function_name: string
+          health_score: number | null
           id: string
           is_connected: boolean | null
           last_checked: string | null
+          last_failure_at: string | null
+          last_success_at: string | null
+          metadata: Json | null
+          response_time_ms: number | null
+          status: string | null
+          success_rate: number | null
+          total_calls: number | null
           updated_at: string | null
         }
         Insert: {
+          alerts_enabled?: boolean | null
           category?: string | null
           created_at?: string | null
+          critical_function?: boolean | null
           description?: string | null
           error_message?: string | null
+          failed_calls?: number | null
           function_name: string
+          health_score?: number | null
           id?: string
           is_connected?: boolean | null
           last_checked?: string | null
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          metadata?: Json | null
+          response_time_ms?: number | null
+          status?: string | null
+          success_rate?: number | null
+          total_calls?: number | null
           updated_at?: string | null
         }
         Update: {
+          alerts_enabled?: boolean | null
           category?: string | null
           created_at?: string | null
+          critical_function?: boolean | null
           description?: string | null
           error_message?: string | null
+          failed_calls?: number | null
           function_name?: string
+          health_score?: number | null
           id?: string
           is_connected?: boolean | null
           last_checked?: string | null
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          metadata?: Json | null
+          response_time_ms?: number | null
+          status?: string | null
+          success_rate?: number | null
+          total_calls?: number | null
           updated_at?: string | null
         }
         Relationships: []
@@ -1329,6 +1446,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "background_jobs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "background_jobs_created_by_fkey"
             columns: ["created_by"]
@@ -1411,6 +1535,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "bulk_operations_initiated_by_fkey"
+            columns: ["initiated_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "bulk_operations_initiated_by_fkey"
             columns: ["initiated_by"]
@@ -1505,6 +1636,13 @@ export type Database = {
           triggered_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "cache_invalidation_log_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "cache_invalidation_log_triggered_by_fkey"
             columns: ["triggered_by"]
@@ -2174,6 +2312,13 @@ export type Database = {
             foreignKeyName: "certification_verification_requests_requested_by_fkey"
             columns: ["requested_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "certification_verification_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -2190,6 +2335,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certification_verification_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "certification_verification_requests_reviewed_by_fkey"
@@ -2260,6 +2412,13 @@ export type Database = {
             foreignKeyName: "completed_requirements_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "completed_requirements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -2276,6 +2435,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "completed_requirements_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "completed_requirements_verified_by_fkey"
@@ -2354,6 +2520,13 @@ export type Database = {
             foreignKeyName: "compliance_actions_assigned_by_fkey"
             columns: ["assigned_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "compliance_actions_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -2370,6 +2543,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_actions_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "compliance_actions_completed_by_fkey"
@@ -2398,6 +2578,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "compliance_metrics"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_actions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "compliance_actions_user_id_fkey"
@@ -2449,11 +2636,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "compliance_activity_log_requirement_id_fkey"
-            columns: ["requirement_id"]
+            foreignKeyName: "compliance_activity_log_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "compliance_requirements"
-            referencedColumns: ["id"]
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "compliance_activity_log_user_id_fkey"
@@ -2472,6 +2659,104 @@ export type Database = {
           {
             foreignKeyName: "compliance_activity_log_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compliance_advanced_reports: {
+        Row: {
+          aggregation_rules: Json | null
+          created_at: string | null
+          created_by: string | null
+          data_sources: Json
+          filters_config: Json | null
+          generation_status: string | null
+          id: string
+          is_active: boolean | null
+          last_generated: string | null
+          next_generation: string | null
+          output_formats: Json | null
+          recipients: Json | null
+          report_category: string
+          report_name: string
+          report_template: string | null
+          report_type: string
+          retention_days: number | null
+          schedule_config: Json | null
+          updated_at: string | null
+          visualization_config: Json | null
+        }
+        Insert: {
+          aggregation_rules?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          data_sources?: Json
+          filters_config?: Json | null
+          generation_status?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_generated?: string | null
+          next_generation?: string | null
+          output_formats?: Json | null
+          recipients?: Json | null
+          report_category: string
+          report_name: string
+          report_template?: string | null
+          report_type: string
+          retention_days?: number | null
+          schedule_config?: Json | null
+          updated_at?: string | null
+          visualization_config?: Json | null
+        }
+        Update: {
+          aggregation_rules?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          data_sources?: Json
+          filters_config?: Json | null
+          generation_status?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_generated?: string | null
+          next_generation?: string | null
+          output_formats?: Json | null
+          recipients?: Json | null
+          report_category?: string
+          report_name?: string
+          report_template?: string | null
+          report_type?: string
+          retention_days?: number | null
+          schedule_config?: Json | null
+          updated_at?: string | null
+          visualization_config?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_advanced_reports_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "compliance_advanced_reports_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_advanced_reports_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_advanced_reports_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -2577,6 +2862,13 @@ export type Database = {
             foreignKeyName: "compliance_audit_events_performed_by_fkey"
             columns: ["performed_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "compliance_audit_events_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -2598,6 +2890,13 @@ export type Database = {
             foreignKeyName: "compliance_audit_events_target_user_id_fkey"
             columns: ["target_user_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "compliance_audit_events_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -2614,6 +2913,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_audit_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "compliance_audit_events_user_id_fkey"
@@ -2684,6 +2990,13 @@ export type Database = {
             foreignKeyName: "compliance_audit_log_performed_by_fkey"
             columns: ["performed_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "compliance_audit_log_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -2700,6 +3013,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_audit_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "compliance_audit_log_user_id_fkey"
@@ -2766,6 +3086,13 @@ export type Database = {
             foreignKeyName: "compliance_audit_trail_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "compliance_audit_trail_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -2784,6 +3111,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      compliance_benchmarks: {
+        Row: {
+          benchmark_category: string | null
+          benchmark_name: string
+          benchmark_type: string
+          best_practice_threshold: number | null
+          bottom_quartile: number | null
+          calculation_method: string | null
+          created_at: string | null
+          data_sources: Json | null
+          effective_date: string
+          expiry_date: string | null
+          id: string
+          industry_standard: number | null
+          is_active: boolean | null
+          metric_unit: string | null
+          organization_average: number | null
+          top_quartile: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          benchmark_category?: string | null
+          benchmark_name: string
+          benchmark_type: string
+          best_practice_threshold?: number | null
+          bottom_quartile?: number | null
+          calculation_method?: string | null
+          created_at?: string | null
+          data_sources?: Json | null
+          effective_date: string
+          expiry_date?: string | null
+          id?: string
+          industry_standard?: number | null
+          is_active?: boolean | null
+          metric_unit?: string | null
+          organization_average?: number | null
+          top_quartile?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          benchmark_category?: string | null
+          benchmark_name?: string
+          benchmark_type?: string
+          best_practice_threshold?: number | null
+          bottom_quartile?: number | null
+          calculation_method?: string | null
+          created_at?: string | null
+          data_sources?: Json | null
+          effective_date?: string
+          expiry_date?: string | null
+          id?: string
+          industry_standard?: number | null
+          is_active?: boolean | null
+          metric_unit?: string | null
+          organization_average?: number | null
+          top_quartile?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       compliance_bulk_operations: {
         Row: {
@@ -2829,6 +3216,13 @@ export type Database = {
           total_count?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "compliance_bulk_operations_initiated_by_fkey"
+            columns: ["initiated_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "compliance_bulk_operations_initiated_by_fkey"
             columns: ["initiated_by"]
@@ -2890,6 +3284,13 @@ export type Database = {
           widget_config?: Json
         }
         Relationships: [
+          {
+            foreignKeyName: "compliance_dashboard_configs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "compliance_dashboard_configs_user_id_fkey"
             columns: ["user_id"]
@@ -2999,6 +3400,13 @@ export type Database = {
             foreignKeyName: "compliance_document_reviews_reviewer_id_fkey"
             columns: ["reviewer_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "compliance_document_reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -3015,6 +3423,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_document_reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "compliance_document_reviews_user_id_fkey"
@@ -3109,6 +3524,13 @@ export type Database = {
             foreignKeyName: "compliance_documents_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "compliance_documents_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -3125,6 +3547,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_documents_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "compliance_documents_verified_by_fkey"
@@ -3229,6 +3658,104 @@ export type Database = {
         }
         Relationships: []
       }
+      compliance_intelligence_insights: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          actionable_recommendations: Json | null
+          confidence_score: number | null
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string
+          expiry_date: string | null
+          id: string
+          insight_category: string
+          insight_date: string
+          insight_description: string
+          insight_severity: string
+          insight_title: string
+          insight_type: string
+          is_acknowledged: boolean | null
+          resolution_notes: string | null
+          resolution_status: string | null
+          supporting_data: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          actionable_recommendations?: Json | null
+          confidence_score?: number | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type: string
+          expiry_date?: string | null
+          id?: string
+          insight_category: string
+          insight_date: string
+          insight_description: string
+          insight_severity: string
+          insight_title: string
+          insight_type: string
+          is_acknowledged?: boolean | null
+          resolution_notes?: string | null
+          resolution_status?: string | null
+          supporting_data?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          actionable_recommendations?: Json | null
+          confidence_score?: number | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string
+          expiry_date?: string | null
+          id?: string
+          insight_category?: string
+          insight_date?: string
+          insight_description?: string
+          insight_severity?: string
+          insight_title?: string
+          insight_type?: string
+          is_acknowledged?: boolean | null
+          resolution_notes?: string | null
+          resolution_status?: string | null
+          supporting_data?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_intelligence_insights_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "compliance_intelligence_insights_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_intelligence_insights_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_intelligence_insights_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compliance_issues: {
         Row: {
           created_at: string
@@ -3274,6 +3801,13 @@ export type Database = {
             foreignKeyName: "compliance_issues_resolved_by_fkey"
             columns: ["resolved_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "compliance_issues_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -3290,6 +3824,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_issues_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "compliance_issues_user_id_fkey"
@@ -3371,6 +3912,13 @@ export type Database = {
             foreignKeyName: "compliance_metrics_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "compliance_metrics_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -3438,6 +3986,13 @@ export type Database = {
             foreignKeyName: "compliance_notification_queue_recipient_user_id_fkey"
             columns: ["recipient_user_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "compliance_notification_queue_recipient_user_id_fkey"
+            columns: ["recipient_user_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -3454,6 +4009,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_notification_queue_sender_user_id_fkey"
+            columns: ["sender_user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "compliance_notification_queue_sender_user_id_fkey"
@@ -3477,6 +4039,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      compliance_real_time_monitoring: {
+        Row: {
+          alert_frequency_minutes: number | null
+          alert_status: string | null
+          consecutive_violations: number | null
+          created_at: string | null
+          current_value: number
+          entity_id: string | null
+          entity_type: string
+          id: string
+          is_active: boolean | null
+          last_alert_sent: string | null
+          metric_being_monitored: string
+          monitor_name: string
+          monitor_type: string
+          monitoring_config: Json | null
+          threshold_critical: number | null
+          threshold_warning: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          alert_frequency_minutes?: number | null
+          alert_status?: string | null
+          consecutive_violations?: number | null
+          created_at?: string | null
+          current_value: number
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          is_active?: boolean | null
+          last_alert_sent?: string | null
+          metric_being_monitored: string
+          monitor_name: string
+          monitor_type: string
+          monitoring_config?: Json | null
+          threshold_critical?: number | null
+          threshold_warning?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          alert_frequency_minutes?: number | null
+          alert_status?: string | null
+          consecutive_violations?: number | null
+          created_at?: string | null
+          current_value?: number
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          is_active?: boolean | null
+          last_alert_sent?: string | null
+          metric_being_monitored?: string
+          monitor_name?: string
+          monitor_type?: string
+          monitoring_config?: Json | null
+          threshold_critical?: number | null
+          threshold_warning?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       compliance_report_templates: {
         Row: {
@@ -3519,6 +4141,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "compliance_report_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "compliance_report_templates_created_by_fkey"
             columns: ["created_by"]
@@ -3587,6 +4216,13 @@ export type Database = {
             foreignKeyName: "compliance_reports_generated_by_fkey"
             columns: ["generated_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "compliance_reports_generated_by_fkey"
+            columns: ["generated_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -3615,48 +4251,211 @@ export type Database = {
       }
       compliance_requirements: {
         Row: {
+          approval_required: boolean | null
+          audit_frequency_days: number | null
+          auto_assign_rules: Json | null
+          category: string | null
+          change_log: Json | null
+          color_code: string | null
+          completion_criteria: Json | null
+          compliance_weight: number | null
           created_at: string | null
+          created_by: string | null
+          deactivated_at: string | null
+          deactivated_by: string | null
           description: string | null
+          difficulty_level: string | null
+          display_order: number | null
           document_required: boolean | null
           due_days_from_assignment: number | null
+          escalation_rules: Json | null
+          estimated_completion_time: number | null
+          external_link_required: boolean | null
+          form_template: Json | null
+          icon: string | null
           id: string
           is_active: boolean | null
           is_mandatory: boolean | null
           name: string
+          notification_settings: Json | null
           points_value: number | null
+          prerequisites: Json | null
+          related_requirements: Json | null
           renewal_frequency_months: number | null
           requirement_type: string
+          supervisor_review_required: boolean | null
+          tier_level: string | null
           updated_at: string | null
+          updated_by: string | null
+          validation_rules: Json | null
+          version: number | null
         }
         Insert: {
+          approval_required?: boolean | null
+          audit_frequency_days?: number | null
+          auto_assign_rules?: Json | null
+          category?: string | null
+          change_log?: Json | null
+          color_code?: string | null
+          completion_criteria?: Json | null
+          compliance_weight?: number | null
           created_at?: string | null
+          created_by?: string | null
+          deactivated_at?: string | null
+          deactivated_by?: string | null
           description?: string | null
+          difficulty_level?: string | null
+          display_order?: number | null
           document_required?: boolean | null
           due_days_from_assignment?: number | null
+          escalation_rules?: Json | null
+          estimated_completion_time?: number | null
+          external_link_required?: boolean | null
+          form_template?: Json | null
+          icon?: string | null
           id?: string
           is_active?: boolean | null
           is_mandatory?: boolean | null
           name: string
+          notification_settings?: Json | null
           points_value?: number | null
+          prerequisites?: Json | null
+          related_requirements?: Json | null
           renewal_frequency_months?: number | null
           requirement_type: string
+          supervisor_review_required?: boolean | null
+          tier_level?: string | null
           updated_at?: string | null
+          updated_by?: string | null
+          validation_rules?: Json | null
+          version?: number | null
         }
         Update: {
+          approval_required?: boolean | null
+          audit_frequency_days?: number | null
+          auto_assign_rules?: Json | null
+          category?: string | null
+          change_log?: Json | null
+          color_code?: string | null
+          completion_criteria?: Json | null
+          compliance_weight?: number | null
           created_at?: string | null
+          created_by?: string | null
+          deactivated_at?: string | null
+          deactivated_by?: string | null
           description?: string | null
+          difficulty_level?: string | null
+          display_order?: number | null
           document_required?: boolean | null
           due_days_from_assignment?: number | null
+          escalation_rules?: Json | null
+          estimated_completion_time?: number | null
+          external_link_required?: boolean | null
+          form_template?: Json | null
+          icon?: string | null
           id?: string
           is_active?: boolean | null
           is_mandatory?: boolean | null
           name?: string
+          notification_settings?: Json | null
           points_value?: number | null
+          prerequisites?: Json | null
+          related_requirements?: Json | null
           renewal_frequency_months?: number | null
           requirement_type?: string
+          supervisor_review_required?: boolean | null
+          tier_level?: string | null
           updated_at?: string | null
+          updated_by?: string | null
+          validation_rules?: Json | null
+          version?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_compliance_requirements_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fk_compliance_requirements_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_compliance_requirements_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_compliance_requirements_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_compliance_requirements_deactivated_by"
+            columns: ["deactivated_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fk_compliance_requirements_deactivated_by"
+            columns: ["deactivated_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_compliance_requirements_deactivated_by"
+            columns: ["deactivated_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_compliance_requirements_deactivated_by"
+            columns: ["deactivated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_compliance_requirements_updated_by"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fk_compliance_requirements_updated_by"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_compliance_requirements_updated_by"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_compliance_requirements_updated_by"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       compliance_requirements_templates: {
         Row: {
@@ -3685,17 +4484,105 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "compliance_requirements_templates_requirement_id_fkey"
-            columns: ["requirement_id"]
-            isOneToOne: false
-            referencedRelation: "compliance_requirements"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "compliance_requirements_templates_template_id_fkey"
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "compliance_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compliance_risk_assessments: {
+        Row: {
+          assessment_date: string
+          assessment_name: string
+          assessment_notes: string | null
+          assessor_id: string | null
+          created_at: string | null
+          current_controls: Json | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          mitigation_strategies: Json | null
+          next_review_date: string | null
+          remediation_plan: Json | null
+          residual_risk_score: number | null
+          risk_category: string
+          risk_impact: number
+          risk_level: string | null
+          risk_probability: number
+          risk_score: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          assessment_date: string
+          assessment_name: string
+          assessment_notes?: string | null
+          assessor_id?: string | null
+          created_at?: string | null
+          current_controls?: Json | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          mitigation_strategies?: Json | null
+          next_review_date?: string | null
+          remediation_plan?: Json | null
+          residual_risk_score?: number | null
+          risk_category: string
+          risk_impact: number
+          risk_level?: string | null
+          risk_probability: number
+          risk_score?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          assessment_date?: string
+          assessment_name?: string
+          assessment_notes?: string | null
+          assessor_id?: string | null
+          created_at?: string | null
+          current_controls?: Json | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          mitigation_strategies?: Json | null
+          next_review_date?: string | null
+          remediation_plan?: Json | null
+          residual_risk_score?: number | null
+          risk_category?: string
+          risk_impact?: number
+          risk_level?: string | null
+          risk_probability?: number
+          risk_score?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_risk_assessments_assessor_id_fkey"
+            columns: ["assessor_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "compliance_risk_assessments_assessor_id_fkey"
+            columns: ["assessor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_risk_assessments_assessor_id_fkey"
+            columns: ["assessor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_risk_assessments_assessor_id_fkey"
+            columns: ["assessor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -3789,6 +4676,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "compliance_rules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "compliance_rules_created_by_fkey"
             columns: ["created_by"]
@@ -3923,6 +4817,13 @@ export type Database = {
             foreignKeyName: "compliance_tier_history_changed_by_fkey"
             columns: ["changed_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "compliance_tier_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -3939,6 +4840,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_tier_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "compliance_tier_history_user_id_fkey"
@@ -3993,6 +4901,66 @@ export type Database = {
           tier?: string
           total_requirements?: number | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      compliance_trend_analysis: {
+        Row: {
+          analysis_date: string
+          analysis_period: string
+          analysis_type: string
+          created_at: string | null
+          current_value: number
+          entity_id: string | null
+          entity_type: string
+          id: string
+          insights: Json | null
+          metric_name: string
+          next_period_prediction: number | null
+          prediction_confidence: number | null
+          previous_period_value: number | null
+          trend_data: Json | null
+          trend_direction: string
+          trend_strength: number | null
+          variance_percentage: number | null
+        }
+        Insert: {
+          analysis_date: string
+          analysis_period: string
+          analysis_type: string
+          created_at?: string | null
+          current_value: number
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          insights?: Json | null
+          metric_name: string
+          next_period_prediction?: number | null
+          prediction_confidence?: number | null
+          previous_period_value?: number | null
+          trend_data?: Json | null
+          trend_direction: string
+          trend_strength?: number | null
+          variance_percentage?: number | null
+        }
+        Update: {
+          analysis_date?: string
+          analysis_period?: string
+          analysis_type?: string
+          created_at?: string | null
+          current_value?: number
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          insights?: Json | null
+          metric_name?: string
+          next_period_prediction?: number | null
+          prediction_confidence?: number | null
+          previous_period_value?: number | null
+          trend_data?: Json | null
+          trend_direction?: string
+          trend_strength?: number | null
+          variance_percentage?: number | null
         }
         Relationships: []
       }
@@ -4056,6 +5024,13 @@ export type Database = {
             foreignKeyName: "compliance_violations_assigned_to_fkey"
             columns: ["assigned_to"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "compliance_violations_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -4072,6 +5047,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_violations_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "compliance_violations_resolved_by_fkey"
@@ -4148,6 +5130,13 @@ export type Database = {
             foreignKeyName: "compliance_workflow_executions_triggered_by_user_id_fkey"
             columns: ["triggered_by_user_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "compliance_workflow_executions_triggered_by_user_id_fkey"
+            columns: ["triggered_by_user_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -4216,6 +5205,13 @@ export type Database = {
             foreignKeyName: "compliance_workflows_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "compliance_workflows_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -4268,6 +5264,13 @@ export type Database = {
             foreignKeyName: "configuration_audit_log_changed_by_fkey"
             columns: ["changed_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "configuration_audit_log_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -4283,13 +5286,6 @@ export type Database = {
             columns: ["changed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "configuration_audit_log_configuration_id_fkey"
-            columns: ["configuration_id"]
-            isOneToOne: false
-            referencedRelation: "system_configurations"
             referencedColumns: ["id"]
           },
         ]
@@ -4437,6 +5433,13 @@ export type Database = {
             foreignKeyName: "course_enrollments_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "course_enrollments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -4514,6 +5517,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "courses"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_offerings_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "course_offerings_instructor_id_fkey"
@@ -4684,6 +5694,13 @@ export type Database = {
             foreignKeyName: "course_schedules_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "course_schedules_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -4844,6 +5861,13 @@ export type Database = {
             foreignKeyName: "courses_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "courses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -4977,6 +6001,13 @@ export type Database = {
             foreignKeyName: "fk_accounts_assigned_to"
             columns: ["assigned_to"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fk_accounts_assigned_to"
+            columns: ["assigned_to"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -4993,6 +6024,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_accounts_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "fk_accounts_created_by"
@@ -5109,6 +6147,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "crm_activities"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_activities_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "fk_activities_created_by"
@@ -5330,6 +6375,13 @@ export type Database = {
           working_hours?: Json | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_assignment_rules_assigned_user"
+            columns: ["assigned_user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "fk_assignment_rules_assigned_user"
             columns: ["assigned_user_id"]
@@ -5566,6 +6618,13 @@ export type Database = {
             foreignKeyName: "fk_contacts_created_by"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fk_contacts_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -5686,6 +6745,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_campaigns_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "fk_campaigns_created_by"
             columns: ["created_by"]
@@ -6143,6 +7209,13 @@ export type Database = {
             foreignKeyName: "fk_scoring_rules_created_by"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fk_scoring_rules_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -6350,6 +7423,13 @@ export type Database = {
             foreignKeyName: "fk_leads_assigned_to"
             columns: ["assigned_to"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fk_leads_assigned_to"
+            columns: ["assigned_to"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -6366,6 +7446,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_leads_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "fk_leads_created_by"
@@ -6550,6 +7637,13 @@ export type Database = {
             foreignKeyName: "fk_opportunities_assigned_to"
             columns: ["assigned_to"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fk_opportunities_assigned_to"
+            columns: ["assigned_to"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -6566,6 +7660,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_opportunities_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "fk_opportunities_created_by"
@@ -7063,6 +8164,13 @@ export type Database = {
             foreignKeyName: "data_retention_policies_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "data_retention_policies_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -7154,6 +8262,13 @@ export type Database = {
             foreignKeyName: "document_submissions_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "document_submissions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -7177,6 +8292,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "document_requirements"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_submissions_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "document_submissions_reviewer_id_fkey"
@@ -7423,6 +8545,13 @@ export type Database = {
             foreignKeyName: "emergency_contacts_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "emergency_contacts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -7615,6 +8744,13 @@ export type Database = {
             foreignKeyName: "external_approval_systems_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "external_approval_systems_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -7675,6 +8811,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "instructor_certifications_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "instructor_certifications_instructor_id_fkey"
             columns: ["instructor_id"]
@@ -7746,6 +8889,13 @@ export type Database = {
             foreignKeyName: "instructor_compliance_checks_checked_by_fkey"
             columns: ["checked_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "instructor_compliance_checks_checked_by_fkey"
+            columns: ["checked_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -7762,6 +8912,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instructor_compliance_checks_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "instructor_compliance_checks_instructor_id_fkey"
@@ -8098,6 +9255,13 @@ export type Database = {
             foreignKeyName: "member_activity_logs_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "member_activity_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -8159,6 +9323,13 @@ export type Database = {
             foreignKeyName: "member_compliance_status_checked_by_fkey"
             columns: ["checked_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "member_compliance_status_checked_by_fkey"
+            columns: ["checked_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -8175,6 +9346,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_compliance_status_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "member_compliance_status_user_id_fkey"
@@ -8244,6 +9422,13 @@ export type Database = {
             foreignKeyName: "member_skills_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "member_skills_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -8260,6 +9445,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_skills_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "member_skills_verified_by_fkey"
@@ -8283,6 +9475,134 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notification_template_variables: {
+        Row: {
+          created_at: string | null
+          default_value: string | null
+          description: string | null
+          id: string
+          is_required: boolean | null
+          template_id: string
+          validation_rules: Json | null
+          variable_name: string
+          variable_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          default_value?: string | null
+          description?: string | null
+          id?: string
+          is_required?: boolean | null
+          template_id: string
+          validation_rules?: Json | null
+          variable_name: string
+          variable_type: string
+        }
+        Update: {
+          created_at?: string | null
+          default_value?: string | null
+          description?: string | null
+          id?: string
+          is_required?: boolean | null
+          template_id?: string
+          validation_rules?: Json | null
+          variable_name?: string
+          variable_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_template_variables_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "notification_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_templates: {
+        Row: {
+          approval_required: boolean | null
+          approved_at: string | null
+          approved_by: string | null
+          category: string | null
+          created_at: string | null
+          created_by: string | null
+          default_metadata: Json | null
+          delivery_channels: Json | null
+          email_body_template: string | null
+          email_subject_template: string | null
+          id: string
+          is_active: boolean | null
+          is_system_template: boolean | null
+          localization: Json | null
+          message_template: string
+          personalization_rules: Json | null
+          priority: string | null
+          push_template: string | null
+          sms_template: string | null
+          template_name: string
+          template_type: string
+          template_version: string | null
+          title_template: string
+          updated_at: string | null
+          variables: Json | null
+        }
+        Insert: {
+          approval_required?: boolean | null
+          approved_at?: string | null
+          approved_by?: string | null
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          default_metadata?: Json | null
+          delivery_channels?: Json | null
+          email_body_template?: string | null
+          email_subject_template?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system_template?: boolean | null
+          localization?: Json | null
+          message_template: string
+          personalization_rules?: Json | null
+          priority?: string | null
+          push_template?: string | null
+          sms_template?: string | null
+          template_name: string
+          template_type: string
+          template_version?: string | null
+          title_template: string
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Update: {
+          approval_required?: boolean | null
+          approved_at?: string | null
+          approved_by?: string | null
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          default_metadata?: Json | null
+          delivery_channels?: Json | null
+          email_body_template?: string | null
+          email_subject_template?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system_template?: boolean | null
+          localization?: Json | null
+          message_template?: string
+          personalization_rules?: Json | null
+          priority?: string | null
+          push_template?: string | null
+          sms_template?: string | null
+          template_name?: string
+          template_type?: string
+          template_version?: string | null
+          title_template?: string
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Relationships: []
       }
       notifications: {
         Row: {
@@ -8337,6 +9657,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "notifications_user_id_fkey"
             columns: ["user_id"]
@@ -8402,6 +9729,13 @@ export type Database = {
             foreignKeyName: "offline_sync_queue_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "offline_sync_queue_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -8462,6 +9796,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "performance_metrics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "performance_metrics_user_id_fkey"
             columns: ["user_id"]
@@ -8533,6 +9874,13 @@ export type Database = {
             foreignKeyName: "predictive_models_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "predictive_models_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -8555,6 +9903,8 @@ export type Database = {
       profiles: {
         Row: {
           certifications_count: number | null
+          compliance_notes: string | null
+          compliance_reminder_frequency: number | null
           compliance_score: number | null
           compliance_status: boolean | null
           compliance_tier: string | null
@@ -8564,6 +9914,7 @@ export type Database = {
           email: string | null
           id: string
           job_title: string | null
+          last_compliance_check: string | null
           last_login: string | null
           last_training_date: string | null
           location_id: string | null
@@ -8576,12 +9927,16 @@ export type Database = {
           status: string
           supervisor_id: string | null
           team_count: number | null
+          tier_upgrade_eligible: boolean | null
+          tier_upgrade_requested_at: string | null
           training_hours: number | null
           updated_at: string
           user_id: string | null
         }
         Insert: {
           certifications_count?: number | null
+          compliance_notes?: string | null
+          compliance_reminder_frequency?: number | null
           compliance_score?: number | null
           compliance_status?: boolean | null
           compliance_tier?: string | null
@@ -8591,6 +9946,7 @@ export type Database = {
           email?: string | null
           id: string
           job_title?: string | null
+          last_compliance_check?: string | null
           last_login?: string | null
           last_training_date?: string | null
           location_id?: string | null
@@ -8603,12 +9959,16 @@ export type Database = {
           status?: string
           supervisor_id?: string | null
           team_count?: number | null
+          tier_upgrade_eligible?: boolean | null
+          tier_upgrade_requested_at?: string | null
           training_hours?: number | null
           updated_at?: string
           user_id?: string | null
         }
         Update: {
           certifications_count?: number | null
+          compliance_notes?: string | null
+          compliance_reminder_frequency?: number | null
           compliance_score?: number | null
           compliance_status?: boolean | null
           compliance_tier?: string | null
@@ -8618,6 +9978,7 @@ export type Database = {
           email?: string | null
           id?: string
           job_title?: string | null
+          last_compliance_check?: string | null
           last_login?: string | null
           last_training_date?: string | null
           location_id?: string | null
@@ -8630,6 +9991,8 @@ export type Database = {
           status?: string
           supervisor_id?: string | null
           team_count?: number | null
+          tier_upgrade_eligible?: boolean | null
+          tier_upgrade_requested_at?: string | null
           training_hours?: number | null
           updated_at?: string
           user_id?: string | null
@@ -8641,6 +10004,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "locations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "profiles_supervisor_id_fkey"
@@ -8762,6 +10132,13 @@ export type Database = {
             foreignKeyName: "progression_history_approved_by_fkey"
             columns: ["approved_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "progression_history_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -8778,6 +10155,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "progression_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "progression_history_user_id_fkey"
@@ -8990,6 +10374,13 @@ export type Database = {
             foreignKeyName: "provider_assignment_workflows_initiated_by_fkey"
             columns: ["initiated_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "provider_assignment_workflows_initiated_by_fkey"
+            columns: ["initiated_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -9006,6 +10397,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_assignment_workflows_selected_ap_user_id_fkey"
+            columns: ["selected_ap_user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "provider_assignment_workflows_selected_ap_user_id_fkey"
@@ -9079,6 +10477,13 @@ export type Database = {
             foreignKeyName: "fk_provider_location_assignments_assigned_by"
             columns: ["assigned_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fk_provider_location_assignments_assigned_by"
+            columns: ["assigned_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -9141,6 +10546,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "provider_navigation_configs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "provider_navigation_configs_created_by_fkey"
             columns: ["created_by"]
@@ -9378,6 +10790,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_provider_team_assignments_assigned_by"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "fk_provider_team_assignments_assigned_by"
             columns: ["assigned_by"]
@@ -9671,6 +11090,13 @@ export type Database = {
             foreignKeyName: "regulatory_reports_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "regulatory_reports_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -9687,6 +11113,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "regulatory_reports_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "regulatory_reports_submitted_by_fkey"
@@ -9749,6 +11182,13 @@ export type Database = {
           started_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "report_executions_executed_by_fkey"
+            columns: ["executed_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "report_executions_executed_by_fkey"
             columns: ["executed_by"]
@@ -9826,6 +11266,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "analytics_reports"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "report_subscriptions_user_id_fkey"
@@ -9970,6 +11417,13 @@ export type Database = {
             foreignKeyName: "risk_assessments_identified_by_fkey"
             columns: ["identified_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "risk_assessments_identified_by_fkey"
+            columns: ["identified_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -9986,6 +11440,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_assessments_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "risk_assessments_owner_id_fkey"
@@ -10070,6 +11531,13 @@ export type Database = {
             foreignKeyName: "risk_mitigation_actions_assigned_to_fkey"
             columns: ["assigned_to"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "risk_mitigation_actions_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -10138,6 +11606,13 @@ export type Database = {
             foreignKeyName: "role_audit_submissions_auditor_id_fkey"
             columns: ["auditor_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "role_audit_submissions_auditor_id_fkey"
+            columns: ["auditor_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -10161,6 +11636,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "role_transition_requests"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_audit_submissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "role_audit_submissions_user_id_fkey"
@@ -10278,6 +11760,13 @@ export type Database = {
             foreignKeyName: "role_transition_requests_reviewer_id_fkey"
             columns: ["reviewer_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "role_transition_requests_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -10294,6 +11783,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_transition_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "role_transition_requests_user_id_fkey"
@@ -10363,6 +11859,13 @@ export type Database = {
             foreignKeyName: "role_video_submissions_reviewer_id_fkey"
             columns: ["reviewer_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "role_video_submissions_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -10386,6 +11889,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "role_transition_requests"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_video_submissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "role_video_submissions_user_id_fkey"
@@ -10457,6 +11967,13 @@ export type Database = {
           uploaded_by?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "roster_uploads_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "roster_uploads_uploaded_by_fkey"
             columns: ["uploaded_by"]
@@ -10596,6 +12113,13 @@ export type Database = {
             foreignKeyName: "search_analytics_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "search_analytics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -10696,6 +12220,13 @@ export type Database = {
             foreignKeyName: "security_events_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "security_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -10757,6 +12288,13 @@ export type Database = {
             foreignKeyName: "session_attendance_recorded_by_fkey"
             columns: ["recorded_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "session_attendance_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -10773,6 +12311,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_attendance_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "session_attendance_student_id_fkey"
@@ -10841,6 +12386,13 @@ export type Database = {
             foreignKeyName: "supervision_relationships_supervisee_id_fkey"
             columns: ["supervisee_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "supervision_relationships_supervisee_id_fkey"
+            columns: ["supervisee_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -10857,6 +12409,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervision_relationships_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "supervision_relationships_supervisor_id_fkey"
@@ -10926,6 +12485,13 @@ export type Database = {
             foreignKeyName: "supervisor_evaluations_evaluator_id_fkey"
             columns: ["evaluator_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "supervisor_evaluations_evaluator_id_fkey"
+            columns: ["evaluator_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -10942,6 +12508,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervisor_evaluations_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "supervisor_evaluations_instructor_id_fkey"
@@ -10999,7 +12572,7 @@ export type Database = {
           category: string
           created_at?: string | null
           created_by?: string | null
-          data_type: string
+          data_type?: string
           description?: string | null
           id?: string
           is_public?: boolean | null
@@ -11024,6 +12597,13 @@ export type Database = {
           value?: Json
         }
         Relationships: [
+          {
+            foreignKeyName: "system_configurations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "system_configurations_created_by_fkey"
             columns: ["created_by"]
@@ -11122,36 +12702,263 @@ export type Database = {
         }
         Relationships: []
       }
-      system_metrics: {
+      system_health_snapshots: {
         Row: {
+          active_alerts_count: number | null
+          component_scores: Json
           created_at: string | null
+          critical_issues: Json | null
           id: string
-          measurement_date: string | null
-          metadata: Json | null
-          metric_category: string | null
-          metric_name: string
-          metric_unit: string | null
-          metric_value: number | null
+          overall_health_score: number
+          performance_summary: Json | null
+          resource_utilization: Json | null
+          snapshot_timestamp: string
+          snapshot_type: string | null
         }
         Insert: {
+          active_alerts_count?: number | null
+          component_scores?: Json
           created_at?: string | null
+          critical_issues?: Json | null
           id?: string
-          measurement_date?: string | null
-          metadata?: Json | null
-          metric_category?: string | null
-          metric_name: string
-          metric_unit?: string | null
-          metric_value?: number | null
+          overall_health_score: number
+          performance_summary?: Json | null
+          resource_utilization?: Json | null
+          snapshot_timestamp?: string
+          snapshot_type?: string | null
         }
         Update: {
+          active_alerts_count?: number | null
+          component_scores?: Json
+          created_at?: string | null
+          critical_issues?: Json | null
+          id?: string
+          overall_health_score?: number
+          performance_summary?: Json | null
+          resource_utilization?: Json | null
+          snapshot_timestamp?: string
+          snapshot_type?: string | null
+        }
+        Relationships: []
+      }
+      system_metric_aggregations: {
+        Row: {
+          aggregated_value: number
+          aggregation_period: string
+          aggregation_type: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          metric_name: string
+          period_end: string
+          period_start: string
+          sample_count: number | null
+        }
+        Insert: {
+          aggregated_value: number
+          aggregation_period: string
+          aggregation_type: string
           created_at?: string | null
           id?: string
-          measurement_date?: string | null
           metadata?: Json | null
-          metric_category?: string | null
+          metric_name: string
+          period_end: string
+          period_start: string
+          sample_count?: number | null
+        }
+        Update: {
+          aggregated_value?: number
+          aggregation_period?: string
+          aggregation_type?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
           metric_name?: string
+          period_end?: string
+          period_start?: string
+          sample_count?: number | null
+        }
+        Relationships: []
+      }
+      system_metric_alerts: {
+        Row: {
+          alert_condition: string
+          alert_name: string
+          alert_severity: string | null
+          alert_status: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          last_triggered_at: string | null
+          metric_name: string
+          notification_channels: Json | null
+          threshold_value: number
+          trigger_count: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          alert_condition: string
+          alert_name: string
+          alert_severity?: string | null
+          alert_status?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_triggered_at?: string | null
+          metric_name: string
+          notification_channels?: Json | null
+          threshold_value: number
+          trigger_count?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          alert_condition?: string
+          alert_name?: string
+          alert_severity?: string | null
+          alert_status?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_triggered_at?: string | null
+          metric_name?: string
+          notification_channels?: Json | null
+          threshold_value?: number
+          trigger_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_metric_alerts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "system_metric_alerts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "system_metric_alerts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "system_metric_alerts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_metrics: {
+        Row: {
+          aggregation_period: string | null
+          anomaly_score: number | null
+          created_at: string | null
+          environment: string | null
+          expires_at: string | null
+          id: string
+          is_anomaly: boolean | null
+          measurement_timestamp: string
+          metadata: Json | null
+          metric_category: string
+          metric_name: string
+          metric_type: string
+          metric_unit: string | null
+          metric_value: number | null
+          source_component: string | null
+          source_instance: string | null
+          tags: Json | null
+        }
+        Insert: {
+          aggregation_period?: string | null
+          anomaly_score?: number | null
+          created_at?: string | null
+          environment?: string | null
+          expires_at?: string | null
+          id?: string
+          is_anomaly?: boolean | null
+          measurement_timestamp?: string
+          metadata?: Json | null
+          metric_category?: string
+          metric_name: string
+          metric_type?: string
           metric_unit?: string | null
           metric_value?: number | null
+          source_component?: string | null
+          source_instance?: string | null
+          tags?: Json | null
+        }
+        Update: {
+          aggregation_period?: string | null
+          anomaly_score?: number | null
+          created_at?: string | null
+          environment?: string | null
+          expires_at?: string | null
+          id?: string
+          is_anomaly?: boolean | null
+          measurement_timestamp?: string
+          metadata?: Json | null
+          metric_category?: string
+          metric_name?: string
+          metric_type?: string
+          metric_unit?: string | null
+          metric_value?: number | null
+          source_component?: string | null
+          source_instance?: string | null
+          tags?: Json | null
+        }
+        Relationships: []
+      }
+      system_performance_baselines: {
+        Row: {
+          baseline_date: string
+          baseline_deviation: number | null
+          baseline_period: string
+          baseline_value: number
+          calculated_at: string | null
+          confidence_interval: number | null
+          created_at: string | null
+          id: string
+          is_current: boolean | null
+          metric_name: string
+          sample_size: number | null
+        }
+        Insert: {
+          baseline_date: string
+          baseline_deviation?: number | null
+          baseline_period: string
+          baseline_value: number
+          calculated_at?: string | null
+          confidence_interval?: number | null
+          created_at?: string | null
+          id?: string
+          is_current?: boolean | null
+          metric_name: string
+          sample_size?: number | null
+        }
+        Update: {
+          baseline_date?: string
+          baseline_deviation?: number | null
+          baseline_period?: string
+          baseline_value?: number
+          calculated_at?: string | null
+          confidence_interval?: number | null
+          created_at?: string | null
+          id?: string
+          is_current?: boolean | null
+          metric_name?: string
+          sample_size?: number | null
         }
         Relationships: []
       }
@@ -11275,6 +13082,13 @@ export type Database = {
             foreignKeyName: "teaching_logs_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "teaching_logs_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -11388,6 +13202,13 @@ export type Database = {
             foreignKeyName: "teaching_sessions_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "teaching_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -11461,6 +13282,13 @@ export type Database = {
             foreignKeyName: "team_approval_requests_approved_by_fkey"
             columns: ["approved_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "team_approval_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -11477,6 +13305,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_approval_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "team_approval_requests_requested_by_fkey"
@@ -11554,6 +13389,13 @@ export type Database = {
             foreignKeyName: "team_approval_workflows_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "team_approval_workflows_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -11618,6 +13460,13 @@ export type Database = {
           team_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "team_bulk_operations_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "team_bulk_operations_performed_by_fkey"
             columns: ["performed_by"]
@@ -11696,6 +13545,13 @@ export type Database = {
             foreignKeyName: "team_governance_rules_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "team_governance_rules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -11767,6 +13623,13 @@ export type Database = {
             foreignKeyName: "team_lifecycle_events_affected_user_id_fkey"
             columns: ["affected_user_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "team_lifecycle_events_affected_user_id_fkey"
+            columns: ["affected_user_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -11783,6 +13646,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_lifecycle_events_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "team_lifecycle_events_performed_by_fkey"
@@ -11925,6 +13795,13 @@ export type Database = {
             foreignKeyName: "team_member_achievements_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "team_member_achievements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -11985,6 +13862,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "team_member_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "team_member_assignments_assigned_by_fkey"
             columns: ["assigned_by"]
@@ -12071,6 +13955,13 @@ export type Database = {
             foreignKeyName: "team_member_deadlines_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "team_member_deadlines_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -12150,6 +14041,13 @@ export type Database = {
             foreignKeyName: "team_member_invitations_invited_by_fkey"
             columns: ["invited_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "team_member_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -12217,6 +14115,13 @@ export type Database = {
           team_member_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "team_member_status_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "team_member_status_history_changed_by_fkey"
             columns: ["changed_by"]
@@ -12327,6 +14232,13 @@ export type Database = {
             foreignKeyName: "fk_team_members_user_id"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fk_team_members_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -12392,6 +14304,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "team_navigation_configs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "team_navigation_configs_created_by_fkey"
             columns: ["created_by"]
@@ -12523,6 +14442,13 @@ export type Database = {
             foreignKeyName: "team_performance_metrics_calculated_by_fkey"
             columns: ["calculated_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "team_performance_metrics_calculated_by_fkey"
+            columns: ["calculated_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -12594,6 +14520,13 @@ export type Database = {
             foreignKeyName: "team_permission_delegations_delegate_id_fkey"
             columns: ["delegate_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "team_permission_delegations_delegate_id_fkey"
+            columns: ["delegate_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -12615,6 +14548,13 @@ export type Database = {
             foreignKeyName: "team_permission_delegations_delegator_id_fkey"
             columns: ["delegator_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "team_permission_delegations_delegator_id_fkey"
+            columns: ["delegator_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -12631,6 +14571,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_permission_delegations_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "team_permission_delegations_revoked_by_fkey"
@@ -12707,6 +14654,13 @@ export type Database = {
             foreignKeyName: "team_workflows_approved_by_fkey"
             columns: ["approved_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "team_workflows_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -12723,6 +14677,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_workflows_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "team_workflows_requested_by_fkey"
@@ -12823,6 +14784,13 @@ export type Database = {
             foreignKeyName: "fk_teams_created_by"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fk_teams_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -12860,6 +14828,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "authorized_providers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "teams_archived_by_fkey"
@@ -13049,6 +15024,13 @@ export type Database = {
             foreignKeyName: "fk_user_achievements_user_id"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fk_user_achievements_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -13112,6 +15094,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "user_activity_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "user_activity_logs_user_id_fkey"
             columns: ["user_id"]
@@ -13183,21 +15172,25 @@ export type Database = {
           created_at: string | null
           current_value: string | null
           due_date: string | null
+          evidence_files: Json | null
           id: string
           last_checked_at: string | null
+          metadata: Json | null
           metric_id: string
+          next_review_date: string | null
+          priority: number | null
           rejection_reason: string | null
+          reminder_sent_at: string | null
           requirement_id: string | null
           review_notes: string | null
           reviewed_at: string | null
           reviewer_id: string | null
           status: string | null
           submission_data: Json | null
-          submitted_at: string | null
+          target_value: string | null
           tier: string | null
-          ui_state: Json | null
           updated_at: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           approved_at?: string | null
@@ -13207,21 +15200,25 @@ export type Database = {
           created_at?: string | null
           current_value?: string | null
           due_date?: string | null
+          evidence_files?: Json | null
           id?: string
           last_checked_at?: string | null
-          metric_id?: string
+          metadata?: Json | null
+          metric_id: string
+          next_review_date?: string | null
+          priority?: number | null
           rejection_reason?: string | null
+          reminder_sent_at?: string | null
           requirement_id?: string | null
           review_notes?: string | null
           reviewed_at?: string | null
           reviewer_id?: string | null
           status?: string | null
           submission_data?: Json | null
-          submitted_at?: string | null
+          target_value?: string | null
           tier?: string | null
-          ui_state?: Json | null
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           approved_at?: string | null
@@ -13231,23 +15228,55 @@ export type Database = {
           created_at?: string | null
           current_value?: string | null
           due_date?: string | null
+          evidence_files?: Json | null
           id?: string
           last_checked_at?: string | null
+          metadata?: Json | null
           metric_id?: string
+          next_review_date?: string | null
+          priority?: number | null
           rejection_reason?: string | null
+          reminder_sent_at?: string | null
           requirement_id?: string | null
           review_notes?: string | null
           reviewed_at?: string | null
           reviewer_id?: string | null
           status?: string | null
           submission_data?: Json | null
-          submitted_at?: string | null
+          target_value?: string | null
           tier?: string | null
-          ui_state?: Json | null
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_user_compliance_records_approved_by"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fk_user_compliance_records_approved_by"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_user_compliance_records_approved_by"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_user_compliance_records_approved_by"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "fk_user_compliance_records_metric_id"
             columns: ["metric_id"]
@@ -13256,49 +15285,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "user_compliance_records_approved_by_fkey"
-            columns: ["approved_by"]
-            isOneToOne: false
-            referencedRelation: "instructor_teaching_load"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "user_compliance_records_approved_by_fkey"
-            columns: ["approved_by"]
-            isOneToOne: false
-            referencedRelation: "instructor_workload_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "user_compliance_records_approved_by_fkey"
-            columns: ["approved_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_compliance_records_requirement_id_fkey"
+            foreignKeyName: "fk_user_compliance_records_requirement_id"
             columns: ["requirement_id"]
             isOneToOne: false
             referencedRelation: "compliance_requirements"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "user_compliance_records_user_id_fkey"
+            foreignKeyName: "fk_user_compliance_records_reviewer_id"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fk_user_compliance_records_reviewer_id"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_user_compliance_records_reviewer_id"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_user_compliance_records_reviewer_id"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_user_compliance_records_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fk_user_compliance_records_user_id"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
           {
-            foreignKeyName: "user_compliance_records_user_id_fkey"
+            foreignKeyName: "fk_user_compliance_records_user_id"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "instructor_workload_summary"
             referencedColumns: ["instructor_id"]
           },
           {
-            foreignKeyName: "user_compliance_records_user_id_fkey"
+            foreignKeyName: "fk_user_compliance_records_user_id"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -13344,6 +15387,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "user_engagement_scores_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "user_engagement_scores_user_id_fkey"
             columns: ["user_id"]
@@ -13403,6 +15453,13 @@ export type Database = {
             foreignKeyName: "user_invitations_invited_by_fkey"
             columns: ["invited_by"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -13457,6 +15514,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "user_performance_metrics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "user_performance_metrics_user_id_fkey"
             columns: ["user_id"]
@@ -13528,6 +15592,13 @@ export type Database = {
             foreignKeyName: "user_preferences_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -13594,6 +15665,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "user_progress_tracking_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "user_progress_tracking_user_id_fkey"
             columns: ["user_id"]
@@ -13744,11 +15822,11 @@ export type Database = {
       workflow_approvals: {
         Row: {
           approval_data: Json | null
-          approval_date: string | null
           approval_method: string | null
+          approval_notes: string | null
           approval_status: string | null
+          approved_at: string | null
           approver_id: string | null
-          comments: string | null
           created_at: string | null
           delegated_to: string | null
           id: string
@@ -13757,11 +15835,11 @@ export type Database = {
         }
         Insert: {
           approval_data?: Json | null
-          approval_date?: string | null
           approval_method?: string | null
+          approval_notes?: string | null
           approval_status?: string | null
+          approved_at?: string | null
           approver_id?: string | null
-          comments?: string | null
           created_at?: string | null
           delegated_to?: string | null
           id?: string
@@ -13770,11 +15848,11 @@ export type Database = {
         }
         Update: {
           approval_data?: Json | null
-          approval_date?: string | null
           approval_method?: string | null
+          approval_notes?: string | null
           approval_status?: string | null
+          approved_at?: string | null
           approver_id?: string | null
-          comments?: string | null
           created_at?: string | null
           delegated_to?: string | null
           id?: string
@@ -13782,6 +15860,13 @@ export type Database = {
           workflow_instance_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "workflow_approvals_approver_id_fkey"
+            columns: ["approver_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "workflow_approvals_approver_id_fkey"
             columns: ["approver_id"]
@@ -13802,6 +15887,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_approvals_delegated_to_fkey"
+            columns: ["delegated_to"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "workflow_approvals_delegated_to_fkey"
@@ -13835,6 +15927,7 @@ export type Database = {
       }
       workflow_definitions: {
         Row: {
+          auto_assignment_rules: Json | null
           conditional_routing: Json | null
           created_at: string | null
           created_by: string | null
@@ -13842,6 +15935,7 @@ export type Database = {
           escalation_rules: Json | null
           id: string
           is_active: boolean | null
+          notification_config: Json | null
           sla_config: Json | null
           updated_at: string | null
           version: number | null
@@ -13850,6 +15944,7 @@ export type Database = {
           workflow_type: string
         }
         Insert: {
+          auto_assignment_rules?: Json | null
           conditional_routing?: Json | null
           created_at?: string | null
           created_by?: string | null
@@ -13857,14 +15952,16 @@ export type Database = {
           escalation_rules?: Json | null
           id?: string
           is_active?: boolean | null
+          notification_config?: Json | null
           sla_config?: Json | null
           updated_at?: string | null
           version?: number | null
           workflow_name: string
-          workflow_steps: Json
+          workflow_steps?: Json
           workflow_type: string
         }
         Update: {
+          auto_assignment_rules?: Json | null
           conditional_routing?: Json | null
           created_at?: string | null
           created_by?: string | null
@@ -13872,6 +15969,7 @@ export type Database = {
           escalation_rules?: Json | null
           id?: string
           is_active?: boolean | null
+          notification_config?: Json | null
           sla_config?: Json | null
           updated_at?: string | null
           version?: number | null
@@ -13880,6 +15978,13 @@ export type Database = {
           workflow_type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "workflow_definitions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "workflow_definitions_created_by_fkey"
             columns: ["created_by"]
@@ -13915,6 +16020,7 @@ export type Database = {
           initiated_at: string | null
           initiated_by: string | null
           instance_name: string | null
+          priority: number | null
           sla_deadline: string | null
           step_history: Json | null
           updated_at: string | null
@@ -13933,6 +16039,7 @@ export type Database = {
           initiated_at?: string | null
           initiated_by?: string | null
           instance_name?: string | null
+          priority?: number | null
           sla_deadline?: string | null
           step_history?: Json | null
           updated_at?: string | null
@@ -13951,6 +16058,7 @@ export type Database = {
           initiated_at?: string | null
           initiated_by?: string | null
           instance_name?: string | null
+          priority?: number | null
           sla_deadline?: string | null
           step_history?: Json | null
           updated_at?: string | null
@@ -13959,6 +16067,13 @@ export type Database = {
           workflow_status?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "workflow_instances_initiated_by_fkey"
+            columns: ["initiated_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "workflow_instances_initiated_by_fkey"
             columns: ["initiated_by"]
@@ -13989,43 +16104,282 @@ export type Database = {
           },
         ]
       }
+      workflow_queue: {
+        Row: {
+          actual_duration: number | null
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string | null
+          due_date: string | null
+          error_message: string | null
+          estimated_duration: number | null
+          id: string
+          last_retry_at: string | null
+          max_retries: number | null
+          queue_data: Json | null
+          queue_metadata: Json | null
+          queue_priority: number | null
+          queue_status: string | null
+          queue_type: string
+          retry_count: number | null
+          started_at: string | null
+          updated_at: string | null
+          workflow_instance_id: string | null
+        }
+        Insert: {
+          actual_duration?: number | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          error_message?: string | null
+          estimated_duration?: number | null
+          id?: string
+          last_retry_at?: string | null
+          max_retries?: number | null
+          queue_data?: Json | null
+          queue_metadata?: Json | null
+          queue_priority?: number | null
+          queue_status?: string | null
+          queue_type: string
+          retry_count?: number | null
+          started_at?: string | null
+          updated_at?: string | null
+          workflow_instance_id?: string | null
+        }
+        Update: {
+          actual_duration?: number | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          error_message?: string | null
+          estimated_duration?: number | null
+          id?: string
+          last_retry_at?: string | null
+          max_retries?: number | null
+          queue_data?: Json | null
+          queue_metadata?: Json | null
+          queue_priority?: number | null
+          queue_status?: string | null
+          queue_type?: string
+          retry_count?: number | null
+          started_at?: string | null
+          updated_at?: string | null
+          workflow_instance_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_queue_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "workflow_queue_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "workflow_queue_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "workflow_queue_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_queue_workflow_instance_id_fkey"
+            columns: ["workflow_instance_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_queue_history: {
+        Row: {
+          change_metadata: Json | null
+          change_reason: string | null
+          changed_by: string | null
+          created_at: string | null
+          id: string
+          new_assignee: string | null
+          new_status: string | null
+          previous_assignee: string | null
+          previous_status: string | null
+          queue_id: string | null
+        }
+        Insert: {
+          change_metadata?: Json | null
+          change_reason?: string | null
+          changed_by?: string | null
+          created_at?: string | null
+          id?: string
+          new_assignee?: string | null
+          new_status?: string | null
+          previous_assignee?: string | null
+          previous_status?: string | null
+          queue_id?: string | null
+        }
+        Update: {
+          change_metadata?: Json | null
+          change_reason?: string | null
+          changed_by?: string | null
+          created_at?: string | null
+          id?: string
+          new_assignee?: string | null
+          new_status?: string | null
+          previous_assignee?: string | null
+          previous_status?: string | null
+          queue_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_queue_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "workflow_queue_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "workflow_queue_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "workflow_queue_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_queue_history_new_assignee_fkey"
+            columns: ["new_assignee"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "workflow_queue_history_new_assignee_fkey"
+            columns: ["new_assignee"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "workflow_queue_history_new_assignee_fkey"
+            columns: ["new_assignee"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "workflow_queue_history_new_assignee_fkey"
+            columns: ["new_assignee"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_queue_history_previous_assignee_fkey"
+            columns: ["previous_assignee"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "workflow_queue_history_previous_assignee_fkey"
+            columns: ["previous_assignee"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "workflow_queue_history_previous_assignee_fkey"
+            columns: ["previous_assignee"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "workflow_queue_history_previous_assignee_fkey"
+            columns: ["previous_assignee"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_queue_history_queue_id_fkey"
+            columns: ["queue_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_queue"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_sla_tracking: {
         Row: {
           breach_count: number | null
           created_at: string | null
-          current_duration: unknown | null
+          current_status: string | null
           escalation_level: number | null
           escalation_triggered: boolean | null
           id: string
           last_breach_at: string | null
-          sla_threshold: unknown
-          sla_type: string
+          recovery_time: number | null
+          sla_deadline: string
+          sla_metadata: Json | null
+          sla_name: string
           updated_at: string | null
           workflow_instance_id: string | null
         }
         Insert: {
           breach_count?: number | null
           created_at?: string | null
-          current_duration?: unknown | null
+          current_status?: string | null
           escalation_level?: number | null
           escalation_triggered?: boolean | null
           id?: string
           last_breach_at?: string | null
-          sla_threshold: unknown
-          sla_type: string
+          recovery_time?: number | null
+          sla_deadline: string
+          sla_metadata?: Json | null
+          sla_name: string
           updated_at?: string | null
           workflow_instance_id?: string | null
         }
         Update: {
           breach_count?: number | null
           created_at?: string | null
-          current_duration?: unknown | null
+          current_status?: string | null
           escalation_level?: number | null
           escalation_triggered?: boolean | null
           id?: string
           last_breach_at?: string | null
-          sla_threshold?: unknown
-          sla_type?: string
+          recovery_time?: number | null
+          sla_deadline?: string
+          sla_metadata?: Json | null
+          sla_name?: string
           updated_at?: string | null
           workflow_instance_id?: string | null
         }
@@ -14058,6 +16412,13 @@ export type Database = {
             foreignKeyName: "supervision_relationships_supervisee_id_fkey"
             columns: ["supervisee_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "supervision_relationships_supervisee_id_fkey"
+            columns: ["supervisee_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -14074,6 +16435,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervision_relationships_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "supervision_relationships_supervisor_id_fkey"
@@ -14106,6 +16474,13 @@ export type Database = {
           supervisor_role: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "supervision_relationships_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "supervision_relationships_supervisor_id_fkey"
             columns: ["supervisor_id"]
@@ -14158,6 +16533,24 @@ export type Database = {
         }
         Relationships: []
       }
+      compliance_dashboard_summary: {
+        Row: {
+          compliance_score: number | null
+          compliance_tier: string | null
+          compliant_count: number | null
+          display_name: string | null
+          email: string | null
+          last_activity: string | null
+          non_compliant_count: number | null
+          overdue_count: number | null
+          pending_count: number | null
+          role: string | null
+          total_requirements: number | null
+          user_id: string | null
+          warning_count: number | null
+        }
+        Relationships: []
+      }
       course_completion_summary: {
         Row: {
           completed_sessions: number | null
@@ -14170,6 +16563,13 @@ export type Database = {
           total_sessions: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "teaching_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "teaching_sessions_instructor_id_fkey"
             columns: ["instructor_id"]
@@ -14299,6 +16699,13 @@ export type Database = {
             foreignKeyName: "teaching_sessions_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "teaching_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -14367,6 +16774,13 @@ export type Database = {
             foreignKeyName: "supervision_relationships_supervisee_id_fkey"
             columns: ["supervisee_id"]
             isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "supervision_relationships_supervisee_id_fkey"
+            columns: ["supervisee_id"]
+            isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
@@ -14383,6 +16797,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervision_relationships_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "supervision_relationships_supervisor_id_fkey"
@@ -14406,16 +16827,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      system_admin_metrics: {
-        Row: {
-          avg_completion_rate: number | null
-          basic_tier_count: number | null
-          pending_reviews: number | null
-          robust_tier_count: number | null
-          total_users: number | null
-        }
-        Relationships: []
       }
     }
     Functions: {
@@ -14555,6 +16966,10 @@ export type Database = {
         Args: { p_lead_id: string }
         Returns: number
       }
+      calculate_system_health_score: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       calculate_teaching_hours_credit: {
         Args: { p_session_id: string }
         Returns: number
@@ -14603,6 +17018,10 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: Json
       }
+      check_metric_alerts: {
+        Args: { p_metric_name: string; p_metric_value: number }
+        Returns: boolean
+      }
       check_provider_data_integrity: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -14641,6 +17060,10 @@ export type Database = {
         Returns: number
       }
       cleanup_expired_compliance_reports: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      cleanup_expired_system_metrics: {
         Args: Record<PropertyKey, never>
         Returns: number
       }
@@ -14777,7 +17200,19 @@ export type Database = {
           new_count: number
         }[]
       }
+      generate_compliance_intelligence_insight: {
+        Args: {
+          p_entity_type: string
+          p_entity_id: string
+          p_analysis_type?: string
+        }
+        Returns: string
+      }
       generate_invitation_token: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_system_health_snapshot: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
@@ -14946,6 +17381,27 @@ export type Database = {
       get_compliance_metrics: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      get_compliance_requirements_for_user: {
+        Args: { user_tier?: string; user_role?: string }
+        Returns: {
+          id: string
+          name: string
+          description: string
+          requirement_type: string
+          category: string
+          tier_level: string
+          is_mandatory: boolean
+          due_days_from_assignment: number
+          points_value: number
+          document_required: boolean
+          external_link_required: boolean
+          estimated_completion_time: number
+          difficulty_level: string
+          display_order: number
+          icon: string
+          color_code: string
+        }[]
       }
       get_cross_team_analytics: {
         Args: Record<PropertyKey, never>
@@ -15132,6 +17588,18 @@ export type Database = {
           performance_metrics: Json
         }[]
       }
+      get_requirement_completion_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          requirement_id: string
+          requirement_name: string
+          total_assigned: number
+          completed: number
+          in_progress: number
+          overdue: number
+          completion_rate: number
+        }[]
+      }
       get_revenue_metrics: {
         Args: { start_date?: string; end_date?: string }
         Returns: {
@@ -15154,6 +17622,17 @@ export type Database = {
       get_system_admin_dashboard_metrics: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      get_system_health_overview: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          total_functions: number
+          healthy_functions: number
+          warning_functions: number
+          critical_functions: number
+          overall_health_score: number
+          critical_functions_down: number
+        }[]
       }
       get_team_analytics_bypass_rls: {
         Args: Record<PropertyKey, never>
@@ -15307,6 +17786,20 @@ export type Database = {
         Args: { user_uuid: string }
         Returns: string[]
       }
+      get_user_workflow_queue: {
+        Args: { p_user_id?: string }
+        Returns: {
+          queue_id: string
+          workflow_name: string
+          queue_type: string
+          queue_priority: number
+          queue_status: string
+          due_date: string
+          entity_type: string
+          entity_id: string
+          queue_data: Json
+        }[]
+      }
       get_workflow_statistics: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -15345,6 +17838,10 @@ export type Database = {
       }
       is_admin_user: {
         Args: { user_uuid: string }
+        Returns: boolean
+      }
+      is_sa_or_ad: {
+        Args: { user_id?: string }
         Returns: boolean
       }
       is_team_admin_direct: {
@@ -15400,6 +17897,14 @@ export type Database = {
         Args: { p_job_id: string }
         Returns: boolean
       }
+      process_compliance_reminders: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      process_workflow_queue_item: {
+        Args: { p_queue_id: string }
+        Returns: boolean
+      }
       qualify_lead_automatically: {
         Args: { p_lead_id: string }
         Returns: boolean
@@ -15414,6 +17919,17 @@ export type Database = {
           p_average_satisfaction_score?: number
           p_completion_rate?: number
           p_compliance_score?: number
+        }
+        Returns: string
+      }
+      record_system_metric: {
+        Args: {
+          p_metric_name: string
+          p_metric_value: number
+          p_metric_category?: string
+          p_metric_unit?: string
+          p_source_component?: string
+          p_tags?: Json
         }
         Returns: string
       }
@@ -15448,6 +17964,10 @@ export type Database = {
       remove_team_member_safe: {
         Args: { p_member_id: string } | { p_team_id: string; p_user_id: string }
         Returns: boolean
+      }
+      render_notification_template: {
+        Args: { template_id: string; template_variables?: Json }
+        Returns: Json
       }
       safe_backfill_certificate_data: {
         Args: Record<PropertyKey, never>
@@ -15536,6 +18056,10 @@ export type Database = {
           updated_status: string
         }[]
       }
+      update_compliance_monitoring_alert: {
+        Args: { p_monitor_id: string; p_current_value: number }
+        Returns: boolean
+      }
       update_compliance_record: {
         Args: {
           p_user_id: string
@@ -15603,6 +18127,10 @@ export type Database = {
       validate_location_selection: {
         Args: { p_workflow_id: string; p_location_id: string }
         Returns: Json
+      }
+      validate_notification_template: {
+        Args: { template_data: Json }
+        Returns: boolean
       }
       validate_provider_uuid: {
         Args: { p_id: string }
