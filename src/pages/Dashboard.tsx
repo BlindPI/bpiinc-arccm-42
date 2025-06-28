@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { DashboardFoundation } from '@/components/foundation/dashboard/DashboardFoundation';
+import { FixedRoleBasedDashboard } from '@/components/dashboard/FixedRoleBasedDashboard';
 
 export default function Dashboard() {
-  return <DashboardFoundation />;
+  return <FixedRoleBasedDashboard />;
 }

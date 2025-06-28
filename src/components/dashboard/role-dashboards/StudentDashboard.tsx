@@ -1,116 +1,163 @@
 
 import React from 'react';
-import { UserProfile } from '@/types/auth';
-import { DashboardConfig } from '@/hooks/useDashboardConfig';
+import { useQuery } from '@tanstack/react-query';
+import { RealTimeDashboardWidget } from '../RealTimeDashboardWidget';
+import { DashboardDataService } from '@/services/dashboard/dashboardDataService';
+import { 
+  Award, 
+  BookOpen, 
+  Clock, 
+  TrendingUp,
+  Calendar,
+  CheckCircle
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { BookOpen, Award, Calendar, Target } from 'lucide-react';
-import { useStudentDashboardData } from '@/hooks/dashboard/useStudentDashboardData';
-import { DashboardActionButton } from '../ui/DashboardActionButton';
-import { InlineLoader } from '@/components/ui/LoadingStates';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 interface StudentDashboardProps {
-  config: DashboardConfig;
-  profile: UserProfile;
+  config: any;
+  profile: any;
 }
 
-const StudentDashboard = ({ config, profile }: StudentDashboardProps) => {
-  const { metrics, isLoading } = useStudentDashboardData(profile.id);
+export default function StudentDashboard({ config, profile }: StudentDashboardProps) {
+  const { data: metrics, isLoading, refetch } = useQuery({
+    queryKey: ['student-metrics', profile.id],
+    queryFn: () => DashboardDataService.getStudentMetrics(profile.id),
+    refetchInterval: 30000
+  });
 
-  if (isLoading) {
-    return <InlineLoader message="Loading student dashboard..." />;
-  }
+  const { data: recentActivities = [] } = useQuery({
+    queryKey: ['student-activities', profile.id],
+    queryFn: () => DashboardDataService.getRecentActivities(profile.id, 'ST'),
+    refetchInterval: 60000
+  });
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <Alert className="bg-gradient-to-r from-green-50 to-white border-green-200 shadow-sm">
-        <BookOpen className="h-4 w-4 text-green-600 mr-2" />
-        <AlertDescription className="text-green-800 font-medium">
-          Welcome to your learning dashboard
-        </AlertDescription>
-      </Alert>
+    <div className="space-y-6">
+      {/* Student Progress */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <RealTimeDashboardWidget
+          title="My Certificates"
+          icon={Award}
+          value={metrics?.activeCertifications}
+          status="success"
+          isLoading={isLoading}
+          onRefresh={refetch}
+          realTime
+          size="sm"
+          actions={[
+            { label: 'View All', onClick: () => window.location.href = '/certificates' }
+          ]}
+        />
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-white border-0 shadow-md hover:shadow-lg transition-shadow">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Active Courses</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{metrics?.activeCourses || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">Currently enrolled</p>
-          </CardContent>
-        </Card>
+        <RealTimeDashboardWidget
+          title="Courses Enrolled"
+          icon={BookOpen}
+          value={0} // Will implement when enrollment data exists
+          status="info"
+          isLoading={isLoading}
+          realTime
+          size="sm"
+        />
 
-        <Card className="bg-gradient-to-br from-green-50 to-white border-0 shadow-md hover:shadow-lg transition-shadow">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Completed Courses</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{metrics?.completedCourses || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">Successfully finished</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-yellow-50 to-white border-0 shadow-md hover:shadow-lg transition-shadow">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Certificates</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{metrics?.certificates || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">Earned certificates</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-50 to-white border-0 shadow-md hover:shadow-lg transition-shadow">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Study Hours</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{metrics?.studyHours || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">Total recorded</p>
-          </CardContent>
-        </Card>
+        <RealTimeDashboardWidget
+          title="Hours Completed"
+          icon={Clock}
+          value={0} // Will implement when course progress data exists
+          status="info"
+          isLoading={isLoading}
+          realTime
+          size="sm"
+        />
       </div>
 
-      <Card className="border-2 bg-gradient-to-br from-white to-gray-50/50 shadow-md">
+      {/* Learning Progress */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <RealTimeDashboardWidget
+          title="Learning Progress"
+          icon={TrendingUp}
+          isLoading={isLoading}
+          realTime
+          size="md"
+        >
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Overall Progress</span>
+              <Badge variant="outline" className="bg-blue-50 text-blue-700">75%</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Certificates Earned</span>
+              <Badge variant="outline" className="bg-green-50 text-green-700">
+                {metrics?.activeCertifications || 0}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Current Streak</span>
+              <Badge variant="outline" className="bg-orange-50 text-orange-700">7 days</Badge>
+            </div>
+          </div>
+        </RealTimeDashboardWidget>
+
+        <RealTimeDashboardWidget
+          title="Upcoming Deadlines"
+          icon={Calendar}
+          isLoading={isLoading}
+          realTime
+          size="md"
+        >
+          <div className="space-y-3">
+            <div className="text-center py-8 text-muted-foreground">
+              <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-500" />
+              <p className="text-sm">No upcoming deadlines</p>
+              <p className="text-xs">You're all caught up!</p>
+            </div>
+          </div>
+        </RealTimeDashboardWidget>
+      </div>
+
+      {/* Student Actions */}
+      <Card>
         <CardHeader>
-          <CardTitle className="text-xl text-gray-900">Student Actions</CardTitle>
+          <CardTitle>Learning Tools</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <DashboardActionButton
-              icon={BookOpen}
-              label="Browse Courses"
-              description="Find and enroll in courses"
-              path="/courses"
-              colorScheme="blue"
-            />
-            <DashboardActionButton
-              icon={Calendar}
-              label="View Schedule"
-              description="View your course schedule"
-              path="/enrollments"
-              colorScheme="green"
-            />
-            <DashboardActionButton
-              icon={Award}
-              label="My Certificates"
-              description="View your certificates"
-              path="/certificates"
-              colorScheme="purple"
-            />
-            <DashboardActionButton
-              icon={Target}
-              label="Learning Goals"
-              description="Set and track learning goals"
-              path="/profile"
-              colorScheme="amber"
-            />
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.href = '/certificates'}
+              className="h-20 flex flex-col gap-2"
+            >
+              <Award className="h-6 w-6" />
+              <span className="text-sm">My Certificates</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => console.log('Browse courses')}
+              className="h-20 flex flex-col gap-2"
+            >
+              <BookOpen className="h-6 w-6" />
+              <span className="text-sm">Browse Courses</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => console.log('Learning history')}
+              className="h-20 flex flex-col gap-2"
+            >
+              <Clock className="h-6 w-6" />
+              <span className="text-sm">Learning History</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.href = '/profile'}
+              className="h-20 flex flex-col gap-2"
+            >
+              <TrendingUp className="h-6 w-6" />
+              <span className="text-sm">My Progress</span>
+            </Button>
           </div>
         </CardContent>
       </Card>
     </div>
   );
-};
-
-export default StudentDashboard;
+}

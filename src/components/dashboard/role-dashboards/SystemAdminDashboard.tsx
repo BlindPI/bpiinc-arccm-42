@@ -1,183 +1,208 @@
 
-import { UserProfile } from '@/types/auth';
-import { DashboardConfig } from '@/hooks/useDashboardConfig';
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { RealTimeDashboardWidget } from '../RealTimeDashboardWidget';
+import { DashboardDataService } from '@/services/dashboard/dashboardDataService';
+import { 
+  Users, 
+  Activity, 
+  AlertTriangle, 
+  CheckCircle, 
+  Clock,
+  Server,
+  Database,
+  Shield
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, Users, Settings, BarChart3, Monitor } from 'lucide-react';
-import { useSystemAdminDashboardData } from '@/hooks/dashboard/useSystemAdminDashboardData';
-import { DashboardActionButton } from '../ui/DashboardActionButton';
-import { InlineLoader } from '@/components/ui/LoadingStates';
-import { ComplianceTierDashboard } from '@/components/compliance/ComplianceTierDashboard';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface SystemAdminDashboardProps {
-  config: DashboardConfig;
-  profile: UserProfile;
+  config: any;
+  profile: any;
 }
 
-const SystemAdminDashboard = ({ config, profile }: SystemAdminDashboardProps) => {
-  const { metrics, isLoading, error } = useSystemAdminDashboardData();
-  
-  if (isLoading) {
-    return <InlineLoader message="Loading system dashboard..." />;
-  }
-  
-  if (error) {
-    return (
-      <Alert className="bg-red-50 border-red-200 shadow-sm">
-        <AlertDescription className="text-red-800 font-medium">
-          Error loading dashboard data. Please try again later.
-        </AlertDescription>
-      </Alert>
-    );
-  }
+export default function SystemAdminDashboard({ config, profile }: SystemAdminDashboardProps) {
+  const { data: metrics, isLoading, refetch } = useQuery({
+    queryKey: ['system-admin-metrics'],
+    queryFn: () => DashboardDataService.getSystemAdminMetrics(),
+    refetchInterval: 30000 // Refresh every 30 seconds
+  });
+
+  const { data: recentActivities = [] } = useQuery({
+    queryKey: ['system-admin-activities'],
+    queryFn: () => DashboardDataService.getRecentActivities(profile.id, 'SA'),
+    refetchInterval: 60000 // Refresh every minute
+  });
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <Alert className="bg-gradient-to-r from-blue-50 to-white border-blue-200 shadow-sm">
-        <Shield className="h-4 w-4 text-blue-600 mr-2" />
-        <AlertDescription className="text-blue-800 font-medium">
-          You are logged in as a System Administrator
-        </AlertDescription>
-      </Alert>
+    <div className="space-y-6">
+      {/* Real-time System Metrics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <RealTimeDashboardWidget
+          title="Total Users"
+          icon={Users}
+          value={metrics?.totalUsers}
+          status="info"
+          isLoading={isLoading}
+          onRefresh={refetch}
+          realTime
+          size="sm"
+        />
 
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">System Overview</TabsTrigger>
-          <TabsTrigger value="compliance">
-            <Shield className="h-4 w-4 mr-1" />
-            Compliance Management
-          </TabsTrigger>
-          <TabsTrigger value="users">User Management</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
-        </TabsList>
+        <RealTimeDashboardWidget
+          title="Active Users"
+          icon={Activity}
+          value={metrics?.activeUsers}
+          status="success"
+          isLoading={isLoading}
+          onRefresh={refetch}
+          realTime
+          size="sm"
+        />
 
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <Card className="bg-gradient-to-br from-blue-50 to-white border-0 shadow-md hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">Total Users</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-gray-900">{metrics?.totalUsers || 0}</div>
-                <p className="text-xs text-gray-500 mt-1">Active users in the system</p>
-              </CardContent>
-            </Card>
+        <RealTimeDashboardWidget
+          title="Pending Approvals"
+          icon={Clock}
+          value={metrics?.pendingApprovals}
+          status={metrics?.pendingApprovals > 5 ? "warning" : "success"}
+          isLoading={isLoading}
+          onRefresh={refetch}
+          realTime
+          size="sm"
+          actions={[
+            { label: 'View All', onClick: () => window.location.href = '/certificate-requests' }
+          ]}
+        />
 
-            <Card className="bg-gradient-to-br from-green-50 to-white border-0 shadow-md hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">Active Courses</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-gray-900">{metrics?.activeCourses || 0}</div>
-                <p className="text-xs text-gray-500 mt-1">Currently active courses</p>
-              </CardContent>
-            </Card>
+        <RealTimeDashboardWidget
+          title="System Health"
+          icon={Server}
+          value={`${metrics?.systemHealth?.healthy || 0}/${(metrics?.systemHealth?.healthy || 0) + (metrics?.systemHealth?.warning || 0) + (metrics?.systemHealth?.critical || 0)}`}
+          status={metrics?.systemHealth?.critical > 0 ? "error" : metrics?.systemHealth?.warning > 0 ? "warning" : "success"}
+          isLoading={isLoading}
+          onRefresh={refetch}
+          realTime
+          size="sm"
+        />
+      </div>
 
-            <Card className="bg-gradient-to-br from-purple-50 to-white border-0 shadow-md hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">System Health</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${metrics?.systemHealth.status === 'Healthy' ? 'text-green-600' : 'text-red-600'}`}>
-                  {metrics?.systemHealth.status || 'UNKNOWN'}
-                </div>
-                <p className="text-xs text-gray-500 mt-1">{metrics?.systemHealth.message}</p>
-              </CardContent>
-            </Card>
+      {/* System Health Details */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <RealTimeDashboardWidget
+          title="System Components"
+          icon={Database}
+          isLoading={isLoading}
+          onRefresh={refetch}
+          realTime
+          size="md"
+        >
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Database</span>
+              <Badge variant="outline" className="bg-green-50 text-green-700">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Healthy
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">API Services</span>
+              <Badge variant="outline" className="bg-green-50 text-green-700">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Operational
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Authentication</span>
+              <Badge variant="outline" className="bg-green-50 text-green-700">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Active
+              </Badge>
+            </div>
+            {metrics?.systemHealth?.warning > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Background Jobs</span>
+                <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
+                  <AlertTriangle className="h-3 w-3 mr-1" />
+                  Warning
+                </Badge>
+              </div>
+            )}
           </div>
+        </RealTimeDashboardWidget>
 
-          <Card className="border-2 bg-gradient-to-br from-white to-gray-50/50 shadow-md">
-            <CardHeader>
-              <CardTitle className="text-xl text-gray-900">System Administration</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <DashboardActionButton
-                  icon={Users}
-                  label="User Management"
-                  description="Manage system users and permissions"
-                  path="/users"
-                  colorScheme="blue"
-                />
-                <DashboardActionButton
-                  icon={Settings}
-                  label="System Settings"
-                  description="Configure system-wide settings"
-                  path="/settings"
-                  colorScheme="green"
-                />
-                <DashboardActionButton
-                  icon={BarChart3}
-                  label="Reports"
-                  description="View system analytics and reports"
-                  path="/analytics"
-                  colorScheme="purple"
-                />
-                <DashboardActionButton
-                  icon={Monitor}
-                  label="System Monitoring"
-                  description="Monitor system health and performance"
-                  path="/system-monitoring"
-                  colorScheme="amber"
-                />
+        <RealTimeDashboardWidget
+          title="Recent System Activity"
+          icon={Shield}
+          isLoading={isLoading}
+          realTime
+          size="md"
+        >
+          <div className="space-y-3 max-h-48 overflow-y-auto">
+            {recentActivities.slice(0, 6).map((activity) => (
+              <div key={activity.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{activity.action}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {activity.user_name} • {new Date(activity.created_at).toLocaleString()}
+                  </p>
+                </div>
+                <Badge variant="outline" className="text-xs">
+                  {activity.entity_type}
+                </Badge>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            ))}
+            {recentActivities.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No recent activities
+              </p>
+            )}
+          </div>
+        </RealTimeDashboardWidget>
+      </div>
 
-        <TabsContent value="compliance" className="space-y-6">
-          <Alert className="bg-gradient-to-r from-green-50 to-white border-green-200 shadow-sm">
-            <Shield className="h-4 w-4 text-green-600 mr-2" />
-            <AlertDescription className="text-green-800 font-medium">
-              System-wide Compliance Management - Monitor and oversee organizational compliance
-            </AlertDescription>
-          </Alert>
-          <ComplianceTierDashboard />
-        </TabsContent>
-
-        <TabsContent value="users" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                User Management
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <Users className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                <h3 className="text-lg font-medium mb-2">User Management</h3>
-                <p className="text-muted-foreground">
-                  Advanced user management features will be available here.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="settings" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                System Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <Settings className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                <h3 className="text-lg font-medium mb-2">System Configuration</h3>
-                <p className="text-muted-foreground">
-                  System-wide configuration and settings management.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>System Administration</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.href = '/users'}
+              className="h-20 flex flex-col gap-2"
+            >
+              <Users className="h-6 w-6" />
+              <span className="text-sm">User Management</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.href = '/certificate-requests'}
+              className="h-20 flex flex-col gap-2"
+            >
+              <Clock className="h-6 w-6" />
+              <span className="text-sm">Approvals</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.href = '/settings'}
+              className="h-20 flex flex-col gap-2"
+            >
+              <Server className="h-6 w-6" />
+              <span className="text-sm">System Settings</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.href = '/analytics'}
+              className="h-20 flex flex-col gap-2"
+            >
+              <Activity className="h-6 w-6" />
+              <span className="text-sm">Analytics</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
-};
-
-export default SystemAdminDashboard;
+}

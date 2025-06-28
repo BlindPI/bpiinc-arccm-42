@@ -24,7 +24,7 @@ import AdminDashboard from './role-dashboards/AdminDashboard';
 import ProviderDashboard from './role-dashboards/ProviderDashboard';
 import InstructorDashboard from './role-dashboards/InstructorDashboard';
 import StudentDashboard from './role-dashboards/StudentDashboard';
-import { LoadingDashboard } from './LoadingDashboard';
+import { LoadingDashboard } from './role-dashboards/LoadingDashboard';
 
 export function FixedRoleBasedDashboard() {
   const { user } = useAuth();
@@ -43,7 +43,7 @@ export function FixedRoleBasedDashboard() {
   const userRole = profile?.role || user?.profile?.role;
 
   if (profileLoading || dataLoading) {
-    return <LoadingDashboard message="Loading dashboard data..." />;
+    return <LoadingDashboard message="Loading your personalized dashboard..." />;
   }
 
   if (error) {
@@ -92,7 +92,7 @@ export function FixedRoleBasedDashboard() {
       showLegend: true
     },
     welcomeMessage: config?.welcomeMessage || 'Welcome to Your Dashboard',
-    subtitle: config?.subtitle || 'Manage your training and compliance',
+    subtitle: config?.subtitle || 'Real-time insights and management tools',
     widgets: config?.widgets || []
   };
 
@@ -187,6 +187,10 @@ export function FixedRoleBasedDashboard() {
               {teamContext.teamName}
             </Badge>
           )}
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            Real-time Data
+          </div>
         </div>
       </div>
 

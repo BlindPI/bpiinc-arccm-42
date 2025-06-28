@@ -1,200 +1,173 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useRoleBasedDashboardData } from '@/hooks/useRoleBasedDashboardData';
-import { ComplianceTierDashboard } from '@/components/compliance/ComplianceTierDashboard';
-import {
-  Users,
-  BookOpen,
-  Award,
-  AlertCircle,
-  Shield,
-  TrendingUp,
-  Activity
+import { useQuery } from '@tanstack/react-query';
+import { RealTimeDashboardWidget } from '../RealTimeDashboardWidget';
+import { DashboardDataService } from '@/services/dashboard/dashboardDataService';
+import { 
+  Users, 
+  Award, 
+  AlertTriangle, 
+  CheckCircle, 
+  Settings,
+  FileText,
+  TrendingUp
 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 interface AdminDashboardProps {
-  config?: any;
-  profile?: any;
+  config: any;
+  profile: any;
 }
 
 export default function AdminDashboard({ config, profile }: AdminDashboardProps) {
-  const { 
-    metrics, 
-    recentActivities, 
-    isLoading, 
-    canViewSystemMetrics 
-  } = useRoleBasedDashboardData();
+  const { data: metrics, isLoading, refetch } = useQuery({
+    queryKey: ['admin-metrics'],
+    queryFn: () => DashboardDataService.getSystemAdminMetrics(), // Admin gets similar view to SA but filtered
+    refetchInterval: 30000
+  });
 
-  // Only show admin dashboard if user has system admin permissions
-  if (!canViewSystemMetrics) {
-    return (
-      <Card className="border-red-200">
-        <CardContent className="p-6 text-center">
-          <Shield className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-red-700 mb-2">Access Denied</h3>
-          <p className="text-red-600">You don't have permission to view system administration data.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
-          <Card key={i} className="animate-pulse">
-            <CardHeader className="pb-2">
-              <div className="h-4 bg-gray-200 rounded w-24"></div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-8 bg-gray-200 rounded w-16 mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-20"></div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  }
+  const { data: recentActivities = [] } = useQuery({
+    queryKey: ['admin-activities'],
+    queryFn: () => DashboardDataService.getRecentActivities(profile.id, 'AD'),
+    refetchInterval: 60000
+  });
 
   return (
     <div className="space-y-6">
-      {/* Admin Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">System Administration</h2>
-          <p className="text-muted-foreground">
-            Administrative oversight and compliance management
-          </p>
-        </div>
-        <Badge variant="default" className="flex items-center gap-2">
-          <Shield className="h-4 w-4" />
-          Admin Access
-        </Badge>
+      {/* Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <RealTimeDashboardWidget
+          title="Total Users"
+          icon={Users}
+          value={metrics?.totalUsers}
+          status="info"
+          isLoading={isLoading}
+          onRefresh={refetch}
+          realTime
+          size="sm"
+        />
+
+        <RealTimeDashboardWidget
+          title="Pending Approvals"
+          icon={AlertTriangle}
+          value={metrics?.pendingApprovals}
+          status={metrics?.pendingApprovals > 5 ? "warning" : "success"}
+          isLoading={isLoading}
+          onRefresh={refetch}
+          realTime
+          size="sm"
+          actions={[
+            { label: 'Review', onClick: () => window.location.href = '/certificate-requests' }
+          ]}
+        />
+
+        <RealTimeDashboardWidget
+          title="System Status"
+          icon={CheckCircle}
+          value={metrics?.systemHealth?.critical === 0 ? "Healthy" : "Issues"}
+          status={metrics?.systemHealth?.critical === 0 ? "success" : "error"}
+          isLoading={isLoading}
+          onRefresh={refetch}
+          realTime
+          size="sm"
+        />
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">System Overview</TabsTrigger>
-          <TabsTrigger value="compliance">
-            <Shield className="h-4 w-4 mr-1" />
-            Compliance Management
-          </TabsTrigger>
-          <TabsTrigger value="activities">System Activities</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-6">
-          {/* System Metrics */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="bg-gradient-to-br from-blue-50 to-white">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Total Users
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">
-                  {metrics.totalUsers || 0}
-                </div>
-                <p className="text-xs text-gray-500 mt-1">System-wide users</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-green-50 to-white">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                  <BookOpen className="h-4 w-4" />
-                  Active Courses
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">
-                  {metrics.activeCourses || 0}
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Currently running</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-purple-50 to-white">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                  <Award className="h-4 w-4" />
-                  Total Certificates
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-purple-600">
-                  {metrics.totalCertificates || 0}
-                </div>
-                <p className="text-xs text-gray-500 mt-1">All time issued</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-orange-50 to-white">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4" />
-                  Pending Requests
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-orange-600">
-                  {metrics.pendingRequests || 0}
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Awaiting review</p>
-              </CardContent>
-            </Card>
+      {/* Management Overview */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <RealTimeDashboardWidget
+          title="User Management"
+          icon={Users}
+          isLoading={isLoading}
+          realTime
+          size="md"
+        >
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Active Users</span>
+              <span className="font-medium">{metrics?.activeUsers || 0}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Total Users</span>
+              <span className="font-medium">{metrics?.totalUsers || 0}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">New This Month</span>
+              <span className="font-medium text-green-600">+12</span>
+            </div>
           </div>
-        </TabsContent>
+        </RealTimeDashboardWidget>
 
-        <TabsContent value="compliance" className="space-y-6">
-          <Alert className="bg-gradient-to-r from-blue-50 to-white border-blue-200 shadow-sm">
-            <Shield className="h-4 w-4 text-blue-600 mr-2" />
-            <AlertDescription className="text-blue-800 font-medium">
-              Administrative Compliance Management - Departmental oversight and compliance review
-            </AlertDescription>
-          </Alert>
-          <ComplianceTierDashboard />
-        </TabsContent>
+        <RealTimeDashboardWidget
+          title="Recent Activities"
+          icon={FileText}
+          isLoading={isLoading}
+          realTime
+          size="md"
+        >
+          <div className="space-y-3 max-h-48 overflow-y-auto">
+            {recentActivities.slice(0, 5).map((activity) => (
+              <div key={activity.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{activity.action}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {activity.user_name} • {new Date(activity.created_at).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+            {recentActivities.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No recent activities
+              </p>
+            )}
+          </div>
+        </RealTimeDashboardWidget>
+      </div>
 
-        <TabsContent value="activities" className="space-y-6">
-          {/* System Activities */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5" />
-                Recent System Activities
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {recentActivities.length > 0 ? (
-                <div className="space-y-3">
-                  {recentActivities.map((activity) => (
-                    <div key={activity.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
-                      <div>
-                        <p className="text-sm font-medium">{activity.description}</p>
-                        <p className="text-xs text-muted-foreground">System Activity</p>
-                      </div>
-                      <Badge variant="outline" className="text-xs">
-                        {new Date(activity.timestamp).toLocaleDateString()}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No recent system activities</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Administration</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.href = '/users'}
+              className="h-20 flex flex-col gap-2"
+            >
+              <Users className="h-6 w-6" />
+              <span className="text-sm">Manage Users</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.href = '/certificate-requests'}
+              className="h-20 flex flex-col gap-2"
+            >
+              <Award className="h-6 w-6" />
+              <span className="text-sm">Approvals</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.href = '/settings'}
+              className="h-20 flex flex-col gap-2"
+            >
+              <Settings className="h-6 w-6" />
+              <span className="text-sm">Settings</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.href = '/analytics'}
+              className="h-20 flex flex-col gap-2"
+            >
+              <TrendingUp className="h-6 w-6" />
+              <span className="text-sm">Reports</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

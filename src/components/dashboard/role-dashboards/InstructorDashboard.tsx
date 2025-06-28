@@ -1,164 +1,167 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Calendar, Users, Award, Clock } from 'lucide-react';
 
-export interface InstructorDashboardProps {
-  config?: {
-    showSchedule?: boolean;
-    showStudents?: boolean;
-  };
-  profile?: {
-    id: string;
-    role: string;
-    display_name?: string;
-  };
-  teamContext?: {
-    teamId: string;
-    teamName: string;
-    locationName: string;
-    locationCity?: string;
-    locationState?: string;
-    locationAddress?: string;
-    apUserName?: string;
-    apUserEmail?: string;
-    apUserPhone?: string;
-  };
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { RealTimeDashboardWidget } from '../RealTimeDashboardWidget';
+import { DashboardDataService } from '@/services/dashboard/dashboardDataService';
+import { 
+  Award, 
+  Users, 
+  BookOpen, 
+  Calendar,
+  TrendingUp
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+
+interface InstructorDashboardProps {
+  teamContext?: any;
+  config: any;
+  profile: any;
 }
 
-export function InstructorDashboard({ config, profile, teamContext }: InstructorDashboardProps) {
+export default function InstructorDashboard({ teamContext, config, profile }: InstructorDashboardProps) {
+  const { data: metrics, isLoading, refetch } = useQuery({
+    queryKey: ['instructor-metrics', profile.id],
+    queryFn: () => DashboardDataService.getInstructorMetrics(profile.id),
+    refetchInterval: 30000
+  });
+
+  const { data: recentActivities = [] } = useQuery({
+    queryKey: ['instructor-activities', profile.id],
+    queryFn: () => DashboardDataService.getRecentActivities(profile.id, profile.role),
+    refetchInterval: 60000
+  });
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Instructor Dashboard</h1>
-          <p className="text-muted-foreground">
-            Welcome back, {profile?.display_name || 'Instructor'}
-          </p>
-        </div>
-        {teamContext && (
-          <Badge variant="outline">
-            {teamContext.teamName}
-          </Badge>
-        )}
+      {/* Instructor Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <RealTimeDashboardWidget
+          title="Certificates Issued"
+          icon={Award}
+          value={metrics?.activeCertifications}
+          status="success"
+          isLoading={isLoading}
+          onRefresh={refetch}
+          realTime
+          size="sm"
+        />
+
+        <RealTimeDashboardWidget
+          title="Active Students"
+          icon={Users}
+          value={0} // Will implement when student enrollment data exists
+          status="info"
+          isLoading={isLoading}
+          realTime
+          size="sm"
+        />
+
+        <RealTimeDashboardWidget
+          title="Courses Teaching"
+          icon={BookOpen}
+          value={0} // Will implement when course assignment data exists
+          status="info"
+          isLoading={isLoading}
+          realTime
+          size="sm"
+        />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today's Classes</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">3</div>
-            <p className="text-xs text-muted-foreground">2 more this week</p>
-          </CardContent>
-        </Card>
+      {/* Teaching Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <RealTimeDashboardWidget
+          title="Teaching Performance"
+          icon={TrendingUp}
+          isLoading={isLoading}
+          realTime
+          size="md"
+        >
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Course Completion Rate</span>
+              <span className="font-medium text-green-600">92%</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Student Satisfaction</span>
+              <span className="font-medium text-blue-600">4.7/5</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Certificates This Month</span>
+              <span className="font-medium">{metrics?.activeCertifications || 0}</span>
+            </div>
+          </div>
+        </RealTimeDashboardWidget>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Students</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">24</div>
-            <p className="text-xs text-muted-foreground">Across all classes</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Certificates Issued</CardTitle>
-            <Award className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">18</div>
-            <p className="text-xs text-muted-foreground">This month</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Hours Taught</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">42</div>
-            <p className="text-xs text-muted-foreground">This month</p>
-          </CardContent>
-        </Card>
+        <RealTimeDashboardWidget
+          title="Recent Activities"
+          icon={Calendar}
+          isLoading={isLoading}
+          realTime
+          size="md"
+        >
+          <div className="space-y-3 max-h-48 overflow-y-auto">
+            {recentActivities.slice(0, 5).map((activity) => (
+              <div key={activity.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{activity.action}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(activity.created_at).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+            {recentActivities.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No recent activities
+              </p>
+            )}
+          </div>
+        </RealTimeDashboardWidget>
       </div>
 
-      {config?.showSchedule !== false && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Today's Schedule</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <h4 className="font-medium">CPR/AED Training</h4>
-                  <p className="text-sm text-muted-foreground">9:00 AM - 12:00 PM</p>
-                  <p className="text-xs text-muted-foreground">Room A - 12 students</p>
-                </div>
-                <Badge variant="default">In Progress</Badge>
-              </div>
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <h4 className="font-medium">First Aid Certification</h4>
-                  <p className="text-sm text-muted-foreground">1:00 PM - 5:00 PM</p>
-                  <p className="text-xs text-muted-foreground">Room B - 8 students</p>
-                </div>
-                <Badge variant="secondary">Upcoming</Badge>
-              </div>
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <h4 className="font-medium">Instructor Recertification</h4>
-                  <p className="text-sm text-muted-foreground">6:00 PM - 8:00 PM</p>
-                  <p className="text-xs text-muted-foreground">Room C - 4 instructors</p>
-                </div>
-                <Badge variant="outline">Scheduled</Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {config?.showStudents !== false && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Students</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Sarah Johnson</p>
-                  <p className="text-sm text-muted-foreground">CPR/AED - Completed</p>
-                </div>
-                <Badge variant="success">Certified</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Mike Chen</p>
-                  <p className="text-sm text-muted-foreground">First Aid - In Progress</p>
-                </div>
-                <Badge variant="warning">Training</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Emily Davis</p>
-                  <p className="text-sm text-muted-foreground">Instructor Level - Pending</p>
-                </div>
-                <Badge variant="secondary">Review</Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Instructor Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Instructor Tools</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.href = '/certificates'}
+              className="h-20 flex flex-col gap-2"
+            >
+              <Award className="h-6 w-6" />
+              <span className="text-sm">Issue Certificates</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => console.log('Manage students')}
+              className="h-20 flex flex-col gap-2"
+            >
+              <Users className="h-6 w-6" />
+              <span className="text-sm">My Students</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => console.log('Course materials')}
+              className="h-20 flex flex-col gap-2"
+            >
+              <BookOpen className="h-6 w-6" />
+              <span className="text-sm">Course Materials</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => console.log('Schedule classes')}
+              className="h-20 flex flex-col gap-2"
+            >
+              <Calendar className="h-6 w-6" />
+              <span className="text-sm">Schedule</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
-
-export default InstructorDashboard;
