@@ -7934,6 +7934,7 @@ export type Database = {
       profiles: {
         Row: {
           certifications_count: number | null
+          compliance_score: number | null
           compliance_status: boolean | null
           compliance_tier: string | null
           created_at: string
@@ -7942,21 +7943,25 @@ export type Database = {
           email: string | null
           id: string
           job_title: string | null
+          last_login: string | null
           last_training_date: string | null
           location_id: string | null
           next_training_due: string | null
           organization: string | null
+          pending_actions: number | null
           performance_score: number | null
           phone: string | null
           role: string
           status: string
           supervisor_id: string | null
+          team_count: number | null
           training_hours: number | null
           updated_at: string
           user_id: string | null
         }
         Insert: {
           certifications_count?: number | null
+          compliance_score?: number | null
           compliance_status?: boolean | null
           compliance_tier?: string | null
           created_at?: string
@@ -7965,21 +7970,25 @@ export type Database = {
           email?: string | null
           id: string
           job_title?: string | null
+          last_login?: string | null
           last_training_date?: string | null
           location_id?: string | null
           next_training_due?: string | null
           organization?: string | null
+          pending_actions?: number | null
           performance_score?: number | null
           phone?: string | null
           role?: string
           status?: string
           supervisor_id?: string | null
+          team_count?: number | null
           training_hours?: number | null
           updated_at?: string
           user_id?: string | null
         }
         Update: {
           certifications_count?: number | null
+          compliance_score?: number | null
           compliance_status?: boolean | null
           compliance_tier?: string | null
           created_at?: string
@@ -7988,15 +7997,18 @@ export type Database = {
           email?: string | null
           id?: string
           job_title?: string | null
+          last_login?: string | null
           last_training_date?: string | null
           location_id?: string | null
           next_training_due?: string | null
           organization?: string | null
+          pending_actions?: number | null
           performance_score?: number | null
           phone?: string | null
           role?: string
           status?: string
           supervisor_id?: string | null
+          team_count?: number | null
           training_hours?: number | null
           updated_at?: string
           user_id?: string | null
@@ -12322,6 +12334,76 @@ export type Database = {
           role?: string
         }
         Relationships: []
+      }
+      user_achievements: {
+        Row: {
+          achieved_at: string | null
+          achievement_description: string | null
+          achievement_name: string
+          achievement_type: string
+          badge_icon: string | null
+          category: string | null
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          points_awarded: number | null
+          tier_level: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          achieved_at?: string | null
+          achievement_description?: string | null
+          achievement_name: string
+          achievement_type: string
+          badge_icon?: string | null
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          points_awarded?: number | null
+          tier_level?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          achieved_at?: string | null
+          achievement_description?: string | null
+          achievement_name?: string
+          achievement_type?: string
+          badge_icon?: string | null
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          points_awarded?: number | null
+          tier_level?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_user_achievements_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_user_achievements_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_user_achievements_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_activity_metrics: {
         Row: {
