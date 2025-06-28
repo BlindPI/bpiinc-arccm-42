@@ -30,7 +30,7 @@ export interface TeamGoalData {
   status: 'on_track' | 'at_risk' | 'behind';
 }
 
-// Fixed RealPerformanceData to match database schema
+// Fixed RealPerformanceData to match actual database usage patterns
 export interface RealPerformanceData {
   performanceRating: number;
   averageSatisfactionScore: number;
@@ -39,7 +39,7 @@ export interface RealPerformanceData {
   performanceScore: number;
 }
 
-// Fixed RealTeamStats to include performanceScore
+// Fixed RealTeamStats to include all required fields
 export interface RealTeamStats {
   performanceScore: number;
   totalMembers: number;
@@ -61,7 +61,7 @@ export interface ComplianceProgress {
   };
 }
 
-// Updated ComplianceTierInfo to match database schema
+// Standardized ComplianceTierInfo interface
 export interface ComplianceTierInfo {
   tier: 'basic' | 'robust';
   requirements: string[];
@@ -69,9 +69,6 @@ export interface ComplianceTierInfo {
   totalRequirements: number;
   completionPercentage: number;
   description?: string;
-  completed_requirements?: number;
-  total_requirements?: number;
-  completion_percentage?: number;
 }
 
 // Updated UserAchievement to match actual database table structure
@@ -107,15 +104,14 @@ export interface AnalyticsReport {
 // Updated EmailCampaign to match database schema
 export interface EmailCampaign {
   id: string;
-  campaign_name: string; // This is the actual field name in database
-  subject_line: string; // This is the actual field name in database
+  campaign_name: string;
+  subject_line: string;
   content: string;
   campaign_type: 'newsletter' | 'promotional' | 'drip' | 'event' | 'follow_up';
   status: string;
   sent_count?: number;
   created_at: string;
   updated_at: string;
-  // Additional database fields
   html_content?: string;
   sender_name: string;
   sender_email: string;
