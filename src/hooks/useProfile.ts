@@ -1,15 +1,25 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { foundationService } from '@/services/foundation';
-import type { UserProfile } from '@/types/foundation';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function useProfile() {
+  const { user } = useAuth();
+
   return useQuery({
-    queryKey: ['user-profile'],
-    queryFn: async (): Promise<UserProfile | null> => {
-      const response = await foundationService.getCurrentUser();
-      return response.data;
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+      return data;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !!user?.id,
   });
 }

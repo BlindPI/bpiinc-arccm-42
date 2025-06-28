@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { EnterpriseLayout } from '@/components/enterprise/layout/EnterpriseLayout';
-import { EnterpriseDashboard } from '@/components/enterprise/dashboard/EnterpriseDashboard';
 import { Toaster } from '@/components/ui/toaster';
 
 const queryClient = new QueryClient({
@@ -27,9 +26,7 @@ function App() {
               path="/*" 
               element={
                 <ProtectedRoute>
-                  <EnterpriseLayout>
-                    <EnterpriseDashboard />
-                  </EnterpriseLayout>
+                  <EnterpriseLayout />
                 </ProtectedRoute>
               } 
             />

@@ -1,34 +1,47 @@
 
 import React from 'react';
-import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
-export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, loading: authLoading, authReady } = useAuth();
+export function ProtectedRoute({ children }: ProtectedRouteProps) {
+  const { user, loading, authReady } = useAuth();
 
-  // Show loading state while checking authentication or if auth is not ready
-  if (authLoading || !authReady) {
+  if (loading || !authReady) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-          <h2 className="text-xl font-medium text-gray-700">Verifying access...</h2>
-          <p className="text-gray-500 mt-2">Please wait while we check your credentials</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
-  // Redirect to sign in if not authenticated
   if (!user) {
-    return <Navigate to="/auth/signin" replace />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Card className="w-full max-w-md mx-4">
+          <CardContent className="p-8 text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">
+              Welcome to Training Hub
+            </h1>
+            <p className="text-gray-600 mb-6">
+              Please sign in to access your dashboard
+            </p>
+            <Button 
+              onClick={() => window.location.href = '/auth'}
+              size="lg" 
+              className="w-full"
+            >
+              Sign In
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
-  // Return children directly - layout is handled by LayoutRouter in main.tsx
   return <>{children}</>;
-};
+}
