@@ -1,23 +1,33 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useUserManagement } from '@/hooks/useUserManagement';
 import { UserTable } from '@/components/user-management/UserTable';
+import { BulkOperationsPanel } from '@/components/user-management/BulkOperationsPanel';
+import { InviteUserDialog } from '@/components/user-management/InviteUserDialog';
 import { 
   Users, 
   Search, 
-  Filter, 
-  Download, 
-  UserPlus,
+  Filter,
+  Download,
+  Upload,
   Shield,
-  Settings
+  Activity,
+  UserPlus,
+  RefreshCw
 } from 'lucide-react';
+import { useProfile } from '@/hooks/useProfile';
+import { hasRequiredRole } from '@/utils/roleUtils';
 
 export function SystemUserManagementDashboard() {
+  const { data: currentUserProfile } = useProfile();
+  const isAdmin = currentUserProfile ? hasRequiredRole(currentUserProfile.role, 'AD') : false;
+  
   const {
     users,
     isLoading,
@@ -29,75 +39,203 @@ export function SystemUserManagementDashboard() {
     setRoleFilter,
     complianceFilter,
     setComplianceFilter,
-    handleSelectUser
+    handleSelectUser,
+    handleSelectAllUsers,
+    fetchUsers,
+    bulkUpdateRoles,
+    bulkUpdateStatus,
+    bulkUpdateComplianceTier
   } = useUserManagement();
 
-  const [bulkAction, setBulkAction] = useState('');
+  // Dialog states
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
+  const [isChangeRoleDialogOpen, setIsChangeRoleDialogOpen] = useState(false);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [detailUserId, setDetailUserId] = useState<string>('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [editFormData, setEditFormData] = useState<any>({});
+  const [newRole, setNewRole] = useState<string>('');
 
-  const handleBulkAction = () => {
-    if (!bulkAction || selectedUsers.length === 0) return;
-    
-    console.log(`Performing bulk action: ${bulkAction} on users:`, selectedUsers);
-    // Implement bulk operations here
+  // Dialog handlers
+  const handleEditClick = (userId: string) => {
+    const user = users.find(u => u.id === userId);
+    if (user) {
+      setEditFormData({
+        display_name: user.display_name || '',
+        email: user.email || ''
+      });
+      setSelectedUserId(userId);
+      setIsEditDialogOpen(true);
+    }
   };
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    const matchesCompliance = complianceFilter === 'all' || 
-                            (complianceFilter === 'compliant' ? user.compliance_status === true : user.compliance_status === false);
-    
-    return matchesSearch && matchesRole && matchesCompliance;
-  });
-
-  const dialogHandlers = {
-    isEditDialogOpen: false,
-    isResetPasswordDialogOpen: false,
-    isChangeRoleDialogOpen: false,
-    isDetailDialogOpen: false,
-    detailUserId: null,
-    handleEditClick: (user: any) => console.log('Edit user:', user.id),
-    handleActivateUser: (userId: string) => console.log('Activate user:', userId),
-    handleDeactivateUser: (userId: string) => console.log('Deactivate user:', userId),
-    handleResetPasswordClick: (user: any) => console.log('Reset password:', user.id),
-    handleChangeRoleClick: (user: any) => console.log('Change role:', user.id),
-    handleViewUserDetail: (userId: string) => console.log('View details:', userId),
-    handleCloseUserDetail: () => console.log('Close details'),
+  const handleResetPasswordClick = (userId: string) => {
+    setSelectedUserId(userId);
+    setIsResetPasswordDialogOpen(true);
   };
+
+  const handleChangeRoleClick = (userId: string) => {
+    setSelectedUserId(userId);
+    setNewRole('');
+    setIsChangeRoleDialogOpen(true);
+  };
+
+  const handleViewUserDetail = (userId: string) => {
+    setDetailUserId(userId);
+    setIsDetailDialogOpen(true);
+  };
+
+  const handleCloseUserDetail = () => {
+    setDetailUserId('');
+    setIsDetailDialogOpen(false);
+  };
+
+  // Placeholder handlers for dialog operations
+  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEditFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
+
+  const handleEditSubmit = async () => {
+    // Implementation would go here
+    console.log('Edit submit:', editFormData);
+    setIsEditDialogOpen(false);
+  };
+
+  const handleActivateUser = async (userId: string) => {
+    await bulkUpdateStatus([userId], 'ACTIVE');
+  };
+
+  const handleDeactivateUser = async (userId: string) => {
+    await bulkUpdateStatus([userId], 'INACTIVE');
+  };
+
+  const handleResetPasswordConfirm = async () => {
+    // Implementation would go here
+    console.log('Reset password for:', selectedUserId);
+    setIsResetPasswordDialogOpen(false);
+  };
+
+  const handleRoleChange = (role: string) => {
+    setNewRole(role);
+  };
+
+  const handleChangeRoleConfirm = async () => {
+    if (newRole && selectedUserId) {
+      await bulkUpdateRoles([selectedUserId], newRole as any);
+      setIsChangeRoleDialogOpen(false);
+    }
+  };
+
+  const handleClearSelection = () => {
+    handleSelectAllUsers(false);
+  };
+
+  // Statistics
+  const stats = {
+    total: users.length,
+    active: users.filter(u => u.status === 'ACTIVE').length,
+    compliant: users.filter(u => u.compliance_status === true).length,
+    selected: selectedUsers.length
+  };
+
+  if (!isAdmin) {
+    return (
+      <Card className="border-red-200">
+        <CardContent className="p-6 text-center">
+          <Shield className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-red-700 mb-2">Access Denied</h3>
+          <p className="text-red-600">You don't have permission to access system user management.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Shield className="h-6 w-6 text-blue-600" />
-            System User Management
-          </h2>
+          <h2 className="text-2xl font-bold tracking-tight">System User Management</h2>
           <p className="text-muted-foreground">
-            Comprehensive user oversight and compliance management
+            Manage users, roles, and compliance across the organization
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export Users
-          </Button>
-          <Button size="sm">
-            <UserPlus className="h-4 w-4 mr-2" />
-            Add User
+          <InviteUserDialog />
+          <Button variant="outline" size="sm" onClick={fetchUsers}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
           </Button>
         </div>
       </div>
 
-      {/* Filters and Search */}
+      {/* Statistics */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Total Users
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
+            <p className="text-xs text-gray-500 mt-1">System-wide</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              Active Users
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{stats.active}</div>
+            <p className="text-xs text-gray-500 mt-1">Currently active</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Compliant
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">{stats.compliant}</div>
+            <p className="text-xs text-gray-500 mt-1">Meeting requirements</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <UserPlus className="h-4 w-4" />
+              Selected
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{stats.selected}</div>
+            <p className="text-xs text-gray-500 mt-1">For bulk operations</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search users by name or email..."
                   value={searchTerm}
@@ -106,27 +244,28 @@ export function SystemUserManagementDashboard() {
                 />
               </div>
             </div>
+            
             <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-48">
                 <SelectValue placeholder="Filter by role" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="SA">System Admin</SelectItem>
-                <SelectItem value="AD">Admin</SelectItem>
-                <SelectItem value="AP">Authorized Provider</SelectItem>
-                <SelectItem value="IC">Instructor Certified</SelectItem>
-                <SelectItem value="IP">Instructor Provisional</SelectItem>
                 <SelectItem value="IT">Instructor Trainee</SelectItem>
-                <SelectItem value="ST">Student</SelectItem>
+                <SelectItem value="IP">Instructor Provisional</SelectItem>
+                <SelectItem value="IC">Instructor Certified</SelectItem>
+                <SelectItem value="AP">Authorized Provider</SelectItem>
+                <SelectItem value="AD">Administrator</SelectItem>
+                <SelectItem value="SA">System Admin</SelectItem>
               </SelectContent>
             </Select>
+
             <Select value={complianceFilter} onValueChange={setComplianceFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Compliance status" />
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filter by compliance" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="all">All Users</SelectItem>
                 <SelectItem value="compliant">Compliant</SelectItem>
                 <SelectItem value="non-compliant">Non-Compliant</SelectItem>
               </SelectContent>
@@ -135,91 +274,49 @@ export function SystemUserManagementDashboard() {
         </CardContent>
       </Card>
 
-      {/* Bulk Actions */}
-      {selectedUsers.length > 0 && (
-        <Card className="bg-blue-50 border-blue-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">
-                  {selectedUsers.length} user{selectedUsers.length !== 1 ? 's' : ''} selected
-                </Badge>
-                <Select value={bulkAction} onValueChange={setBulkAction}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Choose bulk action" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="activate">Activate Users</SelectItem>
-                    <SelectItem value="deactivate">Deactivate Users</SelectItem>
-                    <SelectItem value="reset-compliance">Reset Compliance</SelectItem>
-                    <SelectItem value="assign-tier">Assign Tier</SelectItem>
-                    <SelectItem value="send-notification">Send Notification</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button 
-                onClick={handleBulkAction}
-                disabled={!bulkAction}
-                size="sm"
-              >
-                Apply Action
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Bulk Operations Panel */}
+      <BulkOperationsPanel
+        selectedUsers={selectedUsers}
+        onBulkUpdateRoles={bulkUpdateRoles}
+        onBulkUpdateStatus={bulkUpdateStatus}
+        onBulkUpdateComplianceTier={bulkUpdateComplianceTier}
+        onClearSelection={handleClearSelection}
+      />
 
-      {/* User Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600">{filteredUsers.length}</p>
-              <p className="text-sm text-muted-foreground">Total Users</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">
-                {filteredUsers.filter(u => u.compliance_status === true).length}
-              </p>
-              <p className="text-sm text-muted-foreground">Compliant</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-orange-600">
-                {filteredUsers.filter(u => u.compliance_status === false).length}
-              </p>
-              <p className="text-sm text-muted-foreground">Non-Compliant</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-gray-600">
-                {filteredUsers.filter(u => u.status === 'ACTIVE').length}
-              </p>
-              <p className="text-sm text-muted-foreground">Active</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Users Table */}
+      {/* User Table */}
       <UserTable
-        users={filteredUsers}
+        users={users}
         loading={isLoading}
         error={error}
         selectedUsers={selectedUsers}
         onSelectUser={handleSelectUser}
-        dialogHandlers={dialogHandlers}
-        isAdmin={true}
+        isAdmin={isAdmin}
+        dialogHandlers={{
+          isEditDialogOpen,
+          setIsEditDialogOpen,
+          isResetPasswordDialogOpen,
+          setIsResetPasswordDialogOpen,
+          isChangeRoleDialogOpen,
+          setIsChangeRoleDialogOpen,
+          isDetailDialogOpen,
+          setIsDetailDialogOpen,
+          detailUserId,
+          isProcessing,
+          editFormData,
+          newRole,
+          handleEditClick,
+          handleResetPasswordClick,
+          handleChangeRoleClick,
+          handleViewUserDetail,
+          handleCloseUserDetail,
+          handleEditFormChange,
+          handleEditSubmit,
+          handleActivateUser,
+          handleDeactivateUser,
+          handleResetPasswordConfirm,
+          handleRoleChange,
+          handleChangeRoleConfirm
+        }}
       />
     </div>
   );

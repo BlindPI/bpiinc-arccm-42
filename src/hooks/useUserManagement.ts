@@ -11,8 +11,9 @@ interface User extends Profile {
   email?: string;
   role: UserRole;
   display_name?: string;
-  status: 'ACTIVE' | 'INACTIVE'; // Changed from string to match Profile
+  status: 'ACTIVE' | 'INACTIVE';
   compliance_status?: boolean;
+  compliance_tier?: 'basic' | 'robust' | null;
   created_at: string;
   updated_at: string;
 }
@@ -43,15 +44,41 @@ export function useUserManagement() {
     });
   }, []);
 
+  const handleSelectAllUsers = useCallback((selected: boolean) => {
+    if (selected) {
+      setSelectedUsers(users.map(user => user.id));
+    } else {
+      setSelectedUsers([]);
+    }
+  }, [users]);
+
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // We need to use "profiles" table instead of "users" which is part of auth schema
-      const { data: usersData, error: usersError } = await supabase
+      // Build query with filters
+      let query = supabase
         .from('profiles')
         .select('*');
+
+      // Apply filters
+      if (searchTerm) {
+        query = query.or(`display_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
+      }
+
+      if (roleFilter && roleFilter !== 'all') {
+        query = query.eq('role', roleFilter);
+      }
+
+      if (complianceFilter === 'compliant') {
+        query = query.eq('compliance_status', true);
+      } else if (complianceFilter === 'non-compliant') {
+        query = query.eq('compliance_status', false);
+      }
+
+      const { data: usersData, error: usersError } = await query
+        .order('created_at', { ascending: false });
 
       if (usersError) {
         setError(usersError.message);
@@ -66,7 +93,118 @@ export function useUserManagement() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [searchTerm, roleFilter, complianceFilter]);
+
+  // Bulk operations
+  const bulkUpdateRoles = useCallback(async (userIds: string[], newRole: UserRole) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: newRole, updated_at: new Date().toISOString() })
+        .in('id', userIds);
+
+      if (error) throw error;
+
+      // Log bulk operation
+      await supabase
+        .from('audit_logs')
+        .insert({
+          action: 'bulk_role_update',
+          entity_type: 'user',
+          details: {
+            user_ids: userIds,
+            new_role: newRole,
+            count: userIds.length
+          }
+        });
+
+      toast.success(`Successfully updated ${userIds.length} user roles to ${newRole}`);
+      fetchUsers();
+    } catch (error: any) {
+      toast.error(`Failed to update user roles: ${error.message}`);
+    }
+  }, [fetchUsers]);
+
+  const bulkUpdateStatus = useCallback(async (userIds: string[], status: 'ACTIVE' | 'INACTIVE') => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ status, updated_at: new Date().toISOString() })
+        .in('id', userIds);
+
+      if (error) throw error;
+
+      // Log bulk operation
+      await supabase
+        .from('audit_logs')
+        .insert({
+          action: 'bulk_status_update',
+          entity_type: 'user',
+          details: {
+            user_ids: userIds,
+            new_status: status,
+            count: userIds.length
+          }
+        });
+
+      toast.success(`Successfully ${status === 'ACTIVE' ? 'activated' : 'deactivated'} ${userIds.length} users`);
+      fetchUsers();
+    } catch (error: any) {
+      toast.error(`Failed to update user status: ${error.message}`);
+    }
+  }, [fetchUsers]);
+
+  const bulkUpdateComplianceTier = useCallback(async (userIds: string[], tier: 'basic' | 'robust') => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ compliance_tier: tier, updated_at: new Date().toISOString() })
+        .in('id', userIds);
+
+      if (error) throw error;
+
+      // Log bulk operation
+      await supabase
+        .from('audit_logs')
+        .insert({
+          action: 'bulk_tier_update',
+          entity_type: 'user',
+          details: {
+            user_ids: userIds,
+            new_tier: tier,
+            count: userIds.length
+          }
+        });
+
+      toast.success(`Successfully updated ${userIds.length} users to ${tier} compliance tier`);
+      fetchUsers();
+    } catch (error: any) {
+      toast.error(`Failed to update compliance tiers: ${error.message}`);
+    }
+  }, [fetchUsers]);
+
+  // Real-time updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('profiles-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles'
+        },
+        (payload) => {
+          console.log('Profile change detected:', payload);
+          fetchUsers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchUsers]);
 
   useEffect(() => {
     fetchUsers();
@@ -91,6 +229,11 @@ export function useUserManagement() {
     activeFilters,
     setActiveFilters,
     handleSelectUser,
-    fetchUsers
+    handleSelectAllUsers,
+    fetchUsers,
+    // Bulk operations
+    bulkUpdateRoles,
+    bulkUpdateStatus,
+    bulkUpdateComplianceTier
   };
 }
