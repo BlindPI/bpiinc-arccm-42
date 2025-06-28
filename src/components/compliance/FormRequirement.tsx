@@ -12,11 +12,18 @@ interface FormRequirementProps {
     id: string;
     name: string;
     form_fields?: any[];
+    validation_rules?: {
+      file_types?: string[];
+      max_file_size?: number;
+      min_score?: number;
+      completion_evidence_required?: boolean;
+    };
   };
   userId: string;
+  onSave: () => void;
 }
 
-export function FormRequirement({ requirement, userId }: FormRequirementProps) {
+export function FormRequirement({ requirement, userId, onSave }: FormRequirementProps) {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const { submitRequirement } = useRequirementSubmission();
 
@@ -28,6 +35,7 @@ export function FormRequirement({ requirement, userId }: FormRequirementProps) {
         requirementId: requirement.id,
         submissionData: formData
       });
+      onSave();
     } catch (error) {
       console.error('Form submission error:', error);
     }

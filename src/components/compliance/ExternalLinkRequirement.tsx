@@ -1,3 +1,4 @@
+
 // File: src/components/compliance/ExternalLinkRequirement.tsx
 
 import React, { useState } from 'react';
@@ -26,9 +27,10 @@ interface ExternalLinkRequirementProps {
     }
   };
   onSubmit?: () => void;
+  onSave: () => void;
 }
 
-export function ExternalLinkRequirement({ requirement, onSubmit }: ExternalLinkRequirementProps) {
+export function ExternalLinkRequirement({ requirement, onSubmit, onSave }: ExternalLinkRequirementProps) {
   const { user } = useAuth();
   const [score, setScore] = useState<string>('');
   const [completionCode, setCompletionCode] = useState<string>('');
@@ -95,6 +97,7 @@ export function ExternalLinkRequirement({ requirement, onSubmit }: ExternalLinkR
       
       toast.success('External completion verification submitted successfully');
       onSubmit?.();
+      onSave();
     } catch (error) {
       console.error('Error submitting external requirement:', error);
       toast.error('Failed to submit verification. Please try again.');

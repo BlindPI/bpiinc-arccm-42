@@ -20,6 +20,8 @@ export interface FormRequirementProps {
     name: string;
     description?: string;
     validation_rules?: {
+      file_types?: string[];
+      max_file_size?: number;
       min_score?: number;
       completion_evidence_required?: boolean;
     };
