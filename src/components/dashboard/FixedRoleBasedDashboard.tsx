@@ -44,13 +44,12 @@ export function FixedRoleBasedDashboard() {
   // Get user role
   const userRole = profile?.role;
   
-  // Handle tier switch
+  // Handle tier switch with corrected service call
   const handleTierSwitch = async (newTier: string, reason: string) => {
     try {
       const result = await ComplianceTierService.switchTier(
         user!.id,
-        newTier as 'basic' | 'robust',
-        reason
+        newTier as 'basic' | 'robust'
       );
       
       if (result.success) {
@@ -112,7 +111,8 @@ export function FixedRoleBasedDashboard() {
             <EnhancedProviderDashboard 
               {...dashboardProps}
               config={{
-                tierInfo: tierInfo
+                theme_color: tierInfo?.tier === 'robust' ? '#8B5CF6' : '#3B82F6',
+                dashboard_layout: 'grid'
               }}
             />
           </DashboardDataProvider>

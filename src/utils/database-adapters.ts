@@ -12,8 +12,11 @@ export class DatabaseAdapters {
   static adaptEmailCampaign(dbCampaign: any) {
     return {
       ...dbCampaign,
-      campaign_type: dbCampaign.campaign_type || 'newsletter',
+      // Map database fields to component interface
+      name: dbCampaign.campaign_name || dbCampaign.name,
+      subject: dbCampaign.subject || `${dbCampaign.campaign_name} Campaign`,
       sent_count: dbCampaign.total_recipients || dbCampaign.sent_count || 0,
+      campaign_type: dbCampaign.campaign_type || 'newsletter',
       automation_rules: this.castJsonbField(dbCampaign.automation_rules, {}),
       target_audience: this.castJsonbField(dbCampaign.target_audience, {})
     };
@@ -38,16 +41,32 @@ export class DatabaseAdapters {
       description: dbReq.description,
       category: dbReq.category,
       tier: dbReq.tier,
-      status: dbReq.status || 'pending',
+      requirement_type: dbReq.requirement_type || 'form',
+      current_status: dbReq.current_status || dbReq.status || 'pending',
       due_date: dbReq.due_date,
       completion_date: dbReq.completion_date,
-      type: dbReq.requirement_type || 'form',
       assigned_roles: this.castJsonbField(dbReq.assigned_roles, []),
       validation_rules: this.adaptValidationRules(dbReq.validation_rules),
       ui_component: dbReq.ui_component || 'form',
       external_url: dbReq.external_url,
       external_system: dbReq.external_system,
       metadata: this.castJsonbField(dbReq.metadata, {})
+    };
+  }
+
+  // Adapt user compliance record from database
+  static adaptUserComplianceRecord(dbRecord: any) {
+    return {
+      id: dbRecord.id,
+      user_id: dbRecord.user_id,
+      requirement_id: dbRecord.requirement_id || dbRecord.metric_id,
+      current_status: dbRecord.current_status || dbRecord.compliance_status || 'pending',
+      completion_percentage: dbRecord.completion_percentage || 0,
+      review_notes: dbRecord.review_notes || dbRecord.notes || '',
+      due_date: dbRecord.due_date,
+      completed_at: dbRecord.completed_at,
+      created_at: dbRecord.created_at,
+      updated_at: dbRecord.updated_at
     };
   }
 }

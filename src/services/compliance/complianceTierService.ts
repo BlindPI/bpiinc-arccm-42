@@ -1,270 +1,114 @@
+
 import { supabase } from '@/integrations/supabase/client';
+import { ComplianceTierInfo, adaptTierInfoFromDatabase } from '@/types/compliance-tier-standardized';
+import { DatabaseAdapters } from '@/utils/database-adapters';
 
-export interface ComplianceTierInfo {
-  tier: 'basic' | 'robust';
-  userId: string;
-  assignedAt: string;
-  canAdvance: boolean;
-  requirements: any[];
-}
-
-export interface UIComplianceTierInfo {
-  id: string;
-  tier: 'basic' | 'robust';
-  userId: string;
-  assignedAt: string;
-  canAdvance: boolean;
-  requirements: any[];
-  completion_percentage: number;
-  next_steps: string[];
-  role?: string;
-  template_name?: string;
-  description?: string;
-  completed_requirements?: number;
-  requirements_count?: number;
-  can_advance_tier?: boolean;
-  advancement_blocked_reason?: string;
-  next_requirement?: {
-    name: string;
-    due_date?: string;
-  };
+export interface UIComplianceTierInfo extends ComplianceTierInfo {
+  // Additional UI-specific properties if needed
 }
 
 export interface TierSwitchResult {
   success: boolean;
-  message: string;
-  newTier?: 'basic' | 'robust';
-}
-
-export interface ComplianceTierStatistics {
-  totalUsers: number;
-  basicTierUsers: number;
-  robustTierUsers: number;
-  basicCompletionRate: number;
-  robustCompletionRate: number;
-}
-
-export interface UserComplianceTier {
-  userId: string;
-  tier: 'basic' | 'robust';
-  completion_percentage: number;
-  display_name: string;
-  email: string;
+  message?: string;
+  data?: any;
 }
 
 export class ComplianceTierService {
-  static async getUserTier(userId: string): Promise<ComplianceTierInfo | null> {
+  // Get user compliance tier info with proper return type
+  static async getUserComplianceTierInfo(userId: string): Promise<ComplianceTierInfo | null> {
     try {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('compliance_tier, created_at')
-        .eq('id', userId)
+        .from('user_compliance_records')
+        .select(`
+          *,
+          compliance_requirements (
+            id,
+            name,
+            description,
+            category,
+            tier,
+            requirement_type,
+            validation_rules,
+            due_date,
+            status
+          )
+        `)
+        .eq('user_id', userId)
         .single();
 
-      if (error || !data) return null;
+      if (error) {
+        console.error('Error fetching tier info:', error);
+        return null;
+      }
 
-      return {
-        tier: data.compliance_tier || 'basic',
-        userId,
-        assignedAt: data.created_at,
-        canAdvance: false,
-        requirements: []
-      };
+      return adaptTierInfoFromDatabase(data);
     } catch (error) {
-      console.error('Error fetching user tier:', error);
+      console.error('Service error:', error);
       return null;
     }
   }
 
-  static async getUserComplianceTierInfo(userId: string): Promise<UIComplianceTierInfo | null> {
-    try {
-      const basicInfo = await this.getUserTier(userId);
-      if (!basicInfo) return null;
-
-      // Get completion percentage from user_compliance_records
-      const { data: records } = await supabase
-        .from('user_compliance_records')
-        .select('compliance_status')
-        .eq('user_id', userId);
-
-      const totalRecords = records?.length || 0;
-      const completedRecords = records?.filter(r => r.compliance_status === 'approved').length || 0;
-      const completion_percentage = totalRecords > 0 ? Math.round((completedRecords / totalRecords) * 100) : 0;
-
-      return {
-        id: userId,
-        tier: basicInfo.tier,
-        userId: basicInfo.userId,
-        assignedAt: basicInfo.assignedAt,
-        canAdvance: basicInfo.canAdvance,
-        requirements: basicInfo.requirements,
-        completion_percentage,
-        next_steps: completion_percentage < 100 ? ['Complete remaining requirements'] : ['All requirements completed'],
-        role: 'SA',
-        template_name: `${basicInfo.tier === 'basic' ? 'Essential' : 'Comprehensive'} Compliance Template`,
-        description: `${basicInfo.tier === 'basic' ? 'Basic' : 'Advanced'} compliance requirements for system administrators`,
-        completed_requirements: completedRecords,
-        requirements_count: totalRecords || 3,
-        can_advance_tier: basicInfo.tier === 'basic' && completion_percentage >= 80,
-        advancement_blocked_reason: completion_percentage < 80 ? 'Complete more requirements to advance' : undefined,
-        next_requirement: completion_percentage < 100 ? {
-          name: 'Document Verification',
-          due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-        } : undefined
-      };
-    } catch (error) {
-      console.error('Error fetching user compliance tier info:', error);
-      return null;
-    }
-  }
-
+  // Get UI-optimized compliance tier info
   static async getUIComplianceTierInfo(userId: string): Promise<UIComplianceTierInfo | null> {
-    return this.getUserComplianceTierInfo(userId);
+    const tierInfo = await this.getUserComplianceTierInfo(userId);
+    return tierInfo as UIComplianceTierInfo;
   }
 
-  static async updateUserComplianceTier(userId: string, tier: 'basic' | 'robust'): Promise<boolean> {
+  // Switch tier with proper return type
+  static async switchTier(userId: string, newTier: 'basic' | 'robust'): Promise<TierSwitchResult> {
     try {
       const { error } = await supabase
-        .from('profiles')
-        .update({ compliance_tier: tier })
-        .eq('id', userId);
+        .from('user_compliance_records')
+        .update({ 
+          tier: newTier,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId);
 
       if (error) {
-        console.error('Error updating compliance tier:', error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error updating compliance tier:', error);
-      return false;
-    }
-  }
-
-  static async switchTier(userId: string, targetTier: 'basic' | 'robust'): Promise<boolean> {
-    return this.updateUserComplianceTier(userId, targetTier);
-  }
-
-  static async switchComplianceTier(userId: string, targetTier: 'basic' | 'robust'): Promise<TierSwitchResult> {
-    try {
-      const success = await this.updateUserComplianceTier(userId, targetTier);
-      
-      if (success) {
-        return {
-          success: true,
-          message: `Successfully switched to ${targetTier} tier`,
-          newTier: targetTier
-        };
-      } else {
         return {
           success: false,
-          message: 'Failed to update compliance tier'
+          message: error.message
         };
       }
-    } catch (error) {
+
+      return {
+        success: true,
+        message: `Successfully switched to ${newTier} tier`
+      };
+    } catch (error: any) {
       return {
         success: false,
-        message: `Error switching tier: ${error.message}`
+        message: error.message || 'Unknown error occurred'
       };
     }
   }
 
-  static async validateTierSwitch(userId: string, targetTier: 'basic' | 'robust'): Promise<boolean> {
-    // Basic validation - always allow for now
-    return true;
-  }
-
-  static async getComplianceTierStatistics(): Promise<ComplianceTierStatistics> {
-    try {
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('compliance_tier, id');
-
-      if (error) throw error;
-
-      const totalUsers = profiles?.length || 0;
-      const basicTierUsers = profiles?.filter(p => p.compliance_tier === 'basic').length || 0;
-      const robustTierUsers = profiles?.filter(p => p.compliance_tier === 'robust').length || 0;
-
-      // Get completion rates
-      const { data: records } = await supabase
-        .from('user_compliance_records')
-        .select('user_id, compliance_status');
-
-      const completedUsers = new Set(records?.filter(r => r.compliance_status === 'approved').map(r => r.user_id) || []);
-      
-      return {
-        totalUsers,
-        basicTierUsers,
-        robustTierUsers,
-        basicCompletionRate: totalUsers > 0 ? Math.round((completedUsers.size / totalUsers) * 100) : 0,
-        robustCompletionRate: totalUsers > 0 ? Math.round((completedUsers.size / totalUsers) * 100) : 0
-      };
-    } catch (error) {
-      console.error('Error fetching compliance tier statistics:', error);
-      return {
-        totalUsers: 0,
-        basicTierUsers: 0,
-        robustTierUsers: 0,
-        basicCompletionRate: 0,
-        robustCompletionRate: 0
-      };
-    }
-  }
-
-  static async getAllUsersComplianceTiers(): Promise<UserComplianceTier[]> {
-    try {
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('id, compliance_tier, display_name, email');
-
-      if (error) throw error;
-
-      const result: UserComplianceTier[] = [];
-
-      for (const profile of profiles || []) {
-        const { data: records } = await supabase
-          .from('user_compliance_records')
-          .select('compliance_status')
-          .eq('user_id', profile.id);
-
-        const totalRecords = records?.length || 0;
-        const completedRecords = records?.filter(r => r.compliance_status === 'approved').length || 0;
-        const completion_percentage = totalRecords > 0 ? Math.round((completedRecords / totalRecords) * 100) : 0;
-
-        result.push({
-          userId: profile.id,
-          tier: profile.compliance_tier || 'basic',
-          completion_percentage,
-          display_name: profile.display_name || '',
-          email: profile.email || ''
-        });
-      }
-
-      return result;
-    } catch (error) {
-      console.error('Error fetching all users compliance tiers:', error);
-      return [];
-    }
-  }
-
+  // Subscribe to tier changes
   static subscribeToTierChanges(userId: string, callback: (update: UIComplianceTierInfo) => void) {
     const subscription = supabase
-      .channel(`compliance_tier_${userId}`)
+      .channel(`tier-changes-${userId}`)
       .on('postgres_changes', 
         { 
-          event: 'UPDATE', 
+          event: '*', 
           schema: 'public', 
-          table: 'profiles',
-          filter: `id=eq.${userId}`
+          table: 'user_compliance_records',
+          filter: `user_id=eq.${userId}`
         }, 
-        async () => {
-          const updated = await this.getUIComplianceTierInfo(userId);
-          if (updated) callback(updated);
+        async (payload) => {
+          const tierInfo = await this.getUIComplianceTierInfo(userId);
+          if (tierInfo) {
+            callback(tierInfo);
+          }
         }
       )
       .subscribe();
 
     return subscription;
+  }
+
+  // Get user tier info (alias for backward compatibility)
+  static async getUserTierInfo(userId: string): Promise<ComplianceTierInfo | null> {
+    return this.getUserComplianceTierInfo(userId);
   }
 }
