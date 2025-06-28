@@ -2,69 +2,46 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
-import { useRoleBasedDashboardData } from '@/hooks/useRoleBasedDashboardData';
-import { useDashboardConfig } from '@/hooks/useDashboardConfig';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { useQuery } from '@tanstack/react-query';
+import { CoreDataService } from '@/services/core/dataService';
+import { MetricCard } from '@/components/core/MetricCard';
+import { DataTable } from '@/components/core/DataTable';
+import { LoadingDashboard } from './role-dashboards/LoadingDashboard';
 import { 
   Users, 
-  BookOpen, 
   Award, 
-  TrendingUp, 
-  Activity, 
-  Calendar,
-  Settings,
-  Bell
+  AlertTriangle, 
+  CheckCircle,
+  Activity,
+  FileText
 } from 'lucide-react';
-
-// Import dashboard components as default exports
-import SystemAdminDashboard from './role-dashboards/SystemAdminDashboard';
-import AdminDashboard from './role-dashboards/AdminDashboard';
-import ProviderDashboard from './role-dashboards/ProviderDashboard';
-import InstructorDashboard from './role-dashboards/InstructorDashboard';
-import StudentDashboard from './role-dashboards/StudentDashboard';
-import { LoadingDashboard } from './role-dashboards/LoadingDashboard';
 
 export function FixedRoleBasedDashboard() {
   const { user } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
-  const { 
-    metrics, 
-    recentActivities, 
-    isLoading: dataLoading, 
-    error,
-    canViewSystemMetrics,
-    canViewTeamMetrics,
-    teamContext 
-  } = useRoleBasedDashboardData();
-  const { config } = useDashboardConfig();
-
+  
   const userRole = profile?.role || user?.profile?.role;
 
-  if (profileLoading || dataLoading) {
-    return <LoadingDashboard message="Loading your personalized dashboard..." />;
-  }
+  const { data: metrics, isLoading: metricsLoading } = useQuery({
+    queryKey: ['dashboard-metrics', userRole],
+    queryFn: () => CoreDataService.getDashboardMetrics(userRole || ''),
+    enabled: !!userRole,
+    refetchInterval: 30000
+  });
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <p className="text-red-600">Error loading dashboard: {error}</p>
-          <Button 
-            onClick={() => window.location.reload()} 
-            className="mt-4"
-          >
-            Retry
-          </Button>
-        </div>
-      </div>
-    );
+  const { data: activities = [] } = useQuery({
+    queryKey: ['recent-activities'],
+    queryFn: () => CoreDataService.getRecentActivities(),
+    refetchInterval: 60000
+  });
+
+  if (profileLoading || metricsLoading) {
+    return <LoadingDashboard />;
   }
 
   if (!userRole) {
     return (
-      <div className="space-y-6">
+      <div className="p-6">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <h3 className="text-lg font-medium text-yellow-800">Profile Setup Required</h3>
           <p className="text-yellow-700 mt-2">
@@ -75,126 +52,107 @@ export function FixedRoleBasedDashboard() {
     );
   }
 
-  // Dashboard configuration with all required properties
-  const dashboardConfig = {
-    layout: 'grid' as const,
-    theme: 'light' as const,
-    showQuickActions: true,
-    refreshInterval: 300000,
-    compactMode: false,
-    showNotifications: true,
-    defaultView: 'overview',
-    customSections: [],
-    filterPresets: {},
-    chartPreferences: {
-      type: 'bar' as const,
-      colors: ['#3b82f6', '#10b981', '#f59e0b'],
-      showLegend: true
-    },
-    welcomeMessage: config?.welcomeMessage || 'Welcome to Your Dashboard',
-    subtitle: config?.subtitle || 'Real-time insights and management tools',
-    widgets: config?.widgets || []
-  };
-
-  // Common profile object for all dashboards
-  const dashboardProfile = {
-    id: user?.id || '',
-    role: userRole,
-    email: user?.email,
-    name: profile?.display_name || user?.email?.split('@')[0] || 'User',
-    status: profile?.status || 'ACTIVE',
-    ...profile
-  };
-
-  // Route to appropriate dashboard based on role - pass required props
-  const renderRoleDashboard = () => {
-    switch (userRole) {
-      case 'SA':
-        return (
-          <SystemAdminDashboard 
-            config={dashboardConfig}
-            profile={dashboardProfile}
-          />
-        );
-      case 'AD':
-        return (
-          <AdminDashboard 
-            config={dashboardConfig}
-            profile={dashboardProfile}
-          />
-        );
-      case 'AP':
-        return (
-          <ProviderDashboard 
-            teamContext={teamContext}
-            config={dashboardConfig}
-            profile={dashboardProfile}
-          />
-        );
-      case 'IC':
-      case 'IP':
-      case 'IT':
-      case 'IN':
-        return (
-          <InstructorDashboard 
-            teamContext={teamContext}
-            config={dashboardConfig}
-            profile={dashboardProfile}
-          />
-        );
-      case 'ST':
-        return (
-          <StudentDashboard 
-            config={dashboardConfig}
-            profile={dashboardProfile}
-          />
-        );
-      default:
-        return (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Welcome to Your Dashboard</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Your role ({userRole}) dashboard is being configured. Please contact support if this persists.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        );
+  const activityColumns = [
+    { key: 'action', title: 'Action' },
+    { key: 'entity_type', title: 'Type' },
+    { 
+      key: 'created_at', 
+      title: 'Time',
+      render: (value: string) => new Date(value).toLocaleString()
     }
-  };
+  ];
 
   return (
-    <div className="space-y-6" data-dashboard-config={JSON.stringify(dashboardConfig)}>
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            {dashboardConfig.welcomeMessage}
-          </h1>
-          <p className="text-muted-foreground">
-            {dashboardConfig.subtitle}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline">
-            {userRole}
-          </Badge>
-          {teamContext && (
-            <Badge variant="secondary">
-              {teamContext.teamName}
-            </Badge>
-          )}
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            Real-time Data
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-muted-foreground">Welcome back! Here's what's happening.</p>
+      </div>
+
+      {/* Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard
+          title="Total Users"
+          value={metrics?.totalUsers || 0}
+          icon={Users}
+          onClick={() => window.location.href = '/users'}
+        />
+        
+        <MetricCard
+          title="Active Certificates"
+          value={metrics?.activeCertifications || 0}
+          icon={Award}
+          onClick={() => window.location.href = '/certificates'}
+        />
+        
+        <MetricCard
+          title="Pending Approvals"
+          value={metrics?.pendingApprovals || 0}
+          icon={AlertTriangle}
+        />
+        
+        <MetricCard
+          title="System Status"
+          value="Healthy"
+          icon={CheckCircle}
+        />
+      </div>
+
+      {/* Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <DataTable
+          title="Recent Activity"
+          data={activities.slice(0, 5)}
+          columns={activityColumns}
+        />
+
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Quick Actions</h3>
+          <div className="grid grid-cols-2 gap-4">
+            {userRole === 'SA' || userRole === 'AD' ? (
+              <>
+                <button
+                  onClick={() => window.location.href = '/users'}
+                  className="p-4 border rounded-lg hover:bg-muted/50 transition-colors text-left"
+                >
+                  <Users className="h-6 w-6 mb-2" />
+                  <div className="font-medium">Manage Users</div>
+                  <div className="text-sm text-muted-foreground">Add and manage user accounts</div>
+                </button>
+                
+                <button
+                  onClick={() => window.location.href = '/certificates'}
+                  className="p-4 border rounded-lg hover:bg-muted/50 transition-colors text-left"
+                >
+                  <Award className="h-6 w-6 mb-2" />
+                  <div className="font-medium">Certificates</div>
+                  <div className="text-sm text-muted-foreground">Review and approve certificates</div>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => window.location.href = '/certificates'}
+                  className="p-4 border rounded-lg hover:bg-muted/50 transition-colors text-left"
+                >
+                  <Award className="h-6 w-6 mb-2" />
+                  <div className="font-medium">My Certificates</div>
+                  <div className="text-sm text-muted-foreground">View your certificates</div>
+                </button>
+                
+                <button
+                  onClick={() => console.log('Profile settings')}
+                  className="p-4 border rounded-lg hover:bg-muted/50 transition-colors text-left"
+                >
+                  <Activity className="h-6 w-6 mb-2" />
+                  <div className="font-medium">Profile</div>
+                  <div className="text-sm text-muted-foreground">Update your information</div>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
-
-      {renderRoleDashboard()}
     </div>
   );
 }
