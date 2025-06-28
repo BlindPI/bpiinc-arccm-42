@@ -90,7 +90,10 @@ export function FixedRoleBasedDashboard() {
       type: 'bar' as const,
       colors: ['#3b82f6', '#10b981', '#f59e0b'],
       showLegend: true
-    }
+    },
+    welcomeMessage: config?.welcomeMessage || 'Welcome to Your Dashboard',
+    subtitle: config?.subtitle || 'Manage your training and compliance',
+    widgets: config?.widgets || []
   };
 
   // Common profile object for all dashboards
@@ -98,7 +101,8 @@ export function FixedRoleBasedDashboard() {
     id: user?.id || '',
     role: userRole,
     email: user?.email,
-    name: profile?.name || user?.email?.split('@')[0],
+    name: profile?.display_name || user?.email?.split('@')[0] || 'User',
+    status: profile?.status || 'ACTIVE',
     ...profile
   };
 
@@ -168,10 +172,10 @@ export function FixedRoleBasedDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            {config.welcomeMessage}
+            {dashboardConfig.welcomeMessage}
           </h1>
           <p className="text-muted-foreground">
-            {config.subtitle}
+            {dashboardConfig.subtitle}
           </p>
         </div>
         <div className="flex items-center gap-2">

@@ -1,23 +1,23 @@
 
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import Landing from '@/pages/Landing';
-import AuthPage from '@/pages/AuthPage';
-import Verify from '@/pages/Verify';
+
+// Import existing professional auth components
+import Auth from '@/pages/Auth';
+import SignIn from '@/pages/SignIn';
+import SignUp from '@/pages/SignUp';
+import LandingPage from '@/pages/LandingPage';
 
 export function PublicRoutes() {
   return (
     <Routes>
       {/* Landing page */}
-      <Route path="/landing" element={<Landing />} />
+      <Route path="/landing" element={<LandingPage />} />
       
-      {/* Auth routes */}
-      <Route path="/auth" element={<AuthPage />} />
-      <Route path="/auth/signin" element={<AuthPage />} />
-      <Route path="/auth/signup" element={<AuthPage />} />
-      
-      {/* Mixed access routes */}
-      <Route path="/verify" element={<Verify />} />
+      {/* Auth routes - using existing professional components */}
+      <Route path="/auth" element={<Auth />} />
+      <Route path="/auth/signin" element={<SignIn />} />
+      <Route path="/auth/signup" element={<SignUp />} />
       
       {/* Default redirect to landing for unauthenticated users */}
       <Route path="/" element={<Navigate to="/landing" replace />} />

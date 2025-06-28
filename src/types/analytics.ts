@@ -1,3 +1,4 @@
+
 // Analytics and workflow types
 
 export interface WorkflowApproval {
@@ -30,7 +31,7 @@ export interface AnalyticsReport {
   id: string;
   name: string;
   report_type: string;
-  description?: string; // Added missing description field
+  description?: string;
   configuration: Record<string, any>;
   schedule_config?: Record<string, any>;
   is_automated: boolean;

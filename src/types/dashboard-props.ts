@@ -45,6 +45,9 @@ export interface DashboardConfig {
     colors?: string[];
     showLegend?: boolean;
   };
+  welcomeMessage?: string;
+  subtitle?: string;
+  widgets?: any[];
 }
 
 export interface UserProfile {
@@ -52,6 +55,7 @@ export interface UserProfile {
   role: string;
   email?: string;
   name?: string;
+  status: string;
   [key: string]: any;
 }
 

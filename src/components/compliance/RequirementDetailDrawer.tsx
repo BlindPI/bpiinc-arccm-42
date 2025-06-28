@@ -121,9 +121,8 @@ export function RequirementDetailDrawer({
                   requirement={{
                     id: requirement.id,
                     name: requirement.name,
-                    description: requirement.description,
-                    validation_rules: DatabaseAdapters.adaptValidationRules(requirement.validation_rules),
-                    form_fields: requirement.form_fields
+                    form_fields: requirement.form_fields,
+                    validation_rules: DatabaseAdapters.adaptValidationRules(requirement.validation_rules)
                   }}
                   userId={user.id}
                   onSave={handleSave}
