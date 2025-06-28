@@ -1,155 +1,72 @@
-// File: src/components/compliance/FormRequirement.tsx
 
 import React, { useState } from 'react';
-import { useRequirementSubmission } from '../../hooks/useComplianceRequirements';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
-
-// UI Components
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Textarea } from '../ui/textarea';
-import { Label } from '../ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
-import { Loader2, ListChecks } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useRequirementSubmission } from '@/hooks/useComplianceRequirements';
 
 interface FormRequirementProps {
   requirement: {
     id: string;
     name: string;
-    description: string;
-    form_fields: {
-      id: string;
-      label: string;
-      type: string;
-      required: boolean;
-      options?: string[];
-    }[];
+    form_fields?: any[];
   };
-  onSubmit?: () => void;
+  userId: string;
 }
 
-export function FormRequirement({ requirement, onSubmit }: FormRequirementProps) {
-  const { user } = useAuth();
+export function FormRequirement({ requirement, userId }: FormRequirementProps) {
   const [formData, setFormData] = useState<Record<string, string>>({});
-  const [notes, setNotes] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
   const { submitRequirement } = useRequirementSubmission();
-  
-  const handleSubmit = async () => {
-    if (!user?.id) {
-      toast.error('You must be logged in to submit requirements');
-      return;
-    }
-    
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      // Submit requirement with proper structure
       await submitRequirement({
-        userId: user.id,
+        userId,
         requirementId: requirement.id,
-        submissionData: {
-          form_data: formData,
-          notes,
-          submittedAt: new Date().toISOString()
-        }
+        submissionData: formData
       });
-      
-      toast.success('Form requirement submitted successfully');
-      onSubmit?.();
     } catch (error) {
-      console.error('Error submitting form requirement:', error);
-      toast.error('Failed to submit form. Please try again.');
+      console.error('Form submission error:', error);
     }
   };
-  
+
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="bg-blue-50">
-        <CardTitle className="text-base text-blue-800">{requirement.name}</CardTitle>
-        <CardDescription>{requirement.description}</CardDescription>
+    <Card>
+      <CardHeader>
+        <CardTitle>{requirement.name}</CardTitle>
       </CardHeader>
-      
-      <CardContent className="pt-6 space-y-4">
-        <div className="space-y-4">
-          {requirement.form_fields.map((field) => (
-            <div key={field.id} className="space-y-2">
-              <Label htmlFor={field.id} className={field.required ? 'flex' : ''}>
-                {field.label}
-                {field.required && <span className="text-red-500 ml-1">*</span>}
-              </Label>
-              {field.type === 'text' && (
-                <Input
-                  type="text"
-                  id={field.id}
-                  value={formData[field.id] || ''}
-                  onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })}
-                  required={field.required}
-                />
-              )}
-              {field.type === 'textarea' && (
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {requirement.form_fields?.map((field: any, index: number) => (
+            <div key={index}>
+              <Label htmlFor={field.name}>{field.label}</Label>
+              {field.type === 'textarea' ? (
                 <Textarea
-                  id={field.id}
-                  value={formData[field.id] || ''}
-                  onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })}
+                  id={field.name}
+                  value={formData[field.name] || ''}
+                  onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })}
                   required={field.required}
-                  rows={4}
                 />
-              )}
-              {field.type === 'select' && field.options && (
-                <select
-                  id={field.id}
-                  className="w-full border rounded-md py-2 px-3"
-                  value={formData[field.id] || ''}
-                  onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })}
+              ) : (
+                <Input
+                  id={field.name}
+                  type={field.type || 'text'}
+                  value={formData[field.name] || ''}
+                  onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })}
                   required={field.required}
-                >
-                  <option value="">Select an option</option>
-                  {field.options.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                />
               )}
             </div>
           ))}
-          
-          <div className="space-y-2">
-            <Label htmlFor="notes">Additional Notes</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add any additional information about this submission"
-              rows={3}
-            />
-          </div>
-        </div>
+          <Button type="submit">Submit Form</Button>
+        </form>
       </CardContent>
-      
-      <CardFooter className="bg-gray-50 border-t px-6 py-4">
-        <div className="w-full flex justify-end">
-          <Button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="w-full sm:w-auto"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Submitting...
-              </>
-            ) : (
-              <>
-                <ListChecks className="h-4 w-4 mr-2" />
-                Submit Form
-              </>
-            )}
-          </Button>
-        </div>
-      </CardFooter>
     </Card>
   );
 }
+
+// Default export for compatibility
+export default FormRequirement;

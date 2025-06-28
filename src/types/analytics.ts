@@ -30,6 +30,7 @@ export interface TeamGoalData {
   status: 'on_track' | 'at_risk' | 'behind';
 }
 
+// Fixed RealPerformanceData to match database schema
 export interface RealPerformanceData {
   performanceRating: number;
   averageSatisfactionScore: number;
@@ -38,6 +39,7 @@ export interface RealPerformanceData {
   performanceScore: number;
 }
 
+// Fixed RealTeamStats to include performanceScore
 export interface RealTeamStats {
   performanceScore: number;
   totalMembers: number;
@@ -59,6 +61,7 @@ export interface ComplianceProgress {
   };
 }
 
+// Updated ComplianceTierInfo to match database schema
 export interface ComplianceTierInfo {
   tier: 'basic' | 'robust';
   requirements: string[];
@@ -71,9 +74,9 @@ export interface ComplianceTierInfo {
   completion_percentage?: number;
 }
 
+// Updated UserAchievement to match actual database table structure
 export interface UserAchievement {
   id: string;
-  milestone_id: string;
   user_id: string;
   achievement_name: string;
   achievement_description: string;
@@ -82,7 +85,6 @@ export interface UserAchievement {
   category: string;
   tier_level: string;
   points_awarded: number;
-  points_earned: number;
   achieved_at: string;
   created_at: string;
   updated_at: string;
@@ -102,14 +104,31 @@ export interface AnalyticsReport {
   schedule_config?: Record<string, any>;
 }
 
+// Updated EmailCampaign to match database schema
 export interface EmailCampaign {
   id: string;
-  name: string;
-  subject: string;
+  campaign_name: string; // This is the actual field name in database
+  subject_line: string; // This is the actual field name in database
   content: string;
   campaign_type: 'newsletter' | 'promotional' | 'drip' | 'event' | 'follow_up';
   status: string;
   sent_count?: number;
   created_at: string;
   updated_at: string;
+  // Additional database fields
+  html_content?: string;
+  sender_name: string;
+  sender_email: string;
+  reply_to_email?: string;
+  target_audience?: any;
+  send_date?: string;
+  created_by?: string;
+  total_recipients?: number;
+  delivered_count?: number;
+  opened_count?: number;
+  clicked_count?: number;
+  bounced_count?: number;
+  unsubscribed_count?: number;
+  automation_rules?: any;
+  tracking_enabled?: boolean;
 }

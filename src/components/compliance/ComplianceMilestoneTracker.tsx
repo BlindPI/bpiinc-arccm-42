@@ -1,4 +1,3 @@
-// File: src/components/compliance/ComplianceMilestoneTracker.tsx
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,11 +23,21 @@ export function ComplianceMilestoneTracker() {
         return;
       }
 
-      // Map database structure to interface
+      // Map database structure to interface - no milestone_id needed
       const mappedAchievements = data?.map(achievement => ({
-        ...achievement,
-        milestone_id: achievement.milestone_id || achievement.id,
-        points_earned: achievement.points_awarded || 0
+        id: achievement.id,
+        user_id: achievement.user_id,
+        achievement_name: achievement.achievement_name,
+        achievement_description: achievement.achievement_description,
+        achievement_type: achievement.achievement_type,
+        badge_icon: achievement.badge_icon,
+        category: achievement.category,
+        tier_level: achievement.tier_level,
+        points_awarded: achievement.points_awarded,
+        achieved_at: achievement.achieved_at,
+        created_at: achievement.created_at,
+        updated_at: achievement.updated_at,
+        metadata: achievement.metadata
       })) || [];
 
       setAchievements(mappedAchievements);
@@ -64,7 +73,7 @@ export function ComplianceMilestoneTracker() {
                     </p>
                   </div>
                   <Badge variant="secondary">
-                    {achievement.points_earned} Points
+                    {achievement.points_awarded} Points
                   </Badge>
                   <CheckCircle2 className="h-5 w-5 text-green-500" />
                 </div>

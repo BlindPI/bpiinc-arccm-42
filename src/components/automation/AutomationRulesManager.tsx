@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,7 +16,7 @@ export function AutomationRulesManager() {
   const [editingRule, setEditingRule] = useState<AutomationRule | null>(null);
   const queryClient = useQueryClient();
 
-  // Fetch automation rules with proper type casting
+  // Fetch automation rules with proper JSONB type casting
   const { data: rules = [], isLoading } = useQuery({
     queryKey: ['automation-rules'],
     queryFn: async (): Promise<AutomationRule[]> => {
@@ -29,14 +28,22 @@ export function AutomationRulesManager() {
       if (error) throw error;
 
       return data?.map(rule => ({
-        ...rule,
-        type: rule.rule_type,
+        id: rule.id,
+        name: rule.name,
+        description: rule.description,
         rule_type: rule.rule_type as 'compliance' | 'certificate' | 'notification' | 'progression',
-        isActive: rule.is_active,
-        trigger: { type: 'condition', parameters: rule.trigger_conditions },
-        actions: [{ type: 'action', parameters: rule.actions }],
-        createdAt: rule.created_at || new Date().toISOString(),
-        updatedAt: rule.updated_at || new Date().toISOString()
+        trigger_conditions: typeof rule.trigger_conditions === 'string' 
+          ? JSON.parse(rule.trigger_conditions) 
+          : rule.trigger_conditions || {},
+        actions: typeof rule.actions === 'string' 
+          ? JSON.parse(rule.actions) 
+          : rule.actions || {},
+        is_active: rule.is_active,
+        execution_count: rule.execution_count,
+        last_executed: rule.last_executed,
+        created_by: rule.created_by,
+        created_at: rule.created_at,
+        updated_at: rule.updated_at
       })) || [];
     }
   });
