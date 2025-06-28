@@ -27,7 +27,6 @@ export interface AnalyticsReport {
   description?: string;
   report_type?: string;
   is_automated?: boolean;
-  configuration?: Record<string, any>;
 }
 
 export interface AutomationRule {
@@ -53,32 +52,4 @@ export interface AutomationRule {
   created_by?: string;
   execution_count?: number;
   last_executed?: string;
-}
-
-export interface GlobalAnalytics {
-  totalUsers: number;
-  activeSessions: number;
-  completionRate: number;
-  complianceScore: number;
-  topPerformingTeams: Array<{
-    id: string;
-    name: string;
-    performance: number;
-    memberCount: number;
-  }>;
-}
-
-export interface TeamAnalyticsSummary {
-  id: string;
-  name: string;
-  performance: number;
-  memberCount: number;
-}
-
-export interface TeamGoal {
-  id: string;
-  title: string;
-  progress: number;
-  target: number;
-  status: 'on_track' | 'at_risk' | 'behind';
 }
