@@ -1,3 +1,4 @@
+
 // Route configuration for the application
 export const ALWAYS_PUBLIC_PAGES = [
   "/landing", 
@@ -19,6 +20,7 @@ export const PROTECTED_PAGES = [
   "/users",
   "/teams",
   "/enhanced-teams",
+  "/modern-teams",
   "/role-management",
   "/supervision",
   "/certificates",
@@ -26,7 +28,7 @@ export const PROTECTED_PAGES = [
   "/rosters",
   "/courses",
   "/enrollments",
-  "/enrollment-management",
+  "/enrollment-management", 
   "/training-hub",
   "/locations",
   "/analytics",
@@ -41,7 +43,7 @@ export const PROTECTED_PAGES = [
   "/settings",
   "/crm",
   "/crm/leads",
-  "/crm/opportunities",
+  "/crm/opportunities", 
   "/crm/revenue",
   "/instructor-performance",
   "/authorized-providers",

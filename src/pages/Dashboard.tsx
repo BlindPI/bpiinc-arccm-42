@@ -7,11 +7,6 @@ import DashboardContent from '@/components/dashboard/DashboardContent';
 const Dashboard = () => {
   const { user, loading: authLoading, authReady } = useAuth();
 
-  // Redirect to sign in if not authenticated and auth is ready
-  if (!user && authReady && !authLoading) {
-    return <Navigate to="/auth/signin" replace />;
-  }
-
   // Show loading state if auth is still initializing or not ready
   if (authLoading || !authReady) {
     return (
@@ -23,6 +18,11 @@ const Dashboard = () => {
         </div>
       </div>
     );
+  }
+
+  // Redirect to sign in if not authenticated and auth is ready
+  if (!user && authReady && !authLoading) {
+    return <Navigate to="/auth/signin" replace />;
   }
 
   return <DashboardContent />;
