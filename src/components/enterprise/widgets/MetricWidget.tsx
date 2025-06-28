@@ -1,62 +1,73 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LucideIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 interface MetricWidgetProps {
   title: string;
   value: string | number;
-  icon: LucideIcon;
+  subtitle?: string;
   trend?: {
     value: number;
-    isPositive: boolean;
+    label: string;
+    direction: 'up' | 'down' | 'neutral';
   };
-  status?: 'healthy' | 'warning' | 'critical';
-  onClick?: () => void;
+  icon?: React.ReactNode;
+  className?: string;
 }
 
 export function MetricWidget({ 
   title, 
   value, 
-  icon: Icon, 
+  subtitle, 
   trend, 
-  status = 'healthy',
-  onClick 
+  icon, 
+  className 
 }: MetricWidgetProps) {
-  const statusColors = {
-    healthy: 'text-green-600',
-    warning: 'text-yellow-600',
-    critical: 'text-red-600'
+  const getTrendIcon = () => {
+    switch (trend?.direction) {
+      case 'up':
+        return <TrendingUp className="h-3 w-3" />;
+      case 'down':
+        return <TrendingDown className="h-3 w-3" />;
+      default:
+        return <Minus className="h-3 w-3" />;
+    }
+  };
+
+  const getTrendColor = () => {
+    switch (trend?.direction) {
+      case 'up':
+        return 'text-green-600 bg-green-50';
+      case 'down':
+        return 'text-red-600 bg-red-50';
+      default:
+        return 'text-gray-600 bg-gray-50';
+    }
   };
 
   return (
-    <Card 
-      className={`transition-all hover:shadow-lg border-l-4 ${
-        status === 'healthy' ? 'border-l-green-500' :
-        status === 'warning' ? 'border-l-yellow-500' : 'border-l-red-500'
-      } ${onClick ? 'cursor-pointer hover:bg-gray-50' : ''}`}
-      onClick={onClick}
-    >
+    <Card className={className}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-gray-700">{title}</CardTitle>
-        <div className="flex items-center gap-2">
-          <Icon className={`h-5 w-5 ${statusColors[status]}`} />
-          <Badge 
-            variant={status === 'healthy' ? 'default' : 'destructive'}
-            className="text-xs"
-          >
-            {status}
-          </Badge>
-        </div>
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          {title}
+        </CardTitle>
+        {icon && <div className="text-muted-foreground">{icon}</div>}
       </CardHeader>
       <CardContent>
-        <div className="text-3xl font-bold text-gray-900">{value}</div>
-        {trend && (
-          <p className={`text-sm mt-1 ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-            {trend.isPositive ? '+' : ''}{trend.value}% from last period
-          </p>
-        )}
+        <div className="space-y-2">
+          <div className="text-2xl font-bold">{value}</div>
+          {subtitle && (
+            <p className="text-xs text-muted-foreground">{subtitle}</p>
+          )}
+          {trend && (
+            <Badge variant="secondary" className={`text-xs ${getTrendColor()}`}>
+              {getTrendIcon()}
+              <span className="ml-1">{trend.value}% {trend.label}</span>
+            </Badge>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

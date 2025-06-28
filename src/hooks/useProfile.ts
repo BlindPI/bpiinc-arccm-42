@@ -10,11 +10,11 @@ export function useProfile() {
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .single();
 
       if (error) throw error;
