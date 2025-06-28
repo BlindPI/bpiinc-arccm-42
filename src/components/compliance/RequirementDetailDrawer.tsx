@@ -46,7 +46,6 @@ export function RequirementDetailDrawer({
     if (!requirement || !requirementId || !user?.id) return;
     
     try {
-      // Update requirement status
       await ComplianceRequirementsService.updateRequirementStatus(
         requirementId, 
         'completed',

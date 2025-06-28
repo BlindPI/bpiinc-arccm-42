@@ -30,23 +30,55 @@ export interface TeamContext {
   apUserPhone?: string;
 }
 
-// Basic dashboard component interfaces
+export interface DashboardConfig {
+  layout?: string;
+  theme?: string;
+  showQuickActions?: boolean;
+  refreshInterval?: number;
+  compactMode?: boolean;
+  showNotifications?: boolean;
+  defaultView?: string;
+  customSections?: any[];
+  filterPresets?: Record<string, any>;
+  chartPreferences?: {
+    type?: string;
+    colors?: string[];
+    showLegend?: boolean;
+  };
+}
+
+export interface UserProfile {
+  id: string;
+  role: string;
+  email?: string;
+  name?: string;
+  [key: string]: any;
+}
+
+// Updated dashboard component interfaces with required props
 export interface SystemAdminDashboardProps {
-  // Add any required props here in the future
+  config?: DashboardConfig;
+  profile?: UserProfile;
 }
 
 export interface AdminDashboardProps {
-  // Add any required props here in the future
+  config?: DashboardConfig;
+  profile?: UserProfile;
 }
 
 export interface ProviderDashboardProps {
   teamContext?: TeamContext;
+  config?: DashboardConfig;
+  profile?: UserProfile;
 }
 
 export interface InstructorDashboardProps {
   teamContext?: TeamContext;
+  config?: DashboardConfig;
+  profile?: UserProfile;
 }
 
 export interface StudentDashboardProps {
-  // Add any required props here in the future
+  config?: DashboardConfig;
+  profile?: UserProfile;
 }

@@ -1,4 +1,3 @@
-
 // Analytics and workflow types
 
 export interface WorkflowApproval {
@@ -115,11 +114,11 @@ export interface ComplianceProgress {
 
 export interface EmailCampaign {
   id: string;
-  name: string; // Primary name field
-  subject: string; // Primary subject field
-  campaign_name: string; // Database field name
-  subject_line?: string; // Optional database field name
-  status?: string; // Optional status field
+  name: string;
+  subject: string;
+  campaign_name: string;
+  subject_line?: string;
+  status?: string;
   campaign_type: 'newsletter' | 'promotional' | 'drip' | 'event' | 'follow_up';
   content: string;
   sent_count: number;

@@ -1,4 +1,3 @@
-
 import { safeJsonCast } from '@/types/compliance-tier-standardized';
 
 // Database field casting utilities
@@ -12,16 +11,25 @@ export class DatabaseAdapters {
   static adaptEmailCampaign(dbCampaign: any) {
     return {
       ...dbCampaign,
-      // Map database fields to component interface
+      // Map database fields to component interface - ensure both name and subject are present
       name: dbCampaign.campaign_name || dbCampaign.name || 'Untitled Campaign',
       subject: dbCampaign.subject_line || dbCampaign.subject || `${dbCampaign.campaign_name || 'Campaign'} Subject`,
       campaign_name: dbCampaign.campaign_name || dbCampaign.name || 'Untitled Campaign',
       subject_line: dbCampaign.subject_line || dbCampaign.subject,
       status: dbCampaign.status || 'draft',
       sent_count: dbCampaign.sent_count || 0,
+      delivered_count: dbCampaign.delivered_count || 0,
+      opened_count: dbCampaign.opened_count || 0,
+      clicked_count: dbCampaign.clicked_count || 0,
+      bounced_count: dbCampaign.bounced_count || 0,
+      unsubscribed_count: dbCampaign.unsubscribed_count || 0,
       campaign_type: dbCampaign.campaign_type || 'newsletter',
       automation_rules: this.castJsonbField(dbCampaign.automation_rules, {}),
-      target_audience: this.castJsonbField(dbCampaign.target_audience, {})
+      target_audience: this.castJsonbField(dbCampaign.target_audience, {}),
+      content: dbCampaign.content || '',
+      created_at: dbCampaign.created_at || new Date().toISOString(),
+      updated_at: dbCampaign.updated_at || new Date().toISOString(),
+      created_by: dbCampaign.created_by || ''
     };
   }
 

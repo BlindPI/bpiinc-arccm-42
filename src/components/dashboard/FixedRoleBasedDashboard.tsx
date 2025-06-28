@@ -7,7 +7,6 @@ import { useDashboardConfig } from '@/hooks/useDashboardConfig';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Users, 
   BookOpen, 
@@ -94,22 +93,58 @@ export function FixedRoleBasedDashboard() {
     }
   };
 
-  // Route to appropriate dashboard based on role - pass minimal props to avoid interface errors
+  // Common profile object for all dashboards
+  const dashboardProfile = {
+    id: user?.id || '',
+    role: userRole,
+    email: user?.email,
+    name: profile?.name || user?.email?.split('@')[0],
+    ...profile
+  };
+
+  // Route to appropriate dashboard based on role - pass required props
   const renderRoleDashboard = () => {
     switch (userRole) {
       case 'SA':
-        return <SystemAdminDashboard />;
+        return (
+          <SystemAdminDashboard 
+            config={dashboardConfig}
+            profile={dashboardProfile}
+          />
+        );
       case 'AD':
-        return <AdminDashboard />;
+        return (
+          <AdminDashboard 
+            config={dashboardConfig}
+            profile={dashboardProfile}
+          />
+        );
       case 'AP':
-        return <ProviderDashboard teamContext={teamContext} />;
+        return (
+          <ProviderDashboard 
+            teamContext={teamContext}
+            config={dashboardConfig}
+            profile={dashboardProfile}
+          />
+        );
       case 'IC':
       case 'IP':
       case 'IT':
       case 'IN':
-        return <InstructorDashboard teamContext={teamContext} />;
+        return (
+          <InstructorDashboard 
+            teamContext={teamContext}
+            config={dashboardConfig}
+            profile={dashboardProfile}
+          />
+        );
       case 'ST':
-        return <StudentDashboard />;
+        return (
+          <StudentDashboard 
+            config={dashboardConfig}
+            profile={dashboardProfile}
+          />
+        );
       default:
         return (
           <div className="space-y-6">
