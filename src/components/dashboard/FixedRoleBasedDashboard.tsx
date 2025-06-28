@@ -47,10 +47,9 @@ export function FixedRoleBasedDashboard() {
   // Handle tier switch
   const handleTierSwitch = async (newTier: string, reason: string) => {
     try {
-      const result = await ComplianceTierService.switchUserTier(
+      const result = await ComplianceTierService.switchTier(
         user!.id,
         newTier as 'basic' | 'robust',
-        user!.id,
         reason
       );
       
@@ -113,7 +112,6 @@ export function FixedRoleBasedDashboard() {
             <EnhancedProviderDashboard 
               {...dashboardProps}
               config={{
-                complianceEnabled: true,
                 tierInfo: tierInfo
               }}
             />
@@ -168,7 +166,7 @@ export function FixedRoleBasedDashboard() {
         activeView={dashboardView}
         onViewChange={setDashboardView}
         quickStats={{
-          compliance: tierInfo?.completionPercentage || 0,
+          compliance: tierInfo?.completion_percentage || 0,
           nextDue: tierInfo?.next_requirement?.due_date,
           tier: tierInfo?.tier
         }}
@@ -180,7 +178,7 @@ export function FixedRoleBasedDashboard() {
         <ComplianceTierBanner
           tier={tierInfo?.tier}
           canAdvance={tierInfo?.can_advance_tier}
-          completionPercentage={tierInfo?.completionPercentage}
+          completionPercentage={tierInfo?.completion_percentage}
           onTierSwitch={() => setShowTierSwitchDialog(true)}
         />
         

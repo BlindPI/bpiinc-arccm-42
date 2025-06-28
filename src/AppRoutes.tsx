@@ -1,327 +1,60 @@
-import React from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+
+import React, { Suspense } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import SignIn from '@/pages/SignIn';
-import SignUp from '@/pages/SignUp';
-import ResetPassword from '@/pages/ResetPassword';
+import { LoadingDashboard } from '@/components/dashboard/LoadingDashboard';
+
+// Import all valid page components
 import Dashboard from '@/pages/Dashboard';
-import LandingPage from '@/pages/LandingPage';
-import CertificateVerification from '@/pages/CertificateVerification';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
+import Analytics from '@/pages/Analytics';
+import Teams from '@/pages/Teams';
+import Phase4CRM from '@/pages/Phase4CRM';
+import Certifications from '@/pages/Certifications';
 import Settings from '@/pages/Settings';
 import UserManagement from '@/pages/UserManagement';
-import Profile from '@/pages/Profile';
-import Phase4CRM from '@/pages/Phase4CRM';
-
-// Import all missing pages
-import UnifiedTeams from '@/pages/UnifiedTeams';
-import EnhancedTeams from '@/pages/EnhancedTeams';
-import RoleManagement from '@/pages/RoleManagement';
-import Supervision from '@/pages/Supervision';
-import TrainingHub from '@/pages/TrainingHub';
-import Courses from '@/pages/Courses';
-import Enrollments from '@/pages/Enrollments';
-import EnrollmentManagement from '@/pages/EnrollmentManagement';
-import Locations from '@/pages/Locations';
-import Certifications from '@/pages/Certifications';
-import CertificateAnalytics from '@/pages/CertificateAnalytics';
-import Rosters from '@/pages/Rosters';
-import RevenueAnalytics from '@/pages/RevenueAnalytics';
-import Analytics from '@/pages/Analytics';
-import ExecutiveDashboard from '@/pages/ExecutiveDashboard';
-import ReportScheduler from '@/pages/ReportScheduler';
-import Reports from '@/pages/Reports';
-import Automation from '@/pages/Automation';
-import ProgressionPathBuilder from '@/pages/ProgressionPathBuilder';
-import Integrations from '@/pages/Integrations';
-import Notifications from '@/pages/Notifications';
-import SystemMonitoring from '@/pages/SystemMonitoring';
-import CampaignManagement from '@/pages/CampaignManagement';
-import InstructorPerformance from '@/pages/InstructorPerformance';
-import AuthorizedProviders from '@/pages/AuthorizedProviders';
-import ModernTeams from '@/pages/ModernTeams';
-import CRMDiagnostics from '@/pages/CRMDiagnostics';
-import EmailWorkflowsPage from '@/app/crm/email-workflows/page';
 import ComplianceAdminDashboard from '@/pages/ComplianceAdminDashboard';
 import ComplianceProviderDashboard from '@/pages/ComplianceProviderDashboard';
+import Profile from '@/pages/Profile';
+import Automation from '@/pages/Automation';
 
-export function AppRoutes() {
+// Lazy load other components
+const LazyComponent = ({ Component }: { Component: React.ComponentType }) => (
+  <Suspense fallback={<LoadingDashboard />}>
+    <Component />
+  </Suspense>
+);
+
+export default function AppRoutes() {
   const { user } = useAuth();
-  const location = useLocation();
 
-  // Debug: Log routing state
-  console.log('🐛 ROUTING-DEBUG: AppRoutes rendering with:', {
-    pathname: location.pathname,
-    search: location.search,
-    hasUser: !!user,
-    userId: user?.id
-  });
-
-  // Check specific route matching
-  const isComplianceAdminRoute = location.pathname === '/compliance-dashboard/admin';
-  console.log('🐛 ROUTING-DEBUG: Compliance admin route check:', {
-    pathname: location.pathname,
-    matches: isComplianceAdminRoute,
-    exact: location.pathname === '/compliance-dashboard/admin'
-  });
+  if (!user) {
+    return <Navigate to="/auth/signin" replace />;
+  }
 
   return (
     <Routes>
-      <Route path="/auth/signin" element={<SignIn />} />
-      <Route path="/auth/signup" element={<SignUp />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/landing" element={<LandingPage />} />
-      <Route path="/verify" element={<CertificateVerification />} />
+      {/* Main Dashboard Routes */}
+      <Route path="/dashboard" element={<Dashboard />} />
       
-      <Route path="/" element={
-        <ProtectedRoute>
-          <Dashboard />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/dashboard" element={
-        <ProtectedRoute>
-          <Dashboard />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/settings" element={
-        <ProtectedRoute>
-          <Settings />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/users" element={
-        <ProtectedRoute>
-          <UserManagement />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/profile" element={
-        <ProtectedRoute>
-          <Profile />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/configuration" element={
-        <ProtectedRoute>
-          <Settings />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/crm" element={
-        <ProtectedRoute>
-          <Phase4CRM />
-        </ProtectedRoute>
-      } />
+      {/* Compliance Routes */}
+      <Route path="/compliance-dashboard/admin" element={<ComplianceAdminDashboard />} />
+      <Route path="/compliance-dashboard/provider" element={<ComplianceProviderDashboard />} />
       
-
-      {/* User Management Routes - UNIFIED TEAMS */}
-      <Route path="/teams" element={
-        <ProtectedRoute>
-          <UnifiedTeams />
-        </ProtectedRoute>
-      } />
-
-      {/* DEPRECATED: Legacy team routes - redirect to unified teams */}
-      <Route path="/enhanced-teams" element={
-        <ProtectedRoute>
-          <UnifiedTeams />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/modern-teams" element={
-        <ProtectedRoute>
-          <UnifiedTeams />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/role-management" element={
-        <ProtectedRoute>
-          <RoleManagement />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/supervision" element={
-        <ProtectedRoute>
-          <Supervision />
-        </ProtectedRoute>
-      } />
-
-      {/* Training Management Routes */}
-      <Route path="/training-hub" element={
-        <ProtectedRoute>
-          <TrainingHub />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/courses" element={
-        <ProtectedRoute>
-          <Courses />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/enrollments" element={
-        <ProtectedRoute>
-          <Enrollments />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/enrollment-management" element={
-        <ProtectedRoute>
-          <EnrollmentManagement />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/locations" element={
-        <ProtectedRoute>
-          <Locations />
-        </ProtectedRoute>
-      } />
-
-      {/* Certificate Routes */}
-      <Route path="/certificates" element={
-        <ProtectedRoute>
-          <Certifications />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/certificate-analytics" element={
-        <ProtectedRoute>
-          <CertificateAnalytics />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/rosters" element={
-        <ProtectedRoute>
-          <Rosters />
-        </ProtectedRoute>
-      } />
-
-      {/* CRM Routes - Phase 4 Unified */}
-      <Route path="/crm/campaigns" element={
-        <ProtectedRoute>
-          <CampaignManagement />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/crm/revenue" element={
-        <ProtectedRoute>
-          <RevenueAnalytics />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/crm/email-workflows" element={
-        <ProtectedRoute>
-          <EmailWorkflowsPage />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/crm/diagnostics" element={
-        <ProtectedRoute>
-          <CRMDiagnostics />
-        </ProtectedRoute>
-      } />
-
-      {/* Analytics & Reports Routes */}
-      <Route path="/analytics" element={
-        <ProtectedRoute>
-          <Analytics />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/executive-dashboard" element={
-        <ProtectedRoute>
-          <ExecutiveDashboard />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/report-scheduler" element={
-        <ProtectedRoute>
-          <ReportScheduler />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/reports" element={
-        <ProtectedRoute>
-          <Reports />
-        </ProtectedRoute>
-      } />
-
-      {/* Compliance & Automation Routes */}
-      <Route path="/compliance-dashboard/admin" element={
-        <ProtectedRoute>
-          <ComplianceAdminDashboard />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/compliance-dashboard/provider" element={
-        <ProtectedRoute>
-          <ComplianceProviderDashboard />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/automation" element={
-        <ProtectedRoute>
-          <Automation />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/progression-path-builder" element={
-        <ProtectedRoute>
-          <ProgressionPathBuilder />
-        </ProtectedRoute>
-      } />
-
-      {/* System Administration Routes */}
-      <Route path="/integrations" element={
-        <ProtectedRoute>
-          <Integrations />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/notifications" element={
-        <ProtectedRoute>
-          <Notifications />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/system-monitoring" element={
-        <ProtectedRoute>
-          <SystemMonitoring />
-        </ProtectedRoute>
-      } />
-
-      {/* Additional Routes */}
-      <Route path="/instructor-performance" element={
-        <ProtectedRoute>
-          <InstructorPerformance />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/authorized-providers" element={
-        <ProtectedRoute>
-          <AuthorizedProviders />
-        </ProtectedRoute>
-      } />
-
-      <Route path="*" element={
-        user ? (
-          <ProtectedRoute>
-            <div>
-              <h2>No matching route</h2>
-              <span>{location.pathname}</span>
-              {/* DEBUG: Log routing issue */}
-              {(() => {
-                console.log('🐛 ROUTING-DEBUG: No matching route found for:', location.pathname, 'Search params:', location.search);
-                return null;
-              })()}
-            </div>
-          </ProtectedRoute>
-        ) : (
-          <SignIn />
-        )
-      } />
+      {/* Core Application Routes */}
+      <Route path="/teams" element={<Teams />} />
+      <Route path="/crm" element={<Phase4CRM />} />
+      <Route path="/certificates" element={<Certifications />} />
+      <Route path="/analytics" element={<Analytics />} />
+      <Route path="/automation" element={<Automation />} />
+      
+      {/* User Management */}
+      <Route path="/users" element={<UserManagement />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/settings" element={<Settings />} />
+      
+      {/* Default redirect to dashboard */}
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 }

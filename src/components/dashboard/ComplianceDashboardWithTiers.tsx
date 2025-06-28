@@ -24,9 +24,9 @@ export function ComplianceDashboardWithTiers() {
     );
   }
 
-  const overallCompletion = tierInfo?.completionPercentage || 0;
-  const totalRequirements = tierInfo?.totalRequirements || 0;
-  const completedRequirements = tierInfo?.completedRequirements || 0;
+  const overallCompletion = tierInfo?.completion_percentage || 0;
+  const totalRequirements = tierInfo?.requirements?.length || 0;
+  const completedRequirements = tierInfo?.completed_requirements || 0;
 
   return (
     <div className="space-y-6">

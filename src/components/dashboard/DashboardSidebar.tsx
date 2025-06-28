@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Dashboard, Shield, TrendingUp } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LayoutDashboard, Shield, TrendingUp } from 'lucide-react';
 
 interface DashboardSidebarProps {
   role?: string;
@@ -60,7 +60,7 @@ export function DashboardSidebar({
             className="w-full justify-start"
             onClick={() => onViewChange('overview')}
           >
-            <Dashboard className="h-4 w-4 mr-2" />
+            <LayoutDashboard className="h-4 w-4 mr-2" />
             Overview
           </Button>
 

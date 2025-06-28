@@ -1,43 +1,35 @@
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Settings, 
-  Shield, 
-  CheckCircle, 
-  AlertCircle, 
-  Users, 
-  FileText,
-  Clock
-} from 'lucide-react';
-import { ComplianceTierService, ComplianceTierInfo, TierSwitchResult } from '@/services/compliance/complianceTierService';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Shield, TrendingUp, Users, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { ComplianceTierService } from '@/services/compliance/complianceTierService';
+import { ComplianceTierInfo, adaptTierInfoFromDatabase } from '@/types/compliance-tier-standardized';
 
 interface ComplianceTierManagerProps {
   userId: string;
-  userRole: 'AP' | 'IC' | 'IP' | 'IT' | 'SA' | 'AD';
+  userRole: string;
   userName: string;
-  canManage?: boolean;
+  canManageTier?: boolean;
 }
 
 export function ComplianceTierManager({ 
   userId, 
   userRole, 
   userName, 
-  canManage 
+  canManageTier = false 
 }: ComplianceTierManagerProps) {
   const [tierInfo, setTierInfo] = useState<ComplianceTierInfo | null>(null);
-  const [isChanging, setIsChanging] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Fix: SA and AD users should have management permissions
-  const hasManagementAccess = canManage || ['SA', 'AD'].includes(userRole);
+  const [loading, setLoading] = useState(true);
+  const [switchingTier, setSwitchingTier] = useState(false);
+  const [newTier, setNewTier] = useState<'basic' | 'robust'>('basic');
+  const [switchReason, setSwitchReason] = useState('');
 
   useEffect(() => {
     loadTierInfo();
@@ -45,62 +37,50 @@ export function ComplianceTierManager({
 
   const loadTierInfo = async () => {
     try {
-      setIsLoading(true);
-      const info = await ComplianceTierService.getUserComplianceTierInfo(userId);
-      setTierInfo(info);
+      setLoading(true);
+      const result = await ComplianceTierService.getUserComplianceTier(userId);
+      if (result.success && result.data) {
+        setTierInfo(adaptTierInfoFromDatabase(result.data));
+      }
     } catch (error) {
       console.error('Error loading tier info:', error);
       toast.error('Failed to load compliance tier information');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleTierChange = async (newTier: 'basic' | 'robust') => {
-    if (!hasManagementAccess) {
-      toast.error('You do not have permission to change compliance tiers');
+  const handleTierSwitch = async () => {
+    if (!switchReason.trim()) {
+      toast.error('Please provide a reason for the tier switch');
       return;
     }
 
-    setIsChanging(true);
     try {
-      const result: TierSwitchResult = await ComplianceTierService.switchComplianceTier(userId, newTier);
+      setSwitchingTier(true);
+      const result = await ComplianceTierService.switchTier(userId, newTier, switchReason);
       
       if (result.success) {
-        toast.success(result.message);
-        await loadTierInfo(); // Reload tier information
+        await loadTierInfo();
+        setSwitchReason('');
+        toast.success(`Successfully switched to ${newTier} tier`);
       } else {
-        toast.error(result.message);
+        toast.error(result.message || 'Failed to switch tier');
       }
     } catch (error) {
-      console.error('Error changing tier:', error);
-      toast.error('Failed to update compliance tier');
+      console.error('Error switching tier:', error);
+      toast.error('Failed to switch tier');
     } finally {
-      setIsChanging(false);
+      setSwitchingTier(false);
     }
   };
 
-  const getTierIcon = (tier: 'basic' | 'robust') => {
-    return tier === 'basic' ? <FileText className="h-4 w-4" /> : <Shield className="h-4 w-4" />;
-  };
-
-  const getTierColor = (tier: 'basic' | 'robust') => {
-    return tier === 'basic' ? 'bg-blue-50 border-blue-200' : 'bg-green-50 border-green-200';
-  };
-
-  if (isLoading) {
+  if (loading) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Compliance Tier
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 animate-spin" />
-            Loading compliance information...
+        <CardContent className="p-6">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         </CardContent>
       </Card>
@@ -110,143 +90,102 @@ export function ComplianceTierManager({
   if (!tierInfo) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-red-500" />
-            Compliance Tier
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Unable to load compliance tier information for this user.
-            </AlertDescription>
-          </Alert>
+        <CardContent className="p-6">
+          <div className="text-center text-muted-foreground">
+            No compliance tier information available
+          </div>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Compliance Tier - {userName}
-          </div>
-          <Badge variant="outline" className={getTierColor(tierInfo.tier)}>
-            {getTierIcon(tierInfo.tier)}
-            {tierInfo.tier.charAt(0).toUpperCase() + tierInfo.tier.slice(1)}
-          </Badge>
-        </CardTitle>
-        <CardDescription>
-          {tierInfo.description}
-          {hasManagementAccess && (
-            <span className="block mt-1 text-green-600 font-medium">
-              ✓ Administrator Access - Can modify tiers
-            </span>
-          )}
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent className="space-y-6">
-        {/* Current Status */}
-        <div className="space-y-3">
+    <div className="space-y-6">
+      {/* Current Tier Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Compliance Tier Status for {userName}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium">Completion Status</Label>
-            <span className="text-sm text-muted-foreground">
-              {tierInfo.completed_requirements} of {tierInfo.total_requirements} requirements
-            </span>
+            <div>
+              <p className="text-sm text-muted-foreground">Current Tier</p>
+              <Badge variant={tierInfo.tier === 'robust' ? 'default' : 'secondary'} className="mt-1">
+                {tierInfo.tier.charAt(0).toUpperCase() + tierInfo.tier.slice(1)}
+              </Badge>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-muted-foreground">Progress</p>
+              <p className="text-2xl font-bold">{tierInfo.completion_percentage}%</p>
+            </div>
           </div>
-          
-          <Progress 
-            value={tierInfo.completion_percentage} 
-            className="h-2"
-          />
-          
-          <div className="flex items-center gap-2 text-sm">
-            {tierInfo.completion_percentage === 100 ? (
-              <>
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span className="text-green-700">All requirements completed</span>
-              </>
-            ) : (
-              <>
-                <AlertCircle className="h-4 w-4 text-yellow-500" />
-                <span className="text-yellow-700">{tierInfo.completion_percentage}% completed</span>
-              </>
-            )}
-          </div>
-        </div>
 
-        {/* Tier Selection (only if user can manage) */}
-        {hasManagementAccess && (
-          <div className="space-y-4 border-t pt-4">
-            <Label className="text-sm font-medium">Change Compliance Tier</Label>
-            
-            <RadioGroup
-              value={tierInfo.tier}
-              onValueChange={handleTierChange}
-              disabled={isChanging}
-              className="space-y-4"
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Requirements Completed</span>
+              <span>{tierInfo.completed_requirements} / {tierInfo.totalRequirements}</span>
+            </div>
+            <Progress value={tierInfo.completion_percentage} className="h-2" />
+          </div>
+
+          {tierInfo.can_advance_tier && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center gap-2 text-green-800">
+                <CheckCircle className="h-4 w-4" />
+                <span className="text-sm font-medium">Ready to advance tier!</span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Tier Management (Admin Only) */}
+      {canManageTier && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Tier Management
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="newTier">Switch to Tier</Label>
+              <Select value={newTier} onValueChange={(value: 'basic' | 'robust') => setNewTier(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="basic">Basic</SelectItem>
+                  <SelectItem value="robust">Robust</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="reason">Reason for Change</Label>
+              <Textarea
+                id="reason"
+                value={switchReason}
+                onChange={(e) => setSwitchReason(e.target.value)}
+                placeholder="Please provide a reason for this tier change..."
+                rows={3}
+              />
+            </div>
+
+            <Button 
+              onClick={handleTierSwitch}
+              disabled={switchingTier || !switchReason.trim() || newTier === tierInfo.tier}
+              className="w-full"
             >
-              <div className="flex items-start space-x-3 p-3 border rounded-lg bg-blue-50 border-blue-200">
-                <RadioGroupItem value="basic" id="basic" className="mt-1" />
-                <div className="space-y-1 flex-1">
-                  <Label htmlFor="basic" className="text-sm font-medium cursor-pointer">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Basic Compliance
-                    </div>
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Essential requirements only: resume upload, background check, basic company information.
-                    Ideal for quick onboarding and temporary assignments.
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-start space-x-3 p-3 border rounded-lg bg-green-50 border-green-200">
-                <RadioGroupItem value="robust" id="robust" className="mt-1" />
-                <div className="space-y-1 flex-1">
-                  <Label htmlFor="robust" className="text-sm font-medium cursor-pointer">
-                    <div className="flex items-center gap-2">
-                      <Shield className="h-4 w-4" />
-                      Robust Compliance
-                    </div>
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Comprehensive requirements: all basic requirements plus training courses, 
-                    certifications, insurance, and continuing education. Required for full certification.
-                  </p>
-                </div>
-              </div>
-            </RadioGroup>
-
-            {isChanging && (
-              <Alert>
-                <Clock className="h-4 w-4 animate-spin" />
-                <AlertDescription>
-                  Updating compliance tier and reassigning requirements...
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
-        )}
-
-        {/* Information Alert */}
-        <Alert>
-          <Users className="h-4 w-4" />
-          <AlertDescription>
-            {hasManagementAccess 
-              ? "Changing the compliance tier will reassign all requirements. Previous compliance progress may be affected."
-              : "Only administrators can change compliance tiers. Contact your administrator if you need tier adjustments."
-            }
-          </AlertDescription>
-        </Alert>
-      </CardContent>
-    </Card>
+              {switchingTier ? 'Switching...' : `Switch to ${newTier} Tier`}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
