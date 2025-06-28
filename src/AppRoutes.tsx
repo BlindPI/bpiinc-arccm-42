@@ -1,60 +1,22 @@
 
-import React, { Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { PublicRoutes } from '@/components/routing/PublicRoutes';
+import { ProtectedRoutes } from '@/components/routing/ProtectedRoutes';
 import { LoadingDashboard } from '@/components/dashboard/LoadingDashboard';
 
-// Import all valid page components
-import Dashboard from '@/pages/Dashboard';
-import Analytics from '@/pages/Analytics';
-import Teams from '@/pages/Teams';
-import Phase4CRM from '@/pages/Phase4CRM';
-import Certifications from '@/pages/Certifications';
-import Settings from '@/pages/Settings';
-import UserManagement from '@/pages/UserManagement';
-import ComplianceAdminDashboard from '@/pages/ComplianceAdminDashboard';
-import ComplianceProviderDashboard from '@/pages/ComplianceProviderDashboard';
-import Profile from '@/pages/Profile';
-import Automation from '@/pages/Automation';
-
-// Lazy load other components
-const LazyComponent = ({ Component }: { Component: React.ComponentType }) => (
-  <Suspense fallback={<LoadingDashboard />}>
-    <Component />
-  </Suspense>
-);
-
 export default function AppRoutes() {
-  const { user } = useAuth();
+  const { user, loading, authReady } = useAuth();
 
-  if (!user) {
-    return <Navigate to="/auth/signin" replace />;
+  // Show loading while auth is initializing
+  if (loading || !authReady) {
+    return <LoadingDashboard message="Loading..." />;
   }
 
-  return (
-    <Routes>
-      {/* Main Dashboard Routes */}
-      <Route path="/dashboard" element={<Dashboard />} />
-      
-      {/* Compliance Routes */}
-      <Route path="/compliance-dashboard/admin" element={<ComplianceAdminDashboard />} />
-      <Route path="/compliance-dashboard/provider" element={<ComplianceProviderDashboard />} />
-      
-      {/* Core Application Routes */}
-      <Route path="/teams" element={<Teams />} />
-      <Route path="/crm" element={<Phase4CRM />} />
-      <Route path="/certificates" element={<Certifications />} />
-      <Route path="/analytics" element={<Analytics />} />
-      <Route path="/automation" element={<Automation />} />
-      
-      {/* User Management */}
-      <Route path="/users" element={<UserManagement />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/settings" element={<Settings />} />
-      
-      {/* Default redirect to dashboard */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
-  );
+  // Render appropriate routes based on authentication state
+  if (user) {
+    return <ProtectedRoutes />;
+  } else {
+    return <PublicRoutes />;
+  }
 }
