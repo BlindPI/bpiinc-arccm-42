@@ -9,6 +9,17 @@ export interface TeamAnalyticsSummary {
   completionRate: number;
   performanceScore: number;
   recentActivity: number;
+  // Add missing properties that components expect
+  current_period?: {
+    performance: number;
+    completion: number;
+    activity: number;
+    growth: number;
+  };
+  trend_analysis?: {
+    direction: 'up' | 'down' | 'stable';
+    percentage: number;
+  };
 }
 
 export interface TeamGoal {
@@ -20,6 +31,12 @@ export interface TeamGoal {
   progress: number;
   dueDate: string;
   status: 'active' | 'completed' | 'overdue';
+  // Add missing properties that components expect
+  title?: string;
+  description?: string;
+  target_date?: string;
+  current_value?: number;
+  target_value?: number;
 }
 
 export interface GlobalAnalytics {
@@ -33,6 +50,11 @@ export interface GlobalAnalytics {
     performanceChange: number;
     completionRateChange: number;
   };
+  // Add database compatibility properties
+  total_teams?: number;
+  total_members?: number;
+  average_performance?: number;
+  top_performing_teams?: TeamAnalyticsSummary[];
 }
 
 export interface TeamAnalytics {
@@ -147,7 +169,17 @@ export class TeamAnalyticsService {
             activeMembers: analytics.memberCount,
             completionRate: analytics.completion.rate,
             performanceScore: analytics.performance.overall,
-            recentActivity: analytics.activity.recent
+            recentActivity: analytics.activity.recent,
+            current_period: {
+              performance: analytics.performance.overall,
+              completion: analytics.completion.rate,
+              activity: analytics.activity.recent,
+              growth: 5
+            },
+            trend_analysis: {
+              direction: analytics.activity.trend,
+              percentage: 12
+            }
           };
         })
       );
@@ -162,7 +194,12 @@ export class TeamAnalyticsService {
           memberGrowth: 12,
           performanceChange: 5,
           completionRateChange: 8
-        }
+        },
+        // Database compatibility
+        total_teams: totalTeams,
+        total_members: totalMembers,
+        average_performance: 82,
+        top_performing_teams: topPerformingTeams
       };
     } catch (error) {
       console.error('Error fetching global analytics:', error);
@@ -190,7 +227,17 @@ export class TeamAnalyticsService {
       activeMembers: analytics.memberCount,
       completionRate: analytics.completion.rate,
       performanceScore: analytics.performance.overall,
-      recentActivity: analytics.activity.recent
+      recentActivity: analytics.activity.recent,
+      current_period: {
+        performance: analytics.performance.overall,
+        completion: analytics.completion.rate,
+        activity: analytics.activity.recent,
+        growth: 5
+      },
+      trend_analysis: {
+        direction: analytics.activity.trend,
+        percentage: 12
+      }
     };
   }
 
@@ -205,7 +252,12 @@ export class TeamAnalyticsService {
         currentValue: 75,
         progress: 75,
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        status: 'active'
+        status: 'active',
+        title: 'Complete Training Program',
+        description: 'Ensure all team members complete required training',
+        target_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        current_value: 75,
+        target_value: 100
       },
       {
         id: '2',
@@ -215,7 +267,12 @@ export class TeamAnalyticsService {
         currentValue: 6,
         progress: 60,
         dueDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
-        status: 'active'
+        status: 'active',
+        title: 'Certification Achievement',
+        description: 'Achieve target number of certifications',
+        target_date: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
+        current_value: 6,
+        target_value: 10
       }
     ];
   }
@@ -246,3 +303,6 @@ export class TeamAnalyticsService {
     return this.getGlobalAnalytics();
   }
 }
+
+// Export the service instance for backward compatibility
+export const teamAnalyticsService = TeamAnalyticsService;

@@ -1,3 +1,4 @@
+
 export interface RealPerformanceData {
   totalCertificates: number;
   activeSessions: number;
@@ -15,27 +16,6 @@ export interface RealTeamStats {
   performanceScore: number;
 }
 
-export interface UserProfile {
-  id: string;
-  display_name: string;
-  email: string;
-  role: string;
-  created_at: string;
-  last_login?: string;
-  is_active?: boolean;
-  compliance_status?: boolean;
-  compliance_tier?: string;
-  department?: string;
-  job_title?: string;
-  phone?: string;
-  status?: string;
-  team_count?: number;
-  certifications_count?: number;
-  compliance_score?: number;
-  pending_actions?: number;
-  user_id?: string;
-}
-
 export interface AnalyticsReport {
   id: string;
   name: string;
@@ -44,6 +24,9 @@ export interface AnalyticsReport {
   generatedAt: string;
   generatedBy: string;
   parameters: Record<string, any>;
+  description?: string;
+  report_type?: string;
+  is_automated?: boolean;
 }
 
 export interface AutomationRule {
@@ -62,4 +45,11 @@ export interface AutomationRule {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  // Database compatibility properties
+  rule_type?: string;
+  trigger_conditions?: Record<string, any>;
+  is_active?: boolean;
+  created_by?: string;
+  execution_count?: number;
+  last_executed?: string;
 }
