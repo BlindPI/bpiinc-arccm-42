@@ -69,4 +69,33 @@ export class DatabaseAdapters {
       updated_at: dbRecord.updated_at
     };
   }
+
+  // NEW: Adapt workflow approval data
+  static adaptWorkflowApproval(dbApproval: any) {
+    return {
+      id: dbApproval.id,
+      workflow_instance_id: dbApproval.workflow_instance_id,
+      approver_id: dbApproval.approver_id,
+      approval_status: dbApproval.approval_status,
+      approval_date: dbApproval.approved_at || dbApproval.approval_date,
+      comments: dbApproval.approval_notes || dbApproval.comments || '',
+      approval_method: dbApproval.approval_method,
+      step_number: dbApproval.step_number,
+      created_at: dbApproval.created_at
+    };
+  }
+
+  // NEW: Adapt notification preferences
+  static adaptNotificationPreferences(dbPrefs: any) {
+    return {
+      id: dbPrefs.id,
+      user_id: dbPrefs.user_id,
+      category: dbPrefs.notification_type || dbPrefs.category,
+      in_app_enabled: dbPrefs.enabled || dbPrefs.in_app_enabled || false,
+      email_enabled: dbPrefs.email_notifications || dbPrefs.email_enabled || false,
+      browser_enabled: dbPrefs.push_notifications || dbPrefs.browser_enabled || false,
+      created_at: dbPrefs.created_at,
+      updated_at: dbPrefs.updated_at
+    };
+  }
 }

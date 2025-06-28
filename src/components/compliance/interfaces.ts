@@ -18,11 +18,12 @@ export interface FormRequirementProps {
   requirement: {
     id: string;
     name: string;
-    description: string;
+    description?: string;
     validation_rules?: {
       min_score?: number;
       completion_evidence_required?: boolean;
     };
+    form_fields?: any[];
   };
   onSave: () => void;
 }
@@ -31,7 +32,7 @@ export interface ExternalLinkRequirementProps {
   requirement: {
     id: string;
     name: string;
-    description: string;
+    description?: string;
     external_url?: string;
     external_system?: string;
     validation_rules?: {
@@ -39,7 +40,6 @@ export interface ExternalLinkRequirementProps {
       completion_evidence_required?: boolean;
     };
   };
-  onComplete: () => void;
   onSave: () => void;
 }
 

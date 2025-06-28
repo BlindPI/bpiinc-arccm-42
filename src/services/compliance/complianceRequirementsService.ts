@@ -68,6 +68,68 @@ export class ComplianceRequirementsService {
     }
   }
 
+  // NEW: Get requirements by template
+  static async getRequirementsByTemplate(templateId: string): Promise<ComplianceRequirement[]> {
+    try {
+      const { data, error } = await supabase
+        .from('compliance_requirements')
+        .select('*')
+        .eq('template_id', templateId);
+
+      if (error) {
+        console.error('Error fetching requirements by template:', error);
+        return [];
+      }
+
+      return (data || []).map(req => DatabaseAdapters.adaptComplianceRequirement(req));
+    } catch (error) {
+      console.error('Service error:', error);
+      return [];
+    }
+  }
+
+  // NEW: Initialize tier requirements
+  static async initializeTierRequirements(userId: string, tier: 'basic' | 'robust', role: string): Promise<boolean> {
+    try {
+      // Get template requirements for the role and tier
+      const { data: templateReqs, error } = await supabase
+        .from('compliance_requirements')
+        .select('*')
+        .eq('tier', tier)
+        .contains('assigned_roles', [role]);
+
+      if (error) {
+        console.error('Error fetching template requirements:', error);
+        return false;
+      }
+
+      // Create user compliance records for each requirement
+      const userRecords = templateReqs?.map(req => ({
+        user_id: userId,
+        requirement_id: req.id,
+        current_status: 'assigned',
+        due_date: req.due_date,
+        created_at: new Date().toISOString()
+      })) || [];
+
+      if (userRecords.length > 0) {
+        const { error: insertError } = await supabase
+          .from('user_compliance_records')
+          .upsert(userRecords, { onConflict: 'user_id,requirement_id' });
+
+        if (insertError) {
+          console.error('Error initializing requirements:', insertError);
+          return false;
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error in initializeTierRequirements:', error);
+      return false;
+    }
+  }
+
   // Update requirement status
   static async updateRequirementStatus(requirementId: string, status: string, userId: string): Promise<boolean> {
     try {
@@ -87,7 +149,7 @@ export class ComplianceRequirementsService {
     }
   }
 
-  // Create requirement for user (fixed method name)
+  // Create requirement for user (proper method name)
   static async assignRequirementToUser(userId: string, requirementId: string, dueDate?: string): Promise<boolean> {
     try {
       const { error } = await supabase
@@ -105,5 +167,10 @@ export class ComplianceRequirementsService {
       console.error('Error assigning requirement:', error);
       return false;
     }
+  }
+
+  // NEW: Create requirement for user (alias for backward compatibility)
+  static async createRequirementForUser(userId: string, requirementData: any): Promise<boolean> {
+    return this.assignRequirementToUser(userId, requirementData.requirementId, requirementData.dueDate);
   }
 }

@@ -38,9 +38,10 @@ export function ComplianceTierManager({
   const loadTierInfo = async () => {
     try {
       setLoading(true);
-      const result = await ComplianceTierService.getUserComplianceTier(userId);
-      if (result.success && result.data) {
-        setTierInfo(adaptTierInfoFromDatabase(result.data));
+      // Fixed: Use the correct method name and handle the response properly
+      const result = await ComplianceTierService.getUserComplianceTierInfo(userId);
+      if (result) {
+        setTierInfo(result);
       }
     } catch (error) {
       console.error('Error loading tier info:', error);
@@ -58,7 +59,8 @@ export function ComplianceTierManager({
 
     try {
       setSwitchingTier(true);
-      const result = await ComplianceTierService.switchTier(userId, newTier, switchReason);
+      // Fixed: Use only 2 arguments as expected by the service
+      const result = await ComplianceTierService.switchTier(userId, newTier);
       
       if (result.success) {
         await loadTierInfo();
