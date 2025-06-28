@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { MobileComplianceAdminDashboard } from '@/components/compliance/MobileComplianceAdminDashboard';
+import { EnterpriseComplianceAdminDashboard } from '@/components/admin/EnterpriseComplianceAdminDashboard';
 
 export default function ComplianceAdminDashboard() {
-  return <MobileComplianceAdminDashboard />;
+  return <EnterpriseComplianceAdminDashboard />;
 }
