@@ -4,7 +4,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { SimpleRoleRouter } from './SimpleRoleRouter';
 import { LoadingDashboard } from './LoadingDashboard';
-import { Loader2 } from 'lucide-react';
 
 export default function DashboardContent() {
   const { user, loading: authLoading } = useAuth();
