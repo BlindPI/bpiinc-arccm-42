@@ -8,14 +8,14 @@ export class DatabaseAdapters {
     return safeJsonCast(value, defaultValue);
   }
 
-  // Adapt EmailCampaign from database
+  // Adapt EmailCampaign from database with proper field mapping
   static adaptEmailCampaign(dbCampaign: any) {
     return {
       ...dbCampaign,
       // Map database fields to component interface
       name: dbCampaign.campaign_name || dbCampaign.name,
       subject: dbCampaign.subject || `${dbCampaign.campaign_name} Campaign`,
-      sent_count: dbCampaign.total_recipients || dbCampaign.sent_count || 0,
+      sent_count: dbCampaign.sent_count || 0, // Use correct field name
       campaign_type: dbCampaign.campaign_type || 'newsletter',
       automation_rules: this.castJsonbField(dbCampaign.automation_rules, {}),
       target_audience: this.castJsonbField(dbCampaign.target_audience, {})
@@ -54,15 +54,15 @@ export class DatabaseAdapters {
     };
   }
 
-  // Adapt user compliance record from database
+  // Adapt user compliance record from database with correct field names
   static adaptUserComplianceRecord(dbRecord: any) {
     return {
       id: dbRecord.id,
       user_id: dbRecord.user_id,
-      requirement_id: dbRecord.requirement_id || dbRecord.metric_id,
-      current_status: dbRecord.current_status || dbRecord.compliance_status || 'pending',
+      requirement_id: dbRecord.requirement_id,
+      current_status: dbRecord.current_status || 'pending',
       completion_percentage: dbRecord.completion_percentage || 0,
-      review_notes: dbRecord.review_notes || dbRecord.notes || '',
+      review_notes: dbRecord.review_notes || '', // Use correct field name
       due_date: dbRecord.due_date,
       completed_at: dbRecord.completed_at,
       created_at: dbRecord.created_at,
@@ -70,16 +70,16 @@ export class DatabaseAdapters {
     };
   }
 
-  // NEW: Adapt workflow approval data
+  // NEW: Adapt workflow approval data with proper field mapping
   static adaptWorkflowApproval(dbApproval: any) {
     return {
       id: dbApproval.id,
       workflow_instance_id: dbApproval.workflow_instance_id,
       approver_id: dbApproval.approver_id,
       approval_status: dbApproval.approval_status,
-      approval_date: dbApproval.approved_at || dbApproval.approval_date,
-      comments: dbApproval.approval_notes || dbApproval.comments || '',
-      approval_method: dbApproval.approval_method,
+      approval_date: dbApproval.approval_date,
+      comments: dbApproval.comments || '',
+      approval_method: dbApproval.approval_method || 'manual', // Add default value
       step_number: dbApproval.step_number,
       created_at: dbApproval.created_at
     };

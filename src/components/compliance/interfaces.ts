@@ -40,6 +40,7 @@ export interface ExternalLinkRequirementProps {
       completion_evidence_required?: boolean;
     };
   };
+  onComplete: () => void;
   onSave: () => void;
 }
 

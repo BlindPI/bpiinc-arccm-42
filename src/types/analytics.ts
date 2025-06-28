@@ -31,6 +31,7 @@ export interface AnalyticsReport {
   id: string;
   name: string;
   report_type: string;
+  description: string;
   configuration: Record<string, any>;
   schedule_config?: Record<string, any>;
   is_automated: boolean;
@@ -63,4 +64,71 @@ export interface DashboardMetric {
   period_end?: string;
   is_active: boolean;
   display_order: number;
+}
+
+// New missing types
+export interface GlobalAnalytics {
+  totalUsers: number;
+  activeSessions: number;
+  completionRate: number;
+  complianceScore: number;
+  topPerformingTeams: TeamAnalyticsSummary[];
+}
+
+export interface TeamAnalyticsSummary {
+  id: string;
+  name: string;
+  performance: number;
+  memberCount: number;
+}
+
+export interface TeamGoal {
+  id: string;
+  title: string;
+  progress: number;
+  target: number;
+  status: 'on_track' | 'at_risk' | 'behind';
+}
+
+export interface UserAchievement {
+  id: string;
+  userId: string;
+  achievementType: string;
+  title: string;
+  description: string;
+  earnedAt: string;
+  points?: number;
+}
+
+export interface ComplianceProgress {
+  userId: string;
+  overallProgress: number;
+  completedRequirements: number;
+  totalRequirements: number;
+  tier: 'basic' | 'robust';
+  canAdvanceTier: boolean;
+  requirements: {
+    completed: number;
+    total: number;
+  };
+}
+
+export interface EmailCampaign {
+  id: string;
+  name: string;
+  subject: string;
+  campaign_name: string;
+  campaign_type: 'newsletter' | 'promotional' | 'drip' | 'event' | 'follow_up';
+  content: string;
+  sent_count: number;
+  delivered_count: number;
+  opened_count: number;
+  clicked_count: number;
+  bounced_count: number;
+  unsubscribed_count: number;
+  automation_rules: Record<string, any>;
+  target_audience: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
 }

@@ -19,11 +19,12 @@ import {
   Bell
 } from 'lucide-react';
 
-import { SystemAdminDashboard } from './role-dashboards/SystemAdminDashboard';
-import { AdminDashboard } from './role-dashboards/AdminDashboard';
-import { ProviderDashboard } from './role-dashboards/ProviderDashboard';
-import { InstructorDashboard } from './role-dashboards/InstructorDashboard';
-import { StudentDashboard } from './role-dashboards/StudentDashboard';
+// Changed to default imports
+import SystemAdminDashboard from './role-dashboards/SystemAdminDashboard';
+import AdminDashboard from './role-dashboards/AdminDashboard';
+import ProviderDashboard from './role-dashboards/ProviderDashboard';
+import InstructorDashboard from './role-dashboards/InstructorDashboard';
+import StudentDashboard from './role-dashboards/StudentDashboard';
 import { LoadingDashboard } from './LoadingDashboard';
 
 export function FixedRoleBasedDashboard() {
