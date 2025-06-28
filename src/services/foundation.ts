@@ -8,7 +8,8 @@ import type {
   Certificate, 
   Notification,
   ApiResponse,
-  PaginatedResponse 
+  PaginatedResponse,
+  EmailCampaign 
 } from '@/types/foundation';
 
 class FoundationService {
@@ -38,6 +39,8 @@ class FoundationService {
           role: profile.role,
           status: profile.status || 'ACTIVE',
           compliance_status: profile.compliance_status,
+          compliance_tier: profile.compliance_tier,
+          compliance_score: profile.compliance_score,
           created_at: profile.created_at,
           updated_at: profile.updated_at,
           avatar_url: profile.avatar_url,
@@ -114,8 +117,7 @@ class FoundationService {
         .from('team_members')
         .select(`
           *,
-          user:user_profiles(*),
-          team:teams(*)
+          profiles:user_profiles(*)
         `)
         .eq('team_id', teamId);
 
@@ -162,6 +164,69 @@ class FoundationService {
         limit,
         hasMore: false
       };
+    }
+  }
+
+  // Email Campaign Management (React Query compatible)
+  async getEmailCampaigns(): Promise<EmailCampaign[]> {
+    try {
+      const { data, error } = await supabase
+        .from('email_campaigns')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching email campaigns:', error);
+      return [];
+    }
+  }
+
+  async createEmailCampaign(campaign: Partial<EmailCampaign>): Promise<EmailCampaign> {
+    try {
+      const { data, error } = await supabase
+        .from('email_campaigns')
+        .insert(campaign)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error creating email campaign:', error);
+      throw error;
+    }
+  }
+
+  async updateEmailCampaign(id: string, updates: Partial<EmailCampaign>): Promise<EmailCampaign> {
+    try {
+      const { data, error } = await supabase
+        .from('email_campaigns')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error updating email campaign:', error);
+      throw error;
+    }
+  }
+
+  async deleteEmailCampaign(id: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('email_campaigns')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting email campaign:', error);
+      throw error;
     }
   }
 

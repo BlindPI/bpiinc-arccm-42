@@ -1,55 +1,71 @@
 
-import { NavigateFunction } from 'react-router-dom';
-import { useAuthInit } from './auth/useAuthInit';
-import { useAuthMethods } from './auth/useAuthMethods';
-import { useProfileManagement } from './auth/useProfileManagement';
-import { useInvitations } from './auth/useInvitations';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import type { AuthContextType } from '@/types/foundation';
 
-export const useAuthProvider = (navigate: NavigateFunction) => {
-  const { 
-    user, 
-    session, 
-    loading, 
-    authReady, 
-    setUser, 
-    setSession, 
-    setLoading 
-  } = useAuthInit();
+export function useAuthProvider(navigate: any): AuthContextType {
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [authReady, setAuthReady] = useState(false);
 
-  const {
-    login,
-    register,
-    logout,
-    resetPassword,
-    updatePassword,
-    signUp,
-    signIn,
-    signOut
-  } = useAuthMethods({ setLoading, setUser, setSession, navigate });
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+      setAuthReady(true);
+    });
 
-  const { updateProfile } = useProfileManagement({ user, setUser });
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setUser(session?.user ?? null);
+        setLoading(false);
+        
+        if (event === 'SIGNED_OUT') {
+          navigate('/auth/signin');
+        }
+      }
+    );
 
-  const { acceptInvitation } = useInvitations({ setLoading });
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    
+    if (error) throw error;
+  };
+
+  const signUp = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+    
+    if (error) throw error;
+  };
+
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+  };
+
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) throw error;
+  };
 
   return {
-    // State
     user,
-    session,
     loading,
     authReady,
-    
-    // Auth methods
-    login,
-    register,
-    logout,
-    resetPassword,
-    updateProfile,
-    updatePassword,
-    acceptInvitation,
-    
-    // Simplified interface
-    signUp,
     signIn,
-    signOut
+    signUp,
+    signOut,
+    resetPassword,
   };
-};
+}
