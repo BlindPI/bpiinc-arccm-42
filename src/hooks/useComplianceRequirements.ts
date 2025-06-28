@@ -1,6 +1,58 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+
+export interface UIRequirement {
+  id: string;
+  name: string;
+  description: string;
+  type: 'form' | 'file_upload' | 'external_link';
+  priority: 'high' | 'medium' | 'low';
+  due_date?: string;
+  status: 'not_started' | 'in_progress' | 'completed' | 'overdue';
+  form_fields?: any[];
+  file_requirements?: any;
+  external_url?: string;
+  points?: number;
+  category?: string;
+}
+
+export const useUIRequirements = (userId?: string, role?: string) => {
+  return useQuery({
+    queryKey: ['ui-requirements', userId, role],
+    queryFn: async (): Promise<UIRequirement[]> => {
+      if (!userId || !role) return [];
+
+      const { data, error } = await supabase
+        .from('compliance_requirements')
+        .select('*')
+        .or(`applicable_roles.cs.{${role}},applicable_roles.is.null`)
+        .eq('is_active', true)
+        .order('priority_order', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching UI requirements:', error);
+        throw error;
+      }
+
+      // Transform database records to UI format
+      return data?.map(req => ({
+        id: req.id,
+        name: req.name,
+        description: req.description || '',
+        type: req.requirement_type as 'form' | 'file_upload' | 'external_link',
+        priority: req.priority || 'medium',
+        due_date: req.due_date,
+        status: 'not_started' as const,
+        form_fields: req.form_config?.fields || [],
+        file_requirements: req.file_config,
+        external_url: req.external_url,
+        points: req.points || 0,
+        category: req.category
+      })) || [];
+    },
+    enabled: !!userId && !!role,
+  });
+};
 
 export const useRequirementSubmission = () => {
   const queryClient = useQueryClient();

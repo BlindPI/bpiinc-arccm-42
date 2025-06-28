@@ -1,10 +1,9 @@
-// File: src/providers/DashboardDataProvider.tsx
 
 import React, { ReactNode } from 'react';
 import { ComplianceTierProvider } from '@/contexts/ComplianceTierContext';
 import { DashboardUIProvider } from '@/contexts/DashboardUIContext';
-import { DashboardContextProvider, UIComplianceTierInfo, UIRequirement } from '@/contexts/DashboardContext';
-import { useUIRequirements } from '@/hooks/useComplianceRequirements';
+import { DashboardContextProvider, UIComplianceTierInfo } from '@/contexts/DashboardContext';
+import { useUIRequirements, UIRequirement } from '@/hooks/useComplianceRequirements';
 import { useComplianceTier } from '@/hooks/useComplianceTier';
 import { useComplianceRealtimeUpdates } from '@/hooks/useComplianceRealtimeUpdates';
 
@@ -39,7 +38,7 @@ export function DashboardDataProvider({
     error: tierError 
   } = useComplianceTier(userId);
   
-  // Get requirements filtered for this user role
+  // Get requirements filtered for this user role - using the correct hook
   const { 
     data: requirements, 
     isLoading: reqLoading, 
