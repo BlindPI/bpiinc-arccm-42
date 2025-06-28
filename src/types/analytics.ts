@@ -31,7 +31,7 @@ export interface AnalyticsReport {
   id: string;
   name: string;
   report_type: string;
-  description: string;
+  description?: string; // Added missing description field
   configuration: Record<string, any>;
   schedule_config?: Record<string, any>;
   is_automated: boolean;
@@ -115,9 +115,11 @@ export interface ComplianceProgress {
 
 export interface EmailCampaign {
   id: string;
-  name: string;
-  subject: string;
-  campaign_name: string;
+  name: string; // Primary name field
+  subject: string; // Primary subject field
+  campaign_name: string; // Database field name
+  subject_line?: string; // Optional database field name
+  status?: string; // Optional status field
   campaign_type: 'newsletter' | 'promotional' | 'drip' | 'event' | 'follow_up';
   content: string;
   sent_count: number;

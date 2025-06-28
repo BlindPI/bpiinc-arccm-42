@@ -13,9 +13,12 @@ export class DatabaseAdapters {
     return {
       ...dbCampaign,
       // Map database fields to component interface
-      name: dbCampaign.campaign_name || dbCampaign.name,
-      subject: dbCampaign.subject || `${dbCampaign.campaign_name} Campaign`,
-      sent_count: dbCampaign.sent_count || 0, // Use correct field name
+      name: dbCampaign.campaign_name || dbCampaign.name || 'Untitled Campaign',
+      subject: dbCampaign.subject_line || dbCampaign.subject || `${dbCampaign.campaign_name || 'Campaign'} Subject`,
+      campaign_name: dbCampaign.campaign_name || dbCampaign.name || 'Untitled Campaign',
+      subject_line: dbCampaign.subject_line || dbCampaign.subject,
+      status: dbCampaign.status || 'draft',
+      sent_count: dbCampaign.sent_count || 0,
       campaign_type: dbCampaign.campaign_type || 'newsletter',
       automation_rules: this.castJsonbField(dbCampaign.automation_rules, {}),
       target_audience: this.castJsonbField(dbCampaign.target_audience, {})
@@ -50,7 +53,8 @@ export class DatabaseAdapters {
       ui_component: dbReq.ui_component || 'form',
       external_url: dbReq.external_url,
       external_system: dbReq.external_system,
-      metadata: this.castJsonbField(dbReq.metadata, {})
+      metadata: this.castJsonbField(dbReq.metadata, {}),
+      form_fields: this.castJsonbField(dbReq.form_fields, [])
     };
   }
 
@@ -59,10 +63,10 @@ export class DatabaseAdapters {
     return {
       id: dbRecord.id,
       user_id: dbRecord.user_id,
-      requirement_id: dbRecord.requirement_id,
-      current_status: dbRecord.current_status || 'pending',
+      requirement_id: dbRecord.requirement_id || dbRecord.metric_id, // Handle legacy field name
+      current_status: dbRecord.current_status || dbRecord.compliance_status || 'pending',
       completion_percentage: dbRecord.completion_percentage || 0,
-      review_notes: dbRecord.review_notes || '', // Use correct field name
+      review_notes: dbRecord.review_notes || dbRecord.notes || '',
       due_date: dbRecord.due_date,
       completed_at: dbRecord.completed_at,
       created_at: dbRecord.created_at,
@@ -70,22 +74,22 @@ export class DatabaseAdapters {
     };
   }
 
-  // NEW: Adapt workflow approval data with proper field mapping
+  // Adapt workflow approval data with proper field mapping
   static adaptWorkflowApproval(dbApproval: any) {
     return {
       id: dbApproval.id,
       workflow_instance_id: dbApproval.workflow_instance_id,
       approver_id: dbApproval.approver_id,
       approval_status: dbApproval.approval_status,
-      approval_date: dbApproval.approval_date,
-      comments: dbApproval.comments || '',
-      approval_method: dbApproval.approval_method || 'manual', // Add default value
+      approval_date: dbApproval.approval_date || dbApproval.approved_at,
+      comments: dbApproval.comments || dbApproval.approval_notes || '',
+      approval_method: dbApproval.approval_method || 'manual',
       step_number: dbApproval.step_number,
       created_at: dbApproval.created_at
     };
   }
 
-  // NEW: Adapt notification preferences
+  // Adapt notification preferences
   static adaptNotificationPreferences(dbPrefs: any) {
     return {
       id: dbPrefs.id,

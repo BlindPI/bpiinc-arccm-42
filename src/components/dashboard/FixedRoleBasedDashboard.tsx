@@ -19,7 +19,7 @@ import {
   Bell
 } from 'lucide-react';
 
-// Changed to default imports
+// Import dashboard components as default exports
 import SystemAdminDashboard from './role-dashboards/SystemAdminDashboard';
 import AdminDashboard from './role-dashboards/AdminDashboard';
 import ProviderDashboard from './role-dashboards/ProviderDashboard';
@@ -94,30 +94,22 @@ export function FixedRoleBasedDashboard() {
     }
   };
 
-  // Route to appropriate dashboard based on role
+  // Route to appropriate dashboard based on role - pass minimal props to avoid interface errors
   const renderRoleDashboard = () => {
     switch (userRole) {
       case 'SA':
-        return <SystemAdminDashboard metrics={metrics} recentActivities={recentActivities} />;
+        return <SystemAdminDashboard />;
       case 'AD':
-        return <AdminDashboard metrics={metrics} recentActivities={recentActivities} />;
+        return <AdminDashboard />;
       case 'AP':
-        return <ProviderDashboard 
-          metrics={metrics} 
-          recentActivities={recentActivities}
-          teamContext={teamContext}
-        />;
+        return <ProviderDashboard teamContext={teamContext} />;
       case 'IC':
       case 'IP':
       case 'IT':
       case 'IN':
-        return <InstructorDashboard 
-          metrics={metrics} 
-          recentActivities={recentActivities}
-          teamContext={teamContext}
-        />;
+        return <InstructorDashboard teamContext={teamContext} />;
       case 'ST':
-        return <StudentDashboard metrics={metrics} recentActivities={recentActivities} />;
+        return <StudentDashboard />;
       default:
         return (
           <div className="space-y-6">

@@ -25,6 +25,7 @@ export interface FormRequirementProps {
     };
     form_fields?: any[];
   };
+  userId: string; // Added missing userId prop
   onSave: () => void;
 }
 
@@ -40,7 +41,7 @@ export interface ExternalLinkRequirementProps {
       completion_evidence_required?: boolean;
     };
   };
-  onComplete: () => void;
+  onSubmit?: () => void; // Changed from onComplete to onSubmit
   onSave: () => void;
 }
 

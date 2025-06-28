@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { useAuth } from '@/contexts/AuthContext';
 import { ComplianceRequirementsService } from '@/services/compliance/complianceRequirementsService';
 import { FileUploadRequirement } from './FileUploadRequirement';
 import { FormRequirement } from './FormRequirement';
@@ -17,6 +18,7 @@ export function RequirementDetailDrawer({
   onClose,
   onUpdate
 }: RequirementDetailDrawerProps) {
+  const { user } = useAuth();
   const [requirement, setRequirement] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
@@ -41,14 +43,14 @@ export function RequirementDetailDrawer({
   };
 
   const handleSave = async () => {
-    if (!requirement || !requirementId) return;
+    if (!requirement || !requirementId || !user?.id) return;
     
     try {
       // Update requirement status
       await ComplianceRequirementsService.updateRequirementStatus(
         requirementId, 
         'completed',
-        requirement.user_id || ''
+        user.id
       );
       
       onUpdate(requirementId);
@@ -63,7 +65,7 @@ export function RequirementDetailDrawer({
     // Handle file upload logic
   };
 
-  const handleComplete = () => {
+  const handleSubmit = () => {
     handleSave();
   };
 
@@ -115,14 +117,16 @@ export function RequirementDetailDrawer({
                 />
               )}
 
-              {requirement.requirement_type === 'form' && (
+              {requirement.requirement_type === 'form' && user?.id && (
                 <FormRequirement
                   requirement={{
                     id: requirement.id,
                     name: requirement.name,
                     description: requirement.description,
-                    validation_rules: DatabaseAdapters.adaptValidationRules(requirement.validation_rules)
+                    validation_rules: DatabaseAdapters.adaptValidationRules(requirement.validation_rules),
+                    form_fields: requirement.form_fields
                   }}
+                  userId={user.id}
                   onSave={handleSave}
                 />
               )}
@@ -137,7 +141,7 @@ export function RequirementDetailDrawer({
                     external_system: requirement.external_system,
                     validation_rules: DatabaseAdapters.adaptValidationRules(requirement.validation_rules)
                   }}
-                  onComplete={handleComplete}
+                  onSubmit={handleSubmit}
                   onSave={handleSave}
                 />
               )}
