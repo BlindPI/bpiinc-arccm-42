@@ -40,7 +40,7 @@ import {
 export function AppSidebar() {
   const location = useLocation();
   const { data: profile } = useProfile();
-  const { collapsed } = useSidebar();
+  const { state } = useSidebar();
   const { visibleGroups } = useNavigationVisibility();
 
   const navigationGroups = [
@@ -246,8 +246,10 @@ export function AppSidebar() {
     return visibleGroups.includes(groupId);
   };
 
+  const collapsed = state === 'collapsed';
+
   return (
-    <Sidebar className={collapsed ? "w-14" : "w-64"} collapsible>
+    <Sidebar className={collapsed ? "w-14" : "w-64"}>
       <SidebarContent>
         {navigationGroups.map((group) => {
           const visibleItems = group.items.filter(hasAccess);
