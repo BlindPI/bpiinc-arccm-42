@@ -3,24 +3,61 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { TrendingUp, TrendingDown, Users, Target, Award, Activity } from 'lucide-react';
-import { TeamAnalyticsSummary, GlobalAnalytics, TeamGoal } from '@/services/team/teamAnalyticsService';
+import { 
+  Users, 
+  Target, 
+  TrendingUp, 
+  Award,
+  AlertTriangle,
+  CheckCircle
+} from 'lucide-react';
 
 interface TeamKPIMetricsProps {
-  globalAnalytics: GlobalAnalytics | undefined;
-  teamSummaries: TeamAnalyticsSummary[];
-  teamGoals: TeamGoal[];
+  globalAnalytics?: {
+    totalUsers: number;
+    activeSessions: number;
+    completionRate: number;
+    complianceScore: number;
+    topPerformingTeams: Array<{
+      id: string;
+      name: string;
+      performance: number;
+      memberCount: number;
+    }>;
+  };
+  teamSummaries: Array<{
+    id: string;
+    name: string;
+    performance: number;
+    memberCount: number;
+  }>;
+  teamGoals: Array<{
+    id: string;
+    title: string;
+    progress: number;
+    target: number;
+    status: 'on_track' | 'at_risk' | 'behind';
+  }>;
   isLoading: boolean;
 }
 
-export function TeamKPIMetrics({ globalAnalytics, teamSummaries, teamGoals, isLoading }: TeamKPIMetricsProps) {
+export function TeamKPIMetrics({ 
+  globalAnalytics, 
+  teamSummaries, 
+  teamGoals, 
+  isLoading 
+}: TeamKPIMetricsProps) {
   if (isLoading) {
     return (
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {[...Array(4)].map((_, i) => (
           <Card key={i} className="animate-pulse">
-            <CardContent className="p-6">
-              <div className="h-16 bg-muted rounded"></div>
+            <CardHeader className="pb-2">
+              <div className="h-4 bg-gray-200 rounded w-24"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-8 bg-gray-200 rounded w-16 mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-20"></div>
             </CardContent>
           </Card>
         ))}
@@ -28,252 +65,145 @@ export function TeamKPIMetrics({ globalAnalytics, teamSummaries, teamGoals, isLo
     );
   }
 
-  const formatTrendValue = (current: number, previous?: number) => {
-    if (!previous) return { value: 0, direction: 'stable' as const };
-    const change = ((current - previous) / previous) * 100;
-    return {
-      value: Math.abs(change),
-      direction: change > 0 ? 'up' as const : change < 0 : 'down' as const : 'stable' as const
-    };
-  };
+  const totalUsers = globalAnalytics?.totalUsers || 0;
+  const activeSessions = globalAnalytics?.activeSessions || 0;
+  const overallCompletionRate = globalAnalytics?.completionRate || 0;
+  const complianceScore = globalAnalytics?.complianceScore || 0;
 
   return (
     <div className="space-y-6">
-      {/* Global KPI Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Total Teams
-            </CardTitle>
+      {/* Overview Metrics */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {globalAnalytics?.totalTeams || 0}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">Active teams</p>
+            <div className="text-2xl font-bold">{totalUsers}</div>
+            <p className="text-xs text-muted-foreground">
+              Across all teams
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-50 to-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Total Members
-            </CardTitle>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Sessions</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {globalAnalytics?.totalMembers || 0}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">Team members</p>
+            <div className="text-2xl font-bold">{activeSessions}</div>
+            <p className="text-xs text-muted-foreground">
+              Currently ongoing
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <Target className="h-4 w-4" />
-              Overall Performance
-            </CardTitle>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
+            <Award className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">
-              {globalAnalytics?.overallPerformance || 0}%
-            </div>
-            <p className="text-xs text-gray-500 mt-1">Average performance</p>
+            <div className="text-2xl font-bold">{overallCompletionRate.toFixed(1)}%</div>
+            <Progress value={overallCompletionRate} className="mt-2" />
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-orange-50 to-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <Award className="h-4 w-4" />
-              Top Performers
-            </CardTitle>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Compliance Score</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
-              {globalAnalytics?.topPerformingTeams?.length || 0}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">High performing teams</p>
+            <div className="text-2xl font-bold">{complianceScore.toFixed(1)}%</div>
+            <Badge variant={complianceScore >= 80 ? "default" : "destructive"}>
+              {complianceScore >= 80 ? "Good" : "Needs Attention"}
+            </Badge>
           </CardContent>
         </Card>
       </div>
 
-      {/* Team Goals Progress */}
-      {teamGoals.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              Team Goals Progress
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {teamGoals.map((goal) => {
-                const progressPercentage = (goal.currentValue / goal.targetValue) * 100;
-                const isOverdue = new Date(goal.dueDate) < new Date() && goal.status !== 'completed';
-                
-                return (
-                  <div key={goal.id} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium">{goal.title || goal.goalName}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {goal.description || 'Goal progress tracking'}
-                        </p>
-                      </div>
-                      <Badge 
-                        variant={
-                          goal.status === 'completed' ? 'default' : 
-                          isOverdue ? 'destructive' : 
-                          'secondary'
-                        }
-                      >
-                        {goal.status}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Progress value={progressPercentage} className="flex-1" />
-                      <span className="text-sm font-medium min-w-[60px] text-right">
-                        {goal.currentValue}/{goal.targetValue}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Progress: {Math.round(progressPercentage)}%</span>
-                      <span>Due: {new Date(goal.target_date || goal.dueDate).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Team Performance Summary */}
+      {/* Top Performing Teams */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Team Performance Summary
+            <Target className="h-5 w-5" />
+            Top Performing Teams
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {teamSummaries.slice(0, 4).map((team) => {
-              const performanceTrend = formatTrendValue(
-                team.current_period?.performance || team.performanceScore,
-                80 // Mock previous value
-              );
-              const completionTrend = formatTrendValue(
-                team.current_period?.completion || team.completionRate,
-                75 // Mock previous value  
-              );
-              const activityTrend = formatTrendValue(
-                team.current_period?.activity || team.recentActivity,
-                10 // Mock previous value
-              );
-              const growthTrend = formatTrendValue(
-                team.current_period?.growth || 5,
-                3 // Mock previous value
-              );
-
-              return (
-                <div key={team.teamId} className="space-y-3 p-4 border rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium">{team.teamName}</h4>
-                    <Badge variant="outline">{team.memberCount} members</Badge>
+          {teamSummaries.length > 0 ? (
+            <div className="space-y-4">
+              {teamSummaries.slice(0, 5).map((team) => (
+                <div key={team.id} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div>
+                      <p className="text-sm font-medium">{team.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {team.memberCount} members
+                      </p>
+                    </div>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Performance</span>
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm font-medium">
-                          {team.current_period?.performance || team.performanceScore}%
-                        </span>
-                        {performanceTrend.direction !== 'stable' && (
-                          <div className={`flex items-center gap-1 text-xs ${
-                            performanceTrend.direction === 'up' ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                            {performanceTrend.direction === 'up' ? 
-                              <TrendingUp className="h-3 w-3" /> : 
-                              <TrendingDown className="h-3 w-3" />
-                            }
-                            {performanceTrend.value.toFixed(1)}%
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Completion</span>
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm font-medium">
-                          {team.current_period?.completion || team.completionRate}%
-                        </span>
-                        {completionTrend.direction !== 'stable' && (
-                          <div className={`flex items-center gap-1 text-xs ${
-                            completionTrend.direction === 'up' ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                            {completionTrend.direction === 'up' ? 
-                              <TrendingUp className="h-3 w-3" /> : 
-                              <TrendingDown className="h-3 w-3" />
-                            }
-                            {completionTrend.value.toFixed(1)}%
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Activity</span>
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm font-medium">
-                          {team.current_period?.activity || team.recentActivity}
-                        </span>
-                        {activityTrend.direction !== 'stable' && (
-                          <div className={`flex items-center gap-1 text-xs ${
-                            activityTrend.direction === 'up' ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                            {activityTrend.direction === 'up' ? 
-                              <TrendingUp className="h-3 w-3" /> : 
-                              <TrendingDown className="h-3 w-3" />
-                            }
-                            {activityTrend.value.toFixed(1)}%
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Growth</span>
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm font-medium">
-                          {team.current_period?.growth || 5}%
-                        </span>
-                        {growthTrend.direction !== 'stable' && (
-                          <div className={`flex items-center gap-1 text-xs ${
-                            growthTrend.direction === 'up' ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                            {growthTrend.direction === 'up' ? 
-                              <TrendingUp className="h-3 w-3" /> : 
-                              <TrendingDown className="h-3 w-3" />
-                            }
-                            {growthTrend.value.toFixed(1)}%
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                  <div className="flex items-center space-x-2">
+                    <Progress value={team.performance} className="w-20" />
+                    <span className="text-sm font-medium">
+                      {team.performance.toFixed(1)}%
+                    </span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No team performance data available</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Team Goals */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Team Goals Progress
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {teamGoals.length > 0 ? (
+            <div className="space-y-4">
+              {teamGoals.slice(0, 5).map((goal) => (
+                <div key={goal.id} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">{goal.title}</p>
+                    <Badge 
+                      variant={
+                        goal.status === 'on_track' ? 'default' :
+                        goal.status === 'at_risk' ? 'secondary' : 'destructive'
+                      }
+                    >
+                      {goal.status === 'on_track' ? 'On Track' :
+                       goal.status === 'at_risk' ? 'At Risk' : 'Behind'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Progress value={(goal.progress / goal.target) * 100} className="flex-1" />
+                    <span className="text-xs text-muted-foreground">
+                      {goal.progress}/{goal.target}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No team goals configured</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
