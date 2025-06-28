@@ -19,6 +19,9 @@ import Automation from '@/pages/Automation';
 export function ProtectedRoutes() {
   return (
     <Routes>
+      {/* Default redirect to dashboard for root path */}
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      
       {/* Main Dashboard Routes */}
       <Route path="/dashboard" element={<Dashboard />} />
       
@@ -38,8 +41,7 @@ export function ProtectedRoutes() {
       <Route path="/profile" element={<Profile />} />
       <Route path="/settings" element={<Settings />} />
       
-      {/* Default redirect to dashboard for authenticated users */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      {/* Catch-all route for unknown paths - redirect to dashboard instead of creating conflicts */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

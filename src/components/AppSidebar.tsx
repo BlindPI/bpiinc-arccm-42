@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+
 import {
   LayoutDashboard,
   Users,
@@ -6,33 +6,13 @@ import {
   GraduationCap,
   BarChart3,
   Settings,
-  Zap,
-  Globe,
-  TrendingUp,
-  MapPin,
-  User,
+  Building,
   Shield,
-  Calendar,
+  Zap,
   UserCheck,
-  Award,
-  Bell,
-  Monitor,
-  FileCheck,
-  Clock,
-  UsersIcon,
-  BookOpen,
-  Target,
-  PieChart,
-  Activity,
-  ClipboardList,
-  UserPlus,
-  Briefcase,
-  DollarSign,
-  Building2,
-  Mail,
-  Crown,
-  ClipboardCheck
-} from 'lucide-react';
+  CreditCard
+} from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -41,183 +21,150 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarHeader,
 } from "@/components/ui/sidebar";
-import { useProfile } from '@/hooks/useProfile';
-import { useNavigationVisibility } from '@/hooks/useNavigationVisibility';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { MobileSidebar } from './MobileSidebar';
-
-interface NavigationItem {
-  name: string;
-  href: string;
-  icon: any;
-  group: string;
-  enterpriseOnly?: boolean;
-  roles?: string[];
-}
-
-const navigation: NavigationItem[] = [
-  // Dashboard Group
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard, group: 'Dashboard' },
-  { name: 'Profile', href: '/profile', icon: User, group: 'Dashboard' },
-  
-  // User Management Group
-  { name: 'Users', href: '/users', icon: Users, group: 'User Management' },
-  { name: 'Teams', href: '/teams', icon: UsersIcon, group: 'User Management' },
-  { name: 'Role Management', href: '/role-management', icon: Shield, group: 'User Management' },
-  { name: 'Supervision', href: '/supervision', icon: UserCheck, group: 'User Management' },
-  
-  // Provider Management Group
-  { name: 'Provider Management', href: '/authorized-providers', icon: Building2, group: 'Provider Management', enterpriseOnly: true },
-  
-  // Training Management Group
-  { name: 'Training Hub', href: '/training-hub', icon: BookOpen, group: 'Training Management' },
-  { name: 'Courses', href: '/courses', icon: GraduationCap, group: 'Training Management' },
-  { name: 'Enrollments', href: '/enrollments', icon: ClipboardList, group: 'Training Management' },
-  { name: 'Enrollment Management', href: '/enrollment-management', icon: FileCheck, group: 'Training Management' },
-  { name: 'Locations', href: '/locations', icon: MapPin, group: 'Training Management' },
-  
-  // Certificates Group
-  { name: 'Certificates', href: '/certificates', icon: FileText, group: 'Certificates' },
-  { name: 'Certificate Analytics', href: '/certificate-analytics', icon: Award, group: 'Certificates' },
-  { name: 'Rosters', href: '/rosters', icon: ClipboardList, group: 'Certificates' },
-  
-  // CRM Group - Phase 4 Unified
-  { name: 'Phase 4 CRM Dashboard', href: '/crm', icon: Activity, group: 'CRM' },
-  { name: 'Email Workflows', href: '/crm/email-workflows', icon: Mail, group: 'CRM' },
-  { name: 'Campaign Management', href: '/crm/campaigns', icon: Target, group: 'CRM' },
-  { name: 'Revenue Analytics', href: '/crm/revenue', icon: DollarSign, group: 'CRM' },
-  
-  // Analytics & Reports Group
-  { name: 'Analytics', href: '/analytics', icon: TrendingUp, group: 'Analytics & Reports' },
-  { name: 'Executive Dashboard', href: '/executive-dashboard', icon: PieChart, group: 'Analytics & Reports' },
-  { name: 'Report Scheduler', href: '/report-scheduler', icon: Clock, group: 'Analytics & Reports' },
-  { name: 'Reports', href: '/reports', icon: BarChart3, group: 'Analytics & Reports' },
-  
-  // Compliance & Automation Group - Role-based routing
-  { name: 'Compliance Dashboard', href: '/compliance-dashboard/admin', icon: ClipboardCheck, group: 'Compliance & Automation', enterpriseOnly: true, roles: ['SA', 'AD'] },
-  { name: 'Provider Compliance', href: '/compliance-dashboard/provider', icon: ClipboardCheck, group: 'Compliance & Automation', enterpriseOnly: true, roles: ['AP'] },
-  { name: 'Automation', href: '/automation', icon: Zap, group: 'Compliance & Automation' },
-  { name: 'Progression Path Builder', href: '/progression-path-builder', icon: Target, group: 'Compliance & Automation' },
-  
-  // System Administration Group
-  { name: 'Integrations', href: '/integrations', icon: Globe, group: 'System Administration' },
-  { name: 'Notifications', href: '/notifications', icon: Bell, group: 'System Administration' },
-  { name: 'System Monitoring', href: '/system-monitoring', icon: Monitor, group: 'System Administration' },
-  { name: 'Settings', href: '/settings', icon: Settings, group: 'System Administration' }
-];
+import { useAuth } from "@/contexts/AuthContext";
 
 export function AppSidebar() {
+  const { user } = useAuth();
   const location = useLocation();
-  const { data: profile, isLoading } = useProfile();
-  const { isGroupVisible, isItemVisible, isLoading: navLoading } = useNavigationVisibility();
-  const isMobile = useIsMobile();
-
-  // Use mobile-optimized sidebar on mobile devices
-  if (isMobile) {
-    return <MobileSidebar />;
-  }
-
-  if (isLoading || navLoading) {
-    return (
-      <Sidebar className="bg-sidebar border-sidebar-border">
-        <SidebarHeader>
-          <div className="flex items-center justify-center px-4 py-2">
-            <div className="h-10 w-24 bg-sidebar-accent animate-pulse rounded-lg" />
-          </div>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>Loading...</SidebarGroupLabel>
-          </SidebarGroup>
-        </SidebarContent>
-      </Sidebar>
-    );
-  }
-
-  // Check if user has enterprise access
-  const hasEnterpriseAccess = ['SA', 'AD', 'AP'].includes(profile?.role);
-  console.log(`🔧 SIDEBAR: Enterprise access check - Role: ${profile?.role}, HasAccess: ${hasEnterpriseAccess}`);
-
-  // Filter navigation items using database-driven visibility, enterprise access, and role-based routing
-  const visibleItems = navigation.filter(item => {
-    console.log(`🔧 SIDEBAR: Checking visibility for item: ${item.name} in group: ${item.group}`);
-    
-    // Check enterprise access for enterprise-only items
-    if (item.enterpriseOnly && !hasEnterpriseAccess) {
-      console.log(`🔧 SIDEBAR: Enterprise item ${item.name} hidden - no enterprise access`);
-      return false;
+  
+  // Core navigation items that all authenticated users can access
+  const coreNavigationItems = [
+    {
+      title: "Dashboard",
+      path: "/dashboard", // Fixed: was "/" now "/dashboard"
+      icon: LayoutDashboard
+    },
+    {
+      title: "Teams", 
+      path: "/teams",
+      icon: Users
+    },
+    {
+      title: "Certificates",
+      path: "/certificates", 
+      icon: GraduationCap
+    },
+    {
+      title: "Analytics",
+      path: "/analytics",
+      icon: BarChart3
     }
-    
-    // Check role-based access for role-specific items
-    if (item.roles && item.roles.length > 0 && !item.roles.includes(profile?.role)) {
-      console.log(`🔧 SIDEBAR: Role-specific item ${item.name} hidden - user role ${profile?.role} not in allowed roles: ${item.roles}`);
-      return false;
-    }
-    
-    // First check if the group is visible
-    if (!isGroupVisible(item.group)) {
-      console.log(`🔧 SIDEBAR: Group ${item.group} not visible, hiding ${item.name}`);
-      return false;
-    }
-    
-    // Then check if the specific item is visible
-    const itemVisible = isItemVisible(item.group, item.name);
-    console.log(`🔧 SIDEBAR: Item ${item.name} visibility: ${itemVisible}`);
-    
-    return itemVisible;
-  });
+  ];
 
-  console.log(`🔧 SIDEBAR: Total visible items for role ${profile?.role}:`, visibleItems.length);
-  console.log(`🔧 SIDEBAR: Visible items:`, visibleItems.map(i => i.name));
+  // Advanced features for specific roles
+  const advancedNavigationItems = [
+    {
+      title: "CRM",
+      path: "/crm",
+      icon: CreditCard
+    },
+    {
+      title: "Automation",
+      path: "/automation", 
+      icon: Zap
+    },
+    {
+      title: "Compliance Admin",
+      path: "/compliance-dashboard/admin",
+      icon: Shield
+    },
+    {
+      title: "User Management",  
+      path: "/users",
+      icon: UserCheck
+    }
+  ];
 
-  // Group visible navigation items
-  const groupedItems = visibleItems.reduce((acc, item) => {
-    const group = item.group || 'Other';
-    if (!acc[group]) acc[group] = [];
-    acc[group].push(item);
-    return acc;
-  }, {} as Record<string, typeof navigation>);
+  // Settings and profile
+  const userNavigationItems = [
+    {
+      title: "Profile",
+      path: "/profile",
+      icon: Users
+    },
+    {
+      title: "Settings",
+      path: "/settings",
+      icon: Settings
+    }
+  ];
+
+  // Helper function to render menu items
+  const renderMenuItems = (items: typeof coreNavigationItems) => {
+    return items.map((item) => (
+      <SidebarMenuItem key={item.title}>
+        <SidebarMenuButton
+          asChild
+          isActive={location.pathname === item.path}
+          className="group flex items-center gap-3 w-full py-2 px-3 rounded-md transition-all duration-200 hover:bg-blue-50 focus:bg-blue-100 aria-[active=true]:bg-blue-100 aria-[active=true]:text-blue-700"
+        >
+          <Link to={item.path} className="flex items-center w-full gap-3">
+            <item.icon className={`h-5 w-5 transition-colors duration-200 ${location.pathname === item.path ? "text-blue-600" : "text-gray-400 group-hover:text-blue-600"}`} />
+            <span className="font-medium text-[15px]">{item.title}</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    ));
+  };
 
   return (
-    <Sidebar className="bg-sidebar border-sidebar-border">
-      <SidebarHeader>
-        <div className="flex items-center justify-center px-4 py-3 border-b border-sidebar-border/50">
-          <img
-            src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png"
-            alt="Assured Response Logo"
-            className="h-10 w-auto rounded-lg shadow-md bg-white/90 p-1"
-          />
-        </div>
-      </SidebarHeader>
+    <Sidebar>
       <SidebarContent>
-        {Object.entries(groupedItems).map(([groupName, items]) => (
-          <SidebarGroup key={groupName}>
-            <SidebarGroupLabel className="text-sidebar-foreground/70 font-medium">
-              {groupName}
-            </SidebarGroupLabel>
-            <SidebarMenu>
-              {items.map((item) => {
-                const isActive = location.pathname === item.href;
-                const isEnterprise = item.enterpriseOnly;
-                return (
-                  <SidebarMenuItem key={item.name}>
-                    <SidebarMenuButton asChild isActive={isActive}>
-                      <Link to={item.href} className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                        <item.icon className={`h-4 w-4 flex-shrink-0 ${isEnterprise ? 'text-yellow-600' : ''}`} />
-                        <span className="font-medium">{item.name}</span>
-                        {isEnterprise && (
-                          <Crown className="h-3 w-3 text-yellow-600 ml-auto" />
-                        )}
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroup>
-        ))}
+        {/* Brand area */}
+        <div className="flex flex-col items-center justify-center pb-2 pt-6 border-b border-muted bg-gradient-to-br from-blue-500 to-purple-500">
+          <Link to="/dashboard" className="hover:opacity-90 transition-opacity">
+            <img 
+              src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png"
+              alt="Assured Response Logo"
+              className="h-10 w-auto rounded-lg shadow-md bg-white/80 p-1"
+              style={{ minWidth: '110px' }}
+            />
+          </Link>
+          <div className="mt-2 font-semibold text-sm text-white tracking-wide text-center">
+            Assured Response
+          </div>
+        </div>
+        
+        {/* Core Navigation */}
+        <SidebarGroup className="mt-4">
+          <SidebarGroupLabel className="pl-3 text-xs font-semibold text-muted-foreground tracking-wider">
+            Main Navigation
+          </SidebarGroupLabel>
+          <SidebarMenu>
+            {renderMenuItems(coreNavigationItems)}
+          </SidebarMenu>
+        </SidebarGroup>
+        
+        {/* Advanced Features */}
+        <SidebarGroup className="mt-2">
+          <SidebarGroupLabel className="pl-3 text-xs font-semibold text-muted-foreground tracking-wider">
+            Advanced Features
+          </SidebarGroupLabel>
+          <SidebarMenu>
+            {renderMenuItems(advancedNavigationItems)}
+          </SidebarMenu>
+        </SidebarGroup>
+        
+        {/* User Section */}
+        <div className="mt-auto flex flex-col">
+          <div className="px-4 py-3 border-t border-muted bg-muted/40 rounded-b-lg flex flex-col gap-2 shadow-inner">
+            {userNavigationItems.map((item) => (
+              <Link 
+                key={item.title}
+                to={item.path} 
+                className={`flex items-center gap-3 w-full py-2 px-3 transition-all duration-200 rounded-md ${
+                  location.pathname === item.path 
+                    ? "bg-blue-100 text-blue-700" 
+                    : "text-gray-600 hover:text-blue-800 hover:bg-blue-50"
+                }`}
+              >
+                <item.icon className="h-5 w-5" />
+                <span className="font-medium text-[15px]">{item.title}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
       </SidebarContent>
     </Sidebar>
   );
