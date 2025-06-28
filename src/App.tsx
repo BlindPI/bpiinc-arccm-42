@@ -4,8 +4,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { AppLayout } from '@/components/layout/AppLayout';
-import Dashboard from '@/pages/Dashboard';
+import { EnterpriseLayout } from '@/components/enterprise/layout/EnterpriseLayout';
+import { EnterpriseDashboard } from '@/components/enterprise/dashboard/EnterpriseDashboard';
 import { Toaster } from '@/components/ui/toaster';
 
 const queryClient = new QueryClient({
@@ -24,16 +24,15 @@ function App() {
         <Router>
           <Routes>
             <Route 
-              path="/" 
+              path="/*" 
               element={
                 <ProtectedRoute>
-                  <AppLayout>
-                    <Dashboard />
-                  </AppLayout>
+                  <EnterpriseLayout>
+                    <EnterpriseDashboard />
+                  </EnterpriseLayout>
                 </ProtectedRoute>
               } 
             />
-            {/* Additional routes will be added here as we rebuild components */}
           </Routes>
           <Toaster />
         </Router>

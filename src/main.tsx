@@ -4,8 +4,8 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { AppLayout } from '@/components/foundation/layout/AppLayout';
-import { ProtectedRoutes } from '@/components/routing/ProtectedRoutes';
+import { EnterpriseLayout } from '@/components/enterprise/layout/EnterpriseLayout';
+import { EnterpriseRoutes } from '@/components/enterprise/routing/EnterpriseRoutes';
 import { Toaster } from 'sonner';
 import './App.css';
 
@@ -23,9 +23,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <AppLayout>
-            <ProtectedRoutes />
-          </AppLayout>
+          <EnterpriseLayout>
+            <EnterpriseRoutes />
+          </EnterpriseLayout>
           <Toaster position="top-right" />
         </AuthProvider>
       </QueryClientProvider>
