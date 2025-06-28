@@ -1,297 +1,314 @@
 
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  Users,
-  FileText,
-  GraduationCap,
-  BarChart3,
-  Settings,
-  User,
-  Shield,
-  UsersIcon,
-  BookOpen,
-  ClipboardList,
-  MapPin,
-  Award,
-  TrendingUp,
-  PieChart,
-  Clock,
-  Target,
-  Zap,
-  Globe,
-  Bell,
-  Monitor,
-  ChevronDown,
-  ChevronRight,
-  Search,
-  Briefcase,
-  UserPlus,
-  Activity,
-  DollarSign,
-  UserCheck,
-  FileCheck,
-  Building2,
-  Mail
-} from 'lucide-react';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
+import { cn } from '@/lib/utils';
 import { useProfile } from '@/hooks/useProfile';
 import { useNavigationVisibility } from '@/hooks/useNavigationVisibility';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-
-// Use the same navigation structure as AppSidebar for consistency
-const navigation = [
-  // Dashboard Group
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard, group: 'Dashboard' },
-  { name: 'Profile', href: '/profile', icon: User, group: 'Dashboard' },
-  
-  // User Management Group
-  { name: 'Users', href: '/users', icon: Users, group: 'User Management' },
-  { name: 'Teams', href: '/teams', icon: UsersIcon, group: 'User Management' },
-  { name: 'Role Management', href: '/role-management', icon: Shield, group: 'User Management' },
-  { name: 'Supervision', href: '/supervision', icon: UserCheck, group: 'User Management' },
-  
-  // Training Management Group
-  { name: 'Training Hub', href: '/training-hub', icon: BookOpen, group: 'Training Management' },
-  { name: 'Courses', href: '/courses', icon: GraduationCap, group: 'Training Management' },
-  { name: 'Enrollments', href: '/enrollments', icon: ClipboardList, group: 'Training Management' },
-  { name: 'Enrollment Management', href: '/enrollment-management', icon: FileCheck, group: 'Training Management' },
-  { name: 'Locations', href: '/locations', icon: MapPin, group: 'Training Management' },
-  
-  // Certificates Group
-  { name: 'Certificates', href: '/certificates', icon: FileText, group: 'Certificates' },
-  { name: 'Certificate Analytics', href: '/certificate-analytics', icon: Award, group: 'Certificates' },
-  { name: 'Rosters', href: '/rosters', icon: ClipboardList, group: 'Certificates' },
-  
-  // CRM Group
-  { name: 'CRM Dashboard', href: '/crm', icon: Briefcase, group: 'CRM' },
-  { name: 'Account Management', href: '/crm/accounts', icon: Building2, group: 'CRM' },
-  { name: 'Contact Management', href: '/crm/contacts', icon: Users, group: 'CRM' },
-  { name: 'Lead Management', href: '/crm/leads', icon: UserPlus, group: 'CRM' },
-  { name: 'Opportunities', href: '/crm/opportunities', icon: Target, group: 'CRM' },
-  { name: 'Activities', href: '/crm/activities', icon: Activity, group: 'CRM' },
-  { name: 'Email Workflows', href: '/crm/email-workflows', icon: Mail, group: 'CRM' },
-  { name: 'Campaign Management', href: '/crm/campaigns', icon: Mail, group: 'CRM' },
-  { name: 'Analytics Dashboard', href: '/crm/analytics', icon: BarChart3, group: 'CRM' },
-  { name: 'Revenue Analytics', href: '/crm/revenue', icon: DollarSign, group: 'CRM' },
-  
-  // Analytics & Reports Group
-  { name: 'Analytics', href: '/analytics', icon: TrendingUp, group: 'Analytics & Reports' },
-  { name: 'Executive Dashboard', href: '/executive-dashboard', icon: PieChart, group: 'Analytics & Reports' },
-  { name: 'Report Scheduler', href: '/report-scheduler', icon: Clock, group: 'Analytics & Reports' },
-  { name: 'Reports', href: '/reports', icon: BarChart3, group: 'Analytics & Reports' },
-  
-  // Compliance & Automation Group
-  { name: 'Automation', href: '/automation', icon: Zap, group: 'Compliance & Automation' },
-  { name: 'Progression Path Builder', href: '/progression-path-builder', icon: Target, group: 'Compliance & Automation' },
-  
-  // System Administration Group
-  { name: 'Integrations', href: '/integrations', icon: Globe, group: 'System Administration' },
-  { name: 'Notifications', href: '/notifications', icon: Bell, group: 'System Administration' },
-  { name: 'System Monitoring', href: '/system-monitoring', icon: Monitor, group: 'System Administration' },
-  { name: 'Settings', href: '/settings', icon: Settings, group: 'System Administration' }
-];
-
-// Mobile-specific group configuration for UX
-const mobileGroupConfig = {
-  'Dashboard': { priority: 1, collapsible: false },
-  'User Management': { priority: 2, collapsible: true },
-  'Training Management': { priority: 3, collapsible: true },
-  'Certificates': { priority: 4, collapsible: true },
-  'CRM': { priority: 5, collapsible: true },
-  'Analytics & Reports': { priority: 6, collapsible: true },
-  'Compliance & Automation': { priority: 7, collapsible: true },
-  'System Administration': { priority: 8, collapsible: true }
-};
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import {
+  Menu,
+  LayoutDashboard,
+  Users,
+  GraduationCap,
+  Award,
+  FileText,
+  BarChart3,
+  Settings,
+  Building2,
+  Shield,
+  Bell,
+  Zap,
+  UserCheck,
+  MapPin,
+  BookOpen,
+  Calendar,
+  Target,
+  Briefcase,
+  Monitor,
+  Database,
+  ChevronRight
+} from 'lucide-react';
 
 export function MobileSidebar() {
   const location = useLocation();
-  const { data: profile, isLoading } = useProfile();
-  const { isGroupVisible, isItemVisible, isLoading: navLoading } = useNavigationVisibility();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    new Set(['Dashboard', 'User Management'])
-  );
+  const { data: profile } = useProfile();
+  const { visibleGroups } = useNavigationVisibility();
+  const [open, setOpen] = useState(false);
 
-  const toggleGroup = (groupName: string) => {
-    const newExpanded = new Set(expandedGroups);
-    if (newExpanded.has(groupName)) {
-      newExpanded.delete(groupName);
-    } else {
-      newExpanded.add(groupName);
+  const mobileGroupConfig = [
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      priority: 1,
+      items: [
+        { 
+          id: 'main-dashboard',
+          name: 'Dashboard', 
+          href: '/', 
+          icon: LayoutDashboard,
+          roles: ['SA', 'AD', 'AP', 'IC', 'IP', 'IT', 'S']
+        }
+      ]
+    },
+    {
+      id: 'provider-compliance',
+      label: 'Provider & Compliance',
+      priority: 2,
+      items: [
+        { 
+          id: 'provider-management',
+          name: 'Provider Management', 
+          href: '/provider-management', 
+          icon: Building2,
+          roles: ['SA', 'AD']
+        },
+        { 
+          id: 'authorized-providers',
+          name: 'Authorized Providers', 
+          href: '/authorized-providers', 
+          icon: UserCheck,
+          roles: ['SA', 'AD', 'AP']
+        },
+        { 
+          id: 'compliance-admin',
+          name: 'Compliance Dashboard', 
+          href: '/compliance-admin', 
+          icon: Shield,
+          roles: ['SA', 'AD', 'AP'],
+          enterprise: true
+        }
+      ]
+    },
+    {
+      id: 'user-management',
+      label: 'User Management',
+      priority: 3,
+      items: [
+        { 
+          id: 'users',
+          name: 'Users', 
+          href: '/users', 
+          icon: Users,
+          roles: ['SA', 'AD', 'AP']
+        },
+        { 
+          id: 'teams',
+          name: 'Teams', 
+          href: '/teams', 
+          icon: Users,
+          roles: ['SA', 'AD', 'AP']
+        },
+        { 
+          id: 'locations',
+          name: 'Locations', 
+          href: '/locations', 
+          icon: MapPin,
+          roles: ['SA', 'AD', 'AP']
+        }
+      ]
+    },
+    {
+      id: 'training-education',
+      label: 'Training & Education',
+      priority: 4,
+      items: [
+        { 
+          id: 'courses',
+          name: 'Courses', 
+          href: '/courses', 
+          icon: BookOpen,
+          roles: ['SA', 'AD', 'AP', 'IC', 'IP', 'IT']
+        },
+        { 
+          id: 'certificates',
+          name: 'Certificates', 
+          href: '/certificates', 
+          icon: Award,
+          roles: ['SA', 'AD', 'AP', 'IC', 'IP', 'IT']
+        },
+        { 
+          id: 'enrollments',
+          name: 'Enrollments', 
+          href: '/enrollments', 
+          icon: GraduationCap,
+          roles: ['SA', 'AD', 'AP', 'IC', 'IP', 'IT', 'S']
+        },
+        { 
+          id: 'role-management',
+          name: 'Role Management', 
+          href: '/role-management', 
+          icon: UserCheck,
+          roles: ['SA', 'AD', 'IC', 'IP', 'IT']
+        }
+      ]
+    },
+    {
+      id: 'compliance-automation',
+      label: 'Compliance & Automation',
+      priority: 5,
+      items: [
+        { 
+          id: 'compliance',
+          name: 'Compliance', 
+          href: '/compliance', 
+          icon: FileText,
+          roles: ['SA', 'AD', 'AP', 'IC', 'IP', 'IT', 'S']
+        },
+        { 
+          id: 'automation',
+          name: 'Automation', 
+          href: '/automation', 
+          icon: Zap,
+          roles: ['SA', 'AD'],
+          enterprise: true
+        },
+        { 
+          id: 'notifications',
+          name: 'Notifications', 
+          href: '/notifications', 
+          icon: Bell,
+          roles: ['SA', 'AD', 'AP', 'IC', 'IP', 'IT', 'S']
+        }
+      ]
+    },
+    {
+      id: 'analytics-reporting',
+      label: 'Analytics & Reporting',
+      priority: 6,
+      items: [
+        { 
+          id: 'analytics',
+          name: 'Analytics', 
+          href: '/analytics', 
+          icon: BarChart3,
+          roles: ['SA', 'AD', 'AP']
+        },
+        { 
+          id: 'reports',
+          name: 'Reports', 
+          href: '/reports', 
+          icon: FileText,
+          roles: ['SA', 'AD', 'AP']
+        }
+      ]
+    },
+    {
+      id: 'system-tools',
+      label: 'System & Tools',
+      priority: 7,
+      items: [
+        { 
+          id: 'crm',
+          name: 'CRM', 
+          href: '/crm', 
+          icon: Briefcase,
+          roles: ['SA', 'AD'],
+          enterprise: true
+        },
+        { 
+          id: 'system-monitoring',
+          name: 'System Monitoring', 
+          href: '/system-monitoring', 
+          icon: Monitor,
+          roles: ['SA', 'AD'],
+          enterprise: true
+        },
+        { 
+          id: 'backup-management',
+          name: 'Backup Management', 
+          href: '/backup-management', 
+          icon: Database,
+          roles: ['SA'],
+          enterprise: true
+        },
+        { 
+          id: 'settings',
+          name: 'Settings', 
+          href: '/settings', 
+          icon: Settings,
+          roles: ['SA', 'AD', 'AP']
+        }
+      ]
     }
-    setExpandedGroups(newExpanded);
+  ];
+
+  const isActive = (href: string) => {
+    return location.pathname === href;
   };
 
-  // Filter navigation items using database-driven visibility (same as AppSidebar)
-  const visibleItems = navigation.filter(item => {
-    console.log(`🔧 MOBILE-SIDEBAR: Checking visibility for item: ${item.name} in group: ${item.group}`);
-    
-    // First check if the group is visible
-    if (!isGroupVisible(item.group)) {
-      console.log(`🔧 MOBILE-SIDEBAR: Group ${item.group} not visible, hiding ${item.name}`);
-      return false;
-    }
-    
-    // Then check if the specific item is visible
-    const itemVisible = isItemVisible(item.group, item.name);
-    console.log(`🔧 MOBILE-SIDEBAR: Item ${item.name} visibility: ${itemVisible}`);
-    
-    // Apply search filtering if search term exists
-    if (searchTerm && itemVisible) {
-      return item.name.toLowerCase().includes(searchTerm.toLowerCase());
-    }
-    
-    return itemVisible;
-  });
+  const hasAccess = (item: any) => {
+    if (!profile?.role) return false;
+    return item.roles.includes(profile.role);
+  };
 
-  console.log(`🔧 MOBILE-SIDEBAR: Total visible items for role ${profile?.role}:`, visibleItems.length);
-  console.log(`🔧 MOBILE-SIDEBAR: Visible items:`, visibleItems.map(i => i.name));
+  const isGroupVisible = (groupId: string) => {
+    return visibleGroups.includes(groupId);
+  };
 
-  // Group visible navigation items by group
-  const groupedItems = visibleItems.reduce((acc, item) => {
-    const group = item.group || 'Other';
-    if (!acc[group]) acc[group] = [];
-    acc[group].push(item);
-    return acc;
-  }, {} as Record<string, typeof navigation>);
-
-  // Create mobile-friendly group structure
-  const filteredGroups = Object.entries(groupedItems)
-    .map(([groupName, items]) => ({
-      name: groupName,
-      items,
-      ...mobileGroupConfig[groupName as keyof typeof mobileGroupConfig]
-    }))
-    .filter(group => group.items.length > 0)
-    .sort((a, b) => (a.priority || 99) - (b.priority || 99));
-
-  if (isLoading || navLoading) {
-    return (
-      <Sidebar className="sidebar-mobile-enhanced">
-        <SidebarHeader className="p-4 border-b border-sidebar-border">
-          <div className="flex items-center justify-center">
-            <div className="h-8 w-24 bg-sidebar-accent animate-pulse rounded" />
-          </div>
-        </SidebarHeader>
-        <SidebarContent>
-          <div className="p-4 space-y-4">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-10 bg-sidebar-accent animate-pulse rounded" />
-            ))}
-          </div>
-        </SidebarContent>
-      </Sidebar>
-    );
-  }
+  // Sort groups by priority for mobile display
+  const sortedGroups = mobileGroupConfig
+    .filter(group => isGroupVisible(group.id))
+    .sort((a, b) => a.priority - b.priority);
 
   return (
-    <Sidebar className="sidebar-mobile-enhanced">
-      <SidebarHeader className="p-4 border-b border-sidebar-border/50">
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-center">
-            <img
-              src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png"
-              alt="Assured Response Logo"
-              className="h-8 w-auto rounded-md shadow-sm bg-white/90 p-1"
-            />
-          </div>
-          
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-sidebar-foreground/50" />
-            <Input
-              placeholder="Search navigation..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-9 bg-sidebar-accent/50 border-sidebar-border focus:bg-sidebar-accent"
-            />
-          </div>
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="sm" className="md:hidden">
+          <Menu className="h-5 w-5" />
+          <span className="sr-only">Toggle navigation menu</span>
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="left" className="w-72 p-0">
+        <div className="px-4 py-6 border-b">
+          <h2 className="text-lg font-semibold">Navigation</h2>
         </div>
-      </SidebarHeader>
+        <ScrollArea className="h-full">
+          <div className="p-4 space-y-6">
+            {sortedGroups.map((group) => {
+              const visibleItems = group.items.filter(hasAccess);
+              
+              if (visibleItems.length === 0) {
+                return null;
+              }
 
-      <SidebarContent className="p-2">
-        {filteredGroups.map((group) => (
-          <SidebarGroup key={group.name} className="sidebar-mobile-group">
-            {group.collapsible ? (
-              <Collapsible 
-                open={expandedGroups.has(group.name)}
-                onOpenChange={() => toggleGroup(group.name)}
-              >
-                <CollapsibleTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-between p-3 h-auto sidebar-mobile-label hover:bg-sidebar-accent"
-                  >
-                    <span className="sidebar-mobile-text">{group.name}</span>
-                    {expandedGroups.has(group.name) ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-1">
-                  <SidebarMenu>
-                    {group.items.map((item) => {
-                      const isActive = location.pathname === item.href;
-                      return (
-                        <SidebarMenuItem key={item.name}>
-                          <SidebarMenuButton 
-                            asChild 
-                            isActive={isActive}
-                            className="sidebar-mobile-item"
-                          >
-                            <Link to={item.href} className="flex items-center gap-3 p-3">
-                              <item.icon className="sidebar-mobile-icon" />
-                              <span className="sidebar-mobile-text">{item.name}</span>
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      );
-                    })}
-                  </SidebarMenu>
-                </CollapsibleContent>
-              </Collapsible>
-            ) : (
-              <>
-                <div className="sidebar-mobile-label px-3 py-2">
-                  {group.name}
+              return (
+                <div key={group.id} className="space-y-2">
+                  <h3 className="text-sm font-medium text-muted-foreground px-2">
+                    {group.label}
+                  </h3>
+                  <div className="space-y-1">
+                    {visibleItems.map((item) => (
+                      <Link
+                        key={item.id}
+                        to={item.href}
+                        onClick={() => setOpen(false)}
+                        className={cn(
+                          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                          isActive(item.href)
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                      >
+                        <item.icon className="h-4 w-4" />
+                        <span className="flex-1">{item.name}</span>
+                        {item.enterprise && (
+                          <Badge variant="secondary" className="text-xs">
+                            Enterprise
+                          </Badge>
+                        )}
+                        <ChevronRight className="h-3 w-3" />
+                      </Link>
+                    ))}
+                  </div>
                 </div>
-                <SidebarMenu>
-                  {group.items.map((item) => {
-                    const isActive = location.pathname === item.href;
-                    return (
-                      <SidebarMenuItem key={item.name}>
-                        <SidebarMenuButton 
-                          asChild 
-                          isActive={isActive}
-                          className="sidebar-mobile-item"
-                        >
-                          <Link to={item.href} className="flex items-center gap-3 p-3">
-                            <item.icon className="sidebar-mobile-icon" />
-                            <span className="sidebar-mobile-text">{item.name}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </>
-            )}
-          </SidebarGroup>
-        ))}
-      </SidebarContent>
-    </Sidebar>
+              );
+            })}
+          </div>
+        </ScrollArea>
+      </SheetContent>
+    </Sheet>
   );
 }
