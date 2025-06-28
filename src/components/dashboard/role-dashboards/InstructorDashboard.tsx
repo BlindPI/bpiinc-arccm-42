@@ -1,169 +1,164 @@
-
-import { UserProfile } from '@/types/auth';
-import { DashboardConfig } from '@/hooks/useDashboardConfig';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { GraduationCap, Calendar, Award, Clock, ArrowUpCircle } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
-import { ROLE_LABELS } from '@/lib/roles';
-import { useInstructorDashboardData } from '@/hooks/dashboard/useInstructorDashboardData';
-import { DashboardActionButton } from '../ui/DashboardActionButton';
-import { InlineLoader } from '@/components/ui/LoadingStates';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, Users, Award, Clock } from 'lucide-react';
 
-interface InstructorDashboardProps {
-  config: DashboardConfig;
-  profile: UserProfile;
+export interface InstructorDashboardProps {
+  config?: {
+    showSchedule?: boolean;
+    showStudents?: boolean;
+  };
+  profile?: {
+    id: string;
+    role: string;
+    display_name?: string;
+  };
+  teamContext?: {
+    teamId: string;
+    teamName: string;
+    locationName: string;
+    locationCity?: string;
+    locationState?: string;
+    locationAddress?: string;
+    apUserName?: string;
+    apUserEmail?: string;
+    apUserPhone?: string;
+  };
 }
 
-const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
-  const role = profile.role || 'IT';
-  const { metrics, isLoading } = useInstructorDashboardData(profile.id);
-  
-  // Determine next role for progression path
-  const getNextRole = () => {
-    if (role === 'IT') return 'IP';
-    if (role === 'IP') return 'IC';
-    return null;
-  };
-  
-  const nextRole = getNextRole();
-  
-  // Mock progression data - this would come from progression system
-  const getProgressionPercentage = () => {
-    if (role === 'IT') return 65;
-    if (role === 'IP') return 40;
-    return 100;
-  };
-
-  if (isLoading) {
-    return <InlineLoader message="Loading instructor dashboard..." />;
-  }
-
+export function InstructorDashboard({ config, profile, teamContext }: InstructorDashboardProps) {
   return (
-    <div className="space-y-6 animate-fade-in">
-      <Alert className="bg-gradient-to-r from-teal-50 to-white border-teal-200 shadow-sm">
-        <GraduationCap className="h-4 w-4 text-teal-600 mr-2" />
-        <AlertDescription className="text-teal-800 font-medium">
-          You are logged in as {ROLE_LABELS[role as any]}
-        </AlertDescription>
-      </Alert>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Instructor Dashboard</h1>
+          <p className="text-muted-foreground">
+            Welcome back, {profile?.display_name || 'Instructor'}
+          </p>
+        </div>
+        {teamContext && (
+          <Badge variant="outline">
+            {teamContext.teamName}
+          </Badge>
+        )}
+      </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-gradient-to-br from-teal-50 to-white border-0 shadow-md hover:shadow-lg transition-shadow">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Upcoming Classes</CardTitle>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Today's Classes</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{metrics?.upcomingClasses || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">Scheduled in next 14 days</p>
+            <div className="text-2xl font-bold">3</div>
+            <p className="text-xs text-muted-foreground">2 more this week</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-blue-50 to-white border-0 shadow-md hover:shadow-lg transition-shadow">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Students Taught</CardTitle>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Students</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{metrics?.studentsTaught || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">Last 12 months</p>
+            <div className="text-2xl font-bold">24</div>
+            <p className="text-xs text-muted-foreground">Across all classes</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-white border-0 shadow-md hover:shadow-lg transition-shadow">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Certifications Issued</CardTitle>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Certificates Issued</CardTitle>
+            <Award className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{metrics?.certificationsIssued || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">Last 12 months</p>
+            <div className="text-2xl font-bold">18</div>
+            <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-amber-50 to-white border-0 shadow-md hover:shadow-lg transition-shadow">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Teaching Hours</CardTitle>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Hours Taught</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600">{metrics?.teachingHours || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">Last 3 months</p>
+            <div className="text-2xl font-bold">42</div>
+            <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
         </Card>
       </div>
 
-      {nextRole && (
-        <Card className="border-2 bg-gradient-to-br from-blue-50 to-white shadow-md hover:shadow-lg transition-shadow">
+      {config?.showSchedule !== false && (
+        <Card>
           <CardHeader>
-            <CardTitle className="text-xl text-gray-900">Progression Path</CardTitle>
+            <CardTitle>Today's Schedule</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="p-2 bg-blue-100 rounded-full">
-                <ArrowUpCircle className="h-6 w-6 text-blue-600" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Progress to {ROLE_LABELS[nextRole as any]}
-                </h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  You're on your way to becoming a {ROLE_LABELS[nextRole as any]}
-                </p>
-                <div className="mt-2">
-                  <Progress value={getProgressionPercentage()} className="h-2" />
-                  <p className="text-xs text-gray-500 mt-1">
-                    {getProgressionPercentage()}% of requirements completed
-                  </p>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <h4 className="font-medium">CPR/AED Training</h4>
+                  <p className="text-sm text-muted-foreground">9:00 AM - 12:00 PM</p>
+                  <p className="text-xs text-muted-foreground">Room A - 12 students</p>
                 </div>
+                <Badge variant="default">In Progress</Badge>
               </div>
-              <DashboardActionButton
-                icon={ArrowUpCircle}
-                label="View Path"
-                path="/role-management"
-                colorScheme="blue"
-              />
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <h4 className="font-medium">First Aid Certification</h4>
+                  <p className="text-sm text-muted-foreground">1:00 PM - 5:00 PM</p>
+                  <p className="text-xs text-muted-foreground">Room B - 8 students</p>
+                </div>
+                <Badge variant="secondary">Upcoming</Badge>
+              </div>
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <h4 className="font-medium">Instructor Recertification</h4>
+                  <p className="text-sm text-muted-foreground">6:00 PM - 8:00 PM</p>
+                  <p className="text-xs text-muted-foreground">Room C - 4 instructors</p>
+                </div>
+                <Badge variant="outline">Scheduled</Badge>
+              </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      <Card className="border-2 bg-gradient-to-br from-white to-gray-50/50 shadow-md">
-        <CardHeader>
-          <CardTitle className="text-xl text-gray-900">Instructor Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <DashboardActionButton
-              icon={Calendar}
-              label="View Schedule"
-              description="View your teaching schedule"
-              path="/courses"
-              colorScheme="teal"
-            />
-            <DashboardActionButton
-              icon={Award}
-              label="Issue Certificate"
-              description="Issue certificates to students"
-              path="/certificates"
-              colorScheme="blue"
-            />
-            <DashboardActionButton
-              icon={Clock}
-              label="Log Hours"
-              description="Log your teaching hours"
-              path="/teaching-sessions"
-              colorScheme="purple"
-            />
-            <DashboardActionButton
-              icon={GraduationCap}
-              label="Training Resources"
-              description="Access training materials"
-              path="/courses"
-              colorScheme="amber"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {config?.showStudents !== false && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Students</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Sarah Johnson</p>
+                  <p className="text-sm text-muted-foreground">CPR/AED - Completed</p>
+                </div>
+                <Badge variant="success">Certified</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Mike Chen</p>
+                  <p className="text-sm text-muted-foreground">First Aid - In Progress</p>
+                </div>
+                <Badge variant="warning">Training</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Emily Davis</p>
+                  <p className="text-sm text-muted-foreground">Instructor Level - Pending</p>
+                </div>
+                <Badge variant="secondary">Review</Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
-};
+}
 
 export default InstructorDashboard;
