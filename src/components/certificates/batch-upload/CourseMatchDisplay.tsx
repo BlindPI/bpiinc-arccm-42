@@ -1,129 +1,185 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
-import { CheckCircle, AlertTriangle, XCircle, Info } from 'lucide-react';
-import { CourseMatch, CourseMatchType } from '@/components/certificates/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { AlertTriangle, Check, Info, FileSpreadsheet } from 'lucide-react';
+import { Course } from '@/types/courses';
+import { CourseMatchType } from '../types';
 
 interface CourseMatchDisplayProps {
-  courseMatch: CourseMatch | null;
-  originalCourse?: string;
-  confidence?: number;
+  entry: {
+    firstAidLevel?: string | null;
+    cprLevel?: string | null;
+    length?: number | null;
+    issueDate?: string | null;
+    certifications?: Record<string, string>;
+  };
+  matchedCourse?: {
+    id: string;
+    name: string;
+    matchType: CourseMatchType;
+    certifications?: Array<{
+      type: string;
+      level: string;
+    }>;
+  };
+  availableCourses: Course[];
+  onCourseChange: (courseId: string) => void;
 }
 
-export function CourseMatchDisplay({
-  courseMatch,
-  originalCourse,
-  confidence
+export function CourseMatchDisplay({ 
+  entry, 
+  matchedCourse, 
+  availableCourses,
+  onCourseChange 
 }: CourseMatchDisplayProps) {
-  if (!courseMatch) {
+  if (!matchedCourse) {
+    // Handle case where no course match is available yet
     return (
-      <Card className="p-3 border-destructive/20 bg-destructive/5">
-        <div className="flex items-center gap-2">
-          <XCircle className="h-4 w-4 text-destructive" />
-          <span className="text-sm text-destructive">No course match found</span>
-        </div>
-        {originalCourse && (
-          <p className="text-xs text-muted-foreground mt-1">
-            Original: {originalCourse}
-          </p>
-        )}
-      </Card>
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Info className="h-4 w-4" />
+        <span className="text-sm">Waiting for course match...</span>
+      </div>
     );
   }
-
-  const getMatchIcon = (matchType: CourseMatchType) => {
-    switch (matchType) {
+  
+  const getMatchIcon = () => {
+    switch (matchedCourse.matchType) {
       case 'exact':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
+        return <Check className="h-4 w-4 text-green-500" />;
       case 'partial':
-        return <Info className="h-4 w-4 text-blue-600" />;
-      case 'fallback':
-        return <AlertTriangle className="h-4 w-4 text-orange-600" />;
-      case 'default':
-        return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
-      case 'mismatch':
-        return <XCircle className="h-4 w-4 text-red-600" />;
+        return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+      case 'manual':
+        return <FileSpreadsheet className="h-4 w-4 text-blue-500" />;
       default:
-        return <Info className="h-4 w-4 text-gray-600" />;
+        return <Info className="h-4 w-4 text-blue-500" />;
     }
   };
 
-  const getMatchColor = (matchType: CourseMatchType) => {
-    switch (matchType) {
+  const getMatchDescription = () => {
+    switch (matchedCourse.matchType) {
       case 'exact':
-        return 'border-green-200 bg-green-50';
+        return 'Combined match - both First Aid and CPR levels matched exactly';
       case 'partial':
-        return 'border-blue-200 bg-blue-50';
-      case 'fallback':
-        return 'border-orange-200 bg-orange-50';
-      case 'default':
-        return 'border-yellow-200 bg-yellow-50';
-      case 'mismatch':
-        return 'border-red-200 bg-red-50';
+        return 'Single certification match - either First Aid or CPR level matched';
+      case 'manual':
+        return 'Course selected manually';
       default:
-        return 'border-gray-200 bg-gray-50';
+        return 'Using default course';
     }
   };
 
-  const getBadgeVariant = (matchType: CourseMatchType) => {
-    switch (matchType) {
+  const getMatchColor = () => {
+    switch (matchedCourse.matchType) {
       case 'exact':
-        return 'default';
+        return 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300 border-green-200 dark:border-green-800/30';
       case 'partial':
-        return 'secondary';
-      case 'fallback':
-        return 'outline';
-      case 'default':
-        return 'outline';
-      case 'mismatch':
-        return 'destructive';
+        return 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300 border-amber-200 dark:border-amber-800/30';
+      case 'manual':
+        return 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800/30';
       default:
-        return 'secondary';
+        return 'bg-gray-100 text-gray-700 dark:bg-gray-900/20 dark:text-gray-300 border-gray-200 dark:border-gray-800/30';
+    }
+  };
+
+  // Format the match type text for display
+  const formatMatchType = (type: string) => {
+    switch (type) {
+      case 'exact': return 'Combined';
+      case 'partial': return 'Partial';
+      case 'default': return 'Default';
+      case 'manual': return 'Manual';
+      case 'fallback': return 'Fallback';
+      default: return type;
     }
   };
 
   return (
-    <Card className={`p-3 ${getMatchColor(courseMatch.matchType)}`}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            {getMatchIcon(courseMatch.matchType)}
-            <span className="text-sm font-medium">{courseMatch.name}</span>
-          </div>
-          
-          <div className="flex flex-wrap gap-1 mb-2">
-            <Badge variant={getBadgeVariant(courseMatch.matchType)} className="text-xs">
-              {courseMatch.matchType.charAt(0).toUpperCase() + courseMatch.matchType.slice(1)} Match
-            </Badge>
-            {confidence !== undefined && (
-              <Badge variant="outline" className="text-xs">
-                {Math.round(confidence * 100)}% confidence
+    <div className="flex flex-col gap-2">
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-1">
+              {getMatchIcon()}
+              <Badge 
+                variant="outline"
+                className={getMatchColor()}
+              >
+                {formatMatchType(matchedCourse.matchType)} Match
               </Badge>
-            )}
-          </div>
-
-          {courseMatch.certifications && courseMatch.certifications.length > 0 && (
-            <div className="text-xs text-muted-foreground">
-              Certifications: {courseMatch.certifications.map(cert => 
-                `${cert.type} ${cert.level}`
-              ).join(', ')}
             </div>
-          )}
-
-          {courseMatch.mismatchReason && (
-            <div className="text-xs text-destructive mt-1">
-              Issue: {courseMatch.mismatchReason}
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs bg-white border border-gray-100 p-3 shadow-lg rounded-lg">
+            <p className="text-sm font-medium text-gray-900">{getMatchDescription()}</p>
+            <div className="text-xs mt-2 space-y-1 text-gray-600">
+              <div className="border-b pb-2 border-gray-200">
+                <p className="font-medium">Student information:</p>
+                {entry.firstAidLevel && <p>First Aid: {entry.firstAidLevel}</p>}
+                {entry.cprLevel && <p>CPR: {entry.cprLevel}</p>}
+                {entry.length && <p>Length: {entry.length}h</p>}
+              </div>
+              
+              {/* Display matched course certification values */}
+              {matchedCourse.certifications && matchedCourse.certifications.length > 0 && (
+                <div className="pt-1">
+                  <p className="font-medium">Course certifications:</p>
+                  <ul className="list-disc pl-4 mt-1">
+                    {matchedCourse.certifications.map((cert, i) => (
+                      <li key={i}>{cert.type}: {cert.level}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
-      {originalCourse && originalCourse !== courseMatch.name && (
-        <div className="text-xs text-muted-foreground mt-2 pt-2 border-t border-current/20">
-          Original: {originalCourse}
-        </div>
-      )}
-    </Card>
+      <Select
+        value={matchedCourse.id}
+        onValueChange={onCourseChange}
+      >
+        <SelectTrigger className="w-full min-h-[44px] bg-white text-secondary border-blue-200 hover:border-blue-400 focus:border-blue-500">
+          <SelectValue placeholder="Select a course">
+            <span className="block truncate pr-4">{matchedCourse.name}</span>
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent 
+          className="bg-white border-blue-100 shadow-lg w-[350px] max-h-[300px]"
+          position="popper"
+          align="start"
+        >
+          {availableCourses.map((course) => (
+            <SelectItem 
+              key={course.id} 
+              value={course.id}
+              className="py-3 px-4 focus:bg-blue-50 focus:text-blue-700 cursor-pointer"
+            >
+              <div className="flex flex-col">
+                <span className="font-medium text-secondary">{course.name}</span>
+                <span className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-1">
+                  {course.first_aid_level && (
+                    <span className="bg-blue-50 text-blue-700 px-1 rounded">
+                      FA: {course.first_aid_level}
+                    </span>
+                  )} 
+                  {course.cpr_level && (
+                    <span className="bg-green-50 text-green-700 px-1 rounded">
+                      CPR: {course.cpr_level}
+                    </span>
+                  )}
+                  {course.length && (
+                    <span className="bg-gray-50 text-gray-700 px-1 rounded">
+                      {course.length}h
+                    </span>
+                  )}
+                </span>
+              </div>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
