@@ -176,6 +176,45 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_report_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          default_filters: Json | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          report_type: string
+          template_config: Json
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          default_filters?: Json | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          report_type: string
+          template_config: Json
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          default_filters?: Json | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          report_type?: string
+          template_config?: Json
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       analytics_reports: {
         Row: {
           configuration: Json
@@ -10214,10 +10253,12 @@ export type Database = {
           department: string | null
           display_name: string | null
           email: string | null
+          first_name: string | null
           id: string
           job_title: string | null
           last_compliance_check: string | null
           last_login: string | null
+          last_name: string | null
           last_training_date: string | null
           location_id: string | null
           next_training_due: string | null
@@ -10246,10 +10287,12 @@ export type Database = {
           department?: string | null
           display_name?: string | null
           email?: string | null
+          first_name?: string | null
           id: string
           job_title?: string | null
           last_compliance_check?: string | null
           last_login?: string | null
+          last_name?: string | null
           last_training_date?: string | null
           location_id?: string | null
           next_training_due?: string | null
@@ -10278,10 +10321,12 @@ export type Database = {
           department?: string | null
           display_name?: string | null
           email?: string | null
+          first_name?: string | null
           id?: string
           job_title?: string | null
           last_compliance_check?: string | null
           last_login?: string | null
+          last_name?: string | null
           last_training_date?: string | null
           location_id?: string | null
           next_training_due?: string | null

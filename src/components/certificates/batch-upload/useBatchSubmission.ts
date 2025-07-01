@@ -57,10 +57,12 @@ export function useBatchSubmission() {
         throw new Error(`Failed to create roster: ${rosterError?.message || 'Unknown error'}`);
       }
 
-      // Use the database-generated UUID for roster_id
+      // Use the database-generated UUID for all roster references
       const rosterUUID = rosterResult.id;
 
-      // Create certificate requests for valid records
+      console.log('Roster created successfully with ID:', rosterUUID);
+
+      // Create certificate requests for valid records with corrected data format
       const certificateRequests = validRecords.map(row => ({
         user_id: profile.id,
         recipient_name: row.recipientName,
@@ -70,17 +72,18 @@ export function useBatchSubmission() {
         course_name: row.courseMatch?.name || row.courseName || 'Unknown Course',
         course_id: row.courseMatch?.id || null,
         location_id: selectedLocationId,
-        roster_id: rosterUUID, // Use the database-generated UUID
-        batch_id: rosterName, // Keep human-readable for batch_id
-        batch_name: rosterName,
+        roster_id: rosterUUID, // Use database-generated UUID
+        batch_id: rosterUUID, // Also use UUID for batch_id to match database schema
+        batch_name: rosterName, // Keep human-readable name separate
         status: 'PENDING' as const,
         assessment_status: row.assessmentStatus === 'PASS' ? 'PASS' : 'FAIL',
-        certifications: row.courseMatch?.certifications || [],
         course_length: row.courseMatch?.length || null,
         expiration_months: row.courseMatch?.expiration_months || 24,
         issue_date: new Date().toISOString().split('T')[0],
         expiry_date: new Date(Date.now() + (row.courseMatch?.expiration_months || 24) * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       }));
+
+      console.log('Prepared certificate requests:', certificateRequests.length);
 
       // Insert certificate requests in batches
       const batchSize = 50;
