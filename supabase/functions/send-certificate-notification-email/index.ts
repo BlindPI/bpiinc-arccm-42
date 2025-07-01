@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
@@ -24,9 +25,13 @@ serve(async (req) => {
       throw new Error("RESEND_API_KEY is not configured");
     }
 
+    // Create Supabase client
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     // Parse request body
     const {
       notification_id,
+      user_id,
       user_email,
       user_name,
       title,
@@ -34,26 +39,55 @@ serve(async (req) => {
       notification_type
     } = await req.json();
 
-    console.log(`Sending certificate notification email to ${user_email}`);
+    console.log(`Processing notification email for user: ${user_id || user_email}`);
+
+    // If we have user_id but no email, fetch user details
+    let recipientEmail = user_email;
+    let recipientName = user_name;
+
+    if (user_id && !user_email) {
+      console.log(`Fetching user details for ID: ${user_id}`);
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('email, display_name')
+        .eq('id', user_id)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching user profile:', profileError);
+        throw new Error(`Failed to fetch user profile: ${profileError.message}`);
+      }
+
+      if (userProfile) {
+        recipientEmail = userProfile.email;
+        recipientName = userProfile.display_name || recipientName;
+      }
+    }
+
+    if (!recipientEmail) {
+      throw new Error('No recipient email found');
+    }
+
+    console.log(`Sending certificate notification email to ${recipientEmail}`);
 
     // Generate email content based on notification type
-    const emailContent = generateEmailContent(notification_type, user_name, title, message);
+    const emailContent = generateEmailContent(notification_type, recipientName || 'User', title, message);
     
     // Send email using Resend
     const resend = new Resend(resendApiKey);
     const emailResult = await resend.emails.send({
       from: 'Assured Response <notifications@mail.bpiincworks.com>',
-      to: user_email,
+      to: recipientEmail,
       subject: title,
       html: emailContent,
     });
 
     if (emailResult.error) {
-      console.error(`Error sending email to ${user_email}:`, emailResult.error);
+      console.error(`Error sending email to ${recipientEmail}:`, emailResult.error);
       throw new Error(`Email sending failed: ${emailResult.error.message}`);
     }
 
-    console.log(`Certificate notification email sent successfully to ${user_email}`);
+    console.log(`Certificate notification email sent successfully to ${recipientEmail}`);
 
     return new Response(
       JSON.stringify({ 
@@ -106,23 +140,23 @@ function generateEmailContent(notificationType: string, userName: string, title:
 
   switch (notificationType) {
     case 'batch_submitted':
-      actionButton = `<a href="${Deno.env.get('NEXT_PUBLIC_APP_URL') || 'https://app.bpiincworks.com'}/certificates" class="button">View Certificate Requests</a>`;
+      actionButton = `<a href="https://seaxchrsbldrppupupbw.supabase.co/certificates" class="button">View Certificate Requests</a>`;
       additionalInfo = '<p>Your certificate batch has been submitted for review. You will receive another notification once the review is complete.</p>';
       break;
     case 'batch_approved':
-      actionButton = `<a href="${Deno.env.get('NEXT_PUBLIC_APP_URL') || 'https://app.bpiincworks.com'}/certificates" class="button">View Approved Certificates</a>`;
+      actionButton = `<a href="https://seaxchrsbldrppupupbw.supabase.co/certificates" class="button">View Approved Certificates</a>`;
       additionalInfo = '<p>Congratulations! Your certificate batch has been approved and certificates are now available for download.</p>';
       break;
     case 'batch_rejected':
-      actionButton = `<a href="${Deno.env.get('NEXT_PUBLIC_APP_URL') || 'https://app.bpiincworks.com'}/certificates" class="button">Review Feedback</a>`;
+      actionButton = `<a href="https://seaxchrsbldrppupupbw.supabase.co/certificates" class="button">Review Feedback</a>`;
       additionalInfo = '<p>Your certificate batch requires attention. Please review the feedback and resubmit if necessary.</p>';
       break;
     case 'certificate_approved':
-      actionButton = `<a href="${Deno.env.get('NEXT_PUBLIC_APP_URL') || 'https://app.bpiincworks.com'}/certificates" class="button">Download Certificate</a>`;
+      actionButton = `<a href="https://seaxchrsbldrppupupbw.supabase.co/certificates" class="button">Download Certificate</a>`;
       additionalInfo = '<p>Your certificate has been approved and is ready for download.</p>';
       break;
     case 'certificate_rejected':
-      actionButton = `<a href="${Deno.env.get('NEXT_PUBLIC_APP_URL') || 'https://app.bpiincworks.com'}/certificates" class="button">View Details</a>`;
+      actionButton = `<a href="https://seaxchrsbldrppupupbw.supabase.co/certificates" class="button">View Details</a>`;
       additionalInfo = '<p>Your certificate request needs revision. Please check the details and resubmit.</p>';
       break;
   }

@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -27,55 +28,34 @@ export interface CreateCertificateNotificationParams {
 
 export class SimpleCertificateNotificationService {
   /**
-   * Create a new certificate notification
+   * Create a new certificate notification using the database function
    */
   static async createNotification(params: CreateCertificateNotificationParams): Promise<string | null> {
     try {
-      console.log('Creating certificate notification:', params);
+      console.log('Creating certificate notification via DB function:', params);
 
-      // Direct insert since the RPC function isn't in the types yet
-      const { data, error } = await supabase
-        .from('certificate_notifications')
-        .insert({
-          user_id: params.userId,
-          certificate_request_id: params.certificateRequestId || null,
-          batch_id: params.batchId || null,
-          notification_type: params.notificationType,
-          title: params.title,
-          message: params.message
-        })
-        .select('id')
-        .single();
+      // Use the database function instead of direct insert to avoid RLS issues
+      const { data, error } = await supabase.rpc('create_certificate_notification', {
+        p_user_id: params.userId,
+        p_certificate_request_id: params.certificateRequestId || null,
+        p_batch_id: params.batchId || null,
+        p_notification_type: params.notificationType,
+        p_title: params.title,
+        p_message: params.message,
+        p_send_email: params.sendEmail !== false
+      });
 
       if (error) {
-        console.error('Error creating certificate notification:', error);
+        console.error('Error creating certificate notification via DB function:', error);
         throw error;
       }
 
-      // Send email if requested
-      if (params.sendEmail !== false) {
-        try {
-          await supabase.functions.invoke('send-certificate-notification-email', {
-            body: {
-              notification_id: data.id,
-              user_email: params.userId, // Will be resolved in the function
-              title: params.title,
-              message: params.message,
-              notification_type: params.notificationType
-            }
-          });
-        } catch (emailError) {
-          console.error('Failed to send email notification:', emailError);
-          // Don't fail the notification creation if email fails
-        }
-      }
-
-      console.log('Certificate notification created successfully:', data.id);
-      return data.id;
+      console.log('Certificate notification created successfully via DB function:', data);
+      return data;
 
     } catch (error) {
       console.error('Failed to create certificate notification:', error);
-      toast.error('Failed to send notification');
+      // Don't fail the whole process for notification errors - just log and continue
       return null;
     }
   }
@@ -220,35 +200,54 @@ export class SimpleCertificateNotificationService {
   }
 
   /**
-   * Notify administrators about batch submissions
+   * Notify administrators about batch submissions - with proper error handling
    */
   static async notifyAdminsOfBatchSubmission(batchId: string, submitterName: string, batchSize: number): Promise<void> {
     try {
-      // Get admin users
+      console.log('Starting admin notification process...');
+      
+      // Get admin users with proper query construction
       const { data: adminUsers, error } = await supabase
         .from('profiles')
         .select('id, email, display_name')
-        .in('role', ['AD', 'SA']);
+        .in('role', ['AD', 'SA'])
+        .not('email', 'is', null);
 
-      if (error || !adminUsers?.length) {
+      if (error) {
+        console.error('Error fetching admin users:', error);
+        // Don't throw - this shouldn't break the batch upload
+        return;
+      }
+
+      if (!adminUsers || adminUsers.length === 0) {
         console.warn('No admin users found for batch notification');
         return;
       }
 
-      // Create notifications for each admin
-      const notifications = adminUsers.map(admin => 
-        this.createNotification({
-          userId: admin.id,
-          batchId,
-          notificationType: 'batch_submitted',
-          title: 'New Certificate Batch Submitted',
-          message: `${submitterName} has submitted a batch of ${batchSize} certificate requests for review.`,
-          sendEmail: true
-        })
-      );
+      console.log(`Found ${adminUsers.length} admin users for notification`);
 
-      await Promise.all(notifications);
-      console.log(`Notified ${adminUsers.length} administrators about batch submission`);
+      // Create notifications for each admin - with error handling for each
+      const notificationPromises = adminUsers.map(async (admin) => {
+        try {
+          return await this.createNotification({
+            userId: admin.id,
+            batchId,
+            notificationType: 'batch_submitted',
+            title: 'New Certificate Batch Submitted',
+            message: `${submitterName} has submitted a batch of ${batchSize} certificate requests for review.`,
+            sendEmail: true
+          });
+        } catch (error) {
+          console.error(`Failed to notify admin ${admin.id}:`, error);
+          // Return null instead of throwing to continue with other notifications
+          return null;
+        }
+      });
+
+      const results = await Promise.allSettled(notificationPromises);
+      const successCount = results.filter(r => r.status === 'fulfilled' && r.value !== null).length;
+      
+      console.log(`Successfully notified ${successCount} out of ${adminUsers.length} administrators about batch submission`);
 
     } catch (error) {
       console.error('Failed to notify administrators:', error);

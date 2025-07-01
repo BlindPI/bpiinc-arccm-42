@@ -1,239 +1,153 @@
 
 import { useState } from 'react';
 import { useBatchUpload } from './BatchCertificateContext';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
-import { useCourseData } from '@/hooks/useCourseData';
-import { addMonths, format } from 'date-fns';
-import { generateRosterId } from '@/types/batch-upload';
-import { createRoster } from '@/services/rosterService';
+import { useAuth } from '@/hooks/useAuth';
+import { createRoster, sendBatchRosterEmails } from '@/services/rosterService';
 import { SimpleCertificateNotificationService } from '@/services/notifications/simpleCertificateNotificationService';
+import { toast } from 'sonner';
 
 export function useBatchSubmission() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { 
-    processedData, 
-    selectedLocationId, 
-    setCurrentStep 
-  } = useBatchUpload();
   const { user } = useAuth();
-  const { data: courses } = useCourseData();
-
-  // Get all admin users to notify them of batch uploads
-  const getAdminUsers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, email')
-        .in('role', ['SA', 'AD']);
-        
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching admin users:', error);
-      return [];
-    }
-  };
-
-  // Helper function to calculate expiry date when missing
-  const calculateExpiryDate = (issueDate: string, courseId: string | undefined) => {
-    try {
-      if (!issueDate) return null;
-      
-      // Find course to get expiration months
-      let expirationMonths = 24; // Default to 24 months if not specified
-      if (courseId && courses) {
-        const selectedCourse = courses.find(c => c.id === courseId);
-        if (selectedCourse?.expiration_months) {
-          expirationMonths = selectedCourse.expiration_months;
-        }
-      }
-      
-      // Parse the issue date and add expiration months
-      const parsedIssueDate = new Date(issueDate);
-      if (isNaN(parsedIssueDate.getTime())) {
-        return format(new Date(new Date().setFullYear(new Date().getFullYear() + 2)), 'yyyy-MM-dd');
-      }
-      
-      const expiryDate = addMonths(parsedIssueDate, expirationMonths);
-      return format(expiryDate, 'yyyy-MM-dd');
-    } catch (e) {
-      console.error('Error calculating expiry date:', e);
-      // Return a default expiry date of 2 years from today as a fallback
-      return format(new Date(new Date().setFullYear(new Date().getFullYear() + 2)), 'yyyy-MM-dd');
-    }
-  };
+  
+  const {
+    processedData,
+    selectedLocationId,
+    setCurrentStep,
+    setIsSubmitting: setContextSubmitting
+  } = useBatchUpload();
 
   const submitBatch = async () => {
-    if (isSubmitting) {
-      toast.error('Already submitting batch');
-      return;
-    }
-
-    if (!user) {
-      toast.error('You must be logged in to submit certificates');
-      return;
-    }
-
-    if (!processedData || processedData.data.length === 0) {
-      toast.error('No data to submit');
+    if (!processedData || !selectedLocationId || !user) {
+      toast.error('Missing required data for submission');
       return;
     }
 
     setIsSubmitting(true);
-    console.log('Starting batch submission...');
+    setContextSubmitting(true);
+    setCurrentStep('SUBMITTING');
 
     try {
-      // Generate a unique batch ID and a human-readable roster ID
-      const batchId = crypto.randomUUID();
-      
-      // Get user display name for the roster ID
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('display_name, email')
-        .eq('id', user.id)
-        .single();
+      console.log('Starting batch submission process...');
 
-      // Create a roster ID using the user's display name or email if name not available
-      const userName = profile?.display_name || user.email?.split('@')[0] || 'USER';
-      const rosterName = generateRosterId(userName);
-      
-      console.log(`Generated roster ID: ${rosterName} for batch ${batchId}`);
+      // Filter out invalid records
+      const validRecords = processedData.data.filter(record => 
+        record.isProcessed && 
+        !record.error && 
+        record.name && 
+        record.email &&
+        !record.hasCourseMismatch
+      );
 
-      // Determine course information for the roster
-      let courseId = undefined;
-      let courseName = '';
-      
-      // Extract course information from the first successful match or the first row
-      const firstValidRow = processedData.data.find(row => row.isProcessed && !row.error);
-      if (firstValidRow) {
-        if (firstValidRow.courseMatches && firstValidRow.courseMatches.length > 0) {
-          courseName = firstValidRow.courseMatches[0].courseName;
-          courseId = firstValidRow.courseMatches[0].courseId;
-        }
+      if (validRecords.length === 0) {
+        throw new Error('No valid records to submit');
       }
-      
-      // Create a roster record first
-      const { success, data: rosterData, error: rosterError } = await createRoster({
-        name: rosterName,
-        description: `Batch upload from ${userName} on ${format(new Date(), 'PPP')}`,
+
+      console.log(`Submitting ${validRecords.length} valid records`);
+
+      // Create roster data
+      const rosterData = {
+        location_id: selectedLocationId,
         created_by: user.id,
-        location_id: selectedLocationId !== 'none' ? selectedLocationId : null,
-        course_id: courseId,
-        issue_date: firstValidRow?.issueDate || format(new Date(), 'yyyy-MM-dd'),
-        status: 'ACTIVE',
-        certificate_count: processedData.data.filter(row => row.isProcessed && !row.error).length
+        status: 'PENDING' as const,
+        total_certificates: validRecords.length,
+        processed_certificates: 0,
+        certificate_requests: validRecords.map(record => ({
+          recipient_name: record.name,
+          recipient_email: record.email,
+          recipient_phone: record.phone || null,
+          company: record.company || null,
+          course_id: record.courseMatches?.[0]?.courseId || null,
+          course_name: record.courseMatches?.[0]?.courseName || 'Unknown Course',
+          issue_date: record.issueDate,
+          expiry_date: record.expiryDate,
+          assessment_status: record.assessmentStatus || 'PASS',
+          certifications: record.certifications || {},
+          instructor_name: record.instructorName || null,
+          instructor_level: record.instructorLevel || null,
+          notes: record.notes || null,
+          city: record.city || null,
+          province: record.province || null,
+          postal_code: record.postalCode || null
+        }))
+      };
+
+      console.log('Creating roster with data:', { 
+        location_id: rosterData.location_id,
+        created_by: rosterData.created_by,
+        total_certificates: rosterData.total_certificates
       });
-      
-      if (!success || rosterError) {
-        console.error('Failed to create roster:', rosterError);
-        toast.error(`Failed to create roster: ${rosterError?.message || 'Unknown error'}`);
-        setIsSubmitting(false);
-        return;
-      }
-      
-      console.log('Created roster record:', rosterData);
-      
-      const rosterId = rosterData?.id;
 
-      const requests = processedData.data
-        .filter(row => row.isProcessed && !row.error)
-        .map(row => {
-          // Use course match if available
-          let courseName = '';
-          let courseId = undefined;
-          
-          if (row.courseMatches && row.courseMatches.length > 0) {
-            // Use the best match (first in the array)
-            courseName = row.courseMatches[0].courseName;
-            courseId = row.courseMatches[0].courseId;
-          }
-          
-          // Ensure expiry date is set - this is critical to prevent DB errors
-          const expiryDate = row.expiryDate || calculateExpiryDate(row.issueDate, courseId);
-          
-          if (!expiryDate) {
-            console.warn(`No expiry date could be calculated for ${row.name}, using default 2-year expiration`);
-          }
-          
-          return {
-            recipient_name: row.name,
-            recipient_email: row.email,
-            phone: row.phone || null,
-            company: row.company || null,
-            first_aid_level: row.firstAidLevel || null,
-            cpr_level: row.cprLevel || null,
-            assessment_status: row.assessmentStatus || 'PASS',
-            course_name: courseName, // This is what's actually stored in the DB
-            issue_date: row.issueDate,
-            expiry_date: expiryDate || format(new Date(new Date().setFullYear(new Date().getFullYear() + 2)), 'yyyy-MM-dd'),
-            city: row.city || null,
-            province: row.province || null,
-            postal_code: row.postalCode || null,
-            instructor_name: row.instructorName || null,
-            instructor_level: row.instructorLevel || null,
-            notes: row.notes || null, // Capture notes from Excel uploads
-            status: 'PENDING', // Always set to PENDING so admins can review
-            user_id: user.id,
-            location_id: selectedLocationId !== 'none' ? selectedLocationId : null,
-            batch_id: batchId,       // Store the batch UUID
-            batch_name: rosterName,  // Store the human-readable roster ID
-            roster_id: rosterId      // Store the roster ID for proper grouping
-          };
-        });
-
-      if (requests.length === 0) {
-        toast.error('No valid records to submit');
-        setIsSubmitting(false);
-        return;
+      // Create the roster
+      const rosterResult = await createRoster(rosterData);
+      
+      if (!rosterResult.success) {
+        throw new Error(rosterResult.error?.message || 'Failed to create roster');
       }
 
-      console.log('Submitting certificate requests:', requests);
+      const rosterId = rosterResult.data.id;
+      console.log('Roster created successfully:', rosterId);
 
-      const { data, error } = await supabase
-        .from('certificate_requests')
-        .insert(requests)
-        .select('id');
-
-      if (error) {
-        throw error;
-      }
-
-      const successCount = data?.length || 0;
-      
-      toast.success(`Successfully submitted ${successCount} certificate requests for review`);
-      
+      // Try to send notifications (but don't fail if this doesn't work)
       try {
-        // Notify administrators about the batch submission
-        await SimpleCertificateNotificationService.notifyAdminsOfBatchSubmission(
-          batchId,
-          profile?.display_name || user.email || 'User',
-          successCount
-        );
-
+        console.log('Attempting to send notifications...');
+        
         // Notify the submitter
         await SimpleCertificateNotificationService.notifyBatchSubmitted(
           user.id,
-          batchId,
-          successCount
+          rosterId,
+          validRecords.length
         );
-        
+        console.log('Submitter notification sent successfully');
+
+        // Notify administrators - with error handling
+        await SimpleCertificateNotificationService.notifyAdminsOfBatchSubmission(
+          rosterId,
+          user.email || user.id,
+          validRecords.length
+        );
+        console.log('Admin notifications sent successfully');
+
       } catch (notificationError) {
-        console.error('Error sending batch notifications:', notificationError);
-        // Don't fail the process if notifications have issues
+        console.error('Notification sending failed, but continuing with batch submission:', notificationError);
+        // Don't fail the entire submission just because notifications failed
       }
 
-      // Change step to complete
+      // Try to send batch emails (but don't fail if this doesn't work)
+      try {
+        console.log('Attempting to send batch emails...');
+        const recipientEmails = validRecords.map(record => record.email);
+        
+        const emailResult = await sendBatchRosterEmails(rosterId, recipientEmails);
+        
+        if (emailResult.success) {
+          console.log('Batch emails sent successfully');
+        } else {
+          console.warn('Batch email sending failed:', emailResult.error);
+          // Don't fail the submission - emails can be sent later
+        }
+      } catch (emailError) {
+        console.error('Email sending failed, but continuing with batch submission:', emailError);
+        // Don't fail the entire submission just because emails failed
+      }
+
+      // Success!
+      console.log('Batch submission completed successfully');
+      toast.success(`Successfully submitted ${validRecords.length} certificate requests!`);
       setCurrentStep('COMPLETE');
-      
+
     } catch (error) {
-      console.error('Error submitting batch:', error);
-      toast.error(`Error submitting batch: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Batch submission failed:', error);
+      toast.error(`Submission failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setCurrentStep('REVIEW'); // Go back to review step on error
     } finally {
       setIsSubmitting(false);
+      setContextSubmitting(false);
     }
   };
 
-  return { submitBatch, isSubmitting };
+  return {
+    submitBatch,
+    isSubmitting
+  };
 }
