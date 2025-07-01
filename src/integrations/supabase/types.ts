@@ -12313,6 +12313,9 @@ export type Database = {
           metadata: Json | null
           name: string
           status: string
+          submitted_at: string | null
+          submitted_by: string | null
+          total_count: number | null
           updated_at: string
         }
         Insert: {
@@ -12328,6 +12331,9 @@ export type Database = {
           metadata?: Json | null
           name: string
           status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          total_count?: number | null
           updated_at?: string
         }
         Update: {
@@ -12343,6 +12349,9 @@ export type Database = {
           metadata?: Json | null
           name?: string
           status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          total_count?: number | null
           updated_at?: string
         }
         Relationships: [

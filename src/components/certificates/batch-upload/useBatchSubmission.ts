@@ -31,9 +31,8 @@ export function useBatchSubmission() {
     try {
       console.log('Starting batch submission process...');
 
-      // Generate roster ID
-      const rosterId = generateRosterId(profile.display_name || 'Unknown');
-      const batchName = `Roster ${rosterId}`;
+      // Generate human-readable roster name
+      const rosterName = `Roster ${generateRosterId(profile.display_name || 'Unknown')}`;
 
       // Filter out records with validation errors for submission
       const validRecords = processedData.data.filter(row => 
@@ -42,10 +41,9 @@ export function useBatchSubmission() {
 
       console.log(`Submitting ${validRecords.length} valid records out of ${processedData.totalCount} total`);
 
-      // Create roster entry
+      // Create roster entry - let database generate UUID for id
       const rosterData = {
-        id: rosterId,
-        name: batchName,
+        name: rosterName,
         location_id: selectedLocationId,
         submitted_by: profile.id,
         total_count: validRecords.length,
@@ -55,9 +53,12 @@ export function useBatchSubmission() {
 
       const { success: rosterSuccess, data: rosterResult, error: rosterError } = await createRoster(rosterData);
 
-      if (!rosterSuccess || rosterError) {
+      if (!rosterSuccess || rosterError || !rosterResult) {
         throw new Error(`Failed to create roster: ${rosterError?.message || 'Unknown error'}`);
       }
+
+      // Use the database-generated UUID for roster_id
+      const rosterUUID = rosterResult.id;
 
       // Create certificate requests for valid records
       const certificateRequests = validRecords.map(row => ({
@@ -66,16 +67,19 @@ export function useBatchSubmission() {
         recipient_email: row.email,
         recipient_phone: row.phone || null,
         company: row.company || null,
+        course_name: row.courseMatch?.name || row.courseName || 'Unknown Course',
         course_id: row.courseMatch?.id || null,
         location_id: selectedLocationId,
-        roster_id: rosterId,
-        batch_id: rosterId,
-        batch_name: batchName,
+        roster_id: rosterUUID, // Use the database-generated UUID
+        batch_id: rosterName, // Keep human-readable for batch_id
+        batch_name: rosterName,
         status: 'PENDING' as const,
         assessment_status: row.assessmentStatus === 'PASS' ? 'PASS' : 'FAIL',
         certifications: row.courseMatch?.certifications || [],
         course_length: row.courseMatch?.length || null,
-        expiration_months: row.courseMatch?.expiration_months || 24
+        expiration_months: row.courseMatch?.expiration_months || 24,
+        issue_date: new Date().toISOString().split('T')[0],
+        expiry_date: new Date(Date.now() + (row.courseMatch?.expiration_months || 24) * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       }));
 
       // Insert certificate requests in batches
@@ -107,11 +111,11 @@ export function useBatchSubmission() {
         
         const emailResult = await supabase.functions.invoke('batch-request-email-details', {
           body: {
-            rosterId,
+            rosterId: rosterUUID, // Use the database-generated UUID
             locationId: selectedLocationId,
             submittedBy: profile.id,
             rosterData: processedData.data, // Send all data including errors for AP review
-            batchName
+            batchName: rosterName
           }
         });
 
