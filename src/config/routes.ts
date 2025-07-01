@@ -44,7 +44,5 @@ export const PROTECTED_PAGES = [
   "/crm/opportunities",
   "/crm/revenue",
   "/instructor-performance",
-  "/authorized-providers",
-  "/compliance-dashboard/admin",
-  "/compliance-dashboard/provider"
+  "/authorized-providers"
 ];

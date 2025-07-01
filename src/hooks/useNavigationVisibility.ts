@@ -89,7 +89,6 @@ const getEmergencyDefaultConfig = (role: string): NavigationVisibilityConfig => 
       'Compliance & Automation': {
         enabled: true,
         items: {
-          'Compliance Dashboard': true,
           'Automation': true,
           'Progression Path Builder': true
         }

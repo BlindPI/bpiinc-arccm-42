@@ -28,7 +28,7 @@ const NAVIGATION_GROUPS = {
     'Revenue Analytics'
   ],
   'Analytics & Reports': ['Analytics', 'Executive Dashboard', 'Report Scheduler', 'Reports'],
-  'Compliance & Automation': ['Compliance Dashboard', 'Automation', 'Progression Path Builder'],
+  'Compliance & Automation': ['Automation', 'Progression Path Builder'],
   'System Administration': ['Integrations', 'Notifications', 'System Monitoring', 'Settings']
 };
 
@@ -119,7 +119,7 @@ export function SidebarNavigationControl() {
             'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
             'CRM': { enabled: true, items: { 'Phase 4 CRM Dashboard': true, 'Email Workflows': true, 'Campaign Management': true, 'Revenue Analytics': true } },
             'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Executive Dashboard': true, 'Report Scheduler': true, 'Reports': true } },
-            'Compliance & Automation': { enabled: true, items: { 'Compliance Dashboard': true, 'Automation': true, 'Progression Path Builder': true } }
+            'Compliance & Automation': { enabled: true, items: { 'Automation': true, 'Progression Path Builder': true } }
           } : role === 'AD' ? {
             'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } },
             'User Management': { enabled: true, items: { 'Users': true, 'Teams': true, 'Role Management': true, 'Supervision': true } },
@@ -127,8 +127,7 @@ export function SidebarNavigationControl() {
             'Training Management': { enabled: true, items: { 'Training Hub': true, 'Courses': true, 'Enrollments': true, 'Enrollment Management': true, 'Locations': true } },
             'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
             'CRM': { enabled: true, items: { 'Phase 4 CRM Dashboard': true, 'Email Workflows': true, 'Campaign Management': true, 'Revenue Analytics': true } },
-            'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Executive Dashboard': true, 'Report Scheduler': true, 'Reports': true } },
-            'Compliance & Automation': { enabled: true, items: { 'Compliance Dashboard': true } }
+            'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Executive Dashboard': true, 'Report Scheduler': true, 'Reports': true } }
           } : role === 'TM' ? {
             'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } },
             'User Management': { enabled: true, items: { 'Teams': true, 'Supervision': true } },

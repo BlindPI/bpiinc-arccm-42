@@ -1,67 +1,46 @@
 
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
 
 interface PageHeaderProps {
   icon?: React.ReactNode;
   title: string;
   subtitle?: string;
+  actions?: React.ReactNode;
   badge?: {
     text: string;
-    variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'info' | 'warning';
+    variant?: string;
   };
-  children?: React.ReactNode;
-  actions?: React.ReactNode;
+  className?: string;
 }
 
-export const PageHeader: React.FC<PageHeaderProps> = ({
-  icon,
-  title,
-  subtitle,
-  badge,
-  children,
-  actions
-}) => {
-  const getBadgeVariant = (variant: string) => {
-    switch (variant) {
-      case 'success':
-        return 'success';
-      case 'info':
-        return 'info';
-      case 'warning':
-        return 'warning';
-      default:
-        return variant as 'default' | 'secondary' | 'destructive' | 'outline';
-    }
-  };
-
+export function PageHeader({ icon, title, subtitle, actions, badge, className }: PageHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div className={`flex items-center justify-between ${className || ''}`}>
       <div className="flex items-center gap-3">
-        {icon && <div className="flex-shrink-0">{icon}</div>}
+        {icon}
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
-              {title}
-            </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">{title}</h1>
             {badge && (
-              <Badge variant={getBadgeVariant(badge.variant)}>
+              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                badge.variant === 'success' ? 'bg-green-100 text-green-800' : 
+                badge.variant === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                'bg-gray-100 text-gray-800'
+              }`}>
                 {badge.text}
-              </Badge>
+              </span>
             )}
           </div>
           {subtitle && (
-            <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-              {subtitle}
-            </p>
+            <p className="text-muted-foreground mt-1">{subtitle}</p>
           )}
         </div>
       </div>
-      {(children || actions) && (
-        <div className="flex-shrink-0">
-          {actions || children}
+      {actions && (
+        <div className="flex items-center gap-2">
+          {actions}
         </div>
       )}
     </div>
   );
-};
+}

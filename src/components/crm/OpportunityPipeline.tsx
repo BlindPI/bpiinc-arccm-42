@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, DollarSign, Calendar, MoreHorizontal } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { CRMService } from '@/services/crm/crmService';
@@ -109,14 +109,13 @@ export const OpportunityPipeline: React.FC = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium">Sales Pipeline</h3>
-        <Button onClick={() => {
-          setSelectedOpportunity(null);
-          setIsFormOpen(true);
-        }}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Opportunity
-        </Button>
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={() => setSelectedOpportunity(null)}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Opportunity
+            </Button>
+          </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>

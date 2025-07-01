@@ -5,9 +5,6 @@ import { BrowserRouter as Router } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { AppRoutes } from "./AppRoutes.tsx";
-import { Toaster } from '@/components/ui/sonner';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import { LayoutRouter } from '@/components/LayoutRouter';
 import "./index.css";
 
 // Import team diagnostics for debugging (development only)
@@ -47,16 +44,11 @@ const queryClient = new QueryClient({
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Router>
-          <AuthProvider>
-            <LayoutRouter>
-              <AppRoutes />
-            </LayoutRouter>
-            <Toaster position="top-right" />
-          </AuthProvider>
-        </Router>
-      </TooltipProvider>
+      <Router>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </Router>
     </QueryClientProvider>
   </React.StrictMode>
 );

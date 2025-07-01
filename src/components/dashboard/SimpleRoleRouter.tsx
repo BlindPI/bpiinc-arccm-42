@@ -28,8 +28,6 @@ import { EnhancedTeamProviderDashboard } from './team/EnhancedTeamProviderDashbo
 import { ITDashboard } from './role-dashboards/ITDashboard'; // Import IT Dashboard
 import { IPDashboard } from './role-dashboards/IPDashboard'; // Import IP Dashboard
 import { ICDashboard } from './role-dashboards/ICDashboard'; // Import IC Dashboard
-import SystemAdminDashboard from './role-dashboards/SystemAdminDashboard'; // Import SA Dashboard
-import AdminDashboard from './role-dashboards/AdminDashboard'; // Import AD Dashboard
 
 export function SimpleRoleRouter() {
   const {
@@ -106,42 +104,9 @@ export function SimpleRoleRouter() {
       </div>;
   }
 
-  // System Admin Dashboard (SA users)
-  if (userRole === 'SA') {
-    console.log('🎯 ROUTING: SA user to SystemAdminDashboard');
-    return <div className="space-y-6">
-        <SuccessBanner />
-        <SystemAdminDashboard
-          config={{
-            welcomeMessage: `Welcome, ${profile.display_name || user.email}`,
-            subtitle: 'System Administrator Dashboard',
-            widgets: []
-          }}
-          profile={{
-            ...profile,
-            status: profile.status || 'ACTIVE'
-          }}
-        />
-      </div>;
-  }
-
-  // Admin Dashboard (AD users)
-  if (userRole === 'AD') {
-    console.log('🎯 ROUTING: AD user to AdminDashboard');
-    return <div className="space-y-6">
-        <SuccessBanner />
-        <AdminDashboard
-          config={{
-            welcomeMessage: `Welcome, ${profile.display_name || user.email}`,
-            subtitle: 'Administrator Dashboard',
-            widgets: []
-          }}
-          profile={{
-            ...profile,
-            status: profile.status || 'ACTIVE'
-          }}
-        />
-      </div>;
+  // Admin Dashboard (AD/SA users)
+  if (userRole === 'AD' || userRole === 'SA') {
+    return <AdminQuickDashboard profile={profile} />;
   }
 
   // Instructor Dashboard (IT users specifically for now)

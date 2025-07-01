@@ -104,18 +104,18 @@ export function InviteUserDialog() {
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>
-            {directCreation ? "Create New User" : "Invite New User"}
-          </DialogTitle>
-          <DialogDescription>
-            {directCreation 
-              ? "Directly create a new user account in the system."
-              : "Send an invitation email to add a new user to the system."
-            }
-          </DialogDescription>
-        </DialogHeader>
         <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>
+              {directCreation ? "Create New User" : "Invite New User"}
+            </DialogTitle>
+            <DialogDescription>
+              {directCreation 
+                ? "Directly create a new user account in the system."
+                : "Send an invitation email to add a new user to the system."
+              }
+            </DialogDescription>
+          </DialogHeader>
           <div className="grid gap-4 py-4">
             {(currentUserProfile?.role === 'AD' || currentUserProfile?.role === 'SA') && (
               <div className="flex items-center space-x-2">

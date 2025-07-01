@@ -1,14 +1,12 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import { Table, TableBody, TableCaption, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Users as UsersIcon, Search as SearchIcon } from 'lucide-react';
+import { Loader2, User as UserIcon, Search as SearchIcon, Users as UsersIcon } from 'lucide-react';
 import { UserTableRow } from './UserTableRow';
 import { ExtendedProfile } from '@/types/supabase-schema';
 import { EditUserDialog } from './dialogs/EditUserDialog';
 import { ResetPasswordDialog } from './dialogs/ResetPasswordDialog';
 import { ChangeRoleDialog } from './dialogs/ChangeRoleDialog';
 import { UserDetailDialog } from './dialogs/UserDetailDialog';
-import { ComplianceTierManagerDialog } from './dialogs/ComplianceTierManagerDialog';
 
 type Props = {
   users: ExtendedProfile[];
@@ -29,24 +27,7 @@ export function UserTable({
   dialogHandlers,
   isAdmin,
 }: Props) {
-  const [tierManagerOpen, setTierManagerOpen] = useState(false);
-  const [selectedUserForTier, setSelectedUserForTier] = useState<{
-    id: string;
-    name: string;
-    role: string;
-  } | null>(null);
-
-  const handleTierManagerOpen = (userId: string, userName: string, userRole: string) => {
-    setSelectedUserForTier({ id: userId, name: userName, role: userRole });
-    setTierManagerOpen(true);
-  };
-
-  const handleTierManagerClose = () => {
-    setTierManagerOpen(false);
-    setSelectedUserForTier(null);
-  };
-
-  // Helper: empty state illustration
+  // Helper: empty state illustration (icon + text)
   const EmptyState = () => (
     <div className="flex flex-col items-center justify-center py-24 gap-4">
       <UsersIcon className="h-12 w-12 text-muted-foreground/40 mb-2" />
@@ -97,7 +78,6 @@ export function UserTable({
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Compliance</TableHead>
-                <TableHead>Tier</TableHead>
                 <TableHead>Created At</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -116,7 +96,6 @@ export function UserTable({
                   onChangeRole={dialogHandlers.handleChangeRoleClick}
                   canManageUsers={isAdmin}
                   onViewDetail={dialogHandlers.handleViewUserDetail}
-                  showTierManagerInModal={handleTierManagerOpen}
                 />
               ))}
             </TableBody>
@@ -134,13 +113,6 @@ export function UserTable({
         }}
         user={detailUser}
         isAdmin={isAdmin}
-      />
-      <ComplianceTierManagerDialog
-        open={tierManagerOpen}
-        onOpenChange={setTierManagerOpen}
-        user={selectedUserForTier}
-        canManage={isAdmin}
-        onClose={handleTierManagerClose}
       />
     </>
   );

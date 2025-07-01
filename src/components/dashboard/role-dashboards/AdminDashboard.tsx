@@ -2,14 +2,11 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useRoleBasedDashboardData } from '@/hooks/useRoleBasedDashboardData';
-import { ComplianceTierDashboard } from '@/components/compliance/ComplianceTierDashboard';
-import {
-  Users,
-  BookOpen,
-  Award,
+import { 
+  Users, 
+  BookOpen, 
+  Award, 
   AlertCircle,
   Shield,
   TrendingUp,
@@ -67,7 +64,7 @@ export default function AdminDashboard({ config, profile }: AdminDashboardProps)
         <div>
           <h2 className="text-2xl font-bold tracking-tight">System Administration</h2>
           <p className="text-muted-foreground">
-            Administrative oversight and compliance management
+            Global system metrics and administrative overview
           </p>
         </div>
         <Badge variant="default" className="flex items-center gap-2">
@@ -76,125 +73,100 @@ export default function AdminDashboard({ config, profile }: AdminDashboardProps)
         </Badge>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">System Overview</TabsTrigger>
-          <TabsTrigger value="compliance">
-            <Shield className="h-4 w-4 mr-1" />
-            Compliance Management
-          </TabsTrigger>
-          <TabsTrigger value="activities">System Activities</TabsTrigger>
-        </TabsList>
+      {/* System Metrics */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="bg-gradient-to-br from-blue-50 to-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Total Users
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              {metrics.totalUsers || 0}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">System-wide users</p>
+          </CardContent>
+        </Card>
 
-        <TabsContent value="overview" className="space-y-6">
-          {/* System Metrics */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="bg-gradient-to-br from-blue-50 to-white">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Total Users
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">
-                  {metrics.totalUsers || 0}
-                </div>
-                <p className="text-xs text-gray-500 mt-1">System-wide users</p>
-              </CardContent>
-            </Card>
+        <Card className="bg-gradient-to-br from-green-50 to-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              Active Courses
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {metrics.activeCourses || 0}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Currently running</p>
+          </CardContent>
+        </Card>
 
-            <Card className="bg-gradient-to-br from-green-50 to-white">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                  <BookOpen className="h-4 w-4" />
-                  Active Courses
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">
-                  {metrics.activeCourses || 0}
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Currently running</p>
-              </CardContent>
-            </Card>
+        <Card className="bg-gradient-to-br from-purple-50 to-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <Award className="h-4 w-4" />
+              Total Certificates
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">
+              {metrics.totalCertificates || 0}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">All time issued</p>
+          </CardContent>
+        </Card>
 
-            <Card className="bg-gradient-to-br from-purple-50 to-white">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                  <Award className="h-4 w-4" />
-                  Total Certificates
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-purple-600">
-                  {metrics.totalCertificates || 0}
-                </div>
-                <p className="text-xs text-gray-500 mt-1">All time issued</p>
-              </CardContent>
-            </Card>
+        <Card className="bg-gradient-to-br from-orange-50 to-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              Pending Requests
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">
+              {metrics.pendingRequests || 0}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Awaiting review</p>
+          </CardContent>
+        </Card>
+      </div>
 
-            <Card className="bg-gradient-to-br from-orange-50 to-white">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4" />
-                  Pending Requests
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-orange-600">
-                  {metrics.pendingRequests || 0}
+      {/* System Activities */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Recent System Activities
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {recentActivities.length > 0 ? (
+            <div className="space-y-3">
+              {recentActivities.map((activity) => (
+                <div key={activity.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                  <div>
+                    <p className="text-sm font-medium">{activity.description}</p>
+                    <p className="text-xs text-muted-foreground">System Activity</p>
+                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    {new Date(activity.timestamp).toLocaleDateString()}
+                  </Badge>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Awaiting review</p>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="compliance" className="space-y-6">
-          <Alert className="bg-gradient-to-r from-blue-50 to-white border-blue-200 shadow-sm">
-            <Shield className="h-4 w-4 text-blue-600 mr-2" />
-            <AlertDescription className="text-blue-800 font-medium">
-              Administrative Compliance Management - Departmental oversight and compliance review
-            </AlertDescription>
-          </Alert>
-          <ComplianceTierDashboard />
-        </TabsContent>
-
-        <TabsContent value="activities" className="space-y-6">
-          {/* System Activities */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5" />
-                Recent System Activities
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {recentActivities.length > 0 ? (
-                <div className="space-y-3">
-                  {recentActivities.map((activity) => (
-                    <div key={activity.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
-                      <div>
-                        <p className="text-sm font-medium">{activity.description}</p>
-                        <p className="text-xs text-muted-foreground">System Activity</p>
-                      </div>
-                      <Badge variant="outline" className="text-xs">
-                        {new Date(activity.timestamp).toLocaleDateString()}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No recent system activities</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No recent system activities</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -21,6 +21,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Mail,
@@ -178,14 +179,13 @@ export function ProfessionalEmailCampaignManager() {
             Create and manage professional email marketing campaigns with enterprise-grade templates
           </p>
         </div>
-        <Button
-          onClick={() => setShowCreateDialog(true)}
-          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-        >
-          <Mail className="w-4 h-4 mr-2" />
-          Create Campaign
-        </Button>
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogTrigger asChild>
+            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+              <Mail className="w-4 h-4 mr-2" />
+              Create Campaign
+            </Button>
+          </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Create Professional Email Campaign</DialogTitle>

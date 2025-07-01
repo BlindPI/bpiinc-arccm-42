@@ -32,7 +32,12 @@ export function BatchReviewSection() {
   
   const { data, totalCount, errorCount } = processedData;
   const hasErrors = errorCount > 0;
-  const canSubmit = isValidated && selectedLocationId;
+  
+  // CRITICAL: Check for course mismatches
+  const courseMismatchCount = data.filter(row => row.hasCourseMismatch).length;
+  const hasCourseMismatches = courseMismatchCount > 0;
+  
+  const canSubmit = isValidated && selectedLocationId && !hasCourseMismatches;
   
   const handleSubmit = async () => {
     if (canSubmit) {
@@ -54,12 +59,14 @@ export function BatchReviewSection() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium">
-                  {totalCount} records found {hasErrors && `(${errorCount} with errors)`}
+                  {totalCount} records found 
+                  {hasErrors && ` (${errorCount} with errors)`}
+                  {hasCourseMismatches && ` (${courseMismatchCount} course mismatches)`}
                 </p>
-                {hasErrors && (
+                {(hasErrors || hasCourseMismatches) && (
                   <p className="text-xs text-destructive flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" />
-                    Records with errors will be skipped
+                    Records with errors or mismatches will be skipped
                   </p>
                 )}
               </div>
@@ -110,11 +117,25 @@ export function BatchReviewSection() {
           <ValidationSection 
             confirmations={validationConfirmed}
             setConfirmations={setValidationConfirmed}
+            hasCourseMismatches={hasCourseMismatches}
+            courseMismatchCount={courseMismatchCount}
           />
         </CardContent>
         <CardFooter>
-          {!selectedLocationId && (
-            <Alert variant="destructive" className="mb-4">
+          {hasCourseMismatches && (
+            <Alert variant="destructive" className="mb-4 w-full">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Submission Blocked:</strong> {courseMismatchCount} course mismatch{courseMismatchCount !== 1 ? 'es' : ''} must be resolved.
+                <br />
+                <span className="text-xs">
+                  Review the course matching errors above. Ensure your uploaded data matches available course combinations.
+                </span>
+              </AlertDescription>
+            </Alert>
+          )}
+          {!selectedLocationId && !hasCourseMismatches && (
+            <Alert variant="destructive" className="mb-4 w-full">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
                 Please select a location before submitting the batch.
@@ -131,6 +152,8 @@ export function BatchReviewSection() {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Processing...
               </>
+            ) : hasCourseMismatches ? (
+              'Resolve Course Mismatches to Continue'
             ) : !selectedLocationId ? (
               'Select Location to Continue'
             ) : (

@@ -1,172 +1,127 @@
 import * as XLSX from 'xlsx';
-import { REQUIRED_COLUMNS } from '../constants';
+import { findBestCourseMatch, validateCourseMatch } from './courseMatching';
+import type { Course } from '@/types/courses';
+import type { ProcessedData } from '@/types/batch-upload';
 
-const normalizeColumnName = (name: string): string => {
-  if (!name) return '';
-  
-  const mapping: Record<string, string> = {
-    'CPR': 'CPR Level',
-    'First Aid': 'First Aid Level',
-    'Instructor': 'Instructor Level',
-    'INSTRUCTOR': 'Instructor Level',
-    'Instructor Type': 'Instructor Level',
-    'Instructor Certification': 'Instructor Level',
-    'Length': 'Length',
-    'Hours': 'Length',
-    'Course Hours': 'Length',
-    'course_length': 'Length',
-    'Course Length': 'Length',
-    'Issue Date': 'Issue Date',
-    'Completion Date': 'Issue Date',
-    'ISSUE': 'Issue Date',
-    'Date': 'Issue Date',
-    'Student Name': 'Student Name',
-    'Name': 'Student Name',
-    'Recipient': 'Student Name',
-    'Recipient Name': 'Student Name',
-    'recipient_name': 'Student Name',
-    'Email': 'Email',
-    'E-mail': 'Email',
-    'EmailAddress': 'Email',
-    'email': 'Email',
-    'Instructor Name': 'Instructor'
-  };
-  
-  return mapping[name] || name;
-};
+function cleanString(str: any): string {
+  if (typeof str === 'number') {
+    return String(str).trim();
+  }
+  if (typeof str === 'string') {
+    return str.trim();
+  }
+  return '';
+}
 
-export const processExcelFile = async (file: File) => {
-  const arrayBuffer = await file.arrayBuffer();
-  const workbook = XLSX.read(arrayBuffer);
-  const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-  
-  const rawHeaders = XLSX.utils.sheet_to_json<string[]>(worksheet, { header: 1 })[0];
-  const normalizedHeaders = rawHeaders.map(normalizeColumnName);
-  
-  console.log('Original headers:', rawHeaders);
-  console.log('Normalized headers:', normalizedHeaders);
-  
-  const rows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { 
-    raw: false,
-    defval: ''
-  });
+export async function processRosterFile(
+  file: File,
+  courses: Course[],
+  enableCourseMatching: boolean = false,
+  selectedCourseId?: string
+): Promise<ProcessedData> {
+  try {
+    const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+    const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-  return rows.map(row => {
-    const cleanedRow: Record<string, any> = {};
-    
-    for (const originalKey of Object.keys(row)) {
-      const normalizedKey = normalizeColumnName(originalKey);
-      let value = row[originalKey]?.toString().trim() || '';
+    let errorCount = 0;
+    const processedRows = [];
+
+    for (let i = 0; i < jsonData.length; i++) {
+      const row: any = jsonData[i];
+      const rowNumber = i + 2; // Excel row number (1-indexed + header)
       
-      if (normalizedKey === 'Length' && value) {
-        const numValue = parseFloat(value);
-        value = isNaN(numValue) ? '' : numValue.toString();
+      const processedRow = {
+        id: `temp-${i}`,
+        recipientName: cleanString(row['Name'] || row['Student Name'] || row['Recipient Name'] || ''),
+        email: cleanString(row['Email'] || row['Email Address'] || ''),
+        phone: cleanString(row['Phone'] || row['Phone Number'] || ''),
+        company: cleanString(row['Company'] || row['Organization'] || ''),
+        firstAidLevel: cleanString(row['First Aid Level'] || row['First Aid'] || ''),
+        cprLevel: cleanString(row['CPR Level'] || row['CPR'] || ''),
+        courseName: cleanString(row['Course'] || row['Course Name'] || ''),
+        assessmentStatus: (row['Assessment'] || row['Status'] || 'PASS').toString().toUpperCase(),
+        validationErrors: [] as any[],
+        courseMatch: null as any,
+        hasCourseMismatch: false,
+        rowNumber
+      };
+
+      // Basic validation
+      if (!processedRow.recipientName) {
+        processedRow.validationErrors.push({
+          type: 'required',
+          field: 'recipientName',
+          message: `Row ${rowNumber}: Name is required`
+        });
       }
-      
-      if (normalizedKey === 'Issue Date' && value) {
-        try {
-          const date = new Date(value);
-          if (!isNaN(date.getTime())) {
-            value = date.toISOString().split('T')[0];
-          }
-        } catch (e) {
-          console.log('Failed to parse date:', value);
+
+      if (!processedRow.email) {
+        processedRow.validationErrors.push({
+          type: 'required',
+          field: 'email',
+          message: `Row ${rowNumber}: Email is required`
+        });
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(processedRow.email)) {
+        processedRow.validationErrors.push({
+          type: 'invalid',
+          field: 'email',
+          message: `Row ${rowNumber}: Invalid email format`
+        });
+      }
+
+      // CRITICAL: Course matching validation
+      if (enableCourseMatching && (processedRow.firstAidLevel || processedRow.cprLevel)) {
+        const courseMatch = await findBestCourseMatch(
+          {
+            firstAidLevel: processedRow.firstAidLevel,
+            cprLevel: processedRow.cprLevel
+          },
+          selectedCourseId || 'default',
+          courses
+        );
+
+        processedRow.courseMatch = courseMatch;
+        
+        // Validate the course match
+        const validation = validateCourseMatch(courseMatch);
+        if (!validation.isValid) {
+          processedRow.hasCourseMismatch = true;
+          processedRow.validationErrors.push({
+            type: 'course_mismatch',
+            field: 'course',
+            message: `Row ${rowNumber}: ${validation.error}`,
+            details: {
+              specifiedFirstAid: processedRow.firstAidLevel,
+              specifiedCpr: processedRow.cprLevel,
+              availableCourses: courses
+                .filter(c => c.status === 'ACTIVE')
+                .map(c => ({
+                  name: c.name,
+                  firstAid: c.first_aid_level,
+                  cpr: c.cpr_level
+                }))
+                .slice(0, 5) // Show first 5 for reference
+            }
+          });
         }
       }
-      
-      // Keep the values exactly as they are without normalization
-      cleanedRow[normalizedKey] = value;
-    }
-    
-    return cleanedRow;
-  });
-};
 
-export const processCSVFile = async (file: File) => {
-  const text = await file.text();
-  const rows = text.split('\n').map(row => row.trim()).filter(Boolean);
-  const headers = rows[0].split(',').map(header => header.trim());
-  const normalizedHeaders = headers.map(normalizeColumnName);
-  
-  console.log('CSV Original headers:', headers);
-  console.log('CSV Normalized headers:', normalizedHeaders);
-  
-  const missingColumns = Array.from(REQUIRED_COLUMNS).filter(col => !normalizedHeaders.includes(col));
-  if (missingColumns.length > 0) {
-    throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
-  }
-
-  return rows.slice(1).map(row => {
-    const values = row.split(',').map(cell => cell.trim());
-    const rowData: Record<string, string> = {};
-    
-    headers.forEach((header, index) => {
-      const normalizedHeader = normalizeColumnName(header);
-      let value = values[index] || '';
-      
-      if (normalizedHeader === 'Length' && value) {
-        const numValue = parseFloat(value);
-        value = isNaN(numValue) ? '' : numValue.toString();
+      if (processedRow.validationErrors.length > 0) {
+        errorCount++;
       }
-      
-      if (normalizedHeader === 'Issue Date' && value) {
-        try {
-          const date = new Date(value);
-          if (!isNaN(date.getTime())) {
-            value = date.toISOString().split('T')[0];
-          }
-        } catch (e) {
-          console.log('Failed to parse date:', value);
-        }
-      }
-      
-      // Keep the values exactly as they are without normalization
-      rowData[normalizedHeader] = value;
-    });
-    
-    return rowData;
-  });
-};
 
-export function extractDataFromFile(fileData: Record<string, any>[]): {
-  issueDate?: string;
-  courseInfo?: { 
-    firstAidLevel?: string; 
-    cprLevel?: string; 
-    instructorLevel?: string;
-    length?: number;
-    assessmentStatus?: string;
-    issueDate?: string;
-    instructorName?: string;
-  }
-} {
-  if (!fileData || fileData.length === 0) {
-    return {};
-  }
-  
-  const firstRow = fileData[0] || {};
-  
-  let issueDate: string | undefined;
-  
-  if (firstRow['Issue Date']) {
-    const potentialDate = new Date(firstRow['Issue Date']);
-    if (!isNaN(potentialDate.getTime())) {
-      issueDate = potentialDate.toISOString().split('T')[0];
+      processedRows.push(processedRow);
     }
-  }
 
-  // Use the values exactly as they are in the file
-  const courseInfo = {
-    firstAidLevel: firstRow['First Aid Level'] || undefined,
-    cprLevel: firstRow['CPR Level'] || undefined,
-    instructorLevel: firstRow['Instructor Level'] || undefined,
-    length: firstRow['Length'] ? parseInt(firstRow['Length']) : undefined,
-    assessmentStatus: firstRow['Pass/Fail'] || undefined,
-    issueDate: issueDate,
-    instructorName: firstRow['Instructor'] || undefined
-  };
-  
-  console.log('Extracted data from file with exact values:', { issueDate, courseInfo });
-  
-  return { issueDate, courseInfo };
+    return {
+      data: processedRows,
+      totalCount: processedRows.length,
+      errorCount
+    };
+
+  } catch (error) {
+    console.error('Error processing roster file:', error);
+    throw new Error(`Failed to process file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }
