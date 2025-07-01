@@ -1,30 +1,13 @@
 
-project_id = "seaxchrsbldrppupupbw"
-
-[api]
-enabled = true
-port = 54321
-schemas = ["public", "storage", "graphql_public"]
-
-[db]
-port = 54322
-
-[studio]
-enabled = true
-port = 54323
-api_url = "http://localhost:54321"
-
-[inbucket]
-enabled = true
-port = 54324
-
-[storage]
-enabled = true
+project_id = "ugjttewblqtpznfxutez"
 
 [auth]
-enabled = true
-site_url = "http://localhost:3000"
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["https://lovable.dev"]
+jwt_expiry = 3600
 
-[functions]
-[functions.send-batch-certificate-emails]
+[functions.batch-request-email-details]
+verify_jwt = false
+
+[functions.process-batch-upload]
 verify_jwt = false

@@ -7768,7 +7768,6 @@ export type Database = {
           province: string | null
           qualification_notes: string | null
           referral_source: string | null
-          status: string | null
           training_urgency: string | null
           updated_at: string | null
           website: string | null
@@ -7811,7 +7810,6 @@ export type Database = {
           province?: string | null
           qualification_notes?: string | null
           referral_source?: string | null
-          status?: string | null
           training_urgency?: string | null
           updated_at?: string | null
           website?: string | null
@@ -7854,7 +7852,6 @@ export type Database = {
           province?: string | null
           qualification_notes?: string | null
           referral_source?: string | null
-          status?: string | null
           training_urgency?: string | null
           updated_at?: string | null
           website?: string | null

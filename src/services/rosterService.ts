@@ -1,12 +1,34 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { CreateRosterData } from '@/types/courses';
+
+export interface CreateRosterData {
+  name: string;
+  location_id: string;
+  submitted_by: string;
+  total_count: number;
+  status: 'SUBMITTED' | 'ACTIVE' | 'ARCHIVED' | 'DRAFT';
+  submitted_at: string;
+  description?: string;
+  course_id?: string;
+  issue_date?: string;
+}
 
 export const createRoster = async (rosterData: CreateRosterData) => {
   try {
+    // Let the database generate the UUID for id
     const { data, error } = await supabase
       .from('rosters')
-      .insert(rosterData)
+      .insert({
+        name: rosterData.name,
+        description: rosterData.description,
+        course_id: rosterData.course_id,
+        location_id: rosterData.location_id,
+        issue_date: rosterData.issue_date,
+        created_by: rosterData.submitted_by,
+        status: rosterData.status,
+        submitted_at: rosterData.submitted_at,
+        total_count: rosterData.total_count
+      })
       .select()
       .single();
     

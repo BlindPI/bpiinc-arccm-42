@@ -1,153 +1,87 @@
 
 import { useState } from 'react';
-import { useBatchUpload } from './BatchCertificateContext';
-import { useAuth } from '@/hooks/useAuth';
-import { createRoster, sendBatchRosterEmails } from '@/services/rosterService';
-import { SimpleCertificateNotificationService } from '@/services/notifications/simpleCertificateNotificationService';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useBatchUpload } from './BatchCertificateContext';
+import { useProfile } from '@/hooks/useProfile';
+import { generateRosterId } from '@/types/batch-upload';
 
 export function useBatchSubmission() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: profile } = useProfile();
   
   const {
     processedData,
     selectedLocationId,
     setCurrentStep,
-    setIsSubmitting: setContextSubmitting
+    resetForm
   } = useBatchUpload();
 
   const submitBatch = async () => {
-    if (!processedData || !selectedLocationId || !user) {
-      toast.error('Missing required data for submission');
-      return;
+    if (!processedData || !selectedLocationId || !profile) {
+      throw new Error('Missing required data for batch submission');
     }
 
     setIsSubmitting(true);
-    setContextSubmitting(true);
     setCurrentStep('SUBMITTING');
 
     try {
       console.log('Starting batch submission process...');
 
-      // Filter out invalid records
-      const validRecords = processedData.data.filter(record => 
-        record.isProcessed && 
-        !record.error && 
-        record.name && 
-        record.email &&
-        !record.hasCourseMismatch
-      );
+      // Generate human-readable roster name
+      const rosterName = `Roster ${generateRosterId(profile.display_name || 'Unknown')}`;
 
-      if (validRecords.length === 0) {
-        throw new Error('No valid records to submit');
-      }
+      console.log(`Submitting batch: ${rosterName}`);
 
-      console.log(`Submitting ${validRecords.length} valid records`);
-
-      // Create roster data
-      const rosterData = {
-        location_id: selectedLocationId,
-        created_by: user.id,
-        status: 'PENDING' as const,
-        total_certificates: validRecords.length,
-        processed_certificates: 0,
-        certificate_requests: validRecords.map(record => ({
-          recipient_name: record.name,
-          recipient_email: record.email,
-          recipient_phone: record.phone || null,
-          company: record.company || null,
-          course_id: record.courseMatches?.[0]?.courseId || null,
-          course_name: record.courseMatches?.[0]?.courseName || 'Unknown Course',
-          issue_date: record.issueDate,
-          expiry_date: record.expiryDate,
-          assessment_status: record.assessmentStatus || 'PASS',
-          certifications: record.certifications || {},
-          instructor_name: record.instructorName || null,
-          instructor_level: record.instructorLevel || null,
-          notes: record.notes || null,
-          city: record.city || null,
-          province: record.province || null,
-          postal_code: record.postalCode || null
-        }))
-      };
-
-      console.log('Creating roster with data:', { 
-        location_id: rosterData.location_id,
-        created_by: rosterData.created_by,
-        total_certificates: rosterData.total_certificates
+      // Call the edge function to handle all server-side processing
+      const { data, error } = await supabase.functions.invoke('process-batch-upload', {
+        body: {
+          processedData,
+          selectedLocationId,
+          rosterName,
+          submittedBy: profile.id
+        }
       });
 
-      // Create the roster
-      const rosterResult = await createRoster(rosterData);
-      
-      if (!rosterResult.success) {
-        throw new Error(rosterResult.error?.message || 'Failed to create roster');
+      if (error || !data?.success) {
+        throw new Error(data?.error || error?.message || 'Batch submission failed');
       }
 
-      const rosterId = rosterResult.data.id;
-      console.log('Roster created successfully:', rosterId);
+      console.log('Batch submission completed successfully:', data);
 
-      // Try to send notifications (but don't fail if this doesn't work)
-      try {
-        console.log('Attempting to send notifications...');
-        
-        // Notify the submitter
-        await SimpleCertificateNotificationService.notifyBatchSubmitted(
-          user.id,
-          rosterId,
-          validRecords.length
-        );
-        console.log('Submitter notification sent successfully');
-
-        // Notify administrators - with error handling
-        await SimpleCertificateNotificationService.notifyAdminsOfBatchSubmission(
-          rosterId,
-          user.email || user.id,
-          validRecords.length
-        );
-        console.log('Admin notifications sent successfully');
-
-      } catch (notificationError) {
-        console.error('Notification sending failed, but continuing with batch submission:', notificationError);
-        // Don't fail the entire submission just because notifications failed
-      }
-
-      // Try to send batch emails (but don't fail if this doesn't work)
-      try {
-        console.log('Attempting to send batch emails...');
-        const recipientEmails = validRecords.map(record => record.email);
-        
-        const emailResult = await sendBatchRosterEmails(rosterId, recipientEmails);
-        
-        if (emailResult.success) {
-          console.log('Batch emails sent successfully');
-        } else {
-          console.warn('Batch email sending failed:', emailResult.error);
-          // Don't fail the submission - emails can be sent later
-        }
-      } catch (emailError) {
-        console.error('Email sending failed, but continuing with batch submission:', emailError);
-        // Don't fail the entire submission just because emails failed
-      }
-
-      // Success!
-      console.log('Batch submission completed successfully');
-      toast.success(`Successfully submitted ${validRecords.length} certificate requests!`);
+      // Update UI state
       setCurrentStep('COMPLETE');
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['certificate-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['rosters'] });
+
+      toast.success(`Batch submitted successfully! ${data.validRecordsProcessed} records processed.`);
 
     } catch (error) {
       console.error('Batch submission failed:', error);
-      toast.error(`Submission failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setCurrentStep('REVIEW'); // Go back to review step on error
+      toast.error(`Batch submission failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setCurrentStep('REVIEW'); // Go back to review step
+      throw error;
     } finally {
       setIsSubmitting(false);
-      setContextSubmitting(false);
     }
   };
 
+  const submitMutation = useMutation({
+    mutationFn: submitBatch,
+    onSuccess: () => {
+      console.log('Batch submission mutation completed successfully');
+    },
+    onError: (error: any) => {
+      console.error('Batch submission mutation error:', error);
+    }
+  });
+
   return {
-    submitBatch,
-    isSubmitting
+    submitBatch: submitMutation.mutate,
+    isSubmitting: isSubmitting || submitMutation.isPending
   };
 }
