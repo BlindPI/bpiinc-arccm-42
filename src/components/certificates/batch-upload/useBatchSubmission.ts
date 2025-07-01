@@ -6,7 +6,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useBatchUpload } from './BatchCertificateContext';
 import { useProfile } from '@/hooks/useProfile';
 import { generateRosterId } from '@/types/batch-upload';
-import { createRoster } from '@/services/rosterService';
 
 export function useBatchSubmission() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,106 +33,23 @@ export function useBatchSubmission() {
       // Generate human-readable roster name
       const rosterName = `Roster ${generateRosterId(profile.display_name || 'Unknown')}`;
 
-      // Filter out records with validation errors for submission
-      const validRecords = processedData.data.filter(row => 
-        row.validationErrors.length === 0 && !row.hasCourseMismatch
-      );
+      console.log(`Submitting batch: ${rosterName}`);
 
-      console.log(`Submitting ${validRecords.length} valid records out of ${processedData.totalCount} total`);
-
-      // Create roster entry - let database generate UUID for id
-      const rosterData = {
-        name: rosterName,
-        location_id: selectedLocationId,
-        submitted_by: profile.id,
-        total_count: validRecords.length,
-        status: 'SUBMITTED' as const,
-        submitted_at: new Date().toISOString()
-      };
-
-      const { success: rosterSuccess, data: rosterResult, error: rosterError } = await createRoster(rosterData);
-
-      if (!rosterSuccess || rosterError || !rosterResult) {
-        throw new Error(`Failed to create roster: ${rosterError?.message || 'Unknown error'}`);
-      }
-
-      // Use the database-generated UUID for all roster references
-      const rosterUUID = rosterResult.id;
-
-      console.log('Roster created successfully with ID:', rosterUUID);
-
-      // Create certificate requests for valid records with corrected data format
-      const certificateRequests = validRecords.map(row => ({
-        user_id: profile.id,
-        recipient_name: row.recipientName,
-        recipient_email: row.email,
-        recipient_phone: row.phone || null,
-        company: row.company || null,
-        course_name: row.courseMatch?.name || row.courseName || 'Unknown Course',
-        course_id: row.courseMatch?.id || null,
-        location_id: selectedLocationId,
-        roster_id: rosterUUID, // Use database-generated UUID
-        batch_id: rosterUUID, // Also use UUID for batch_id to match database schema
-        batch_name: rosterName, // Keep human-readable name separate
-        status: 'PENDING' as const,
-        assessment_status: row.assessmentStatus === 'PASS' ? 'PASS' : 'FAIL',
-        course_length: row.courseMatch?.length || null,
-        expiration_months: row.courseMatch?.expiration_months || 24,
-        issue_date: new Date().toISOString().split('T')[0],
-        expiry_date: new Date(Date.now() + (row.courseMatch?.expiration_months || 24) * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      }));
-
-      console.log('Prepared certificate requests:', certificateRequests.length);
-
-      // Insert certificate requests in batches
-      const batchSize = 50;
-      const insertPromises = [];
-
-      for (let i = 0; i < certificateRequests.length; i += batchSize) {
-        const batch = certificateRequests.slice(i, i + batchSize);
-        insertPromises.push(
-          supabase
-            .from('certificate_requests')
-            .insert(batch)
-        );
-      }
-
-      const results = await Promise.all(insertPromises);
-      const errors = results.filter(result => result.error);
-
-      if (errors.length > 0) {
-        console.error('Some certificate requests failed to insert:', errors);
-        throw new Error(`Failed to insert ${errors.length} certificate requests`);
-      }
-
-      console.log('Certificate requests inserted successfully');
-
-      // CRITICAL: Trigger automatic email notification to AP users
-      try {
-        console.log('Triggering batch email notification...');
-        
-        const emailResult = await supabase.functions.invoke('batch-request-email-details', {
-          body: {
-            rosterId: rosterUUID, // Use the database-generated UUID
-            locationId: selectedLocationId,
-            submittedBy: profile.id,
-            rosterData: processedData.data, // Send all data including errors for AP review
-            batchName: rosterName
-          }
-        });
-
-        if (emailResult.error) {
-          console.error('Failed to send batch notification emails:', emailResult.error);
-          // Don't fail the submission, just log the email error
-          toast.warning('Batch submitted successfully, but notification emails failed to send');
-        } else {
-          console.log('Batch notification emails sent successfully:', emailResult.data);
-          toast.success(`Batch submitted successfully! Notification emails sent to AP users.`);
+      // Call the edge function to handle all server-side processing
+      const { data, error } = await supabase.functions.invoke('process-batch-upload', {
+        body: {
+          processedData,
+          selectedLocationId,
+          rosterName,
+          submittedBy: profile.id
         }
-      } catch (emailError) {
-        console.error('Error triggering batch email notification:', emailError);
-        toast.warning('Batch submitted successfully, but notification emails failed to send');
+      });
+
+      if (error || !data?.success) {
+        throw new Error(data?.error || error?.message || 'Batch submission failed');
       }
+
+      console.log('Batch submission completed successfully:', data);
 
       // Update UI state
       setCurrentStep('COMPLETE');
@@ -142,7 +58,7 @@ export function useBatchSubmission() {
       queryClient.invalidateQueries({ queryKey: ['certificate-requests'] });
       queryClient.invalidateQueries({ queryKey: ['rosters'] });
 
-      console.log('Batch submission completed successfully');
+      toast.success(`Batch submitted successfully! ${data.validRecordsProcessed} records processed.`);
 
     } catch (error) {
       console.error('Batch submission failed:', error);
@@ -157,11 +73,10 @@ export function useBatchSubmission() {
   const submitMutation = useMutation({
     mutationFn: submitBatch,
     onSuccess: () => {
-      toast.success('Batch submission completed successfully!');
+      console.log('Batch submission mutation completed successfully');
     },
     onError: (error: any) => {
       console.error('Batch submission mutation error:', error);
-      toast.error(`Submission failed: ${error.message}`);
     }
   });
 

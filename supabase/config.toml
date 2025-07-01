@@ -8,3 +8,6 @@ jwt_expiry = 3600
 
 [functions.batch-request-email-details]
 verify_jwt = false
+
+[functions.process-batch-upload]
+verify_jwt = false
