@@ -46,7 +46,7 @@ export function BatchViewContent({
 
   return (
     <div className="space-y-6">
-      {/* Summary Stats */}
+      {/* Summary Stats - Show Details by default */}
       <div className="flex items-center gap-6 text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
           <Layers className="h-4 w-4" />
