@@ -42,10 +42,28 @@ import AuthorizedProviders from '@/pages/AuthorizedProviders';
 import ModernTeams from '@/pages/ModernTeams';
 import CRMDiagnostics from '@/pages/CRMDiagnostics';
 import EmailWorkflowsPage from '@/app/crm/email-workflows/page';
+import ComplianceAdminDashboard from '@/pages/ComplianceAdminDashboard';
+import ComplianceProviderDashboard from '@/pages/ComplianceProviderDashboard';
 
 export function AppRoutes() {
   const { user } = useAuth();
   const location = useLocation();
+
+  // Debug: Log routing state
+  console.log('🐛 ROUTING-DEBUG: AppRoutes rendering with:', {
+    pathname: location.pathname,
+    search: location.search,
+    hasUser: !!user,
+    userId: user?.id
+  });
+
+  // Check specific route matching
+  const isComplianceAdminRoute = location.pathname === '/compliance-dashboard/admin';
+  console.log('🐛 ROUTING-DEBUG: Compliance admin route check:', {
+    pathname: location.pathname,
+    matches: isComplianceAdminRoute,
+    exact: location.pathname === '/compliance-dashboard/admin'
+  });
 
   return (
     <Routes>
@@ -231,6 +249,18 @@ export function AppRoutes() {
       } />
 
       {/* Compliance & Automation Routes */}
+      <Route path="/compliance-dashboard/admin" element={
+        <ProtectedRoute>
+          <ComplianceAdminDashboard />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/compliance-dashboard/provider" element={
+        <ProtectedRoute>
+          <ComplianceProviderDashboard />
+        </ProtectedRoute>
+      } />
+
       <Route path="/automation" element={
         <ProtectedRoute>
           <Automation />

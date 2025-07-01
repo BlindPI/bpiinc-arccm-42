@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MoreHorizontal, Edit, Trash2, Plus, Building2, DollarSign } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { CRMService } from '@/services/crm/crmService';
@@ -212,13 +212,14 @@ export const AccountsTable: React.FC = () => {
             <SelectItem value="competitor">Competitor</SelectItem>
           </SelectContent>
         </Select>
+        <Button onClick={() => {
+          setSelectedAccount(null);
+          setIsFormOpen(true);
+        }}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Account
+        </Button>
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setSelectedAccount(null)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Account
-            </Button>
-          </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>

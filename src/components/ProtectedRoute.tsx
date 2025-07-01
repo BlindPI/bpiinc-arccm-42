@@ -3,7 +3,6 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
-import { LayoutRouter } from './LayoutRouter';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -30,6 +29,6 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return <Navigate to="/auth/signin" replace />;
   }
 
-  // Render protected content with layout
-  return <LayoutRouter>{children}</LayoutRouter>;
+  // Return children directly - layout is handled by LayoutRouter in main.tsx
+  return <>{children}</>;
 };

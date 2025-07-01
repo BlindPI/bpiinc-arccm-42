@@ -1,4 +1,5 @@
-export type CourseMatchType = 'exact' | 'partial' | 'fallback' | 'default' | 'mismatch';
+
+export type CourseMatchType = 'exact' | 'partial' | 'fallback' | 'default' | 'manual';
 
 export interface CourseMatch {
   id: string;
@@ -7,11 +8,10 @@ export interface CourseMatch {
   length?: number;
   expiration_months: number;
   courseType?: string;
-  certifications: Array<{
+  certifications?: {
     type: string;
     level: string;
-  }>;
-  mismatchReason?: string; // Added for mismatch cases
+  }[];
 }
 
 // Add the ProcessingStatus type that was missing

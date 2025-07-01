@@ -28,6 +28,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
 import { Certificate } from '@/types/certificates';
+import { Profile } from '@/types/supabase-schema';
 import { CertificateStatsCards } from './CertificateStatsCards';
 import { EnhancedCertificateCard } from './EnhancedCertificateCard';
 import { EmailCertificateForm } from '../EmailCertificateForm';
@@ -53,18 +54,17 @@ export function EnhancedCertificatesView() {
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
 
   const { data: paginatedData, isLoading } = useQuery({
-    queryKey: ['enhanced-certificates', isAdmin, statusFilter, profile?.id, currentPage, pageSize, sortBy, sortDirection, searchQuery],
+    queryKey: ['enhanced-certificates', isAdmin, statusFilter, profile?.id, (profile as any)?.compliance_tier, currentPage, pageSize, sortBy, sortDirection, searchQuery],
     queryFn: async () => {
       // 🔍 PAGINATION DIAGNOSTIC: Log query start time
       const queryStart = performance.now();
-      console.log(`🔍 Certificate Query Starting - Page ${currentPage}, Size ${pageSize} with server-side pagination`);
+      console.log(`🔍 Certificate Query Starting - Page ${currentPage}, Size ${pageSize} with DUAL TIER COMPLIANCE filtering`);
+      
+      console.log(`🔍 User role: ${profile?.role}, isAdmin: ${isAdmin}`);
       
       // **FIXED: For AP users, get certificates using proper location-based filtering service**
       if (!isAdmin && profile?.role === 'AP' && profile?.id) {
-        console.log('🔍 AP user detected - using proper location-based certificate service (same as AP dashboard)');
-        
-        // **CRITICAL FIX: Use the SAME service as AP dashboard for consistent certificate counts**
-        // This ensures AP users see the same 347 certificates in both dashboard and certificate pages
+        console.log('🔍 AP user detected - using location-based certificate service');
         
         // First, get the provider ID for this AP user
         const { data: apUser, error: apError } = await supabase
@@ -96,7 +96,7 @@ export function EnhancedCertificatesView() {
         const primaryLocationId = provider.primary_location_id;
         console.log(`🔍 Provider primary location: ${primaryLocationId}`);
         
-        // **STEP 2: Get ALL certificates first (for stats), then apply search and pagination**
+        // **STEP 2: Get ALL certificates for location**
         let baseQuery = supabase
           .from('certificates')
           .select('*')
@@ -109,6 +109,8 @@ export function EnhancedCertificatesView() {
           console.error('🔍 Failed to get all certificates for stats:', allError);
           return { certificates: [], totalCount: 0, allCertificates: [] };
         }
+        
+        console.log(`🔍 Found ${allCertificates?.length || 0} certificates for location ${primaryLocationId}`);
         
         // **STEP 3: Apply filters for display data**
         let filteredQuery = supabase
@@ -140,7 +142,7 @@ export function EnhancedCertificatesView() {
         }
         
         const totalCount = filteredData?.length || 0;
-        console.log(`🔍 Found ${totalCount} filtered certificates, ${allCertificates?.length || 0} total certificates`);
+        console.log(`🔍 Found ${totalCount} filtered certificates for location`);
         
         // **CLIENT-SIDE PAGINATION** (since we need to maintain location-based filtering)
         const offset = (currentPage - 1) * pageSize;
@@ -148,7 +150,7 @@ export function EnhancedCertificatesView() {
         
         const queryTime = performance.now() - queryStart;
         console.log(`🔍 AP Certificate Query Complete: ${paginatedData.length} records (${totalCount} filtered, ${allCertificates?.length || 0} total) in ${queryTime.toFixed(2)}ms`);
-        console.log(`✅ SUCCESS: AP certificate page now uses same location-based logic as AP dashboard`);
+        console.log(`✅ SUCCESS: AP certificate page loaded`);
         
         return {
           certificates: paginatedData as Certificate[],
@@ -157,7 +159,7 @@ export function EnhancedCertificatesView() {
         };
       }
       
-      // **NON-AP USERS: Use original server-side pagination**
+      // **ADMINS AND OTHER USERS: Use proper access control**
       const offset = (currentPage - 1) * pageSize;
       
       // **STEP 1: Get all certificates for stats calculation**
@@ -166,7 +168,7 @@ export function EnhancedCertificatesView() {
         .select('*');
 
       if (!isAdmin && profile?.id) {
-        // Other roles: Filter by user_id (existing behavior)
+        // Non-admin roles: Filter by user_id (existing behavior)
         allQuery = allQuery.eq('user_id', profile.id);
       }
 
@@ -176,13 +178,15 @@ export function EnhancedCertificatesView() {
         console.error('🔍 Failed to get all certificates for stats:', allError);
       }
       
+      console.log(`🔍 Found ${allCertificates?.length || 0} total certificates for role ${profile?.role}`);
+      
       // **STEP 2: Get paginated data with filters**
       let query = supabase
         .from('certificates')
         .select('*', { count: 'exact' });
 
       if (!isAdmin && profile?.id) {
-        // Other roles: Filter by user_id (existing behavior)
+        // Non-admin roles: Filter by user_id (existing behavior)
         query = query.eq('user_id', profile.id);
       }
 
@@ -209,7 +213,8 @@ export function EnhancedCertificatesView() {
       // 🔍 PAGINATION DIAGNOSTIC: Log query completion
       const queryTime = performance.now() - queryStart;
       const recordCount = data?.length || 0;
-      console.log(`🔍 Certificate Query Complete: ${recordCount} records fetched in ${queryTime.toFixed(2)}ms (Total: ${count})`);
+      console.log(`🔍 Certificate Query Complete: ${recordCount} records fetched in ${queryTime.toFixed(2)}ms (Total: ${count}) for role ${profile?.role}`);
+      console.log(`✅ SUCCESS: Certificate query completed for ${isAdmin ? 'admin' : 'user'}`);
       
       if (error) throw error;
       return {

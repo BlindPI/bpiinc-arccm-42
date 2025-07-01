@@ -6,28 +6,29 @@ interface ValidationSectionProps {
   confirmations: Record<string, boolean>;
   setConfirmations: (values: Record<string, boolean>) => void;
   disabled?: boolean;
-  hasCourseMismatches?: boolean;
-  courseMismatchCount?: number;
 }
 
 export function ValidationSection({
   confirmations,
   setConfirmations,
-  disabled = false,
-  hasCourseMismatches = false,
-  courseMismatchCount = 0
+  disabled = false
 }: ValidationSectionProps) {
+  // Convert Record<string, boolean> to boolean[] for the checklist component
   const [validConfirmations, setValidConfirmations] = useState<boolean[]>([false, false, false, false, false]);
   
+  // Synchronize with passed-in props when they change
   useEffect(() => {
+    // Convert the Record to boolean array based on known keys
     const keys = ['dataAccuracy', 'locationConfirmed', 'coursesMatched', 'duplicatesChecked', 'readyToSubmit'];
     const confirmationArray = keys.map(key => confirmations[key] || false);
     setValidConfirmations(confirmationArray);
   }, [confirmations]);
   
+  // Handle changes safely - convert boolean[] back to Record<string, boolean>
   const handleConfirmationsChange = (newConfirmations: boolean[]) => {
     setValidConfirmations(newConfirmations);
     
+    // Convert back to Record format
     const keys = ['dataAccuracy', 'locationConfirmed', 'coursesMatched', 'duplicatesChecked', 'readyToSubmit'];
     const confirmationRecord: Record<string, boolean> = {};
     keys.forEach((key, index) => {
@@ -43,8 +44,6 @@ export function ValidationSection({
         confirmations={validConfirmations}
         setConfirmations={handleConfirmationsChange}
         disabled={disabled}
-        hasCourseMismatches={hasCourseMismatches}
-        courseMismatchCount={courseMismatchCount}
       />
     </div>
   );

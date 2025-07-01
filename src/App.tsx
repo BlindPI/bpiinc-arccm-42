@@ -1,49 +1,40 @@
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter as Router } from 'react-router-dom';
-import { Toaster } from '@/components/ui/sonner';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import { SidebarProvider } from '@/components/ui/sidebar';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { LayoutRouter } from '@/components/LayoutRouter';
-import { AppRoutes } from './AppRoutes';
-import { useEffect } from 'react';
-import './App.css';
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { LayoutRouter } from "@/components/LayoutRouter";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      retry: (failureCount, error) => {
-        return failureCount < 3;
-      },
-    },
-  },
-});
+// Import pages
+import Index from "./pages/Index";
+import Landing from "./pages/Landing";
+import ComplianceAdminDashboard from "./pages/ComplianceAdminDashboard";
+import UserManagement from "./pages/UserManagement";
+import SystemUserManagement from "./pages/SystemUserManagement";
+
+const queryClient = new QueryClient();
 
 function App() {
-  useEffect(() => {
-    // Basic app initialization tracking
-    console.log('🔧 App initialized');
-    
-    return () => {
-      console.log('🔧 App cleanup');
-    };
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Router>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
           <AuthProvider>
-            <SidebarProvider>
-              <LayoutRouter>
-                <AppRoutes />
-              </LayoutRouter>
-            </SidebarProvider>
-            <Toaster position="top-right" />
+            <LayoutRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/landing" element={<Landing />} />
+                <Route path="/compliance-dashboard/admin" element={<ComplianceAdminDashboard />} />
+                <Route path="/user-management" element={<UserManagement />} />
+                <Route path="/system-user-management" element={<SystemUserManagement />} />
+              </Routes>
+            </LayoutRouter>
           </AuthProvider>
-        </Router>
+        </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
   );

@@ -30,7 +30,8 @@ import {
   DollarSign,
   Building2,
   Mail,
-  Crown
+  Crown,
+  ClipboardCheck
 } from 'lucide-react';
 import {
   Sidebar,
@@ -53,6 +54,7 @@ interface NavigationItem {
   icon: any;
   group: string;
   enterpriseOnly?: boolean;
+  roles?: string[];
 }
 
 const navigation: NavigationItem[] = [
@@ -93,7 +95,9 @@ const navigation: NavigationItem[] = [
   { name: 'Report Scheduler', href: '/report-scheduler', icon: Clock, group: 'Analytics & Reports' },
   { name: 'Reports', href: '/reports', icon: BarChart3, group: 'Analytics & Reports' },
   
-  // Compliance & Automation Group
+  // Compliance & Automation Group - Role-based routing
+  { name: 'Compliance Dashboard', href: '/compliance-dashboard/admin', icon: ClipboardCheck, group: 'Compliance & Automation', enterpriseOnly: true, roles: ['SA', 'AD'] },
+  { name: 'Provider Compliance', href: '/compliance-dashboard/provider', icon: ClipboardCheck, group: 'Compliance & Automation', enterpriseOnly: true, roles: ['AP'] },
   { name: 'Automation', href: '/automation', icon: Zap, group: 'Compliance & Automation' },
   { name: 'Progression Path Builder', href: '/progression-path-builder', icon: Target, group: 'Compliance & Automation' },
   
@@ -136,13 +140,19 @@ export function AppSidebar() {
   const hasEnterpriseAccess = ['SA', 'AD', 'AP'].includes(profile?.role);
   console.log(`🔧 SIDEBAR: Enterprise access check - Role: ${profile?.role}, HasAccess: ${hasEnterpriseAccess}`);
 
-  // Filter navigation items using database-driven visibility and enterprise access
+  // Filter navigation items using database-driven visibility, enterprise access, and role-based routing
   const visibleItems = navigation.filter(item => {
     console.log(`🔧 SIDEBAR: Checking visibility for item: ${item.name} in group: ${item.group}`);
     
     // Check enterprise access for enterprise-only items
     if (item.enterpriseOnly && !hasEnterpriseAccess) {
       console.log(`🔧 SIDEBAR: Enterprise item ${item.name} hidden - no enterprise access`);
+      return false;
+    }
+    
+    // Check role-based access for role-specific items
+    if (item.roles && item.roles.length > 0 && !item.roles.includes(profile?.role)) {
+      console.log(`🔧 SIDEBAR: Role-specific item ${item.name} hidden - user role ${profile?.role} not in allowed roles: ${item.roles}`);
       return false;
     }
     

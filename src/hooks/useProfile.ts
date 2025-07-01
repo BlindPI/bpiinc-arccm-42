@@ -9,7 +9,7 @@ import { debugLog, debugWarn, debugError } from "@/utils/debugUtils";
 export function useProfile() {
   const { user, loading: authLoading, authReady } = useAuth();
   
-  console.log("🔧 useProfile: Hook called", {
+  debugLog("useProfile: Hook called", {
     userId: user?.id || "none",
     authLoading,
     authReady,
@@ -20,37 +20,37 @@ export function useProfile() {
   const result = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
-      console.log('🔧 useProfile: Starting profile fetch for user:', user?.id);
+      debugLog('useProfile: Starting profile fetch for user:', user?.id);
       
       if (!user?.id) {
-        console.log('🔧 useProfile: No user ID provided');
+        debugLog('useProfile: No user ID provided');
         return null;
       }
 
-      // If user already has profile data, use it
+      // If user already has profile data, use it but still verify with database
       if (user.profile && user.profile.role) {
-        console.log('🔧 useProfile: Using existing user.profile data:', user.profile);
+        debugLog('useProfile: Using existing user.profile data:', user.profile);
         return user.profile as Profile;
       }
 
       try {
-        console.log('🔧 useProfile: Fetching from profiles table for user:', user.id);
+        debugLog('useProfile: Fetching from profiles table for user:', user.id);
         const startTime = performance.now();
         
         const { data: profile, error } = await supabase
           .from('profiles')
-          .select('id, role, display_name, email, created_at, updated_at, status, phone, organization, job_title')
+          .select('id, role, display_name, email, created_at, updated_at, status, phone, organization, job_title, compliance_tier')
           .eq('id', user.id)
           .single();
           
         const duration = performance.now() - startTime;
 
         if (error) {
-          console.error('🔧 useProfile: Error fetching profile:', error.message, error.code);
+          debugError('useProfile: Error fetching profile:', error.message, error.code);
           
           // If profile doesn't exist, try with maybeSingle
           if (error.code === 'PGRST116') {
-            console.log('🔧 useProfile: Profile not found, trying maybeSingle');
+            debugLog('useProfile: Profile not found, trying maybeSingle');
             const { data: maybeProfile, error: maybeError } = await supabase
               .from('profiles')
               .select('*')
@@ -58,32 +58,52 @@ export function useProfile() {
               .maybeSingle();
             
             if (maybeError) {
-              console.error('🔧 useProfile: MaybeSingle also failed:', maybeError);
+              debugError('useProfile: MaybeSingle also failed:', maybeError);
               return null;
             }
             
             if (!maybeProfile) {
-              console.log('🔧 useProfile: No profile found for user:', user.id);
-              return null;
+              debugLog('useProfile: No profile found for user:', user.id);
+              // Create a basic profile if none exists
+              const { data: newProfile, error: createError } = await supabase
+                .from('profiles')
+                .insert({
+                  id: user.id,
+                  role: 'IT', // Default role
+                  display_name: user.email?.split('@')[0] || 'User',
+                  email: user.email,
+                  status: 'ACTIVE',
+                  compliance_tier: 'basic'
+                })
+                .select()
+                .single();
+                
+              if (createError) {
+                debugError('useProfile: Failed to create profile:', createError);
+                return null;
+              }
+              
+              debugLog('useProfile: Created new profile:', newProfile);
+              return newProfile as Profile;
             }
             
-            console.log('🔧 useProfile: Found profile with maybeSingle');
+            debugLog('useProfile: Found profile with maybeSingle');
             return maybeProfile as Profile;
           }
           
-          console.error('🔧 useProfile: Non-recoverable error:', error);
+          debugError('useProfile: Non-recoverable error:', error);
           return null;
         }
 
         if (!profile) {
-          console.log('🔧 useProfile: No profile found for user:', user.id, 'Duration:', Math.round(duration) + 'ms');
+          debugLog('useProfile: No profile found for user:', user.id, 'Duration:', Math.round(duration) + 'ms');
           return null;
         }
 
-        console.log('🔧 useProfile: Successfully fetched profile for user:', user.id, 'Role:', profile.role, 'Duration:', Math.round(duration) + 'ms');
+        debugLog('useProfile: Successfully fetched profile for user:', user.id, 'Role:', profile.role, 'Duration:', Math.round(duration) + 'ms');
         return profile as Profile;
       } catch (error) {
-        console.error('🔧 useProfile: Unexpected error:', error);
+        debugError('useProfile: Unexpected error:', error);
         return null;
       }
     },
@@ -103,7 +123,7 @@ export function useProfile() {
     throwOnError: false,
   });
 
-  console.log('🔧 useProfile: Query result:', {
+  debugLog('useProfile: Query result:', {
     data: !!result.data,
     isLoading: result.isLoading,
     error: !!result.error,

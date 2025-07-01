@@ -1,180 +1,215 @@
-import React, { useState, useEffect } from 'react';
+
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Users, 
-  Shield, 
-  FileText, 
-  TrendingUp,
-  BarChart3
-} from 'lucide-react';
-import { ComplianceTierService } from '@/services/compliance/complianceTierService';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Shield, Users, TrendingUp, AlertTriangle, Info } from 'lucide-react';
+import { useComplianceAdminStats } from '@/hooks/useComplianceAdminStats';
 
 export function ComplianceTierDashboard() {
-  const [statistics, setStatistics] = useState({
-    basic_tier_users: 0,
-    robust_tier_users: 0,
-    basic_completion_avg: 0,
-    robust_completion_avg: 0
-  });
-  const [allUsers, setAllUsers] = useState<Array<{
-    user_id: string;
-    display_name: string;
-    email: string;
-    role: string;
-    compliance_tier: 'basic' | 'robust';
-    completion_percentage: number;
-  }>>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  const loadDashboardData = async () => {
-    try {
-      setIsLoading(true);
-      const [stats, users] = await Promise.all([
-        ComplianceTierService.getComplianceTierStatistics(),
-        ComplianceTierService.getAllUsersComplianceTiers()
-      ]);
-      
-      setStatistics(stats);
-      setAllUsers(users);
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const totalUsers = statistics.basic_tier_users + statistics.robust_tier_users;
+  const { data: stats, isLoading, error } = useComplianceAdminStats();
 
   if (isLoading) {
+    return <ComplianceTierDashboardSkeleton />;
+  }
+
+  if (error) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[1, 2, 3, 4].map(i => (
-          <Card key={i}>
-            <CardContent className="p-6">
-              <div className="animate-pulse">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center text-red-500">
+            <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
+            <p>Failed to load compliance data</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {error.message}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Check if we have any data at all
+  const hasData = stats && (stats.totalUsers > 0 || stats.basicTierCount > 0 || stats.robustTierCount > 0);
+
+  if (!hasData) {
+    return (
+      <div className="space-y-6">
+        <Alert className="border-blue-200 bg-blue-50">
+          <Info className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-blue-800">
+            <strong>Compliance System Ready</strong> - No compliance data found yet. 
+            The system is properly configured and ready to manage compliance once users are assigned tiers 
+            and compliance records are created.
+          </AlertDescription>
+        </Alert>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              System Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <Shield className="h-16 w-16 mx-auto mb-4 text-blue-500 opacity-50" />
+              <h3 className="text-lg font-medium mb-2">Compliance System Active</h3>
+              <p className="text-muted-foreground mb-4">
+                Ready to manage compliance tiers and requirements
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'good': return 'bg-green-500';
+      case 'warning': return 'bg-yellow-500';
+      case 'critical': return 'bg-red-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'good': return 'Good';
+      case 'warning': return 'Needs Attention';
+      case 'critical': return 'Critical';
+      default: return 'Unknown';
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Overview Stats */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Users className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalUsers}</div>
+            <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
             <p className="text-xs text-muted-foreground">
-              Active compliance users
+              Active system users
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Basic Tier</CardTitle>
-            <FileText className="h-4 w-4 text-blue-500" />
+            <CardTitle className="text-sm font-medium">Pending Reviews</CardTitle>
+            <Shield className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{statistics.basic_tier_users}</div>
-            <div className="flex items-center gap-2 mt-1">
-              <Progress value={statistics.basic_completion_avg} className="h-1 flex-1" />
-              <span className="text-xs text-muted-foreground">
-                {statistics.basic_completion_avg}% avg
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Robust Tier</CardTitle>
-            <Shield className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{statistics.robust_tier_users}</div>
-            <div className="flex items-center gap-2 mt-1">
-              <Progress value={statistics.robust_completion_avg} className="h-1 flex-1" />
-              <span className="text-xs text-muted-foreground">
-                {statistics.robust_completion_avg}% avg
-              </span>
-            </div>
+            <div className="text-2xl font-bold">{stats?.pendingReviews || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              Awaiting approval
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {Math.round((statistics.basic_completion_avg + statistics.robust_completion_avg) / 2)}%
+            <div className="text-2xl font-bold">{stats?.avgCompletionRate || 0}%</div>
+            <Progress value={stats?.avgCompletionRate || 0} className="mt-2" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">System Health</CardTitle>
+            <Shield className="h-4 w-4 text-indigo-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center space-x-2">
+              <div className={`w-3 h-3 rounded-full ${getStatusColor(stats?.complianceStatus || 'unknown')}`} />
+              <span className="text-sm font-medium">
+                {getStatusText(stats?.complianceStatus || 'unknown')}
+              </span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Overall average
-            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* User List */}
+      {/* Tier Distribution */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            Compliance Tier Overview
+            <Shield className="h-5 w-5" />
+            Compliance Tier Distribution
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {allUsers.map((user) => (
-              <div key={user.user_id} className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div>
-                    <div className="font-medium">{user.display_name}</div>
-                    <div className="text-sm text-muted-foreground">{user.email}</div>
-                  </div>
-                  <Badge variant="outline">{user.role}</Badge>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <Badge 
-                    variant="outline" 
-                    className={user.compliance_tier === 'robust' ? 'bg-green-50' : 'bg-blue-50'}
-                  >
-                    {user.compliance_tier === 'robust' ? (
-                      <Shield className="h-3 w-3 mr-1" />
-                    ) : (
-                      <FileText className="h-3 w-3 mr-1" />
-                    )}
-                    {user.compliance_tier.charAt(0).toUpperCase() + user.compliance_tier.slice(1)}
-                  </Badge>
-                  
-                  <div className="flex items-center gap-2 min-w-[100px]">
-                    <Progress value={user.completion_percentage} className="h-2 flex-1" />
-                    <span className="text-sm text-muted-foreground">
-                      {user.completion_percentage}%
-                    </span>
-                  </div>
-                </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Basic Tier</span>
+                <Badge variant="outline" className="bg-blue-50">
+                  {stats?.basicTierCount || 0} users
+                </Badge>
               </div>
-            ))}
+              <Progress 
+                value={stats?.totalUsers ? (stats.basicTierCount / stats.totalUsers) * 100 : 0} 
+                className="h-2"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Robust Tier</span>
+                <Badge variant="outline" className="bg-green-50">
+                  {stats?.robustTierCount || 0} users
+                </Badge>
+              </div>
+              <Progress 
+                value={stats?.totalUsers ? (stats.robustTierCount / stats.totalUsers) * 100 : 0} 
+                className="h-2"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ComplianceTierDashboardSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={i}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-4 rounded" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-8 w-16 mb-2" />
+              <Skeleton className="h-3 w-20" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-6 w-48" />
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
           </div>
         </CardContent>
       </Card>

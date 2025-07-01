@@ -3,9 +3,8 @@ import type { Course } from '@/types/courses';
 import type { CourseMatch, CourseMatchType } from '../types';
 
 /**
- * Enhanced course matching with strict validation to prevent mismatched assignments
- * This addresses the critical issue where BLS-only courses were incorrectly matched
- * when users specified both First Aid and CPR levels
+ * Finds the best course match based on certificate information
+ * Uses direct equality matching for First Aid and CPR levels
  */
 export async function findBestCourseMatch(
   courseInfo: { 
@@ -26,111 +25,64 @@ export async function findBestCourseMatch(
   console.log(`Found ${activeCourses.length} active courses for matching`);
   
   // Get the input values, making sure they're not undefined
-  const firstAidLevel = courseInfo.firstAidLevel?.trim() || '';
-  const cprLevel = courseInfo.cprLevel?.trim() || '';
+  const firstAidLevel = courseInfo.firstAidLevel || '';
+  const cprLevel = courseInfo.cprLevel || '';
   
   console.log(`Matching: First Aid: "${firstAidLevel}", CPR: "${cprLevel}"`);
   
-  // CRITICAL FIX: Strict validation mode
-  // If user specifies BOTH First Aid AND CPR, we need a course that has BOTH
-  const userSpecifiedBoth = firstAidLevel && cprLevel;
-  const userSpecifiedFirstAidOnly = firstAidLevel && !cprLevel;
-  const userSpecifiedCprOnly = !firstAidLevel && cprLevel;
+  // Find exact matches on both First Aid Level and CPR Level
+  const exactMatches = activeCourses.filter(course => {
+    const firstAidMatch = firstAidLevel && course.first_aid_level && 
+      firstAidLevel.toLowerCase() === course.first_aid_level.toLowerCase();
+    
+    const cprMatch = cprLevel && course.cpr_level && 
+      cprLevel.toLowerCase() === course.cpr_level.toLowerCase();
+    
+    // We want an exact match on both fields if they are provided
+    return firstAidMatch && cprMatch;
+  });
   
-  if (userSpecifiedBoth) {
-    console.log('User specified BOTH First Aid and CPR - looking for exact matches only');
-    
-    // Find courses that have BOTH First Aid and CPR levels
-    const exactMatches = activeCourses.filter(course => {
-      const courseHasFirstAid = course.first_aid_level && course.first_aid_level.trim();
-      const courseHasCpr = course.cpr_level && course.cpr_level.trim();
-      
-      // Course must have BOTH to be considered
-      if (!courseHasFirstAid || !courseHasCpr) {
-        return false;
-      }
-      
-      const firstAidMatch = firstAidLevel.toLowerCase() === course.first_aid_level.toLowerCase();
-      const cprMatch = cprLevel.toLowerCase() === course.cpr_level.toLowerCase();
-      
-      return firstAidMatch && cprMatch;
-    });
-    
-    if (exactMatches.length > 0) {
-      console.log('Found exact match with both First Aid and CPR:', exactMatches[0].name);
-      return createCourseMatchObject(exactMatches[0], 'exact');
-    }
-    
-    // CRITICAL: No fallback to partial matches when user specified both
-    console.log('MISMATCH: User specified both First Aid and CPR but no course has both matching levels');
-    return {
-      id: 'mismatch',
-      name: 'COURSE MISMATCH',
-      matchType: 'mismatch',
-      certifications: [],
-      expiration_months: 0,
-      mismatchReason: `No course found with both "${firstAidLevel}" First Aid and "${cprLevel}" CPR. Available courses either have different levels or are CPR-only/First Aid-only.`
-    };
+  if (exactMatches.length > 0) {
+    console.log('Found exact match on CPR and First Aid level:', exactMatches[0].name);
+    return createCourseMatchObject(exactMatches[0], 'exact');
   }
   
-  if (userSpecifiedFirstAidOnly) {
-    console.log('User specified First Aid only - looking for First Aid courses');
-    
-    const firstAidMatches = activeCourses.filter(course => {
-      const courseHasFirstAid = course.first_aid_level && course.first_aid_level.trim();
-      return courseHasFirstAid && firstAidLevel.toLowerCase() === course.first_aid_level.toLowerCase();
-    });
+  // If no exact match on both, try to match just the First Aid Level
+  if (firstAidLevel) {
+    const firstAidMatches = activeCourses.filter(course => 
+      course.first_aid_level && firstAidLevel.toLowerCase() === course.first_aid_level.toLowerCase()
+    );
     
     if (firstAidMatches.length > 0) {
-      console.log('Found First Aid match:', firstAidMatches[0].name);
-      return createCourseMatchObject(firstAidMatches[0], 'exact');
+      console.log('Found match on First Aid level only:', firstAidMatches[0].name);
+      return createCourseMatchObject(firstAidMatches[0], 'partial');
     }
-    
-    console.log('MISMATCH: No course found with specified First Aid level');
-    return {
-      id: 'mismatch',
-      name: 'COURSE MISMATCH',
-      matchType: 'mismatch',
-      certifications: [],
-      expiration_months: 0,
-      mismatchReason: `No course found with "${firstAidLevel}" First Aid level.`
-    };
   }
   
-  if (userSpecifiedCprOnly) {
-    console.log('User specified CPR only - looking for CPR courses');
-    
-    const cprMatches = activeCourses.filter(course => {
-      const courseHasCpr = course.cpr_level && course.cpr_level.trim();
-      return courseHasCpr && cprLevel.toLowerCase() === course.cpr_level.toLowerCase();
-    });
+  // If no match on First Aid Level, try to match just the CPR Level
+  if (cprLevel) {
+    const cprMatches = activeCourses.filter(course => 
+      course.cpr_level && cprLevel.toLowerCase() === course.cpr_level.toLowerCase()
+    );
     
     if (cprMatches.length > 0) {
-      console.log('Found CPR match:', cprMatches[0].name);
-      return createCourseMatchObject(cprMatches[0], 'exact');
+      console.log('Found match on CPR level only:', cprMatches[0].name);
+      return createCourseMatchObject(cprMatches[0], 'partial');
     }
-    
-    console.log('MISMATCH: No course found with specified CPR level');
-    return {
-      id: 'mismatch',
-      name: 'COURSE MISMATCH',
-      matchType: 'mismatch',
-      certifications: [],
-      expiration_months: 0,
-      mismatchReason: `No course found with "${cprLevel}" CPR level.`
-    };
   }
   
-  // Handle instructor courses with substring matching
+  // Handle instructor courses by looking for substring matches
   if (firstAidLevel && firstAidLevel.toLowerCase().includes('instructor')) {
     const instructorCourses = activeCourses.filter(course => 
       course.name.toLowerCase().includes('instructor')
     );
 
     if (instructorCourses.length > 0) {
+      // Find the most appropriate instructor course
       if (firstAidLevel.toLowerCase().includes('standard')) {
         const standardInstructorCourse = instructorCourses.find(course => 
-          course.name.toLowerCase().includes('standard')
+          course.name.toLowerCase().includes('standard') && 
+          course.name.toLowerCase().includes('instructor')
         );
         
         if (standardInstructorCourse) {
@@ -141,7 +93,8 @@ export async function findBestCourseMatch(
       
       if (firstAidLevel.toLowerCase().includes('emergency')) {
         const emergencyInstructorCourse = instructorCourses.find(course => 
-          course.name.toLowerCase().includes('emergency')
+          course.name.toLowerCase().includes('emergency') && 
+          course.name.toLowerCase().includes('instructor')
         );
         
         if (emergencyInstructorCourse) {
@@ -150,13 +103,14 @@ export async function findBestCourseMatch(
         }
       }
       
+      // If no specific instructor match found, use the first instructor course
       console.log('Using first available instructor course:', instructorCourses[0].name);
       return createCourseMatchObject(instructorCourses[0], 'fallback');
     }
   }
   
-  // Use default course if provided and no specific matching was requested
-  if (defaultCourseId && defaultCourseId !== 'default' && !firstAidLevel && !cprLevel) {
+  // Use default course if provided
+  if (defaultCourseId && defaultCourseId !== 'default') {
     const defaultCourse = activeCourses.find(c => c.id === defaultCourseId);
     if (defaultCourse) {
       console.log('Using default course:', defaultCourse.name);
@@ -166,24 +120,6 @@ export async function findBestCourseMatch(
   
   console.log('No matches found for the provided course information');
   return null;
-}
-
-/**
- * Validates if a course match is acceptable for submission
- */
-export function validateCourseMatch(match: CourseMatch | null): { isValid: boolean; error?: string } {
-  if (!match) {
-    return { isValid: false, error: 'No course match found' };
-  }
-  
-  if (match.matchType === 'mismatch') {
-    return { 
-      isValid: false, 
-      error: match.mismatchReason || 'Course mismatch detected'
-    };
-  }
-  
-  return { isValid: true };
 }
 
 function createCourseMatchObject(course: Course, matchType: CourseMatchType): CourseMatch {

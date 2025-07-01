@@ -1,11 +1,114 @@
+import * as React from "react";
 
-import * as React from "react"
-import * as CollapsiblePrimitive from "@radix-ui/react-collapsible"
+interface CollapsibleContextValue {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
 
-const Collapsible = CollapsiblePrimitive.Root
+const CollapsibleContext = React.createContext<CollapsibleContextValue | undefined>(
+  undefined
+);
 
-const CollapsibleTrigger = CollapsiblePrimitive.CollapsibleTrigger
+interface CollapsibleProps {
+  open?: boolean;
+  defaultOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  children?: React.ReactNode;
+}
 
-const CollapsibleContent = CollapsiblePrimitive.CollapsibleContent
+export function Collapsible({
+  open,
+  defaultOpen = false,
+  onOpenChange,
+  children,
+}: CollapsibleProps) {
+  const [internalOpen, setInternalOpen] = React.useState(defaultOpen);
+  const isControlled = open !== undefined;
+  const isOpen = isControlled ? open : internalOpen;
 
-export { Collapsible, CollapsibleTrigger, CollapsibleContent }
+  const handleOpenChange = React.useCallback(
+    (value: boolean) => {
+      if (!isControlled) {
+        setInternalOpen(value);
+      }
+      onOpenChange?.(value);
+    },
+    [isControlled, onOpenChange]
+  );
+
+  return (
+    <CollapsibleContext.Provider
+      value={{ open: isOpen, onOpenChange: handleOpenChange }}
+    >
+      {children}
+    </CollapsibleContext.Provider>
+  );
+}
+
+interface CollapsibleTriggerProps extends React.HTMLAttributes<HTMLElement> {
+  asChild?: boolean;
+  children?: React.ReactNode;
+}
+
+export function CollapsibleTrigger({
+  asChild = false,
+  children,
+  ...props
+}: CollapsibleTriggerProps) {
+  const context = React.useContext(CollapsibleContext);
+
+  if (!context) {
+    throw new Error("CollapsibleTrigger must be used within a Collapsible");
+  }
+
+  const { open, onOpenChange } = context;
+
+  const handleClick = (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
+    onOpenChange(!open);
+    props.onClick?.(e);
+  };
+
+  if (asChild && React.isValidElement(children)) {
+    // Filter out asChild prop before passing to cloned element
+    const { asChild: _, ...domProps } = props as any;
+    return React.cloneElement(children as React.ReactElement, {
+      ...domProps,
+      onClick: handleClick,
+    });
+  }
+
+  // Filter out asChild prop before passing to button
+  const { asChild: _, ...domProps } = props as any;
+  return (
+    <button type="button" {...domProps} onClick={handleClick}>
+      {children}
+    </button>
+  );
+}
+
+interface CollapsibleContentProps extends React.HTMLAttributes<HTMLDivElement> {
+  children?: React.ReactNode;
+}
+
+export function CollapsibleContent({
+  children,
+  ...props
+}: CollapsibleContentProps) {
+  const context = React.useContext(CollapsibleContext);
+
+  if (!context) {
+    throw new Error("CollapsibleContent must be used within a Collapsible");
+  }
+
+  const { open } = context;
+
+  if (!open) {
+    return null;
+  }
+
+  return (
+    <div {...props}>
+      {children}
+    </div>
+  );
+}
