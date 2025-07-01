@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +27,7 @@ export function LocationSelector({ selectedLocationId, onSelect, excludeAssigned
       const { data, error } = await supabase
         .from('locations')
         .select('*')
+        .eq('status', 'ACTIVE')  // Only get ACTIVE locations
         .order('name');
       
       if (error) throw error;

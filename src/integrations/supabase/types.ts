@@ -152,6 +152,102 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alert_type: string
+          data: Json | null
+          id: string
+          message: string
+          resolved_at: string | null
+          severity: string | null
+          triggered_at: string | null
+          triggered_by: string | null
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type: string
+          data?: Json | null
+          id?: string
+          message: string
+          resolved_at?: string | null
+          severity?: string | null
+          triggered_at?: string | null
+          triggered_by?: string | null
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type?: string
+          data?: Json | null
+          id?: string
+          message?: string
+          resolved_at?: string | null
+          severity?: string | null
+          triggered_at?: string | null
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_alerts_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "analytics_alerts_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "analytics_alerts_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "analytics_alerts_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analytics_alerts_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "analytics_alerts_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "analytics_alerts_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "analytics_alerts_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       analytics_cache: {
         Row: {
           cache_key: string
@@ -176,38 +272,178 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_metrics: {
+        Row: {
+          context: Json | null
+          id: string
+          metadata: Json | null
+          metric_name: string
+          metric_type: string | null
+          metric_value: number | null
+          recorded_at: string | null
+          recorded_by: string | null
+        }
+        Insert: {
+          context?: Json | null
+          id?: string
+          metadata?: Json | null
+          metric_name: string
+          metric_type?: string | null
+          metric_value?: number | null
+          recorded_at?: string | null
+          recorded_by?: string | null
+        }
+        Update: {
+          context?: Json | null
+          id?: string
+          metadata?: Json | null
+          metric_name?: string
+          metric_type?: string | null
+          metric_value?: number | null
+          recorded_at?: string | null
+          recorded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_metrics_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "analytics_metrics_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "analytics_metrics_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "analytics_metrics_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analytics_report_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          default_filters: Json | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          report_type: string
+          template_config: Json
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          default_filters?: Json | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          report_type: string
+          template_config: Json
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          default_filters?: Json | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          report_type?: string
+          template_config?: Json
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       analytics_reports: {
         Row: {
           configuration: Json
           created_at: string | null
           created_by: string | null
+          data: Json
+          date_range_end: string
+          date_range_start: string
+          description: string | null
+          file_path: string | null
+          file_size: number | null
+          filters: Json | null
+          generated_at: string | null
           id: string
           is_automated: boolean | null
+          is_scheduled: boolean | null
+          last_updated: string | null
+          metadata: Json | null
           name: string
           report_type: string
           schedule_config: Json | null
+          status: string | null
+          title: string | null
           updated_at: string | null
         }
         Insert: {
           configuration?: Json
           created_at?: string | null
           created_by?: string | null
+          data?: Json
+          date_range_end?: string
+          date_range_start?: string
+          description?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          filters?: Json | null
+          generated_at?: string | null
           id?: string
           is_automated?: boolean | null
+          is_scheduled?: boolean | null
+          last_updated?: string | null
+          metadata?: Json | null
           name: string
           report_type: string
           schedule_config?: Json | null
+          status?: string | null
+          title?: string | null
           updated_at?: string | null
         }
         Update: {
           configuration?: Json
           created_at?: string | null
           created_by?: string | null
+          data?: Json
+          date_range_end?: string
+          date_range_start?: string
+          description?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          filters?: Json | null
+          generated_at?: string | null
           id?: string
           is_automated?: boolean | null
+          is_scheduled?: boolean | null
+          last_updated?: string | null
+          metadata?: Json | null
           name?: string
           report_type?: string
           schedule_config?: Json | null
+          status?: string | null
+          title?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2433,6 +2669,8 @@ export type Database = {
           lead_id: string | null
           opened_at: string | null
           opportunity_id: string | null
+          recipient_id: string | null
+          sender_id: string | null
           sent_at: string | null
           status: string | null
           subject: string | null
@@ -2458,6 +2696,8 @@ export type Database = {
           lead_id?: string | null
           opened_at?: string | null
           opportunity_id?: string | null
+          recipient_id?: string | null
+          sender_id?: string | null
           sent_at?: string | null
           status?: string | null
           subject?: string | null
@@ -2483,6 +2723,8 @@ export type Database = {
           lead_id?: string | null
           opened_at?: string | null
           opportunity_id?: string | null
+          recipient_id?: string | null
+          sender_id?: string | null
           sent_at?: string | null
           status?: string | null
           subject?: string | null
@@ -4257,6 +4499,7 @@ export type Database = {
       }
       compliance_records: {
         Row: {
+          assessor_id: string | null
           assigned_to: string | null
           attachments: string[] | null
           completion_date: string | null
@@ -4274,6 +4517,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          assessor_id?: string | null
           assigned_to?: string | null
           attachments?: string[] | null
           completion_date?: string | null
@@ -4291,6 +4535,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          assessor_id?: string | null
           assigned_to?: string | null
           attachments?: string[] | null
           completion_date?: string | null
@@ -7523,6 +7768,7 @@ export type Database = {
           province: string | null
           qualification_notes: string | null
           referral_source: string | null
+          status: string | null
           training_urgency: string | null
           updated_at: string | null
           website: string | null
@@ -7565,6 +7811,7 @@ export type Database = {
           province?: string | null
           qualification_notes?: string | null
           referral_source?: string | null
+          status?: string | null
           training_urgency?: string | null
           updated_at?: string | null
           website?: string | null
@@ -7607,6 +7854,7 @@ export type Database = {
           province?: string | null
           qualification_notes?: string | null
           referral_source?: string | null
+          status?: string | null
           training_urgency?: string | null
           updated_at?: string | null
           website?: string | null
@@ -10214,23 +10462,31 @@ export type Database = {
           department: string | null
           display_name: string | null
           email: string | null
+          email_verified: boolean | null
+          first_name: string | null
           id: string
           job_title: string | null
           last_compliance_check: string | null
           last_login: string | null
+          last_name: string | null
+          last_sign_in_at: string | null
           last_training_date: string | null
           location_id: string | null
+          metadata: Json | null
           next_training_due: string | null
           organization: string | null
           pending_actions: number | null
           performance_score: number | null
           phone: string | null
+          phone_verified: boolean | null
           role: string
           status: string
           supervisor_id: string | null
           team_count: number | null
+          team_id: string | null
           tier_upgrade_eligible: boolean | null
           tier_upgrade_requested_at: string | null
+          title: string | null
           training_hours: number | null
           updated_at: string
           user_id: string | null
@@ -10246,23 +10502,31 @@ export type Database = {
           department?: string | null
           display_name?: string | null
           email?: string | null
+          email_verified?: boolean | null
+          first_name?: string | null
           id: string
           job_title?: string | null
           last_compliance_check?: string | null
           last_login?: string | null
+          last_name?: string | null
+          last_sign_in_at?: string | null
           last_training_date?: string | null
           location_id?: string | null
+          metadata?: Json | null
           next_training_due?: string | null
           organization?: string | null
           pending_actions?: number | null
           performance_score?: number | null
           phone?: string | null
+          phone_verified?: boolean | null
           role?: string
           status?: string
           supervisor_id?: string | null
           team_count?: number | null
+          team_id?: string | null
           tier_upgrade_eligible?: boolean | null
           tier_upgrade_requested_at?: string | null
+          title?: string | null
           training_hours?: number | null
           updated_at?: string
           user_id?: string | null
@@ -10278,23 +10542,31 @@ export type Database = {
           department?: string | null
           display_name?: string | null
           email?: string | null
+          email_verified?: boolean | null
+          first_name?: string | null
           id?: string
           job_title?: string | null
           last_compliance_check?: string | null
           last_login?: string | null
+          last_name?: string | null
+          last_sign_in_at?: string | null
           last_training_date?: string | null
           location_id?: string | null
+          metadata?: Json | null
           next_training_due?: string | null
           organization?: string | null
           pending_actions?: number | null
           performance_score?: number | null
           phone?: string | null
+          phone_verified?: boolean | null
           role?: string
           status?: string
           supervisor_id?: string | null
           team_count?: number | null
+          team_id?: string | null
           tier_upgrade_eligible?: boolean | null
           tier_upgrade_requested_at?: string | null
+          title?: string | null
           training_hours?: number | null
           updated_at?: string
           user_id?: string | null
@@ -10333,6 +10605,13 @@ export type Database = {
             columns: ["supervisor_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
           {
@@ -12313,6 +12592,9 @@ export type Database = {
           metadata: Json | null
           name: string
           status: string
+          submitted_at: string | null
+          submitted_by: string | null
+          total_count: number | null
           updated_at: string
         }
         Insert: {
@@ -12328,6 +12610,9 @@ export type Database = {
           metadata?: Json | null
           name: string
           status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          total_count?: number | null
           updated_at?: string
         }
         Update: {
@@ -12343,6 +12628,9 @@ export type Database = {
           metadata?: Json | null
           name?: string
           status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          total_count?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -13530,6 +13818,72 @@ export type Database = {
           },
         ]
       }
+      team_activities: {
+        Row: {
+          activity_type: string
+          created_at: string | null
+          description: string | null
+          id: string
+          metadata: Json | null
+          team_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          team_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          team_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_activities_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_activities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "team_activities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_activities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_activities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_approval_requests: {
         Row: {
           approved_at: string | null
@@ -14618,6 +14972,47 @@ export type Database = {
           },
         ]
       }
+      team_metrics: {
+        Row: {
+          id: string
+          metadata: Json | null
+          metric_name: string
+          metric_value: number | null
+          period_end: string | null
+          period_start: string | null
+          recorded_at: string | null
+          team_id: string | null
+        }
+        Insert: {
+          id?: string
+          metadata?: Json | null
+          metric_name: string
+          metric_value?: number | null
+          period_end?: string | null
+          period_start?: string | null
+          recorded_at?: string | null
+          team_id?: string | null
+        }
+        Update: {
+          id?: string
+          metadata?: Json | null
+          metric_name?: string
+          metric_value?: number | null
+          period_end?: string | null
+          period_start?: string | null
+          recorded_at?: string | null
+          team_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_metrics_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_navigation_configs: {
         Row: {
           config_overrides: Json
@@ -15080,6 +15475,7 @@ export type Database = {
           provider_id: string | null
           split_from_team_id: string | null
           status: string | null
+          team_lead: string | null
           team_type: string | null
           updated_at: string
         }
@@ -15101,6 +15497,7 @@ export type Database = {
           provider_id?: string | null
           split_from_team_id?: string | null
           status?: string | null
+          team_lead?: string | null
           team_type?: string | null
           updated_at?: string
         }
@@ -15122,6 +15519,7 @@ export type Database = {
           provider_id?: string | null
           split_from_team_id?: string | null
           status?: string | null
+          team_lead?: string | null
           team_type?: string | null
           updated_at?: string
         }
@@ -16932,6 +17330,71 @@ export type Database = {
           },
           {
             foreignKeyName: "workflow_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflows: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          definition: Json
+          description: string | null
+          id: string
+          name: string
+          status: string | null
+          updated_at: string | null
+          version: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          definition: Json
+          description?: string | null
+          id?: string
+          name: string
+          status?: string | null
+          updated_at?: string | null
+          version?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          definition?: Json
+          description?: string | null
+          id?: string
+          name?: string
+          status?: string | null
+          updated_at?: string | null
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflows_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "workflows_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "workflows_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "workflows_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
