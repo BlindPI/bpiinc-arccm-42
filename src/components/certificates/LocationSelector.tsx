@@ -20,7 +20,7 @@ export function LocationSelector({
   onLocationChange,
   disabled = false
 }: LocationSelectorProps) {
-  const { locations, isLoading } = useLocationData();
+  const { locations, isLoading } = useLocationData({ status: 'ACTIVE' });
   
   if (isLoading) {
     return (
