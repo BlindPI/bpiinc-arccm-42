@@ -13,6 +13,65 @@ function cleanString(str: any): string {
   return '';
 }
 
+function formatDate(dateValue: any): string {
+  if (!dateValue) return '';
+  
+  // Handle Excel date serial numbers
+  if (typeof dateValue === 'number') {
+    const excelDate = new Date((dateValue - 25569) * 86400 * 1000);
+    return excelDate.toISOString().split('T')[0];
+  }
+  
+  // Handle string dates
+  if (typeof dateValue === 'string') {
+    const cleanDate = dateValue.trim();
+    if (!cleanDate) return '';
+    
+    // Try parsing various formats
+    let parsedDate: Date | null = null;
+    
+    // Try MM/DD/YYYY format
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(cleanDate)) {
+      const [month, day, year] = cleanDate.split('/');
+      parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    }
+    // Try DD/MM/YYYY format
+    else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(cleanDate)) {
+      const [day, month, year] = cleanDate.split('/');
+      parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    }
+    // Try YYYY-MM-DD format
+    else if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(cleanDate)) {
+      parsedDate = new Date(cleanDate);
+    }
+    // Try direct parsing
+    else {
+      parsedDate = new Date(cleanDate);
+    }
+    
+    if (parsedDate && !isNaN(parsedDate.getTime())) {
+      return parsedDate.toISOString().split('T')[0];
+    }
+  }
+  
+  return '';
+}
+
+function calculateExpiryDate(issueDate: string, course: Course | null): string {
+  if (!issueDate) return '';
+  
+  const issue = new Date(issueDate);
+  if (isNaN(issue.getTime())) return '';
+  
+  // Get expiration months from course, default to 36 months
+  const expirationMonths = course?.expiration_months || 36;
+  
+  const expiry = new Date(issue);
+  expiry.setMonth(expiry.getMonth() + expirationMonths);
+  
+  return expiry.toISOString().split('T')[0];
+}
+
 export async function processRosterFile(
   file: File,
   courses: Course[],
@@ -31,6 +90,10 @@ export async function processRosterFile(
       const row: any = jsonData[i];
       const rowNumber = i + 2; // Excel row number (1-indexed + header)
       
+      // Extract and format completion date
+      const rawIssueDate = row['Completion Date'] || row['Issue Date'] || row['Date'] || '';
+      const formattedIssueDate = formatDate(rawIssueDate) || new Date().toISOString().split('T')[0]; // Default to today
+
       const processedRow = {
         id: `temp-${i}`,
         recipientName: cleanString(row['Name'] || row['Student Name'] || row['Recipient Name'] || ''),
@@ -41,8 +104,11 @@ export async function processRosterFile(
         cprLevel: cleanString(row['CPR Level'] || row['CPR'] || ''),
         courseName: cleanString(row['Course'] || row['Course Name'] || ''),
         assessmentStatus: (row['Assessment'] || row['Status'] || 'PASS').toString().toUpperCase(),
+        issueDate: formattedIssueDate,
+        expiryDate: '', // Will be calculated after course matching
         validationErrors: [] as any[],
         courseMatch: null as any,
+        courseMatches: [] as any[],
         hasCourseMismatch: false,
         rowNumber
       };
@@ -70,7 +136,9 @@ export async function processRosterFile(
         });
       }
 
-      // CRITICAL: Course matching validation
+      // CRITICAL: Course matching validation and expiry calculation
+      let matchedCourse: Course | null = null;
+      
       if (enableCourseMatching && (processedRow.firstAidLevel || processedRow.cprLevel)) {
         const courseMatch = await findBestCourseMatch(
           {
@@ -82,6 +150,12 @@ export async function processRosterFile(
         );
 
         processedRow.courseMatch = courseMatch;
+        processedRow.courseMatches = courseMatch ? [courseMatch] : [];
+        
+        // Find the actual course object for expiry calculation
+        if (courseMatch && courseMatch.id) {
+          matchedCourse = courses.find(c => c.id === courseMatch.id) || null;
+        }
         
         // Validate the course match
         const validation = validateCourseMatch(courseMatch);
@@ -105,7 +179,22 @@ export async function processRosterFile(
             }
           });
         }
+      } else if (selectedCourseId && selectedCourseId !== 'none') {
+        // Use selected course if no matching enabled
+        matchedCourse = courses.find(c => c.id === selectedCourseId) || null;
+        if (matchedCourse) {
+          processedRow.courseMatches = [{
+            id: matchedCourse.id,
+            name: matchedCourse.name,
+            matchType: 'manual' as const,
+            expiration_months: matchedCourse.expiration_months,
+            certifications: []
+          }];
+        }
       }
+      
+      // Calculate expiry date based on matched course
+      processedRow.expiryDate = calculateExpiryDate(processedRow.issueDate, matchedCourse);
 
       if (processedRow.validationErrors.length > 0) {
         errorCount++;
