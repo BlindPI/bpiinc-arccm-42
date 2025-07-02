@@ -5,6 +5,7 @@ import { useBatchUpload } from './BatchCertificateContext';
 import { useAuth } from '@/hooks/useAuth';
 import { createRoster, sendBatchRosterEmails } from '@/services/rosterService';
 import { SimpleCertificateNotificationService } from '@/services/notifications/simpleCertificateNotificationService';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export function useBatchSubmission() {
@@ -45,38 +46,23 @@ export function useBatchSubmission() {
 
       console.log(`Submitting ${validRecords.length} valid records`);
 
-      // Create roster data
+      // Create roster data with valid fields only
       const rosterData = {
         name: `Batch-${new Date().toISOString().slice(0, 10)}-${validRecords.length}`,
         location_id: selectedLocationId,
         created_by: user.id,
         status: 'PENDING' as const,
-        total_certificates: validRecords.length,
-        processed_certificates: 0,
-        certificate_requests: validRecords.map(record => ({
-          recipient_name: record.recipientName,
-          recipient_email: record.email,
-          recipient_phone: record.phone || null,
-          company: record.company || null,
-          course_id: record.courseMatches?.[0]?.courseId || null,
-          course_name: record.courseMatches?.[0]?.courseName || 'Unknown Course',
-          issue_date: record.issueDate,
-          expiry_date: record.expiryDate,
-          assessment_status: record.assessmentStatus || 'PASS',
-          certifications: record.certifications || {},
-          instructor_name: record.instructorName || null,
-          instructor_level: record.instructorLevel || null,
-          notes: record.notes || null,
-          city: record.city || null,
-          province: record.province || null,
-          postal_code: record.postalCode || null
-        }))
+        certificate_count: validRecords.length,
+        course_id: validRecords[0]?.courseMatches?.[0]?.courseId || null,
+        issue_date: validRecords[0]?.issueDate || new Date().toISOString().slice(0, 10),
+        description: `Batch certificate request with ${validRecords.length} certificates`,
+        instructor_name: validRecords[0]?.instructorName || null
       };
 
       console.log('Creating roster with data:', { 
         location_id: rosterData.location_id,
         created_by: rosterData.created_by,
-        total_certificates: rosterData.total_certificates
+        certificate_count: rosterData.certificate_count
       });
 
       // Create the roster
@@ -88,6 +74,53 @@ export function useBatchSubmission() {
 
       const rosterId = rosterResult.data.id;
       console.log('Roster created successfully:', rosterId);
+
+      // Create certificate requests separately and link to roster
+      const batchId = crypto.randomUUID();
+      const batchName = rosterData.name;
+      
+      console.log('Creating certificate requests...');
+      for (const record of validRecords) {
+        try {
+          const { data: certificateRequest, error } = await supabase
+            .from('certificate_requests')
+            .insert({
+              roster_id: rosterId,
+              batch_id: batchId,
+              batch_name: batchName,
+              user_id: user.id,
+              location_id: selectedLocationId,
+              recipient_name: record.recipientName,
+              recipient_email: record.email,
+              email: record.email,
+              phone: record.phone || null,
+              company: record.company || null,
+              course_name: record.courseMatches?.[0]?.courseName || 'Unknown Course',
+              issue_date: record.issueDate,
+              expiry_date: record.expiryDate,
+              assessment_status: record.assessmentStatus || 'PASS',
+              cpr_level: record.cprLevel || null,
+              first_aid_level: record.firstAidLevel || null,
+              instructor_name: record.instructorName || null,
+              instructor_level: record.instructorLevel || null,
+              notes: record.notes || null,
+              city: record.city || null,
+              province: record.province || null,
+              postal_code: record.postalCode || null,
+              status: 'PENDING'
+            });
+
+          if (error) {
+            console.error('Failed to create certificate request:', error);
+            throw new Error(`Failed to create certificate request: ${error.message}`);
+          }
+        } catch (requestError) {
+          console.error('Certificate request creation failed:', requestError);
+          throw requestError;
+        }
+      }
+      
+      console.log(`Successfully created ${validRecords.length} certificate requests`);
 
       // Try to send notifications (but don't fail if this doesn't work)
       try {
