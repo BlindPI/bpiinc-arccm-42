@@ -139,6 +139,12 @@ export function useBatchSubmission() {
       console.log('Created roster record:', rosterData);
       
       const rosterId = rosterData?.id;
+      console.log('Roster ID extracted:', rosterId);
+      
+      console.log('About to process certificate requests...');
+      console.log('ProcessedData structure:', processedData);
+      console.log('ProcessedData.data length:', processedData.data?.length);
+      console.log('Filtered data (isProcessed && !error):', processedData.data?.filter(row => row.isProcessed && !row.error));
 
       const requests = processedData.data
         .filter(row => row.isProcessed && !row.error)
