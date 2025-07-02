@@ -9,7 +9,6 @@ import { addMonths, format } from 'date-fns';
 import { generateRosterId } from '@/types/batch-upload';
 import { createRoster } from '@/services/rosterService';
 import { SimpleCertificateNotificationService } from '@/services/notifications/simpleCertificateNotificationService';
-import type { CreateRosterData } from '@/types/roster';
 
 export function useBatchSubmission() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -83,7 +82,6 @@ export function useBatchSubmission() {
     }
 
     setIsSubmitting(true);
-    setCurrentStep('SUBMITTING'); // CRITICAL: Set submitting step first!
     console.log('Starting batch submission...');
 
     try {
@@ -116,18 +114,17 @@ export function useBatchSubmission() {
         }
       }
       
-      // Create a roster record first - use the correct type from roster.ts
-      const rosterInput: CreateRosterData = {
+      // Create a roster record first
+      const { success, data: rosterData, error: rosterError } = await createRoster({
         name: rosterName,
         description: `Batch upload from ${userName} on ${format(new Date(), 'PPP')}`,
         created_by: user.id,
         location_id: selectedLocationId !== 'none' ? selectedLocationId : null,
         course_id: courseId,
         issue_date: firstValidRow?.issueDate || format(new Date(), 'yyyy-MM-dd'),
-        status: 'ACTIVE'
-      };
-      
-      const { success, data: rosterData, error: rosterError } = await createRoster(rosterInput);
+        status: 'ACTIVE',
+        certificate_count: processedData.data.filter(row => row.isProcessed && !row.error).length
+      });
       
       if (!success || rosterError) {
         console.error('Failed to create roster:', rosterError);
@@ -139,12 +136,6 @@ export function useBatchSubmission() {
       console.log('Created roster record:', rosterData);
       
       const rosterId = rosterData?.id;
-      console.log('Roster ID extracted:', rosterId);
-      
-      console.log('About to process certificate requests...');
-      console.log('ProcessedData structure:', processedData);
-      console.log('ProcessedData.data length:', processedData.data?.length);
-      console.log('Filtered data (isProcessed && !error):', processedData.data?.filter(row => row.isProcessed && !row.error));
 
       const requests = processedData.data
         .filter(row => row.isProcessed && !row.error)
@@ -199,28 +190,6 @@ export function useBatchSubmission() {
       }
 
       console.log('Submitting certificate requests:', requests);
-      console.log('First request sample:', requests[0]);
-
-      // DEBUGGING: Test with a single request first to isolate the issue
-      console.log('Testing single certificate request insertion...');
-      const testRequest = requests[0];
-      const { data: testData, error: testError } = await supabase
-        .from('certificate_requests')
-        .insert([testRequest])
-        .select('id');
-
-      if (testError) {
-        console.error('DETAILED ERROR during certificate_requests insert:', {
-          error: testError,
-          message: testError.message,
-          details: testError.details,
-          hint: testError.hint,
-          code: testError.code
-        });
-        throw new Error(`Certificate requests insertion failed: ${testError.message} (${testError.code})`);
-      }
-
-      console.log('Single test request succeeded, inserting all requests...');
 
       const { data, error } = await supabase
         .from('certificate_requests')
@@ -228,14 +197,7 @@ export function useBatchSubmission() {
         .select('id');
 
       if (error) {
-        console.error('DETAILED ERROR during bulk certificate_requests insert:', {
-          error: error,
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        });
-        throw new Error(`Bulk certificate requests insertion failed: ${error.message} (${error.code})`);
+        throw error;
       }
 
       const successCount = data?.length || 0;

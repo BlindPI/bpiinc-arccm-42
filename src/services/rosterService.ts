@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { CreateRosterData } from '@/types/roster';
+import { CreateRosterData } from '@/types/courses';
 
 export const createRoster = async (rosterData: CreateRosterData) => {
   try {

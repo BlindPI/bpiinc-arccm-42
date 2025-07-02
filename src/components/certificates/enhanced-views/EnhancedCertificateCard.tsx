@@ -19,7 +19,6 @@ import {
 import { Certificate } from '@/types/certificates';
 import { format } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { EmailDeliveryStatus } from '../EmailDeliveryStatus';
 
 interface EnhancedCertificateCardProps {
   certificate: Certificate;
@@ -75,19 +74,19 @@ export const EnhancedCertificateCard: React.FC<EnhancedCertificateCardProps> = (
   };
 
   const getEmailStatusIndicator = () => {
+    if (certificate.email_status === 'SENT' || certificate.is_batch_emailed) {
+      return (
+        <div className="flex items-center gap-1 text-green-600">
+          <CheckCircle className="h-3 w-3" />
+          <span className="text-xs">Email Sent</span>
+        </div>
+      );
+    }
     return (
-      <EmailDeliveryStatus
-        certificateId={certificate.id}
-        deliveryStatus={certificate.delivery_status}
-        lastDeliveryAttempt={certificate.last_delivery_attempt}
-        deliveryAttempts={certificate.delivery_attempts}
-        bounceReason={certificate.bounce_reason}
-        emailStatus={certificate.email_status}
-        isBatchEmailed={certificate.is_batch_emailed}
-        lastEmailedAt={certificate.last_emailed_at}
-        size="sm"
-        showRetryButton={true}
-      />
+      <div className="flex items-center gap-1 text-gray-400">
+        <Mail className="h-3 w-3" />
+        <span className="text-xs">Not Sent</span>
+      </div>
     );
   };
 
