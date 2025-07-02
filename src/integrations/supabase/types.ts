@@ -8825,6 +8825,39 @@ export type Database = {
         }
         Relationships: []
       }
+      email_delivery_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string | null
+          id: string
+          message: string
+          metadata: Json | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string | null
+          id?: string
+          message: string
+          metadata?: Json | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string | null
+          id?: string
+          message?: string
+          metadata?: Json | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+        }
+        Relationships: []
+      }
       email_delivery_events: {
         Row: {
           bounce_reason: string | null
@@ -8865,6 +8898,71 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "email_delivery_events_certificate_id_fkey"
+            columns: ["certificate_id"]
+            isOneToOne: false
+            referencedRelation: "certificates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_delivery_reports: {
+        Row: {
+          generated_at: string | null
+          id: string
+          report_date: string
+          report_type: string
+          stats: Json
+        }
+        Insert: {
+          generated_at?: string | null
+          id?: string
+          report_date: string
+          report_type?: string
+          stats: Json
+        }
+        Update: {
+          generated_at?: string | null
+          id?: string
+          report_date?: string
+          report_type?: string
+          stats?: Json
+        }
+        Relationships: []
+      }
+      email_retry_queue: {
+        Row: {
+          certificate_id: string
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          next_retry_at: string
+          retry_count: number
+          status: string
+        }
+        Insert: {
+          certificate_id: string
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          next_retry_at: string
+          retry_count?: number
+          status?: string
+        }
+        Update: {
+          certificate_id?: string
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          next_retry_at?: string
+          retry_count?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_retry_queue_certificate_id_fkey"
             columns: ["certificate_id"]
             isOneToOne: false
             referencedRelation: "certificates"
@@ -18493,6 +18591,15 @@ export type Database = {
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_domain_bounce_rates: {
+        Args: { hours_back?: number }
+        Returns: {
+          domain: string
+          total_emails: number
+          bounced_emails: number
+          bounce_rate: number
+        }[]
       }
       get_enhanced_executive_dashboard_metrics: {
         Args: Record<PropertyKey, never>
