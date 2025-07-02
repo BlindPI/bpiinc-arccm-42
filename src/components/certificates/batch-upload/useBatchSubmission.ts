@@ -46,9 +46,17 @@ export function useBatchSubmission() {
 
       console.log(`Submitting ${validRecords.length} valid records`);
 
+      // Generate human-readable batch name like JW-20250702-1828-76
+      const now = new Date();
+      const userInitials = (user.email?.substring(0, 2) || 'XX').toUpperCase();
+      const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+      const timeStr = now.toTimeString().slice(0, 5).replace(':', '');
+      const randomSuffix = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+      const humanReadableBatchName = `${userInitials}-${dateStr}-${timeStr}-${randomSuffix}`;
+
       // Create roster data with valid fields only
       const rosterData = {
-        name: `Batch-${new Date().toISOString().slice(0, 10)}-${validRecords.length}`,
+        name: humanReadableBatchName,
         location_id: selectedLocationId,
         created_by: user.id,
         status: 'PENDING' as const,
