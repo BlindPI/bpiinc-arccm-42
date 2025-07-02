@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Settings, BarChart3, Users } from 'lucide-react';
 import { RealMemberTable } from './RealMemberTable';
 import { AddTeamMemberModal } from './AddTeamMemberModal';
-import { TeamAnalyticsService } from '@/services/team/teamAnalyticsService';
+import { teamAnalyticsService } from '@/services/team/teamAnalyticsService';
 import { RealTeamDataService } from '@/services/team/realTeamDataService';
 
 interface FunctionalTeamManagementHubProps {
@@ -25,7 +25,7 @@ export function FunctionalTeamManagementHub({ userRole }: FunctionalTeamManageme
 
   const { data: systemAnalytics } = useQuery({
     queryKey: ['system-analytics'],
-    queryFn: () => TeamAnalyticsService.getGlobalAnalytics()
+    queryFn: () => teamAnalyticsService.getSystemWideAnalytics()
   });
 
   const canManageTeams = ['SA', 'AD'].includes(userRole || '');
@@ -64,7 +64,7 @@ export function FunctionalTeamManagementHub({ userRole }: FunctionalTeamManageme
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Teams</p>
-                  <p className="text-2xl font-bold">{systemAnalytics.total_teams}</p>
+                  <p className="text-2xl font-bold">{systemAnalytics.totalTeams}</p>
                 </div>
                 <Users className="h-5 w-5 text-blue-500" />
               </div>
@@ -76,7 +76,7 @@ export function FunctionalTeamManagementHub({ userRole }: FunctionalTeamManageme
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Members</p>
-                  <p className="text-2xl font-bold">{systemAnalytics.total_members}</p>
+                  <p className="text-2xl font-bold">{systemAnalytics.totalMembers}</p>
                 </div>
                 <Users className="h-5 w-5 text-green-500" />
               </div>
@@ -88,7 +88,7 @@ export function FunctionalTeamManagementHub({ userRole }: FunctionalTeamManageme
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Avg Performance</p>
-                  <p className="text-2xl font-bold">{systemAnalytics.average_performance}%</p>
+                  <p className="text-2xl font-bold">{systemAnalytics.averagePerformance}%</p>
                 </div>
                 <BarChart3 className="h-5 w-5 text-purple-500" />
               </div>
@@ -100,7 +100,7 @@ export function FunctionalTeamManagementHub({ userRole }: FunctionalTeamManageme
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Compliance</p>
-                  <p className="text-2xl font-bold">85%</p>
+                  <p className="text-2xl font-bold">{systemAnalytics.averageCompliance}%</p>
                 </div>
                 <Settings className="h-5 w-5 text-orange-500" />
               </div>

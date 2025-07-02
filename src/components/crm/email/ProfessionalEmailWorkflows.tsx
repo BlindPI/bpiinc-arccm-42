@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -124,7 +123,7 @@ export function ProfessionalEmailWorkflows() {
           c.created_at && new Date(c.created_at).toDateString() === today
         );
         
-        const totalSent = campaigns.reduce((sum, c) => sum + (c.delivered_count || 0), 0);
+        const totalSent = campaigns.reduce((sum, c) => sum + (c.sent_count || 0), 0);
         const totalOpened = campaigns.reduce((sum, c) => sum + (c.opened_count || 0), 0);
         const totalDelivered = campaigns.reduce((sum, c) => sum + (c.delivered_count || 0), 0);
         
@@ -133,7 +132,7 @@ export function ProfessionalEmailWorkflows() {
           Math.round((campaigns.filter(c => c.status === 'sent').length / campaigns.length) * 100) : 0;
 
         return {
-          emailsSentToday: todaysCampaigns.reduce((sum, c) => sum + (c.delivered_count || 0), 0),
+          emailsSentToday: todaysCampaigns.reduce((sum, c) => sum + (c.sent_count || 0), 0),
           openRate,
           automationSuccess,
           totalCampaigns: campaigns.length

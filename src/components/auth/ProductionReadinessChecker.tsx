@@ -3,9 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
-import { validateSupabaseConfiguration, ConfigurationValidation } from '@/utils/configurationValidator';
+import { validateSupabaseConfiguration, ConfigurationValidationResult } from '@/utils/configurationValidator';
 export const ProductionReadinessChecker: React.FC = () => {
-  const [validation, setValidation] = useState<ConfigurationValidation | null>(null);
+  const [validation, setValidation] = useState<ConfigurationValidationResult | null>(null);
   useEffect(() => {
     setValidation(validateSupabaseConfiguration());
   }, []);
