@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useBatchUpload } from './BatchCertificateContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { createRoster, sendBatchRosterEmails } from '@/services/rosterService';
 import { SimpleCertificateNotificationService } from '@/services/notifications/simpleCertificateNotificationService';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,6 +12,7 @@ import { toast } from 'sonner';
 export function useBatchSubmission() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
+  const { data: profile } = useProfile();
   
   const {
     processedData,
@@ -46,9 +48,25 @@ export function useBatchSubmission() {
 
       console.log(`Submitting ${validRecords.length} valid records`);
 
-      // Generate human-readable batch name like JW-20250702-1828-76
+      // Generate human-readable batch name like JW-20250702-1828-76 from user's actual name
       const now = new Date();
-      const userInitials = (user.email?.substring(0, 2) || 'XX').toUpperCase();
+      
+      // Get initials from user's profile name
+      let userInitials = 'XX';
+      if (profile?.display_name) {
+        const nameParts = profile.display_name.trim().split(' ');
+        if (nameParts.length >= 2) {
+          // Take first letter of first name and first letter of last name
+          userInitials = (nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)).toUpperCase();
+        } else if (nameParts.length === 1) {
+          // Single name, take first two letters
+          userInitials = nameParts[0].substring(0, 2).toUpperCase();
+        }
+      } else if (user.email) {
+        // Fallback to email if no display name
+        userInitials = user.email.substring(0, 2).toUpperCase();
+      }
+      
       const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
       const timeStr = now.toTimeString().slice(0, 5).replace(':', '');
       const randomSuffix = Math.floor(Math.random() * 100).toString().padStart(2, '0');
