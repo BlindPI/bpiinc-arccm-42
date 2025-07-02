@@ -193,6 +193,28 @@ export function useBatchSubmission() {
       }
 
       console.log('Submitting certificate requests:', requests);
+      console.log('First request sample:', requests[0]);
+
+      // DEBUGGING: Test with a single request first to isolate the issue
+      console.log('Testing single certificate request insertion...');
+      const testRequest = requests[0];
+      const { data: testData, error: testError } = await supabase
+        .from('certificate_requests')
+        .insert([testRequest])
+        .select('id');
+
+      if (testError) {
+        console.error('DETAILED ERROR during certificate_requests insert:', {
+          error: testError,
+          message: testError.message,
+          details: testError.details,
+          hint: testError.hint,
+          code: testError.code
+        });
+        throw new Error(`Certificate requests insertion failed: ${testError.message} (${testError.code})`);
+      }
+
+      console.log('Single test request succeeded, inserting all requests...');
 
       const { data, error } = await supabase
         .from('certificate_requests')
@@ -200,7 +222,14 @@ export function useBatchSubmission() {
         .select('id');
 
       if (error) {
-        throw error;
+        console.error('DETAILED ERROR during bulk certificate_requests insert:', {
+          error: error,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        throw new Error(`Bulk certificate requests insertion failed: ${error.message} (${error.code})`);
       }
 
       const successCount = data?.length || 0;
