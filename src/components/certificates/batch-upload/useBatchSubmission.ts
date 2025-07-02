@@ -33,9 +33,8 @@ export function useBatchSubmission() {
 
       // Filter out invalid records
       const validRecords = processedData.data.filter(record => 
-        record.isProcessed && 
-        !record.error && 
-        record.name && 
+        record.validationErrors.length === 0 && 
+        record.recipientName && 
         record.email &&
         !record.hasCourseMismatch
       );
@@ -48,13 +47,14 @@ export function useBatchSubmission() {
 
       // Create roster data
       const rosterData = {
+        name: `Batch-${new Date().toISOString().slice(0, 10)}-${validRecords.length}`,
         location_id: selectedLocationId,
         created_by: user.id,
         status: 'PENDING' as const,
         total_certificates: validRecords.length,
         processed_certificates: 0,
         certificate_requests: validRecords.map(record => ({
-          recipient_name: record.name,
+          recipient_name: record.recipientName,
           recipient_email: record.email,
           recipient_phone: record.phone || null,
           company: record.company || null,
