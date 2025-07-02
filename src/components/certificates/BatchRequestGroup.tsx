@@ -37,7 +37,7 @@ export function BatchRequestGroup({
   setRejectionReason
 }: BatchRequestGroupProps) {
   const { data: profile } = useProfile();
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const isIndividualRequest = batchId.startsWith('individual_');
   const pendingCount = requests.filter(r => r.status === 'PENDING').length;
   const approvedCount = requests.filter(r => r.status === 'APPROVED').length;
