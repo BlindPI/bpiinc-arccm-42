@@ -31,6 +31,7 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmailCertificateForm } from './EmailCertificateForm';
 import { CertificatePreviewModal } from './CertificatePreviewModal';
+import { EmailDeliveryStatus } from './EmailDeliveryStatus';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface CertificatesTableProps {
@@ -162,15 +163,20 @@ export function CertificatesTable({
 
   // Get email status badge for certificate
   const getEmailStatusBadge = (cert: any) => {
-    if (cert.is_batch_emailed || cert.email_status === 'SENT') {
-      return (
-        <Badge variant="outline" className="bg-green-50 text-green-700 flex items-center gap-1">
-          <MailCheck className="h-3 w-3" />
-          Emailed
-        </Badge>
-      );
-    }
-    return null;
+    return (
+      <EmailDeliveryStatus
+        certificateId={cert.id}
+        deliveryStatus={cert.delivery_status}
+        lastDeliveryAttempt={cert.last_delivery_attempt}
+        deliveryAttempts={cert.delivery_attempts}
+        bounceReason={cert.bounce_reason}
+        emailStatus={cert.email_status}
+        isBatchEmailed={cert.is_batch_emailed}
+        lastEmailedAt={cert.last_emailed_at}
+        size="sm"
+        showRetryButton={true}
+      />
+    );
   };
 
   // Get email button text and icon
@@ -370,7 +376,7 @@ export function CertificatesTable({
                     {format(new Date(cert.expiry_date), 'MMMM d, yyyy')}
                   </TableCell>
                   <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-2">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                         cert.status === 'ACTIVE' 
                           ? 'bg-green-100 text-green-800'
