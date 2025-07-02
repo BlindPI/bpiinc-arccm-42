@@ -9,6 +9,7 @@ import { addMonths, format } from 'date-fns';
 import { generateRosterId } from '@/types/batch-upload';
 import { createRoster } from '@/services/rosterService';
 import { SimpleCertificateNotificationService } from '@/services/notifications/simpleCertificateNotificationService';
+import type { CreateRosterData } from '@/types/roster';
 
 export function useBatchSubmission() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -82,6 +83,7 @@ export function useBatchSubmission() {
     }
 
     setIsSubmitting(true);
+    setCurrentStep('SUBMITTING'); // CRITICAL: Set submitting step first!
     console.log('Starting batch submission...');
 
     try {
@@ -114,17 +116,18 @@ export function useBatchSubmission() {
         }
       }
       
-      // Create a roster record first
-      const { success, data: rosterData, error: rosterError } = await createRoster({
+      // Create a roster record first - use the correct type from roster.ts
+      const rosterInput: CreateRosterData = {
         name: rosterName,
         description: `Batch upload from ${userName} on ${format(new Date(), 'PPP')}`,
         created_by: user.id,
         location_id: selectedLocationId !== 'none' ? selectedLocationId : null,
         course_id: courseId,
         issue_date: firstValidRow?.issueDate || format(new Date(), 'yyyy-MM-dd'),
-        status: 'ACTIVE',
-        certificate_count: processedData.data.filter(row => row.isProcessed && !row.error).length
-      });
+        status: 'ACTIVE'
+      };
+      
+      const { success, data: rosterData, error: rosterError } = await createRoster(rosterInput);
       
       if (!success || rosterError) {
         console.error('Failed to create roster:', rosterError);
