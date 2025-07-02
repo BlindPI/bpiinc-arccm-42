@@ -76,7 +76,7 @@ export function useBatchSubmission() {
       console.log('Roster created successfully:', rosterId);
 
       // Create certificate requests separately and link to roster
-      const batchId = rosterData.name; // Use the human-readable batch name as batch_id
+      const batchId = crypto.randomUUID();
       const batchName = rosterData.name;
       
       console.log('Creating certificate requests...');
