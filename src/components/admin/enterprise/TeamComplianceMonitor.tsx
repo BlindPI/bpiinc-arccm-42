@@ -15,14 +15,14 @@ import {
   Clock
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { teamAnalyticsService } from '@/services/team/teamAnalyticsService';
+import { TeamAnalyticsService } from '@/services/team/teamAnalyticsService';
 
 export function TeamComplianceMonitor() {
   const [activeTab, setActiveTab] = useState('overview');
 
   const { data: systemAnalytics, isLoading } = useQuery({
     queryKey: ['system-compliance-analytics'],
-    queryFn: () => teamAnalyticsService.getSystemWideAnalytics()
+    queryFn: () => TeamAnalyticsService.getGlobalAnalytics()
   });
 
   // Mock compliance data - replace with real service calls
@@ -30,8 +30,8 @@ export function TeamComplianceMonitor() {
     overallScore: 85,
     criticalIssues: 3,
     pendingReviews: 12,
-    compliantTeams: Math.floor((systemAnalytics?.totalTeams || 0) * 0.8),
-    totalTeams: systemAnalytics?.totalTeams || 0,
+    compliantTeams: Math.floor((systemAnalytics?.total_teams || 0) * 0.8),
+    totalTeams: systemAnalytics?.total_teams || 0,
     trends: {
       thisMonth: 85,
       lastMonth: 82,

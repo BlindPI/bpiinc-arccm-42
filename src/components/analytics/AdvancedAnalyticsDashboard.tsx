@@ -15,7 +15,7 @@ import {
   Settings
 } from 'lucide-react';
 import { PredictiveAnalyticsDashboard } from './PredictiveAnalyticsDashboard';
-import { WorkflowApprovalDashboard } from '@/components/governance/WorkflowApprovalDashboard';
+// import { WorkflowApprovalDashboard } from '@/components/governance/WorkflowApprovalDashboard';
 
 export function AdvancedAnalyticsDashboard() {
   const [activeTab, setActiveTab] = useState('predictive');
@@ -119,7 +119,9 @@ export function AdvancedAnalyticsDashboard() {
         </TabsContent>
 
         <TabsContent value="governance">
-          <WorkflowApprovalDashboard />
+          <div className="text-center py-8 text-muted-foreground">
+            <p>Governance dashboard temporarily disabled</p>
+          </div>
         </TabsContent>
 
         <TabsContent value="performance">
