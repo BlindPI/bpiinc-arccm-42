@@ -53,7 +53,7 @@ export function useBatchSubmission() {
         created_by: user.id,
         status: 'PENDING' as const,
         certificate_count: validRecords.length,
-        course_id: validRecords[0]?.courseMatches?.[0]?.courseId || null,
+        course_id: validRecords[0]?.courseMatches?.[0]?.id || null,
         issue_date: validRecords[0]?.issueDate || new Date().toISOString().slice(0, 10),
         description: `Batch certificate request with ${validRecords.length} certificates`,
         instructor_name: validRecords[0]?.instructorName || null
@@ -95,7 +95,7 @@ export function useBatchSubmission() {
               email: record.email,
               phone: record.phone || null,
               company: record.company || null,
-              course_name: record.courseMatches?.[0]?.courseName || 'Unknown Course',
+              course_name: record.courseMatches?.[0]?.name || 'Unknown Course',
               issue_date: record.issueDate,
               expiry_date: record.expiryDate,
               assessment_status: record.assessmentStatus || 'PASS',

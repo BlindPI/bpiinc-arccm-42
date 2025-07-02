@@ -1,4 +1,4 @@
-export type CourseMatchType = 'exact' | 'partial' | 'fallback' | 'default' | 'mismatch';
+export type CourseMatchType = 'exact' | 'partial' | 'fallback' | 'default' | 'mismatch' | 'manual';
 
 export interface CourseMatch {
   id: string;

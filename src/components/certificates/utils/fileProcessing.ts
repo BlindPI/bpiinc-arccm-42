@@ -184,10 +184,11 @@ export async function processRosterFile(
         matchedCourse = courses.find(c => c.id === selectedCourseId) || null;
         if (matchedCourse) {
           processedRow.courseMatches = [{
-            courseId: matchedCourse.id,
-            courseName: matchedCourse.name,
-            confidence: 1.0,
-            matchType: 'manual' as const
+            id: matchedCourse.id,
+            name: matchedCourse.name,
+            matchType: 'manual' as const,
+            expiration_months: matchedCourse.expiration_months || 36,
+            certifications: []
           }];
         }
       }
