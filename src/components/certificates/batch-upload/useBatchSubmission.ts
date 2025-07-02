@@ -47,9 +47,8 @@ export function useBatchSubmission() {
       console.log(`Submitting ${validRecords.length} valid records`);
 
       // Create roster data with valid fields only
-      const batchId = crypto.randomUUID();
       const rosterData = {
-        name: batchId,
+        name: `Batch-${new Date().toISOString().slice(0, 10)}-${validRecords.length}`,
         location_id: selectedLocationId,
         created_by: user.id,
         status: 'PENDING' as const,
@@ -77,6 +76,7 @@ export function useBatchSubmission() {
       console.log('Roster created successfully:', rosterId);
 
       // Create certificate requests separately and link to roster
+      const batchId = rosterData.name; // Use the human-readable batch name as batch_id
       const batchName = rosterData.name;
       
       console.log('Creating certificate requests...');
