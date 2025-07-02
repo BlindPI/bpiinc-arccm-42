@@ -2349,10 +2349,13 @@ export type Database = {
           batch_email_id: string | null
           batch_id: string | null
           batch_name: string | null
+          bounce_reason: string | null
           certificate_request_id: string | null
           certificate_url: string | null
           course_name: string
           created_at: string
+          delivery_attempts: number | null
+          delivery_status: string | null
           email_status: string | null
           expiry_date: string
           generation_status: string | null
@@ -2362,11 +2365,13 @@ export type Database = {
           is_batch_emailed: boolean | null
           issue_date: string
           issued_by: string | null
+          last_delivery_attempt: string | null
           last_emailed_at: string | null
           length: number | null
           location_id: string | null
           recipient_email: string | null
           recipient_name: string
+          resend_email_id: string | null
           roster_id: string | null
           status: string
           template_id: string | null
@@ -2380,10 +2385,13 @@ export type Database = {
           batch_email_id?: string | null
           batch_id?: string | null
           batch_name?: string | null
+          bounce_reason?: string | null
           certificate_request_id?: string | null
           certificate_url?: string | null
           course_name: string
           created_at?: string
+          delivery_attempts?: number | null
+          delivery_status?: string | null
           email_status?: string | null
           expiry_date: string
           generation_status?: string | null
@@ -2393,11 +2401,13 @@ export type Database = {
           is_batch_emailed?: boolean | null
           issue_date: string
           issued_by?: string | null
+          last_delivery_attempt?: string | null
           last_emailed_at?: string | null
           length?: number | null
           location_id?: string | null
           recipient_email?: string | null
           recipient_name: string
+          resend_email_id?: string | null
           roster_id?: string | null
           status?: string
           template_id?: string | null
@@ -2411,10 +2421,13 @@ export type Database = {
           batch_email_id?: string | null
           batch_id?: string | null
           batch_name?: string | null
+          bounce_reason?: string | null
           certificate_request_id?: string | null
           certificate_url?: string | null
           course_name?: string
           created_at?: string
+          delivery_attempts?: number | null
+          delivery_status?: string | null
           email_status?: string | null
           expiry_date?: string
           generation_status?: string | null
@@ -2424,11 +2437,13 @@ export type Database = {
           is_batch_emailed?: boolean | null
           issue_date?: string
           issued_by?: string | null
+          last_delivery_attempt?: string | null
           last_emailed_at?: string | null
           length?: number | null
           location_id?: string | null
           recipient_email?: string | null
           recipient_name?: string
+          resend_email_id?: string | null
           roster_id?: string | null
           status?: string
           template_id?: string | null
@@ -8809,6 +8824,53 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      email_delivery_events: {
+        Row: {
+          bounce_reason: string | null
+          certificate_id: string | null
+          created_at: string
+          error_message: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          resend_email_id: string | null
+          status: string
+          timestamp: string
+        }
+        Insert: {
+          bounce_reason?: string | null
+          certificate_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          resend_email_id?: string | null
+          status: string
+          timestamp?: string
+        }
+        Update: {
+          bounce_reason?: string | null
+          certificate_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          resend_email_id?: string | null
+          status?: string
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_delivery_events_certificate_id_fkey"
+            columns: ["certificate_id"]
+            isOneToOne: false
+            referencedRelation: "certificates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_templates: {
         Row: {
