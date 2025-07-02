@@ -47,11 +47,20 @@ interface BatchUploadContextType {
   resetForm: () => void;
   isSubmitting: boolean;
   setIsSubmitting: (submitting: boolean) => void;
+  
+  // Navigation
+  onNavigateToTab?: (tabValue: string) => void;
 }
 
 const BatchUploadContext = createContext<BatchUploadContextType | undefined>(undefined);
 
-export function BatchUploadProvider({ children }: { children: ReactNode }) {
+export function BatchUploadProvider({ 
+  children, 
+  onNavigateToTab 
+}: { 
+  children: ReactNode;
+  onNavigateToTab?: (tabValue: string) => void;
+}) {
   // Step management
   const [currentStep, setCurrentStep] = useState<'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE'>('UPLOAD');
   
@@ -128,6 +137,9 @@ export function BatchUploadProvider({ children }: { children: ReactNode }) {
     resetForm,
     isSubmitting,
     setIsSubmitting,
+    
+    // Navigation
+    onNavigateToTab,
   };
 
   return (

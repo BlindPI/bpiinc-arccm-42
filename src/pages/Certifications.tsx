@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CertificateForm } from "@/components/CertificateForm";
 import { BatchCertificateUpload } from "@/components/certificates/BatchCertificateUpload";
@@ -18,6 +19,11 @@ export default function Certifications() {
   const { data: profile } = useProfile();
   const isMobile = useIsMobile();
   const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
+  const [activeTab, setActiveTab] = useState("batch");
+
+  const navigateToTab = (tabValue: string) => {
+    setActiveTab(tabValue);
+  };
 
   return (
     <div className="flex flex-col gap-6 w-full animate-fade-in">
@@ -36,7 +42,7 @@ export default function Certifications() {
       />
       
       <div className="bg-gradient-to-r from-white via-gray-50/50 to-white dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 border rounded-xl shadow-sm p-6 w-full">
-        <Tabs defaultValue="batch" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList 
             className="flex flex-nowrap w-full mb-6 bg-gradient-to-r from-primary/90 to-primary p-1 rounded-lg shadow-md overflow-x-auto"
           >
@@ -104,7 +110,7 @@ export default function Certifications() {
 
           <div className="mt-2 w-full">
             <TabsContent value="batch" className="mt-6">
-              <BatchCertificateUpload />
+              <BatchCertificateUpload onNavigateToTab={navigateToTab} />
             </TabsContent>
           
             <TabsContent value="requests" className="mt-6 space-y-6">

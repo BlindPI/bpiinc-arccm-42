@@ -3,9 +3,13 @@ import { TemplateDownloadOptions } from './TemplateDownloadOptions';
 import { BatchUploadProvider } from './batch-upload/BatchCertificateContext';
 import { BatchUploadForm } from './batch-upload/BatchUploadForm';
 
-export function BatchCertificateUpload() {
+interface BatchCertificateUploadProps {
+  onNavigateToTab?: (tabValue: string) => void;
+}
+
+export function BatchCertificateUpload({ onNavigateToTab }: BatchCertificateUploadProps) {
   return (
-    <BatchUploadProvider>
+    <BatchUploadProvider onNavigateToTab={onNavigateToTab}>
       <Card className="shadow-xl border-2 border-card card-gradient animate-fade-in w-full">
         <CardHeader>
           <CardTitle>

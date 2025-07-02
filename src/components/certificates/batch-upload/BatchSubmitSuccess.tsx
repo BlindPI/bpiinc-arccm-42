@@ -1,10 +1,10 @@
 
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, Folder } from 'lucide-react';
+import { CheckCircle2, Folder, FileCheck } from 'lucide-react';
 import { useBatchUpload } from './BatchCertificateContext';
 
 export function BatchSubmitSuccess() {
-  const { resetForm } = useBatchUpload();
+  const { resetForm, onNavigateToTab } = useBatchUpload();
   
   return (
     <div className="flex flex-col items-center justify-center py-12 space-y-4">
@@ -19,7 +19,17 @@ export function BatchSubmitSuccess() {
         You can track the status of your requests in the Pending Approvals tab.
       </p>
       
-      <div className="pt-4">
+      <div className="pt-4 flex gap-3 justify-center">
+        {onNavigateToTab && (
+          <Button 
+            onClick={() => onNavigateToTab('requests')}
+            size="lg"
+            className="gap-2"
+          >
+            <FileCheck className="h-4 w-4" />
+            View Pending Requests
+          </Button>
+        )}
         <Button 
           onClick={resetForm}
           variant="outline"
