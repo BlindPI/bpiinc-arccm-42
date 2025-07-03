@@ -533,14 +533,11 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({
 
       {/* Enhanced Tabs with Team and Location Management + PHASE 4: Compliance */}
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="teams">Team Assignments</TabsTrigger>
           <TabsTrigger value="locations">Locations</TabsTrigger>
-          <TabsTrigger value="compliance">
-            <Shield className="h-4 w-4 mr-1" />
-            Compliance
-          </TabsTrigger>
+          
           <TabsTrigger value="performance">Performance</TabsTrigger>
         </TabsList>
 
