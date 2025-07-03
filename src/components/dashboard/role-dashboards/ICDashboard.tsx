@@ -119,33 +119,7 @@ export function ICDashboard() {
             Overview of your compliance status as an Instructor Certified.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {tierInfo ? <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-lg flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-blue-500" /> Current Compliance Tier: 
-                  <Badge variant="outline" className={`${tierInfo.tier === 'robust' ? 'bg-green-50 text-green-800 border-green-300' : 'bg-blue-50 text-blue-800 border-blue-300'} px-2 py-1`}>
-                    {tierInfo.tier.charAt(0).toUpperCase() + tierInfo.tier.slice(1)}
-                  </Badge>
-                </h3>
-              </div>
-              <p className="text-sm text-muted-foreground">{tierInfo.description}</p>
-              
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <Label>Overall Completion</Label>
-                  <span>{tierInfo.completed_requirements} / {tierInfo.total_requirements} requirements</span>
-                </div>
-                <Progress value={tierInfo.completion_percentage} className="h-2" />
-                <p className="text-sm text-muted-foreground">{tierInfo.completion_percentage}% completed</p>
-              </div>
-            </div> : <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Unable to load your compliance tier information. Please contact support.
-              </AlertDescription>
-            </Alert>}
-        </CardContent>
+        
       </Card>
 
       {/* Compliance Requirements List */}
