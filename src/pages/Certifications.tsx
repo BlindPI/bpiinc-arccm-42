@@ -17,6 +17,7 @@ import { CertificateRecoveryDashboard } from "@/components/certificates/Certific
 import { CertificateMetricsHeader } from "@/components/certificates/dashboard/CertificateMetricsHeader";
 import { CertificateNavigationCards } from "@/components/certificates/navigation/CertificateNavigationCards";
 import { MobileTabNavigation } from "@/components/certificates/mobile/MobileTabNavigation";
+import { useDashboardMetrics, useNavigationStats } from "@/hooks/useCertificateMetrics";
 
 export default function Certifications() {
   const { data: profile } = useProfile();
@@ -24,6 +25,10 @@ export default function Certifications() {
   const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
   const [activeTab, setActiveTab] = useState("batch");
   const [viewMode, setViewMode] = useState<'cards' | 'tabs'>(isMobile ? 'tabs' : 'cards');
+
+  // Fetch real metrics data
+  const { metrics: dashboardMetrics, isLoading: metricsLoading } = useDashboardMetrics(canManageRequests);
+  const { stats: navigationStats, isLoading: statsLoading } = useNavigationStats(canManageRequests);
 
   const navigateToTab = (tabValue: string) => {
     setActiveTab(tabValue);
@@ -86,7 +91,10 @@ export default function Certifications() {
   return (
     <div className="flex flex-col gap-6 w-full animate-fade-in">
       {/* Enterprise Metrics Header */}
-      <CertificateMetricsHeader canManageRequests={canManageRequests} />
+      <CertificateMetricsHeader
+        canManageRequests={canManageRequests}
+        metrics={dashboardMetrics || undefined}
+      />
       
       {/* Navigation Toggle - Desktop Only */}
       {!isMobile && (
@@ -120,6 +128,7 @@ export default function Certifications() {
               activeTab={activeTab}
               onTabChange={setActiveTab}
               canManageRequests={canManageRequests}
+              stats={navigationStats || undefined}
             />
             
             {/* Content for selected card */}
