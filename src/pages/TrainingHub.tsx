@@ -60,7 +60,7 @@ export default function TrainingHub() {
       const { data: instructors, error: instructorsError } = await supabase
         .from('profiles')
         .select('id, role')
-        .in('role', ['instructor_candidate', 'instructor_provisional', 'instructor_trainer']);
+        .in('role', ['IC', 'IP', 'IT', 'AP']);
 
       if (instructorsError) {
         console.error('Error fetching instructors:', instructorsError);
@@ -79,6 +79,17 @@ export default function TrainingHub() {
         throw schedulesError;
       }
 
+      // Get active locations count
+      const { data: locations, error: locationsError } = await supabase
+        .from('locations')
+        .select('id')
+        .eq('status', 'ACTIVE');
+
+      if (locationsError) {
+        console.error('Error fetching locations:', locationsError);
+        throw locationsError;
+      }
+
       // Calculate compliance rate from sessions
       const complianceRate = sessions && sessions.length > 0 
         ? Math.round((sessions.filter(s => s.compliance_status === 'compliant').length / sessions.length) * 100)
@@ -88,6 +99,7 @@ export default function TrainingHub() {
         sessions: sessions?.length || 0,
         instructors: instructors?.length || 0,
         schedules: schedules?.length || 0,
+        locations: locations?.length || 0,
         compliance: complianceRate
       });
 
@@ -95,6 +107,7 @@ export default function TrainingHub() {
         totalSessions: sessions?.length || 0,
         activeInstructors: instructors?.length || 0,
         upcomingSchedules: schedules?.length || 0,
+        activeLocations: locations?.length || 0,
         complianceRate
       };
     },
@@ -670,6 +683,7 @@ export default function TrainingHub() {
           totalSessions={metrics?.totalSessions || 0}
           activeInstructors={metrics?.activeInstructors || 0}
           upcomingSchedules={metrics?.upcomingSchedules || 0}
+          activeLocations={metrics?.activeLocations || 0}
           complianceRate={metrics?.complianceRate || 0}
         />
 

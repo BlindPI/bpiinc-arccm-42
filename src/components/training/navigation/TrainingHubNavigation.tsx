@@ -41,6 +41,7 @@ interface TrainingHubNavigationProps {
   totalSessions: number;
   activeInstructors: number;
   upcomingSchedules: number;
+  activeLocations?: number;
   complianceRate: number;
 }
 
@@ -50,6 +51,7 @@ export const TrainingHubNavigation: React.FC<TrainingHubNavigationProps> = ({
   totalSessions,
   activeInstructors,
   upcomingSchedules,
+  activeLocations = 0,
   complianceRate
 }) => {
   const navigationCards: NavigationCard[] = [
@@ -108,7 +110,7 @@ export const TrainingHubNavigation: React.FC<TrainingHubNavigationProps> = ({
       icon: MapPin,
       gradient: 'from-indigo-500 to-indigo-600',
       stats: {
-        primary: totalSessions, // Using sessions as a proxy for location activity
+        primary: activeLocations,
         label: 'Active locations',
         trend: 'stable'
       },

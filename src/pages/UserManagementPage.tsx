@@ -301,15 +301,188 @@ export default function UserManagementPage() {
   const handleImport = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.csv,.xlsx';
-    input.onchange = (e) => {
+    input.accept = '.csv';
+    input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
-        toast.success(`Processing ${file.name}...`);
-        // TODO: Implement CSV/Excel import logic
+        await processCSVImport(file);
       }
     };
     input.click();
+  };
+
+  const processCSVImport = async (file: File) => {
+    setIsProcessing(true);
+    
+    try {
+      // Read file content
+      const fileContent = await file.text();
+      const lines = fileContent.split('\n').filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        toast.error('CSV file must contain at least a header row and one data row');
+        return;
+      }
+
+      // Parse CSV headers
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const requiredFields = ['email', 'display_name', 'role'];
+      
+      // Validate required columns exist
+      const missingFields = requiredFields.filter(field => !headers.includes(field));
+      if (missingFields.length > 0) {
+        toast.error(`Missing required columns: ${missingFields.join(', ')}`);
+        return;
+      }
+
+      // Parse data rows
+      const users = [];
+      const errors = [];
+      const validRoles = ['IT', 'IC', 'IP', 'AP', 'AM', 'SM'] as UserRole[];
+
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim());
+        
+        if (values.length !== headers.length) {
+          errors.push(`Row ${i + 1}: Column count mismatch`);
+          continue;
+        }
+
+        const userData: any = {};
+        headers.forEach((header, index) => {
+          userData[header] = values[index];
+        });
+
+        // Validate email
+        if (!userData.email || !userData.email.includes('@')) {
+          errors.push(`Row ${i + 1}: Invalid email address`);
+          continue;
+        }
+
+        // Validate role
+        if (!validRoles.includes(userData.role as UserRole)) {
+          errors.push(`Row ${i + 1}: Invalid role '${userData.role}'. Must be one of: ${validRoles.join(', ')}`);
+          continue;
+        }
+
+        // Validate display name
+        if (!userData.display_name || userData.display_name.length < 2) {
+          errors.push(`Row ${i + 1}: Display name must be at least 2 characters`);
+          continue;
+        }
+
+        users.push({
+          email: userData.email,
+          display_name: userData.display_name,
+          role: userData.role as UserRole,
+          status: userData.status || 'ACTIVE',
+          compliance_status: userData.compliance_status === 'true' || userData.compliance_status === '1' || false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      }
+
+      if (errors.length > 0) {
+        toast.error(`${errors.length} validation errors found. Please fix your CSV file.`);
+        console.error('CSV Import Errors:', errors);
+        return;
+      }
+
+      if (users.length === 0) {
+        toast.error('No valid users found in CSV file');
+        return;
+      }
+
+      // Show processing progress
+      toast.success(`Processing ${users.length} users...`);
+
+      // Batch insert users to Supabase
+      let successCount = 0;
+      let failureCount = 0;
+      const batchSize = 10;
+
+      for (let i = 0; i < users.length; i += batchSize) {
+        const batch = users.slice(i, i + batchSize);
+        
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .insert(batch)
+            .select();
+
+          if (error) {
+            console.error('Batch insert error:', error);
+            failureCount += batch.length;
+            
+            // Try individual inserts for this batch to identify conflicts
+            for (const user of batch) {
+              try {
+                const { error: individualError } = await supabase
+                  .from('profiles')
+                  .insert([user])
+                  .select();
+                
+                if (individualError) {
+                  if (individualError.code === '23505') { // Unique constraint violation
+                    console.warn(`User ${user.email} already exists, skipping`);
+                  } else {
+                    console.error(`Failed to insert ${user.email}:`, individualError);
+                  }
+                  failureCount++;
+                } else {
+                  successCount++;
+                }
+              } catch (err) {
+                console.error(`Error inserting ${user.email}:`, err);
+                failureCount++;
+              }
+            }
+          } else {
+            successCount += batch.length;
+          }
+        } catch (batchError) {
+          console.error('Batch processing error:', batchError);
+          failureCount += batch.length;
+        }
+      }
+
+      // Log import activity
+      try {
+        await supabase
+          .from('activity_logs')
+          .insert({
+            user_id: (await supabase.auth.getUser()).data.user?.id,
+            activity_type: 'bulk_import',
+            details: {
+              total_processed: users.length,
+              successful_imports: successCount,
+              failed_imports: failureCount,
+              filename: file.name
+            },
+            created_at: new Date().toISOString()
+          });
+      } catch (logError) {
+        console.warn('Failed to log import activity:', logError);
+      }
+
+      // Show results
+      if (successCount > 0 && failureCount === 0) {
+        toast.success(`Successfully imported ${successCount} users`);
+      } else if (successCount > 0 && failureCount > 0) {
+        toast.success(`Imported ${successCount} users, ${failureCount} failed (likely duplicates)`);
+      } else {
+        toast.error(`Import failed: ${failureCount} users could not be imported`);
+      }
+
+      // Refresh user list
+      loadUsers();
+
+    } catch (error: any) {
+      console.error('CSV import error:', error);
+      toast.error('Failed to process CSV file: ' + error.message);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleExport = () => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,12 @@ import {
   Shield,
   Users,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  Activity,
+  Clock,
+  UserCheck,
+  Settings,
+  Loader2
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ExtendedProfile } from "@/types/supabase-schema";
@@ -30,6 +35,8 @@ import {
   hasValidPhone,
   hasValidEmail
 } from '@/utils/fixNullProfileAccessPatterns';
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const roleNames: Record<string, string> = {
   'IT': 'Instructor Trainee',
@@ -41,6 +48,36 @@ const roleNames: Record<string, string> = {
   'IN': 'Instructor New'
 };
 
+interface ActivityLog {
+  id: string;
+  user_id: string;
+  activity_type: string;
+  description: string;
+  metadata?: any;
+  created_at: string;
+}
+
+interface SupervisionRelationship {
+  id: string;
+  supervisor_id: string;
+  supervisee_id: string;
+  status: string;
+  created_at: string;
+  supervisor_name?: string;
+  supervisee_name?: string;
+}
+
+interface UserCertification {
+  id: string;
+  user_id: string;
+  certification_name: string;
+  certification_type: string;
+  issued_date: string;
+  expiry_date?: string;
+  status: string;
+  issuing_authority?: string;
+}
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -50,7 +87,113 @@ type Props = {
 
 export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, isAdmin }) => {
   const [tab, setTab] = useState('profile');
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [supervisionRelationships, setSupervisionRelationships] = useState<SupervisionRelationship[]>([]);
+  const [certifications, setCertifications] = useState<UserCertification[]>([]);
+  const [loadingActivity, setLoadingActivity] = useState(false);
+  const [loadingSupervision, setLoadingSupervision] = useState(false);
+  const [loadingCertifications, setLoadingCertifications] = useState(false);
+
   if (!user) return null;
+
+  // Load activity logs
+  const loadActivityLogs = async () => {
+    setLoadingActivity(true);
+    try {
+      const { data, error } = await supabase
+        .from('activity_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      setActivityLogs(data || []);
+    } catch (error: any) {
+      console.error('Error loading activity logs:', error);
+      toast.error('Failed to load activity logs');
+    } finally {
+      setLoadingActivity(false);
+    }
+  };
+
+  // Load supervision relationships
+  const loadSupervisionRelationships = async () => {
+    setLoadingSupervision(true);
+    try {
+      // Get relationships where user is supervisor
+      const { data: supervisorData, error: supervisorError } = await supabase
+        .from('supervision_relationships')
+        .select(`
+          *,
+          supervisee:profiles!supervisee_id(display_name, email)
+        `)
+        .eq('supervisor_id', user.id);
+
+      // Get relationships where user is supervisee
+      const { data: superviseeData, error: superviseeError } = await supabase
+        .from('supervision_relationships')
+        .select(`
+          *,
+          supervisor:profiles!supervisor_id(display_name, email)
+        `)
+        .eq('supervisee_id', user.id);
+
+      if (supervisorError) throw supervisorError;
+      if (superviseeError) throw superviseeError;
+
+      const relationships = [
+        ...(supervisorData || []).map(rel => ({
+          ...rel,
+          supervisee_name: rel.supervisee?.display_name || 'Unknown'
+        })),
+        ...(superviseeData || []).map(rel => ({
+          ...rel,
+          supervisor_name: rel.supervisor?.display_name || 'Unknown'
+        }))
+      ];
+
+      setSupervisionRelationships(relationships);
+    } catch (error: any) {
+      console.error('Error loading supervision relationships:', error);
+      toast.error('Failed to load supervision relationships');
+    } finally {
+      setLoadingSupervision(false);
+    }
+  };
+
+  // Load certifications
+  const loadCertifications = async () => {
+    setLoadingCertifications(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_certifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('issued_date', { ascending: false });
+
+      if (error) throw error;
+      setCertifications(data || []);
+    } catch (error: any) {
+      console.error('Error loading certifications:', error);
+      toast.error('Failed to load certifications');
+    } finally {
+      setLoadingCertifications(false);
+    }
+  };
+
+  // Load data when dialog opens or tab changes
+  useEffect(() => {
+    if (open && user) {
+      if (tab === 'activity') {
+        loadActivityLogs();
+      } else if (tab === 'supervision') {
+        loadSupervisionRelationships();
+      } else if (tab === 'certifications') {
+        loadCertifications();
+      }
+    }
+  }, [open, user, tab]);
 
   const getInitials = (name?: string, email?: string) => {
     const safeName = getSafeUserDisplayName(user);
@@ -203,40 +346,200 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
                 )}
               </TabsContent>
               <TabsContent value="activity" className="pt-2">
-                <div className="text-[15px] text-muted-foreground">
-                  <Calendar className="inline-block w-5 h-5 mr-1 text-blue-400" />
+                <div className="flex items-center gap-2 mb-4">
+                  <Activity className="w-5 h-5 text-blue-500" />
                   <span className="font-medium text-slate-900 dark:text-slate-200">User Activity Timeline</span>
-                  <div className="mt-2 text-xs text-muted-foreground/80">
-                    <div className="flex flex-col gap-2">
-                      <div className="h-4 bg-gradient-to-r from-blue-200/60 via-purple-200/60 to-green-200/40 rounded w-2/3 animate-pulse"></div>
-                      <div className="h-4 bg-gradient-to-r from-purple-200/40 via-pink-200/70 to-blue-200/60 rounded w-1/2 animate-pulse"></div>
-                      <div className="h-4 bg-gradient-to-r from-blue-100/50 via-purple-100/50 to-pink-100/50 rounded w-1/3 animate-pulse"></div>
-                      <span className="mt-2 text-xs text-slate-400">More detailed user activity integration coming soon.</span>
-                    </div>
-                  </div>
                 </div>
+                
+                {loadingActivity ? (
+                  <div className="flex justify-center items-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                ) : activityLogs.length > 0 ? (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {activityLogs.map((log) => (
+                      <div key={log.id} className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border">
+                        <div className="flex-shrink-0 mt-1">
+                          {log.activity_type === 'login' && <UserCheck className="w-4 h-4 text-green-500" />}
+                          {log.activity_type === 'logout' && <Clock className="w-4 h-4 text-gray-500" />}
+                          {log.activity_type === 'profile_update' && <Settings className="w-4 h-4 text-blue-500" />}
+                          {log.activity_type === 'role_change' && <Shield className="w-4 h-4 text-purple-500" />}
+                          {!['login', 'logout', 'profile_update', 'role_change'].includes(log.activity_type) && <Activity className="w-4 h-4 text-gray-400" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                            {log.description}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                            {new Date(log.created_at).toLocaleString()}
+                          </p>
+                          {log.metadata && (
+                            <div className="mt-2 text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 p-2 rounded">
+                              <pre className="whitespace-pre-wrap">{JSON.stringify(log.metadata, null, 2)}</pre>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                    <Activity className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+                    <p>No activity logs found for this user.</p>
+                    <p className="text-xs mt-1">Activity tracking may not be enabled or this is a new user.</p>
+                  </div>
+                )}
               </TabsContent>
               <TabsContent value="supervision" className="pt-2">
-                <div className="flex items-center gap-2 mb-2">
-                  <Shield className="w-5 h-5 text-green-500" />
+                <div className="flex items-center gap-2 mb-4">
+                  <Users className="w-5 h-5 text-green-500" />
                   <span className="font-medium text-slate-900 dark:text-slate-200">Supervision Relationships</span>
                 </div>
-                <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-lg text-sm text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800">
-                  <div>No supervision relationships found for this user.<br />
-                  (Integrated supervision management coming soon.)</div>
-                </div>
+                
+                {loadingSupervision ? (
+                  <div className="flex justify-center items-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                ) : supervisionRelationships.length > 0 ? (
+                  <div className="space-y-4">
+                    {supervisionRelationships
+                      .filter(rel => rel.supervisor_id === user.id)
+                      .length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-2">
+                          <Shield className="w-4 h-4 text-blue-500" />
+                          Supervising Others
+                        </h4>
+                        <div className="space-y-2">
+                          {supervisionRelationships
+                            .filter(rel => rel.supervisor_id === user.id)
+                            .map((rel) => (
+                              <div key={rel.id} className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                <div>
+                                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                    {rel.supervisee_name}
+                                  </p>
+                                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    Since: {new Date(rel.created_at).toLocaleDateString()}
+                                  </p>
+                                </div>
+                                <Badge variant="outline" className={`text-xs ${
+                                  rel.status === 'active' ? 'bg-green-100 text-green-800 border-green-300' :
+                                  rel.status === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                                  'bg-gray-100 text-gray-800 border-gray-300'
+                                }`}>
+                                  {rel.status}
+                                </Badge>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {supervisionRelationships
+                      .filter(rel => rel.supervisee_id === user.id)
+                      .length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-2">
+                          <UserCheck className="w-4 h-4 text-green-500" />
+                          Supervised By
+                        </h4>
+                        <div className="space-y-2">
+                          {supervisionRelationships
+                            .filter(rel => rel.supervisee_id === user.id)
+                            .map((rel) => (
+                              <div key={rel.id} className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                                <div>
+                                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                    {rel.supervisor_name}
+                                  </p>
+                                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    Since: {new Date(rel.created_at).toLocaleDateString()}
+                                  </p>
+                                </div>
+                                <Badge variant="outline" className={`text-xs ${
+                                  rel.status === 'active' ? 'bg-green-100 text-green-800 border-green-300' :
+                                  rel.status === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                                  'bg-gray-100 text-gray-800 border-gray-300'
+                                }`}>
+                                  {rel.status}
+                                </Badge>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                    <Users className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+                    <p>No supervision relationships found for this user.</p>
+                    <p className="text-xs mt-1">This user is not currently supervising anyone or being supervised.</p>
+                  </div>
+                )}
               </TabsContent>
               <TabsContent value="certifications" className="pt-2">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-4">
                   <Award className="w-5 h-5 text-purple-500" />
-                  <span className="font-medium text-slate-900 dark:text-slate-200">Certifications</span>
+                  <span className="font-medium text-slate-900 dark:text-slate-200">Certifications & Awards</span>
                 </div>
-                <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-lg text-sm text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800">
-                  <div>
-                    No certifications or awards recorded for this user.<br />
-                    (Coming soon: certification records and export.)
+                
+                {loadingCertifications ? (
+                  <div className="flex justify-center items-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
-                </div>
+                ) : certifications.length > 0 ? (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {certifications.map((cert) => (
+                      <div key={cert.id} className="p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                              {cert.certification_name}
+                            </h4>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                              {cert.certification_type}
+                            </p>
+                            {cert.issuing_authority && (
+                              <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+                                Issued by: {cert.issuing_authority}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-4 mt-2 text-xs text-slate-500 dark:text-slate-400">
+                              <span>Issued: {new Date(cert.issued_date).toLocaleDateString()}</span>
+                              {cert.expiry_date && (
+                                <span className={new Date(cert.expiry_date) < new Date() ? 'text-red-600' : ''}>
+                                  Expires: {new Date(cert.expiry_date).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-2 ml-4">
+                            <Badge variant="outline" className={`text-xs ${
+                              cert.status === 'active' ? 'bg-green-100 text-green-800 border-green-300' :
+                              cert.status === 'expired' ? 'bg-red-100 text-red-800 border-red-300' :
+                              cert.status === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                              'bg-gray-100 text-gray-800 border-gray-300'
+                            }`}>
+                              {cert.status}
+                            </Badge>
+                            {cert.expiry_date && new Date(cert.expiry_date) < new Date() && (
+                              <Badge variant="outline" className="text-xs bg-red-100 text-red-800 border-red-300">
+                                Expired
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                    <Award className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+                    <p>No certifications found for this user.</p>
+                    <p className="text-xs mt-1">Certifications will appear here once they are added to the system.</p>
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
             <DialogFooter className="mt-4">

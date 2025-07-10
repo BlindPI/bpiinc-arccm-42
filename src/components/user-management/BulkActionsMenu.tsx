@@ -114,10 +114,113 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
   };
 
   const sendBulkEmail = async () => {
-    // In a real implementation, this would send emails to selected users
-    // For now, we'll simulate a delay and return success
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    return true;
+    try {
+      console.log("Sending bulk email to users:", selectedUsers);
+      
+      // First, fetch user details with emails
+      const { data: users, error: fetchError } = await supabase
+        .from('profiles')
+        .select('id, email, display_name')
+        .in('id', selectedUsers)
+        .not('email', 'is', null);
+        
+      if (fetchError) {
+        throw fetchError;
+      }
+      
+      if (!users || users.length === 0) {
+        throw new Error('No users with valid email addresses found');
+      }
+      
+      // Filter out users without email addresses
+      const validUsers = users.filter(user => user.email && user.email.trim() !== '');
+      
+      if (validUsers.length === 0) {
+        throw new Error('None of the selected users have valid email addresses');
+      }
+      
+      // Create email batches to avoid overwhelming the email service
+      const batchSize = 50;
+      const batches = [];
+      for (let i = 0; i < validUsers.length; i += batchSize) {
+        batches.push(validUsers.slice(i, i + batchSize));
+      }
+      
+      let totalSent = 0;
+      let errors = [];
+      
+      // Process each batch
+      for (const batch of batches) {
+        try {
+          // Call Supabase Edge Function for sending emails
+          const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-bulk-email', {
+            body: {
+              recipients: batch.map(user => ({
+                email: user.email,
+                name: user.display_name || 'User'
+              })),
+              subject: 'Important Update from BPI Training System',
+              template: 'bulk-notification',
+              metadata: {
+                sender_type: 'admin',
+                batch_id: `batch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                total_recipients: validUsers.length
+              }
+            }
+          });
+          
+          if (emailError) {
+            console.error('Email service error:', emailError);
+            errors.push(`Batch error: ${emailError.message}`);
+          } else {
+            totalSent += batch.length;
+            console.log(`Successfully sent emails to batch of ${batch.length} users`);
+          }
+        } catch (batchError: any) {
+          console.error('Batch processing error:', batchError);
+          errors.push(`Failed to process batch: ${batchError.message}`);
+        }
+      }
+      
+      // Log the email activity
+      const { error: logError } = await supabase
+        .from('activity_logs')
+        .insert({
+          user_id: 'system', // System-generated activity
+          activity_type: 'bulk_email_sent',
+          description: `Bulk email sent to ${totalSent} users`,
+          metadata: {
+            total_recipients: totalSent,
+            failed_batches: errors.length,
+            selected_user_count: selectedUsers.length,
+            valid_email_count: validUsers.length,
+            errors: errors
+          }
+        });
+        
+      if (logError) {
+        console.warn('Failed to log email activity:', logError);
+      }
+      
+      if (errors.length > 0 && totalSent === 0) {
+        throw new Error(`Failed to send any emails: ${errors.join(', ')}`);
+      }
+      
+      if (errors.length > 0) {
+        toast.warning(`Emails sent to ${totalSent} users, but ${errors.length} batches failed`);
+      }
+      
+      return {
+        success: true,
+        totalSent,
+        errors: errors.length > 0 ? errors : undefined,
+        message: `Successfully sent emails to ${totalSent} out of ${selectedUsers.length} selected users`
+      };
+      
+    } catch (error: any) {
+      console.error('Bulk email error:', error);
+      throw new Error(`Email sending failed: ${error.message}`);
+    }
   };
 
   const markUsersAsCompliant = async () => {
