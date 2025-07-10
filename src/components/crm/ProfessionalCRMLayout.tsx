@@ -193,7 +193,7 @@ export function ProfessionalCRMLayout() {
                   <p className="text-muted-foreground mb-4">
                     Visit the dedicated Analytics page for comprehensive reports and insights
                   </p>
-                  <Button onClick={() => window.location.href = '/crm-analytics'}>
+                  <Button onClick={() => window.location.href = '/crm/analytics'}>
                     View Analytics Dashboard
                   </Button>
                 </div>

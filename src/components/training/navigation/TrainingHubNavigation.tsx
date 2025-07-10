@@ -3,12 +3,14 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  BookOpen, 
-  Users, 
-  Calendar, 
+import {
+  BookOpen,
+  Users,
+  Calendar,
   BarChart3,
-  Settings,
+  MapPin,
+  ClipboardList,
+  GraduationCap,
   TrendingUp,
   Clock,
   ArrowRight
@@ -84,20 +86,48 @@ export const TrainingHubNavigation: React.FC<TrainingHubNavigationProps> = ({
       action: () => onTabChange('instructors')
     },
     {
-      id: 'scheduling',
-      title: 'Course Scheduling',
-      description: 'Schedule courses, manage offerings, and handle conflict detection and resolution',
-      icon: Calendar,
+      id: 'courses',
+      title: 'Course Management',
+      description: 'Manage course catalog, enrollments, and course offerings with full lifecycle tracking',
+      icon: GraduationCap,
       gradient: 'from-green-500 to-emerald-600',
       stats: {
         primary: upcomingSchedules,
-        label: 'Scheduled courses',
+        label: 'Active courses',
         trend: upcomingSchedules > 0 ? 'up' : 'stable'
       },
-      badge: upcomingSchedules > 0 
-        ? { text: 'Courses Scheduled', variant: 'default' as const }
-        : { text: 'None Scheduled', variant: 'secondary' as const },
-      action: () => onTabChange('scheduling')
+      badge: upcomingSchedules > 0
+        ? { text: 'Courses Available', variant: 'default' as const }
+        : { text: 'No Courses', variant: 'secondary' as const },
+      action: () => onTabChange('courses')
+    },
+    {
+      id: 'locations',
+      title: 'Location Management',
+      description: 'Manage training locations, facility capacity, and geographic service areas',
+      icon: MapPin,
+      gradient: 'from-indigo-500 to-indigo-600',
+      stats: {
+        primary: totalSessions, // Using sessions as a proxy for location activity
+        label: 'Active locations',
+        trend: 'stable'
+      },
+      badge: { text: 'Locations Active', variant: 'default' as const },
+      action: () => onTabChange('locations')
+    },
+    {
+      id: 'rosters',
+      title: 'Roster Management',
+      description: 'Track student rosters, attendance records, and training completion status',
+      icon: ClipboardList,
+      gradient: 'from-teal-500 to-teal-600',
+      stats: {
+        primary: activeInstructors, // Using instructors as proxy for roster activity
+        label: 'Active rosters',
+        trend: 'up'
+      },
+      badge: { text: 'Rosters Managed', variant: 'default' as const },
+      action: () => onTabChange('rosters')
     },
     {
       id: 'analytics',
@@ -135,7 +165,7 @@ export const TrainingHubNavigation: React.FC<TrainingHubNavigationProps> = ({
           Training Management Dashboard
         </h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {navigationCards.map((card) => (
             <Card 
               key={card.id}

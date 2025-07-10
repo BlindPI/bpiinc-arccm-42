@@ -63,32 +63,26 @@ const navigation: NavigationItem[] = [
   // User Management Group
   { name: 'Users', href: '/users', icon: Users, group: 'User Management' },
   { name: 'Teams', href: '/teams', icon: UsersIcon, group: 'User Management' },
-  { name: 'Role Management', href: '/role-management', icon: Shield, group: 'User Management' },
   { name: 'Supervision', href: '/supervision', icon: UserCheck, group: 'User Management' },
   
   // Provider Management Group
   { name: 'Provider Management', href: '/authorized-providers', icon: Building2, group: 'Provider Management', enterpriseOnly: true },
   
-  // Training Management Group
+  // Training Management Group - UNIFIED HUB
   { name: 'Training Hub', href: '/training-hub', icon: BookOpen, group: 'Training Management' },
-  { name: 'Courses', href: '/courses', icon: GraduationCap, group: 'Training Management' },
   { name: 'Enrollments', href: '/enrollments', icon: ClipboardList, group: 'Training Management' },
-  { name: 'Enrollment Management', href: '/enrollment-management', icon: FileCheck, group: 'Training Management' },
-  { name: 'Locations', href: '/locations', icon: MapPin, group: 'Training Management' },
   
   // Certificates Group
   { name: 'Certificates', href: '/certificates', icon: FileText, group: 'Certificates' },
-  { name: 'Certificate Analytics', href: '/certificate-analytics', icon: Award, group: 'Certificates' },
-  { name: 'Rosters', href: '/rosters', icon: ClipboardList, group: 'Certificates' },
   
-  // CRM Group - Phase 4 Unified
+  // CRM Group - Phase 7 Unified Hub
+  { name: 'CRM Hub', href: '/crm/hub', icon: Building2, group: 'CRM' },
   { name: 'Phase 4 CRM Dashboard', href: '/crm', icon: Activity, group: 'CRM' },
   { name: 'Email Workflows', href: '/crm/email-workflows', icon: Mail, group: 'CRM' },
   { name: 'Campaign Management', href: '/crm/campaigns', icon: Target, group: 'CRM' },
-  { name: 'Revenue Analytics', href: '/crm/revenue', icon: DollarSign, group: 'CRM' },
   
   // Analytics & Reports Group
-  { name: 'Analytics', href: '/analytics', icon: TrendingUp, group: 'Analytics & Reports' },
+  { name: 'Analytics Hub', href: '/analytics', icon: TrendingUp, group: 'Analytics & Reports' },
   { name: 'Report Scheduler', href: '/report-scheduler', icon: Clock, group: 'Analytics & Reports' },
   { name: 'Reports', href: '/reports', icon: BarChart3, group: 'Analytics & Reports' },
   
@@ -97,9 +91,8 @@ const navigation: NavigationItem[] = [
   { name: 'Progression Path Builder', href: '/progression-path-builder', icon: Target, group: 'Compliance & Automation' },
   
   // System Administration Group
+  { name: 'Admin Hub', href: '/admin-hub', icon: Shield, group: 'System Administration' },
   { name: 'Integrations', href: '/integrations', icon: Globe, group: 'System Administration' },
-  { name: 'Notifications', href: '/notifications', icon: Bell, group: 'System Administration' },
-  { name: 'System Monitoring', href: '/system-monitoring', icon: Monitor, group: 'System Administration' },
   { name: 'Settings', href: '/settings', icon: Settings, group: 'System Administration' }
 ];
 

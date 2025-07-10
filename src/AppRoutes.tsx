@@ -8,37 +8,33 @@ import Dashboard from '@/pages/Dashboard';
 import LandingPage from '@/pages/LandingPage';
 import CertificateVerification from '@/pages/CertificateVerification';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import Settings from '@/pages/Settings';
-import UserManagement from '@/pages/UserManagement';
+// DIRECT: Bypassing wrapper redundancy
+import { SettingsLayout } from '@/components/settings/SettingsLayout';
+import UserManagementPage from '@/pages/UserManagementPage';
+import { ApiIntegrationManager } from '@/components/integration/ApiIntegrationManager';
 import Profile from '@/pages/Profile';
-import Phase4CRM from '@/pages/Phase4CRM';
+import CRM from '@/pages/CRM';
+import CRMAnalytics from '@/pages/CRMAnalytics';
 
-// Import all missing pages
+// Import all pages
 import UnifiedTeams from '@/pages/UnifiedTeams';
-import EnhancedTeams from '@/pages/EnhancedTeams';
-import RoleManagement from '@/pages/RoleManagement';
+// UNIFIED: RoleManagement → AdminHub
 import Supervision from '@/pages/Supervision';
 import TrainingHub from '@/pages/TrainingHub';
-import Courses from '@/pages/Courses';
+// UNIFIED: Courses, Locations, Rosters → TrainingHub
 import Enrollments from '@/pages/Enrollments';
-import EnrollmentManagement from '@/pages/EnrollmentManagement';
-import Locations from '@/pages/Locations';
 import Certifications from '@/pages/Certifications';
-import CertificateAnalytics from '@/pages/CertificateAnalytics';
-import Rosters from '@/pages/Rosters';
-import RevenueAnalytics from '@/pages/RevenueAnalytics';
+// UNIFIED: Admin Hub consolidation
+import AdminHub from '@/pages/AdminHub';
 import Analytics from '@/pages/Analytics';
 import ReportScheduler from '@/pages/ReportScheduler';
 import Reports from '@/pages/Reports';
 import Automation from '@/pages/Automation';
 import ProgressionPathBuilder from '@/pages/ProgressionPathBuilder';
-import Integrations from '@/pages/Integrations';
-import Notifications from '@/pages/Notifications';
-import SystemMonitoring from '@/pages/SystemMonitoring';
+// UNIFIED: System Admin components → AdminHub
 import CampaignManagement from '@/pages/CampaignManagement';
-import InstructorPerformance from '@/pages/InstructorPerformance';
+import CRMHub from '@/pages/CRMHub';
 import AuthorizedProviders from '@/pages/AuthorizedProviders';
-import ModernTeams from '@/pages/ModernTeams';
 import CRMDiagnostics from '@/pages/CRMDiagnostics';
 import EmailWorkflowsPage from '@/app/crm/email-workflows/page';
 
@@ -62,13 +58,13 @@ export function AppRoutes() {
 
       <Route path="/settings" element={
         <ProtectedRoute>
-          <Settings />
+          <SettingsLayout />
         </ProtectedRoute>
       } />
 
       <Route path="/users" element={
         <ProtectedRoute>
-          <UserManagement />
+          <UserManagementPage />
         </ProtectedRoute>
       } />
 
@@ -86,10 +82,15 @@ export function AppRoutes() {
 
       <Route path="/crm" element={
         <ProtectedRoute>
-          <Phase4CRM />
+          <CRM />
         </ProtectedRoute>
       } />
-      
+
+      <Route path="/crm/analytics" element={
+        <ProtectedRoute>
+          <CRMAnalytics />
+        </ProtectedRoute>
+      } />
 
       {/* User Management Routes - UNIFIED TEAMS */}
       <Route path="/teams" element={
@@ -111,9 +112,10 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
 
+      {/* UNIFIED: Role Management → Admin Hub */}
       <Route path="/role-management" element={
         <ProtectedRoute>
-          <RoleManagement />
+          <AdminHub />
         </ProtectedRoute>
       } />
 
@@ -130,27 +132,24 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
 
+      {/* UNIFIED: Course Management → Training Hub */}
       <Route path="/courses" element={
         <ProtectedRoute>
-          <Courses />
+          <TrainingHub />
         </ProtectedRoute>
       } />
 
+      {/* UNIFIED: Enrollments → Training Hub */}
       <Route path="/enrollments" element={
         <ProtectedRoute>
-          <Enrollments />
+          <TrainingHub />
         </ProtectedRoute>
       } />
 
-      <Route path="/enrollment-management" element={
-        <ProtectedRoute>
-          <EnrollmentManagement />
-        </ProtectedRoute>
-      } />
-
+      {/* UNIFIED: Locations → Training Hub */}
       <Route path="/locations" element={
         <ProtectedRoute>
-          <Locations />
+          <TrainingHub />
         </ProtectedRoute>
       } />
 
@@ -161,28 +160,37 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
 
+      {/* UNIFIED: Certificate Analytics → Analytics Hub */}
       <Route path="/certificate-analytics" element={
         <ProtectedRoute>
-          <CertificateAnalytics />
+          <Analytics />
         </ProtectedRoute>
       } />
 
+      {/* UNIFIED: Rosters → Training Hub */}
       <Route path="/rosters" element={
         <ProtectedRoute>
-          <Rosters />
+          <TrainingHub />
         </ProtectedRoute>
       } />
 
       {/* CRM Routes - Phase 4 Unified */}
+      <Route path="/crm/hub" element={
+        <ProtectedRoute>
+          <CRMHub />
+        </ProtectedRoute>
+      } />
+
       <Route path="/crm/campaigns" element={
         <ProtectedRoute>
           <CampaignManagement />
         </ProtectedRoute>
       } />
 
+      {/* UNIFIED: Revenue Analytics → Analytics Hub */}
       <Route path="/crm/revenue" element={
         <ProtectedRoute>
-          <RevenueAnalytics />
+          <Analytics />
         </ProtectedRoute>
       } />
 
@@ -231,28 +239,38 @@ export function AppRoutes() {
       } />
 
       {/* System Administration Routes */}
+      {/* DIRECT: Integrations component */}
       <Route path="/integrations" element={
         <ProtectedRoute>
-          <Integrations />
+          <ApiIntegrationManager />
         </ProtectedRoute>
       } />
 
+      {/* UNIFIED: Notifications → Admin Hub */}
       <Route path="/notifications" element={
         <ProtectedRoute>
-          <Notifications />
+          <AdminHub />
         </ProtectedRoute>
       } />
 
+      {/* UNIFIED: System Monitoring → Admin Hub */}
       <Route path="/system-monitoring" element={
         <ProtectedRoute>
-          <SystemMonitoring />
+          <AdminHub />
         </ProtectedRoute>
       } />
 
-      {/* Additional Routes */}
+      {/* NEW: Admin Hub route */}
+      <Route path="/admin-hub" element={
+        <ProtectedRoute>
+          <AdminHub />
+        </ProtectedRoute>
+      } />
+
+      {/* UNIFIED: Instructor Performance → Analytics Hub */}
       <Route path="/instructor-performance" element={
         <ProtectedRoute>
-          <InstructorPerformance />
+          <Analytics />
         </ProtectedRoute>
       } />
 
