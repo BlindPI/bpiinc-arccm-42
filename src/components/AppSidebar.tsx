@@ -89,7 +89,6 @@ const navigation: NavigationItem[] = [
   
   // Analytics & Reports Group
   { name: 'Analytics', href: '/analytics', icon: TrendingUp, group: 'Analytics & Reports' },
-  { name: 'Executive Dashboard', href: '/executive-dashboard', icon: PieChart, group: 'Analytics & Reports' },
   { name: 'Report Scheduler', href: '/report-scheduler', icon: Clock, group: 'Analytics & Reports' },
   { name: 'Reports', href: '/reports', icon: BarChart3, group: 'Analytics & Reports' },
   

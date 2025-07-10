@@ -28,7 +28,6 @@ import CertificateAnalytics from '@/pages/CertificateAnalytics';
 import Rosters from '@/pages/Rosters';
 import RevenueAnalytics from '@/pages/RevenueAnalytics';
 import Analytics from '@/pages/Analytics';
-import ExecutiveDashboard from '@/pages/ExecutiveDashboard';
 import ReportScheduler from '@/pages/ReportScheduler';
 import Reports from '@/pages/Reports';
 import Automation from '@/pages/Automation';
@@ -56,12 +55,6 @@ export function AppRoutes() {
       <Route path="/verify" element={<CertificateVerification />} />
       
       <Route path="/" element={
-        <ProtectedRoute>
-          <Dashboard />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/dashboard" element={
         <ProtectedRoute>
           <Dashboard />
         </ProtectedRoute>
@@ -209,12 +202,6 @@ export function AppRoutes() {
       <Route path="/analytics" element={
         <ProtectedRoute>
           <Analytics />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/executive-dashboard" element={
-        <ProtectedRoute>
-          <ExecutiveDashboard />
         </ProtectedRoute>
       } />
 
