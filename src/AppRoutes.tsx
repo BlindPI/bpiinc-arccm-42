@@ -76,7 +76,7 @@ export function AppRoutes() {
 
       <Route path="/configuration" element={
         <ProtectedRoute>
-          <Settings />
+          <SettingsLayout />
         </ProtectedRoute>
       } />
 
