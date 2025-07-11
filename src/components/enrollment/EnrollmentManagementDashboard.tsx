@@ -112,7 +112,7 @@ export function EnrollmentManagementDashboard() {
   // Thinkific sync handlers
   const handleSyncAllEnrollments = async () => {
     try {
-      const enrollmentIds = filteredEnrollments.map(e => e.id);
+      const enrollmentIds = enrollments.map(e => e.id);
       await startBatchSync(enrollmentIds);
       toast.success('Batch sync started');
     } catch (error) {
@@ -481,15 +481,15 @@ export function EnrollmentManagementDashboard() {
                   <div className="space-y-4">
                     <div className="flex justify-between text-sm">
                       <span>Progress</span>
-                      <span>{batchProgress.processed} of {batchProgress.total}</span>
+                      <span>{batchProgress.completed} of {batchProgress.total}</span>
                     </div>
                     <Progress
-                      value={(batchProgress.processed / batchProgress.total) * 100}
+                      value={(batchProgress.completed / batchProgress.total) * 100}
                       className="w-full"
                     />
-                    {batchProgress.errors.length > 0 && (
+                    {batchProgress.failed > 0 && (
                       <div className="text-sm text-red-600">
-                        {batchProgress.errors.length} errors occurred
+                        {batchProgress.failed} errors occurred
                       </div>
                     )}
                   </div>
