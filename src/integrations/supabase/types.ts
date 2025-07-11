@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instanciate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.3 (519615d)"
+  }
   public: {
     Tables: {
       access_patterns: {
@@ -1855,8 +1860,10 @@ export type Database = {
           assessment_status: string | null
           batch_id: string | null
           batch_name: string | null
+          calculated_status: string | null
           city: string | null
           company: string | null
+          completion_date: string | null
           course_name: string
           cpr_level: string | null
           created_at: string
@@ -1873,24 +1880,35 @@ export type Database = {
           length: number | null
           location_id: string | null
           notes: string | null
+          online_completion_date: string | null
+          pass_threshold: number | null
           phone: string | null
           postal_code: string | null
+          practical_completion_date: string | null
+          practical_score: number | null
+          practical_weight: number | null
           province: string | null
           recipient_email: string | null
           recipient_name: string
           rejection_reason: string | null
+          requires_both_scores: boolean | null
           reviewer_id: string | null
           roster_id: string | null
           status: string
+          total_score: number | null
           updated_at: string
           user_id: string | null
+          written_score: number | null
+          written_weight: number | null
         }
         Insert: {
           assessment_status?: string | null
           batch_id?: string | null
           batch_name?: string | null
+          calculated_status?: string | null
           city?: string | null
           company?: string | null
+          completion_date?: string | null
           course_name: string
           cpr_level?: string | null
           created_at?: string
@@ -1907,24 +1925,35 @@ export type Database = {
           length?: number | null
           location_id?: string | null
           notes?: string | null
+          online_completion_date?: string | null
+          pass_threshold?: number | null
           phone?: string | null
           postal_code?: string | null
+          practical_completion_date?: string | null
+          practical_score?: number | null
+          practical_weight?: number | null
           province?: string | null
           recipient_email?: string | null
           recipient_name: string
           rejection_reason?: string | null
+          requires_both_scores?: boolean | null
           reviewer_id?: string | null
           roster_id?: string | null
           status?: string
+          total_score?: number | null
           updated_at?: string
           user_id?: string | null
+          written_score?: number | null
+          written_weight?: number | null
         }
         Update: {
           assessment_status?: string | null
           batch_id?: string | null
           batch_name?: string | null
+          calculated_status?: string | null
           city?: string | null
           company?: string | null
+          completion_date?: string | null
           course_name?: string
           cpr_level?: string | null
           created_at?: string
@@ -1941,17 +1970,26 @@ export type Database = {
           length?: number | null
           location_id?: string | null
           notes?: string | null
+          online_completion_date?: string | null
+          pass_threshold?: number | null
           phone?: string | null
           postal_code?: string | null
+          practical_completion_date?: string | null
+          practical_score?: number | null
+          practical_weight?: number | null
           province?: string | null
           recipient_email?: string | null
           recipient_name?: string
           rejection_reason?: string | null
+          requires_both_scores?: boolean | null
           reviewer_id?: string | null
           roster_id?: string | null
           status?: string
+          total_score?: number | null
           updated_at?: string
           user_id?: string | null
+          written_score?: number | null
+          written_weight?: number | null
         }
         Relationships: [
           {
@@ -5679,6 +5717,7 @@ export type Database = {
           max_participants: number
           start_date: string
           status: string
+          thinkific_course_id: string | null
           updated_at: string
         }
         Insert: {
@@ -5691,6 +5730,7 @@ export type Database = {
           max_participants?: number
           start_date: string
           status?: string
+          thinkific_course_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -5703,6 +5743,7 @@ export type Database = {
           max_participants?: number
           start_date?: string
           status?: string
+          thinkific_course_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -8693,6 +8734,9 @@ export type Database = {
           enrollment_date: string
           id: string
           status: string
+          student_profile_id: string | null
+          thinkific_completion_date: string | null
+          thinkific_passed: boolean | null
           updated_at: string
           user_id: string
           waitlist_position: number | null
@@ -8705,6 +8749,9 @@ export type Database = {
           enrollment_date?: string
           id?: string
           status: string
+          student_profile_id?: string | null
+          thinkific_completion_date?: string | null
+          thinkific_passed?: boolean | null
           updated_at?: string
           user_id: string
           waitlist_position?: number | null
@@ -8717,6 +8764,9 @@ export type Database = {
           enrollment_date?: string
           id?: string
           status?: string
+          student_profile_id?: string | null
+          thinkific_completion_date?: string | null
+          thinkific_passed?: boolean | null
           updated_at?: string
           user_id?: string
           waitlist_position?: number | null
@@ -8727,6 +8777,13 @@ export type Database = {
             columns: ["course_offering_id"]
             isOneToOne: false
             referencedRelation: "course_offerings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_enrollments_student_profile_id"
+            columns: ["student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "student_enrollment_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -12657,6 +12714,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      student_enrollment_profiles: {
+        Row: {
+          created_at: string | null
+          display_name: string | null
+          email: string
+          enrollment_status: string | null
+          external_student_id: string | null
+          first_name: string | null
+          id: string
+          import_date: string | null
+          imported_from: string | null
+          is_active: boolean | null
+          last_name: string | null
+          last_sync_date: string | null
+          student_metadata: Json | null
+          sync_status: string | null
+          thinkific_user_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          display_name?: string | null
+          email: string
+          enrollment_status?: string | null
+          external_student_id?: string | null
+          first_name?: string | null
+          id?: string
+          import_date?: string | null
+          imported_from?: string | null
+          is_active?: boolean | null
+          last_name?: string | null
+          last_sync_date?: string | null
+          student_metadata?: Json | null
+          sync_status?: string | null
+          thinkific_user_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          display_name?: string | null
+          email?: string
+          enrollment_status?: string | null
+          external_student_id?: string | null
+          first_name?: string | null
+          id?: string
+          import_date?: string | null
+          imported_from?: string | null
+          is_active?: boolean | null
+          last_name?: string | null
+          last_sync_date?: string | null
+          student_metadata?: Json | null
+          sync_status?: string | null
+          thinkific_user_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       supervision_relationships: {
         Row: {
@@ -17231,6 +17345,43 @@ export type Database = {
         }
         Relationships: []
       }
+      enrollment_with_student_profiles: {
+        Row: {
+          course_description: string | null
+          course_name: string | null
+          course_offering_id: string | null
+          created_at: string | null
+          end_date: string | null
+          id: string | null
+          start_date: string | null
+          student_display_name: string | null
+          student_email: string | null
+          student_first_name: string | null
+          student_import_date: string | null
+          student_last_name: string | null
+          student_last_sync: string | null
+          student_profile_id: string | null
+          student_status: string | null
+          thinkific_user_id: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enrollments_course_offering_id_fkey"
+            columns: ["course_offering_id"]
+            isOneToOne: false
+            referencedRelation: "course_offerings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_enrollments_student_profile_id"
+            columns: ["student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "student_enrollment_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evaluable_teaching_sessions: {
         Row: {
           course_name: string | null
@@ -17492,6 +17643,20 @@ export type Database = {
         Args: { p_campaign_id: string }
         Returns: number
       }
+      calculate_certificate_status: {
+        Args: {
+          p_practical_score: number
+          p_written_score: number
+          p_practical_weight: number
+          p_written_weight: number
+          p_pass_threshold: number
+          p_requires_both_scores: boolean
+        }
+        Returns: {
+          total_score: number
+          calculated_status: string
+        }[]
+      }
       calculate_compliance_risk_score: {
         Args: { p_entity_type: string; p_entity_id: string }
         Returns: number
@@ -17749,6 +17914,16 @@ export type Database = {
           created_at: string
           updated_at: string
         }[]
+      }
+      find_or_create_student_profile: {
+        Args: {
+          p_email: string
+          p_first_name?: string
+          p_last_name?: string
+          p_thinkific_user_id?: string
+          p_student_metadata?: Json
+        }
+        Returns: string
       }
       fix_roster_certificate_counts: {
         Args: Record<PropertyKey, never>
@@ -18746,21 +18921,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -18778,14 +18957,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -18801,14 +18982,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -18824,14 +19007,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -18839,14 +19024,16 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
