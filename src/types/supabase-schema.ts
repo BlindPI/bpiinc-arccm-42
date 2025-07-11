@@ -172,6 +172,24 @@ export interface CertificateRequest {
   generation_attempts?: number;
   generation_error?: string;
   last_generation_attempt?: string;
+  notes?: string;
+  // Enhanced score tracking fields
+  practical_score?: number;
+  written_score?: number;
+  total_score?: number;
+  completion_date?: string;
+  online_completion_date?: string;
+  practical_completion_date?: string;
+  pass_threshold?: number;
+  calculated_status?: 'AUTO_PASS' | 'AUTO_FAIL' | 'MANUAL_REVIEW' | 'PENDING_SCORES';
+  // Thinkific integration fields
+  thinkific_course_id?: string;
+  thinkific_enrollment_id?: string;
+  last_score_sync?: string;
+  // Score weighting configuration
+  practical_weight?: number;
+  written_weight?: number;
+  requires_both_scores?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -296,4 +314,95 @@ export function safeCampaignStatus(status: string): CampaignStatus {
 
 export function safeAssignmentType(type: string): AssignmentType {
   return isValidAssignmentType(type) ? type : 'round_robin';
+}
+
+// Enhanced certificate status types
+export type CertificateCalculatedStatus = 'AUTO_PASS' | 'AUTO_FAIL' | 'MANUAL_REVIEW' | 'PENDING_SCORES';
+
+// Thinkific integration types
+export interface ThinkificCourseData {
+  course_id: string;
+  course_name: string;
+  enrollment_id: string;
+  completion_status: 'completed' | 'in_progress' | 'not_started';
+  completion_date?: string;
+  score?: number;
+  last_accessed?: string;
+}
+
+export interface ScoreThresholds {
+  passThreshold: number;
+  conditionalMin: number;
+  requiresBothScores: boolean;
+  practicalWeight: number;
+  writtenWeight: number;
+}
+
+export interface StudentScores {
+  practical?: number;
+  written?: number;
+  total?: number;
+}
+
+export interface EnhancedCertificateRequest extends CertificateRequest {
+  // Additional computed fields for UI display
+  isScoreComplete: boolean;
+  passFailStatus: 'PASS' | 'FAIL' | 'CONDITIONAL' | 'PENDING';
+  scoreProgress: number; // 0-100 percentage
+  thinkificData?: ThinkificCourseData;
+  validationErrors: ValidationError[];
+  hasCourseMismatch?: boolean;
+}
+
+export interface ValidationError {
+  type: string;
+  message: string;
+  field?: string;
+  details?: any;
+}
+
+export interface ScoreDisplayConfig {
+  showProgressBars: boolean;
+  showIndividualScores: boolean;
+  showThresholds: boolean;
+  colorCodeByStatus: boolean;
+  enableScoreEditing: boolean;
+}
+
+// Type guards for enhanced types
+export function isValidCalculatedStatus(status: string): status is CertificateCalculatedStatus {
+  return ['AUTO_PASS', 'AUTO_FAIL', 'MANUAL_REVIEW', 'PENDING_SCORES'].includes(status);
+}
+
+export function safeCalculatedStatus(status: string): CertificateCalculatedStatus {
+  return isValidCalculatedStatus(status) ? status : 'PENDING_SCORES';
+}
+
+// Score calculation utilities
+export function calculateWeightedScore(practical: number, written: number, practicalWeight: number = 0.5): number {
+  return (practical * practicalWeight) + (written * (1 - practicalWeight));
+}
+
+export function determinePassFailStatus(
+  practicalScore?: number,
+  writtenScore?: number,
+  threshold: number = 80,
+  requiresBoth: boolean = true
+): CertificateCalculatedStatus {
+  if (!practicalScore && !writtenScore) {
+    return 'PENDING_SCORES';
+  }
+  
+  if (practicalScore && writtenScore) {
+    const totalScore = calculateWeightedScore(practicalScore, writtenScore);
+    if (totalScore >= threshold) {
+      if (requiresBoth && (practicalScore < threshold || writtenScore < threshold)) {
+        return 'MANUAL_REVIEW';
+      }
+      return 'AUTO_PASS';
+    }
+    return 'AUTO_FAIL';
+  }
+  
+  return 'PENDING_SCORES';
 }

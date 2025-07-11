@@ -30,7 +30,34 @@ VITE_SUPABASE_URL=https://your-actual-project-id.supabase.co
 VITE_SUPABASE_ANON_KEY=your-actual-anon-key-here
 ```
 
-### 4. Restart the Development Server
+### 4. Configure Thinkific API (Optional)
+
+If you plan to use Thinkific integration for importing test scores, you'll need to set up Supabase secrets:
+
+1. Go to your Supabase Dashboard → Settings → Edge Functions
+2. Add the following secrets:
+   - `THINKIFIC_API_KEY`: Your Thinkific API key
+   - `THINKIFIC_SUBDOMAIN`: Your Thinkific subdomain
+
+To set up Supabase secrets via CLI:
+```bash
+# Install Supabase CLI if not already installed
+npm install -g supabase
+
+# Login to Supabase
+supabase login
+
+# Link your project
+supabase link --project-ref your-project-id
+
+# Set the secrets
+supabase secrets set THINKIFIC_API_KEY=your_api_key_here
+supabase secrets set THINKIFIC_SUBDOMAIN=your_subdomain_here
+```
+
+**Note:** These secrets are stored securely on Supabase and are only accessible by Edge Functions, never exposed to client-side code.
+
+### 5. Restart the Development Server
 
 After updating the `.env` file, restart your development server:
 
