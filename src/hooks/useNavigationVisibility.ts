@@ -34,6 +34,7 @@ const getEmergencyDefaultConfig = (role: string): NavigationVisibilityConfig => 
         enabled: true,
         items: {
           'Users': true,
+          'Students': true,
           'Teams': true,
           'Enterprise Teams': true,
           'Role Management': true,
