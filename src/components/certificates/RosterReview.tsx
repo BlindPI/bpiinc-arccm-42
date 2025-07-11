@@ -274,7 +274,9 @@ export function RosterReview({
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="font-medium">
+                          {/* Handle both processed upload data (camelCase) and database data (snake_case) */}
                           {row.recipient_name ||
+                           (row as any).recipientName ||
                            row.name ||
                            row.full_name ||
                            (row.first_name && row.last_name ? `${row.first_name} ${row.last_name}` : null) ||
