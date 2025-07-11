@@ -28,7 +28,7 @@ export interface SyncProgress {
 
 export class ThinkificSyncService {
   /**
-   * Import all students from Thinkific and create local enrollment records
+   * Enhanced import: Pull comprehensive progress data for all students including assessments and quiz scores
    */
   static async importStudentsFromThinkific(
     options: SyncOptions = {},
@@ -40,13 +40,13 @@ export class ThinkificSyncService {
     errors: string[];
     importedStudents: any[];
   }> {
-    console.log('🚀 STARTING THINKIFIC STUDENT IMPORT');
+    console.log('🚀 STARTING ENHANCED THINKIFIC STUDENT IMPORT');
     console.log('Options:', options);
     
     try {
-      // Call Thinkific API to get all students with enrollments
+      // Call Thinkific API to get all students with enrollments using comprehensive method
       const response = await this.callThinkificAPI({
-        action: 'getAllStudents'
+        action: 'getAllStudents' // This maps to getAllStudentsWithEnrollments in the edge function
       });
 
       if (!response.success) {
@@ -57,13 +57,14 @@ export class ThinkificSyncService {
       const students = thinkificData.students || [];
       
       console.log(`📊 Found ${students.length} students with ${thinkificData.totalEnrollments} enrollments in Thinkific`);
+      console.log(`🎯 Starting ENHANCED sync to pull detailed progress data for all students...`);
 
       let success = 0;
       let failed = 0;
       const errors: string[] = [];
       const importedStudents: any[] = [];
 
-      // Process each student and their enrollments
+      // Process each student and their enrollments with enhanced data collection
       for (let i = 0; i < students.length; i++) {
         const student = students[i];
         
@@ -71,12 +72,12 @@ export class ThinkificSyncService {
           total: students.length,
           completed: i,
           failed: failed,
-          current: `Processing ${student.first_name} ${student.last_name} (${student.email})`
+          current: `Processing ${student.first_name} ${student.last_name} (${student.email}) - Enhanced Sync`
         });
 
         try {
-          // Import this student's enrollments
-          const studentResult = await this.importStudentEnrollments(student);
+          // Import this student's enrollments with comprehensive progress data
+          const studentResult = await this.importStudentEnrollmentsEnhanced(student);
           
           if (studentResult.success) {
             success += studentResult.enrollmentsCreated;
@@ -128,7 +129,111 @@ export class ThinkificSyncService {
   }
 
   /**
-   * Import Thinkific course progress data for a single student (no local enrollment creation)
+   * ENHANCED: Import comprehensive Thinkific progress data including assessments, quiz scores, and detailed progress
+   */
+  static async importStudentEnrollmentsEnhanced(student: any): Promise<{
+    success: boolean;
+    enrollmentsCreated: number;
+    error?: string;
+    details?: any[];
+  }> {
+    console.log(`👤 ENHANCED: Importing comprehensive Thinkific data for ${student.email}`);
+    
+    try {
+      const enrollments = student.enrollments || [];
+      let progressRecordsStored = 0;
+      const details: any[] = [];
+
+      // Check if student profile exists in our system
+      let studentProfileId = await this.findOrCreateUser(student);
+      
+      if (!studentProfileId) {
+        return {
+          success: false,
+          enrollmentsCreated: 0,
+          error: 'Failed to find or create student profile in local system'
+        };
+      }
+
+      // For each enrollment, pull comprehensive data including assessments and quiz scores
+      for (const enrollment of enrollments) {
+        try {
+          console.log(`📊 ENHANCED: Pulling detailed data for course ${enrollment.course_id}...`);
+          
+          // Get comprehensive student certificate data including assessments and scores
+          const detailedDataResponse = await this.callThinkificAPI({
+            action: 'getStudentData',
+            email: student.email,
+            courseId: enrollment.course_id.toString()
+          });
+
+          let enhancedEnrollmentData = enrollment;
+          let assessmentData = null;
+          let overallScore = null;
+
+          if (detailedDataResponse.success && detailedDataResponse.data) {
+            const detailedData = detailedDataResponse.data;
+            enhancedEnrollmentData = detailedData.enrollment || enrollment;
+            assessmentData = {
+              assessments: detailedData.assessments || [],
+              assessmentResults: detailedData.assessmentResults || [],
+              course: detailedData.course || null
+            };
+            overallScore = detailedData.overallScore;
+            
+            console.log(`✅ Enhanced data retrieved: ${assessmentData.assessments.length} assessments, ${assessmentData.assessmentResults.length} results`);
+          } else {
+            console.log(`⚠️ Could not retrieve enhanced data for ${student.email} in course ${enrollment.course_id}, using basic enrollment data`);
+          }
+          
+          // Store the enhanced Thinkific enrollment and assessment data
+          await this.storeEnhancedThinkificProgressData(
+            studentProfileId,
+            enhancedEnrollmentData,
+            student,
+            assessmentData,
+            overallScore
+          );
+          
+          progressRecordsStored++;
+          details.push({
+            action: 'enhanced_progress_stored',
+            thinkificCourseId: enrollment.course_id,
+            thinkificEnrollmentId: enrollment.id,
+            courseName: enhancedEnrollmentData.course?.name || enrollment.course?.name || `Course ${enrollment.course_id}`,
+            progress: enhancedEnrollmentData.percentage_completed || 0,
+            completionStatus: enhancedEnrollmentData.completed_at ? 'COMPLETED' : 'IN_PROGRESS',
+            assessmentsCount: assessmentData?.assessments?.length || 0,
+            resultsCount: assessmentData?.assessmentResults?.length || 0,
+            overallScore: overallScore
+          });
+          
+        } catch (error) {
+          console.error(`Error storing enhanced progress data for enrollment ${enrollment.id}:`, error);
+          // Fallback to basic storage
+          await this.storeThinkificProgressData(studentProfileId, enrollment, student);
+          progressRecordsStored++;
+        }
+      }
+
+      return {
+        success: true,
+        enrollmentsCreated: progressRecordsStored,
+        details
+      };
+
+    } catch (error) {
+      console.error(`Error importing enhanced student data for ${student.email}:`, error);
+      return {
+        success: false,
+        enrollmentsCreated: 0,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Legacy method: Import basic Thinkific course progress data for a single student (no local enrollment creation)
    */
   static async importStudentEnrollments(student: any): Promise<{
     success: boolean;
@@ -136,7 +241,7 @@ export class ThinkificSyncService {
     error?: string;
     details?: any[];
   }> {
-    console.log(`👤 Importing Thinkific progress data for ${student.email}`);
+    console.log(`👤 Importing basic Thinkific progress data for ${student.email}`);
     
     try {
       const enrollments = student.enrollments || [];
@@ -157,7 +262,7 @@ export class ThinkificSyncService {
       // Store Thinkific course progress data in student metadata
       for (const enrollment of enrollments) {
         try {
-          console.log(`📊 Storing progress data for Thinkific course ${enrollment.course_id}`);
+          console.log(`📊 Storing basic progress data for Thinkific course ${enrollment.course_id}`);
           
           // Store the Thinkific enrollment data for viewing and manual assignment
           await this.storeThinkificProgressData(studentProfileId, enrollment, student);
@@ -194,7 +299,118 @@ export class ThinkificSyncService {
   }
 
   /**
-   * Store Thinkific progress data in student profile for viewing and manual assignment
+   * ENHANCED: Store comprehensive Thinkific progress data including assessments, quiz scores, and detailed metrics
+   */
+  private static async storeEnhancedThinkificProgressData(
+    studentProfileId: string,
+    enrollment: any,
+    student: any,
+    assessmentData: any = null,
+    overallScore: any = null
+  ): Promise<void> {
+    try {
+      // Get existing student profile
+      const { data: profile, error: fetchError } = await supabase
+        .from('student_enrollment_profiles')
+        .select('student_metadata')
+        .eq('id', studentProfileId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching student profile:', fetchError);
+        return;
+      }
+
+      // Extract existing metadata
+      const existingMetadata = profile?.student_metadata || {};
+      const thinkificCourses = existingMetadata.thinkific_courses || [];
+
+      // Create comprehensive course progress record with rich data
+      const courseProgress = {
+        thinkific_course_id: enrollment.course_id,
+        thinkific_enrollment_id: enrollment.id,
+        course_name: enrollment.course?.name || `Course ${enrollment.course_id}`,
+        progress_percentage: enrollment.percentage_completed || 0,
+        completion_status: enrollment.completed_at ? 'COMPLETED' : 'IN_PROGRESS',
+        started_at: enrollment.started_at,
+        completed_at: enrollment.completed_at,
+        practical_score: overallScore?.practical || enrollment.practical_score,
+        written_score: overallScore?.written || enrollment.written_score,
+        total_score: overallScore?.total || enrollment.total_score,
+        passed: overallScore?.passed || false,
+        last_synced: new Date().toISOString(),
+        
+        // Enhanced assessment data
+        assessments: assessmentData?.assessments || [],
+        assessment_results: assessmentData?.assessmentResults || [],
+        course_details: assessmentData?.course || null,
+        overall_score_breakdown: overallScore || null,
+        
+        // Activity and progress tracking
+        activity_feed: [], // Placeholder for future activity feed data
+        section_progress: [], // Placeholder for section-by-section progress
+        
+        // Metadata
+        enhanced_data_available: !!assessmentData,
+        data_pull_timestamp: new Date().toISOString(),
+        raw_enrollment_data: enrollment,
+        raw_assessment_data: assessmentData
+      };
+
+      // Update or add course progress
+      const existingCourseIndex = thinkificCourses.findIndex(
+        (course: any) => course.thinkific_course_id === enrollment.course_id
+      );
+
+      if (existingCourseIndex >= 0) {
+        thinkificCourses[existingCourseIndex] = courseProgress;
+      } else {
+        thinkificCourses.push(courseProgress);
+      }
+
+      // Calculate enhanced metadata
+      const completedCourses = thinkificCourses.filter((course: any) => course.completion_status === 'COMPLETED').length;
+      const averageScore = thinkificCourses
+        .filter((course: any) => course.total_score > 0)
+        .reduce((sum: number, course: any, _, arr: any[]) => sum + course.total_score / arr.length, 0);
+
+      // Update student metadata with enhanced tracking
+      const updatedMetadata = {
+        ...existingMetadata,
+        thinkific_courses: thinkificCourses,
+        last_thinkific_sync: new Date().toISOString(),
+        total_thinkific_courses: thinkificCourses.length,
+        completed_thinkific_courses: completedCourses,
+        average_score: Math.round(averageScore * 100) / 100,
+        enhanced_sync_enabled: true,
+        total_assessments: thinkificCourses.reduce((sum: number, course: any) => sum + (course.assessments?.length || 0), 0),
+        total_assessment_results: thinkificCourses.reduce((sum: number, course: any) => sum + (course.assessment_results?.length || 0), 0)
+      };
+
+      // Save updated metadata
+      const { error: updateError } = await supabase
+        .from('student_enrollment_profiles')
+        .update({
+          student_metadata: updatedMetadata,
+          last_sync_date: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', studentProfileId);
+
+      if (updateError) {
+        console.error('Error updating enhanced student progress data:', updateError);
+        return;
+      }
+
+      console.log(`✅ ENHANCED: Stored comprehensive data for ${student.email} in course ${enrollment.course_id} with ${assessmentData?.assessments?.length || 0} assessments`);
+
+    } catch (error) {
+      console.error('Error storing enhanced Thinkific progress data:', error);
+    }
+  }
+
+  /**
+   * Store basic Thinkific progress data in student profile for viewing and manual assignment
    */
   private static async storeThinkificProgressData(
     studentProfileId: string,
