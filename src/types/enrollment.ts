@@ -50,7 +50,7 @@ export interface CoursePrerequisite {
 // Extended enrollment interface with computed Thinkific fields
 export interface EnrollmentWithThinkific extends Enrollment {
   // Computed Fields for UI Display
-  thinkific_progress?: number; // 0-100 percentage
+  completion_percentage?: number; // 0-100 percentage
   overall_passed?: boolean;
   has_thinkific_data?: boolean;
   sync_health_status?: 'HEALTHY' | 'STALE' | 'ERROR' | 'NEVER_SYNCED';

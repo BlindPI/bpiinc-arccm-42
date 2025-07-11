@@ -111,27 +111,25 @@ export class EnrollmentService {
         .select(`
           status,
           enrollment_date,
-          thinkific_sync_status,
-          thinkific_progress,
-          thinkific_completion_percentage,
-          thinkific_practical_score,
-          thinkific_written_score,
-          thinkific_final_score,
-          thinkific_last_sync_date
+          sync_status,
+          completion_percentage,
+          practical_score,
+          written_score,
+          total_score,
+          last_thinkific_sync
         `);
 
       if (error) throw error;
 
       const totalEnrollments = enrollments?.length || 0;
-      const syncedEnrollments = enrollments?.filter(e => e.thinkific_sync_status === 'SYNCED').length || 0;
+      const syncedEnrollments = enrollments?.filter(e => e.sync_status === 'SYNCED').length || 0;
       const completedWithThinkific = enrollments?.filter(e =>
-        (e.thinkific_progress && e.thinkific_progress >= 100) ||
-        (e.thinkific_completion_percentage && e.thinkific_completion_percentage >= 100)
+        (e.completion_percentage && e.completion_percentage >= 100)
       ).length || 0;
 
       // Calculate averages
-      const progressValues = enrollments?.filter(e => e.thinkific_progress != null).map(e => e.thinkific_progress) || [];
-      const scoreValues = enrollments?.filter(e => e.thinkific_final_score != null).map(e => e.thinkific_final_score) || [];
+      const progressValues = enrollments?.filter(e => e.completion_percentage != null).map(e => e.completion_percentage) || [];
+      const scoreValues = enrollments?.filter(e => e.total_score != null).map(e => e.total_score) || [];
       
       const averageProgress = progressValues.length > 0
         ? progressValues.reduce((sum, val) => sum + val, 0) / progressValues.length
@@ -142,7 +140,7 @@ export class EnrollmentService {
         : 0;
 
       // Get most recent sync date
-      const syncDates = enrollments?.filter(e => e.thinkific_last_sync_date).map(e => e.thinkific_last_sync_date) || [];
+      const syncDates = enrollments?.filter(e => e.last_thinkific_sync).map(e => e.last_thinkific_sync) || [];
       const lastSyncDate = syncDates.length > 0
         ? syncDates.sort((a, b) => new Date(b!).getTime() - new Date(a!).getTime())[0]
         : null;

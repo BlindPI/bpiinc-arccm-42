@@ -147,8 +147,8 @@ export class ThinkificSyncService {
       await supabase
         .from('enrollments')
         .update({
-          thinkific_sync_status: 'FAILED' as ThinkificSyncStatus,
-          thinkific_last_sync: new Date().toISOString()
+          sync_status: 'ERROR' as ThinkificSyncStatus,
+          last_thinkific_sync: new Date().toISOString()
         })
         .eq('id', enrollmentId);
 
@@ -257,11 +257,13 @@ export class ThinkificSyncService {
   static async getCourseMappings(): Promise<ThinkificCourseMapping[]> {
     try {
       const { data: mappings, error } = await supabase
-        .from('thinkific_course_mappings')
+        .from('course_thinkific_mappings')
         .select(`
           *,
-          courses!inner(name),
-          course_offerings(id, start_date, end_date)
+          course_offerings!inner(
+            id, start_date, end_date,
+            courses!inner(name)
+          )
         `)
         .eq('is_active', true);
 
@@ -271,13 +273,13 @@ export class ThinkificSyncService {
 
       return mappings?.map(mapping => ({
         id: mapping.id,
-        localCourseId: mapping.local_course_id,
+        localCourseId: mapping.course_offering_id,
         thinkificCourseId: mapping.thinkific_course_id,
-        courseName: mapping.courses?.name || 'Unknown Course',
+        courseName: mapping.course_offerings?.courses?.name || 'Unknown Course',
         thinkificCourseName: mapping.thinkific_course_name,
         isActive: mapping.is_active,
         createdAt: mapping.created_at,
-        courseOfferings: mapping.course_offerings || []
+        courseOfferings: [mapping.course_offerings] || []
       })) || [];
 
     } catch (error) {
@@ -292,9 +294,9 @@ export class ThinkificSyncService {
   static async updateCourseMapping(mapping: Partial<ThinkificCourseMapping>): Promise<void> {
     try {
       const { error } = await supabase
-        .from('thinkific_course_mappings')
+        .from('course_thinkific_mappings')
         .upsert({
-          local_course_id: mapping.localCourseId,
+          course_offering_id: mapping.localCourseId,
           thinkific_course_id: mapping.thinkificCourseId,
           thinkific_course_name: mapping.thinkificCourseName,
           is_active: mapping.isActive ?? true,
@@ -331,14 +333,14 @@ export class ThinkificSyncService {
             courses!inner(name)
           )
         `)
-        .order('thinkific_last_sync', { ascending: false });
+        .order('last_thinkific_sync', { ascending: false });
 
       if (filters.courseOfferingId) {
         query = query.eq('course_offering_id', filters.courseOfferingId);
       }
 
       if (filters.syncStatus) {
-        query = query.eq('thinkific_sync_status', filters.syncStatus);
+        query = query.eq('sync_status', filters.syncStatus);
       }
 
       if (filters.limit) {
@@ -356,14 +358,14 @@ export class ThinkificSyncService {
         thinkific: {
           enrollmentId: enrollment.thinkific_enrollment_id,
           courseId: enrollment.thinkific_course_id,
-          progressPercentage: enrollment.thinkific_progress_percentage,
+          progressPercentage: enrollment.completion_percentage,
           completionDate: enrollment.thinkific_completion_date,
-          practicalScore: enrollment.thinkific_practical_score,
-          writtenScore: enrollment.thinkific_written_score,
-          overallScore: enrollment.thinkific_overall_score,
+          practicalScore: enrollment.practical_score,
+          writtenScore: enrollment.written_score,
+          overallScore: enrollment.total_score,
           passed: enrollment.thinkific_passed,
-          lastSync: enrollment.thinkific_last_sync,
-          syncStatus: enrollment.thinkific_sync_status
+          lastSync: enrollment.last_thinkific_sync,
+          syncStatus: enrollment.sync_status
         }
       })) || [];
 
@@ -409,9 +411,14 @@ export class ThinkificSyncService {
   }): Promise<void> {
     try {
       await supabase
-        .from('thinkific_sync_logs')
+        .from('enrollment_sync_logs')
         .insert({
-          ...logData,
+          enrollment_id: logData.enrollment_id,
+          sync_type: logData.operation_type === 'INDIVIDUAL_SYNC' ? 'MANUAL' :
+                    logData.operation_type === 'BATCH_SYNC' ? 'BULK' : 'AUTOMATIC',
+          sync_status: logData.status,
+          thinkific_data: logData.details || null,
+          error_message: logData.error_message || null,
           created_at: new Date().toISOString()
         });
     } catch (error) {
@@ -433,21 +440,21 @@ export class ThinkificSyncService {
     try {
       const { data: stats, error } = await supabase
         .from('enrollments')
-        .select('thinkific_sync_status, thinkific_last_sync');
+        .select('sync_status, last_thinkific_sync');
 
       if (error) {
         throw new Error(`Failed to fetch sync statistics: ${error.message}`);
       }
 
       const totalEnrollments = stats?.length || 0;
-      const syncedEnrollments = stats?.filter(s => s.thinkific_sync_status === 'SYNCED').length || 0;
-      const failedSyncs = stats?.filter(s => s.thinkific_sync_status === 'FAILED').length || 0;
-      const pendingSyncs = stats?.filter(s => s.thinkific_sync_status === 'PENDING').length || 0;
+      const syncedEnrollments = stats?.filter(s => s.sync_status === 'SYNCED').length || 0;
+      const failedSyncs = stats?.filter(s => s.sync_status === 'ERROR').length || 0;
+      const pendingSyncs = stats?.filter(s => s.sync_status === 'PENDING').length || 0;
       
       const lastSyncDate = stats
-        ?.filter(s => s.thinkific_last_sync)
-        ?.sort((a, b) => new Date(b.thinkific_last_sync).getTime() - new Date(a.thinkific_last_sync).getTime())
-        ?.[0]?.thinkific_last_sync;
+        ?.filter(s => s.last_thinkific_sync)
+        ?.sort((a, b) => new Date(b.last_thinkific_sync).getTime() - new Date(a.last_thinkific_sync).getTime())
+        ?.[0]?.last_thinkific_sync;
 
       return {
         totalEnrollments,

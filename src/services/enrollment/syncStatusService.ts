@@ -50,27 +50,27 @@ class SyncStatusService {
     try {
       // Update enrollment record
       const enrollmentUpdate: any = {
-        thinkific_sync_status: status,
-        thinkific_last_sync_date: new Date().toISOString(),
+        sync_status: status,
+        last_thinkific_sync: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
 
       // Add Thinkific data if provided
       if (thinkificData) {
         if (thinkificData.studentId) enrollmentUpdate.thinkific_student_id = thinkificData.studentId;
-        if (thinkificData.progress !== undefined) enrollmentUpdate.thinkific_progress = thinkificData.progress;
+        if (thinkificData.progress !== undefined) enrollmentUpdate.completion_percentage = thinkificData.progress;
         if (thinkificData.completionPercentage !== undefined) {
-          enrollmentUpdate.thinkific_completion_percentage = thinkificData.completionPercentage;
+          enrollmentUpdate.completion_percentage = thinkificData.completionPercentage;
         }
-        if (thinkificData.finalScore !== undefined) enrollmentUpdate.thinkific_final_score = thinkificData.finalScore;
+        if (thinkificData.finalScore !== undefined) enrollmentUpdate.total_score = thinkificData.finalScore;
         if (thinkificData.enrollmentStatus) enrollmentUpdate.thinkific_enrollment_status = thinkificData.enrollmentStatus;
       }
 
       // Add error message if failed
       if (status === 'ERROR' || status === 'NOT_FOUND') {
-        enrollmentUpdate.thinkific_sync_error = errorMessage;
+        enrollmentUpdate.sync_error = errorMessage;
       } else {
-        enrollmentUpdate.thinkific_sync_error = null;
+        enrollmentUpdate.sync_error = null;
       }
 
       const { error: updateError } = await supabase
@@ -103,7 +103,7 @@ class SyncStatusService {
   async logSyncEvent(log: Omit<EnrollmentSyncLog, 'id' | 'created_at'>): Promise<void> {
     try {
       const { error } = await supabase
-        .from('thinkific_sync_logs')
+        .from('enrollment_sync_logs')
         .insert({
           enrollment_id: log.enrollment_id,
           sync_status: log.sync_status,
@@ -129,7 +129,7 @@ class SyncStatusService {
     try {
       const { data, error } = await supabase
         .from('enrollments')
-        .select('id, thinkific_sync_status')
+        .select('id, sync_status')
         .in('id', enrollmentIds);
 
       if (error) {
@@ -137,7 +137,7 @@ class SyncStatusService {
       }
 
       return data.reduce((acc, item) => {
-        acc[item.id] = item.thinkific_sync_status || 'PENDING';
+        acc[item.id] = item.sync_status || 'PENDING';
         return acc;
       }, {} as Record<string, EnrollmentSyncStatus>);
     } catch (error) {
@@ -165,8 +165,8 @@ class SyncStatusService {
             )
           )
         `)
-        .in('thinkific_sync_status', ['ERROR', 'NOT_FOUND'])
-        .order('thinkific_last_sync_date', { ascending: true });
+        .in('sync_status', ['ERROR', 'NOT_FOUND'])
+        .order('last_thinkific_sync', { ascending: true });
 
       if (error) {
         throw new Error(`Failed to get failed enrollments: ${error.message}`);
@@ -187,8 +187,8 @@ class SyncStatusService {
       const { error } = await supabase
         .from('enrollments')
         .update({
-          thinkific_sync_status: 'PENDING',
-          thinkific_sync_error: null,
+          sync_status: 'PENDING',
+          sync_error: null,
           updated_at: new Date().toISOString()
         })
         .in('id', enrollmentIds);
@@ -218,7 +218,7 @@ class SyncStatusService {
   async getSyncLogs(enrollmentId: string, limit: number = 50): Promise<EnrollmentSyncLog[]> {
     try {
       const { data, error } = await supabase
-        .from('thinkific_sync_logs')
+        .from('enrollment_sync_logs')
         .select('*')
         .eq('enrollment_id', enrollmentId)
         .order('created_at', { ascending: false })
@@ -248,7 +248,7 @@ class SyncStatusService {
     try {
       // Get current retry count
       const { data: logs } = await supabase
-        .from('thinkific_sync_logs')
+        .from('enrollment_sync_logs')
         .select('*')
         .eq('enrollment_id', enrollmentId)
         .eq('sync_status', 'ERROR')
@@ -297,8 +297,8 @@ class SyncStatusService {
     try {
       const { data, error } = await supabase
         .from('enrollments')
-        .select('thinkific_sync_status, thinkific_last_sync_date')
-        .not('thinkific_sync_status', 'is', null);
+        .select('sync_status, last_thinkific_sync')
+        .not('sync_status', 'is', null);
 
       if (error) {
         throw new Error(`Failed to get sync health metrics: ${error.message}`);
@@ -307,17 +307,17 @@ class SyncStatusService {
       const enrollments = data || [];
       const totalEnrollments = enrollments.length;
       
-      const syncedCount = enrollments.filter(e => e.thinkific_sync_status === 'SYNCED').length;
-      const pendingCount = enrollments.filter(e => e.thinkific_sync_status === 'PENDING').length;
-      const errorCount = enrollments.filter(e => e.thinkific_sync_status === 'ERROR').length;
-      const notFoundCount = enrollments.filter(e => e.thinkific_sync_status === 'NOT_FOUND').length;
-      const reviewCount = enrollments.filter(e => e.thinkific_sync_status === 'MANUAL_REVIEW').length;
+      const syncedCount = enrollments.filter(e => e.sync_status === 'SYNCED').length;
+      const pendingCount = enrollments.filter(e => e.sync_status === 'PENDING').length;
+      const errorCount = enrollments.filter(e => e.sync_status === 'ERROR').length;
+      const notFoundCount = enrollments.filter(e => e.sync_status === 'NOT_FOUND').length;
+      const reviewCount = enrollments.filter(e => e.sync_status === 'MANUAL_REVIEW').length;
       
       const syncedPercentage = totalEnrollments > 0 ? (syncedCount / totalEnrollments) * 100 : 0;
       
       // Get most recent sync date
       const lastSyncDate = enrollments
-        .map(e => e.thinkific_last_sync_date)
+        .map(e => e.last_thinkific_sync)
         .filter(Boolean)
         .sort()
         .pop();
