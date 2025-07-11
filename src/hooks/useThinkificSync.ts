@@ -336,16 +336,21 @@ export const useBatchSync = () => {
   const [error, setError] = useState<string | null>(null);
 
   const startBatchSync = useCallback(async (enrollmentIds: string[]) => {
+    console.log('🎯 BATCH SYNC HOOK TRIGGERED');
+    console.log('Enrollment IDs to sync:', enrollmentIds);
+    
     setIsRunning(true);
     setError(null);
     setResults([]);
     setProgress({ total: enrollmentIds.length, completed: 0, failed: 0 });
 
     try {
+      console.log('🚀 Starting batch sync through service...');
       const batchResults = await ThinkificSyncService.syncEnrollments(
         enrollmentIds,
         { batchSize: 5 },
         (progressUpdate) => {
+          console.log('📊 Progress update:', progressUpdate);
           setProgress(progressUpdate);
         }
       );

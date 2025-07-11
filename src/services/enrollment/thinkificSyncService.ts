@@ -31,10 +31,15 @@ export class ThinkificSyncService {
    * Sync a single enrollment with Thinkific data
    */
   static async syncEnrollment(
-    enrollmentId: string, 
+    enrollmentId: string,
     options: SyncOptions = {}
   ): Promise<ThinkificSyncResult> {
+    console.log('🔄 SYNC ENROLLMENT STARTING');
+    console.log('Enrollment ID:', enrollmentId);
+    console.log('Options:', options);
+    
     try {
+      console.log('📋 Fetching enrollment data from database...');
       // Get enrollment with user and course data
       const { data: enrollment, error: enrollmentError } = await supabase
         .from('enrollments')
@@ -177,6 +182,11 @@ export class ThinkificSyncService {
     options: SyncOptions = {},
     onProgress?: (progress: SyncProgress) => void
   ): Promise<ThinkificSyncResult[]> {
+    console.log('🔄 BATCH SYNC STARTING');
+    console.log('Enrollment IDs:', enrollmentIds);
+    console.log('Options:', options);
+    console.log('Number of enrollments to sync:', enrollmentIds.length);
+    
     const batchSize = options.batchSize || 5;
     const results: ThinkificSyncResult[] = [];
     let completed = 0;
@@ -379,18 +389,33 @@ export class ThinkificSyncService {
    * Call Thinkific API via edge function
    */
   private static async callThinkificAPI(request: any): Promise<ThinkificAPIResponse> {
+    console.log('🚀 THINKIFIC API CALL STARTING');
+    console.log('Request:', request);
+    
     try {
+      console.log('📡 Invoking edge function: thinkific-api');
       const { data, error } = await supabase.functions.invoke('thinkific-api', {
         body: request
       });
 
+      console.log('📥 Edge function response:');
+      console.log('Data:', data);
+      console.log('Error:', error);
+
       if (error) {
+        console.error('❌ Edge function returned error:', error);
         throw new Error(error.message);
       }
 
+      console.log('✅ Edge function call successful');
       return data;
     } catch (error) {
-      console.error('Error calling Thinkific API:', error);
+      console.error('💥 Error calling Thinkific API:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        cause: error instanceof Error ? error.cause : undefined
+      });
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'

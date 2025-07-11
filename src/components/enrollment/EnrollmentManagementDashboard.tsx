@@ -111,11 +111,19 @@ export function EnrollmentManagementDashboard() {
 
   // Thinkific sync handlers
   const handleSyncAllEnrollments = async () => {
+    console.log('🎬 SYNC ALL BUTTON CLICKED');
+    console.log('Available enrollments:', enrollments);
+    
     try {
       const enrollmentIds = enrollments.map(e => e.id);
+      console.log('📋 Enrollment IDs to sync:', enrollmentIds);
+      console.log('🚀 Calling startBatchSync...');
+      
       await startBatchSync(enrollmentIds);
       toast.success('Batch sync started');
+      console.log('✅ Batch sync initiated successfully');
     } catch (error) {
+      console.error('❌ Failed to start batch sync:', error);
       toast.error('Failed to start batch sync');
     }
   };
