@@ -19,7 +19,6 @@ import {
   TrendingDown,
   Minus,
   RefreshCw,
-  Sync,
   CheckCircle,
   XCircle,
   Clock,
@@ -261,7 +260,7 @@ export function EnrollmentManagementDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Sync className="h-5 w-5" />
+                  <RefreshCw className="h-5 w-5" />
                   Thinkific Integration
                 </CardTitle>
               </CardHeader>
