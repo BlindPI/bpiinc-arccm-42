@@ -273,8 +273,16 @@ export function RosterReview({
                   }`}>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="font-medium">{row.recipient_name || 'No Name'}</div>
-                        <div className="text-sm text-gray-600">{row.email || row.recipient_email}</div>
+                        <div className="font-medium">
+                          {row.recipient_name ||
+                           row.name ||
+                           row.full_name ||
+                           (row.first_name && row.last_name ? `${row.first_name} ${row.last_name}` : null) ||
+                           row.student_name ||
+                           row.participant_name ||
+                           'No Name'}
+                        </div>
+                        <div className="text-sm text-gray-600">{row.email || row.recipient_email || row.student_email}</div>
                         {(row.first_aid_level || row.cpr_level) && (
                           <div className="text-xs text-gray-500 mt-1">
                             Specified: {row.first_aid_level && `First Aid: ${row.first_aid_level}`}

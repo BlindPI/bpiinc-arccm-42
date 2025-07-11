@@ -173,6 +173,14 @@ export interface CertificateRequest {
   generation_error?: string;
   last_generation_attempt?: string;
   notes?: string;
+  // Additional roster upload name field variations
+  name?: string;
+  full_name?: string;
+  first_name?: string;
+  last_name?: string;
+  student_name?: string;
+  participant_name?: string;
+  student_email?: string;
   // Enhanced score tracking fields
   practical_score?: number;
   written_score?: number;
