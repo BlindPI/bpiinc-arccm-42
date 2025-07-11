@@ -13,6 +13,17 @@ export interface EnrollmentMetrics {
     lastMonth: number;
     percentageChange: number;
   };
+  thinkificStats?: {
+    totalEnrollments: number;
+    syncedEnrollments: number;
+    syncedPercentage: number;
+    completedWithThinkific: number;
+    thinkificCompletionRate: number;
+    averageProgress: number;
+    averageScore: number;
+    syncHealth: 'healthy' | 'warning' | 'critical';
+    lastSyncDate: string | null;
+  };
 }
 
 export interface EnrollmentFilters {
@@ -85,6 +96,79 @@ export class EnrollmentService {
       };
     } catch (error) {
       console.error('Error fetching enrollment metrics:', error);
+      throw error;
+    }
+  }
+
+  static async getEnrollmentMetricsWithThinkific(): Promise<EnrollmentMetrics> {
+    try {
+      // Get basic metrics first
+      const basicMetrics = await this.getEnrollmentMetrics();
+
+      // Get enrollments with Thinkific fields
+      const { data: enrollments, error } = await supabase
+        .from('enrollments')
+        .select(`
+          status,
+          enrollment_date,
+          thinkific_sync_status,
+          thinkific_progress,
+          thinkific_completion_percentage,
+          thinkific_practical_score,
+          thinkific_written_score,
+          thinkific_final_score,
+          thinkific_last_sync_date
+        `);
+
+      if (error) throw error;
+
+      const totalEnrollments = enrollments?.length || 0;
+      const syncedEnrollments = enrollments?.filter(e => e.thinkific_sync_status === 'SYNCED').length || 0;
+      const completedWithThinkific = enrollments?.filter(e =>
+        (e.thinkific_progress && e.thinkific_progress >= 100) ||
+        (e.thinkific_completion_percentage && e.thinkific_completion_percentage >= 100)
+      ).length || 0;
+
+      // Calculate averages
+      const progressValues = enrollments?.filter(e => e.thinkific_progress != null).map(e => e.thinkific_progress) || [];
+      const scoreValues = enrollments?.filter(e => e.thinkific_final_score != null).map(e => e.thinkific_final_score) || [];
+      
+      const averageProgress = progressValues.length > 0
+        ? progressValues.reduce((sum, val) => sum + val, 0) / progressValues.length
+        : 0;
+      
+      const averageScore = scoreValues.length > 0
+        ? scoreValues.reduce((sum, val) => sum + val, 0) / scoreValues.length
+        : 0;
+
+      // Get most recent sync date
+      const syncDates = enrollments?.filter(e => e.thinkific_last_sync_date).map(e => e.thinkific_last_sync_date) || [];
+      const lastSyncDate = syncDates.length > 0
+        ? syncDates.sort((a, b) => new Date(b!).getTime() - new Date(a!).getTime())[0]
+        : null;
+
+      // Calculate sync health
+      const syncPercentage = totalEnrollments > 0 ? (syncedEnrollments / totalEnrollments) : 0;
+      const syncHealth: 'healthy' | 'warning' | 'critical' =
+        syncPercentage >= 0.8 ? 'healthy' :
+        syncPercentage >= 0.5 ? 'warning' : 'critical';
+
+      return {
+        ...basicMetrics,
+        thinkificStats: {
+          totalEnrollments,
+          syncedEnrollments,
+          syncedPercentage: syncPercentage * 100,
+          completedWithThinkific,
+          thinkificCompletionRate: totalEnrollments > 0 ? (completedWithThinkific / totalEnrollments) * 100 : 0,
+          averageProgress,
+          averageScore,
+          syncHealth,
+          lastSyncDate
+        }
+      };
+    } catch (error) {
+      console.error('Error fetching Thinkific-enhanced enrollment metrics:', error);
       throw error;
     }
   }

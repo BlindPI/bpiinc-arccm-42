@@ -1,13 +1,15 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Users, 
-  Calendar, 
-  UserPlus, 
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import {
+  Users,
+  Calendar,
+  UserPlus,
   AlertCircle,
   Search,
   Filter,
@@ -15,14 +17,28 @@ import {
   Upload,
   TrendingUp,
   TrendingDown,
-  Minus
+  Minus,
+  RefreshCw,
+  Sync,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Loader2,
+  Activity
 } from "lucide-react";
-import { useEnrollmentMetrics, useFilteredEnrollments, useEnrollmentTrends } from '@/hooks/useEnrollmentAnalytics';
+import { useEnrollmentMetrics, useFilteredEnrollments, useEnrollmentTrends, useEnrollmentMetricsWithThinkific } from '@/hooks/useEnrollmentAnalytics';
 import { EnrollmentTable } from './EnrollmentTable';
 import { WaitlistManager } from './WaitlistManager';
 import { BulkEnrollmentForm } from './BulkEnrollmentForm';
 import { EnrollmentStats } from './EnrollmentStats';
 import { EnrollmentService, type EnrollmentWithDetails } from '@/services/enrollment/enrollmentService';
+import {
+  useThinkificSync,
+  useSyncStatistics,
+  useBatchSync,
+  useEnrollmentWithSync,
+  useCourseMappings
+} from '@/hooks/useThinkificSync';
 import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -30,10 +46,17 @@ export function EnrollmentManagementDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [selectedEnrollments, setSelectedEnrollments] = useState<string[]>([]);
   const queryClient = useQueryClient();
 
-  const { data: metrics, isLoading: metricsLoading } = useEnrollmentMetrics();
+  const { data: metrics, isLoading: metricsLoading } = useEnrollmentMetricsWithThinkific();
   const { data: trends } = useEnrollmentTrends();
+  
+  // Thinkific sync hooks
+  const { syncEnrollment, syncEnrollments, isLoading: isSyncing, error: syncError } = useThinkificSync();
+  const { statistics: syncStats, isLoading: syncStatsLoading } = useSyncStatistics();
+  const { startBatchSync, isRunning: isBatchSyncing, progress: batchProgress } = useBatchSync();
+  const { mappings: courseMappings } = useCourseMappings();
   
   const filters = {
     ...(statusFilter && { status: statusFilter }),
@@ -87,6 +110,31 @@ export function EnrollmentManagementDashboard() {
     }
   });
 
+  // Thinkific sync handlers
+  const handleSyncAllEnrollments = async () => {
+    try {
+      const enrollmentIds = filteredEnrollments.map(e => e.id);
+      await startBatchSync(enrollmentIds);
+      toast.success('Batch sync started');
+    } catch (error) {
+      toast.error('Failed to start batch sync');
+    }
+  };
+
+  const handleSyncSelectedEnrollments = async () => {
+    if (selectedEnrollments.length === 0) {
+      toast.error('Please select enrollments to sync');
+      return;
+    }
+    
+    try {
+      await startBatchSync(selectedEnrollments);
+      toast.success(`Started sync for ${selectedEnrollments.length} enrollments`);
+    } catch (error) {
+      toast.error('Failed to start sync');
+    }
+  };
+
   // Filter enrollments by search term
   const filteredEnrollments = enrollments.filter((enrollment: EnrollmentWithDetails) => {
     if (!searchTerm) return true;
@@ -137,6 +185,7 @@ export function EnrollmentManagementDashboard() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="enrollments">All Enrollments</TabsTrigger>
+          <TabsTrigger value="thinkific">Thinkific Sync</TabsTrigger>
           <TabsTrigger value="waitlist">Waitlist Management</TabsTrigger>
           <TabsTrigger value="bulk">Bulk Operations</TabsTrigger>
         </TabsList>
@@ -207,6 +256,70 @@ export function EnrollmentManagementDashboard() {
             </Card>
           </div>
 
+          {/* Thinkific Integration Stats */}
+          {metrics?.thinkificStats && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sync className="h-5 w-5" />
+                  Thinkific Integration
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">Sync Health</p>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={
+                        metrics.thinkificStats.syncHealth === 'healthy' ? 'default' :
+                        metrics.thinkificStats.syncHealth === 'warning' ? 'secondary' : 'destructive'
+                      }>
+                        {metrics.thinkificStats.syncHealth}
+                      </Badge>
+                      <span className="text-sm">
+                        {metrics.thinkificStats.syncedPercentage.toFixed(1)}% synced
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">Avg Progress</p>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <Progress value={metrics.thinkificStats.averageProgress} className="h-2" />
+                      </div>
+                      <span className="text-sm font-medium">
+                        {metrics.thinkificStats.averageProgress.toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">Avg Score</p>
+                    <p className="text-2xl font-bold">
+                      {metrics.thinkificStats.averageScore.toFixed(1)}%
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">Completion Rate</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {metrics.thinkificStats.thinkificCompletionRate.toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+                
+                {metrics.thinkificStats.lastSyncDate && (
+                  <div className="mt-4 pt-4 border-t">
+                    <p className="text-sm text-muted-foreground">
+                      Last sync: {new Date(metrics.thinkificStats.lastSyncDate).toLocaleString()}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle>Recent Enrollments</CardTitle>
@@ -266,6 +379,167 @@ export function EnrollmentManagementDashboard() {
 
         <TabsContent value="waitlist" className="space-y-4">
           <WaitlistManager />
+        </TabsContent>
+
+        <TabsContent value="thinkific">
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Thinkific Integration</h3>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleSyncAllEnrollments}
+                  disabled={isBatchSyncing}
+                  variant="outline"
+                >
+                  {isBatchSyncing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Syncing...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Sync All
+                    </>
+                  )}
+                </Button>
+                {selectedEnrollments.length > 0 && (
+                  <Button
+                    onClick={handleSyncSelectedEnrollments}
+                    disabled={isBatchSyncing}
+                  >
+                    Sync Selected ({selectedEnrollments.length})
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Sync Statistics */}
+            {syncStats && (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Synced</p>
+                        <p className="text-2xl font-bold">{syncStats.synced}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-yellow-500" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Pending</p>
+                        <p className="text-2xl font-bold">{syncStats.pending}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2">
+                      <XCircle className="h-4 w-4 text-red-500" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Failed</p>
+                        <p className="text-2xl font-bold">{syncStats.failed}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2">
+                      <Activity className="h-4 w-4 text-blue-500" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Last Sync</p>
+                        <p className="text-sm font-medium">
+                          {syncStats.lastSync
+                            ? new Date(syncStats.lastSync).toLocaleDateString()
+                            : 'Never'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Batch Sync Progress */}
+            {isBatchSyncing && batchProgress && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Sync Progress
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex justify-between text-sm">
+                      <span>Progress</span>
+                      <span>{batchProgress.processed} of {batchProgress.total}</span>
+                    </div>
+                    <Progress
+                      value={(batchProgress.processed / batchProgress.total) * 100}
+                      className="w-full"
+                    />
+                    {batchProgress.errors.length > 0 && (
+                      <div className="text-sm text-red-600">
+                        {batchProgress.errors.length} errors occurred
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Course Mappings */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Course Mappings</CardTitle>
+                <CardDescription>
+                  Manage how local courses map to Thinkific courses
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {courseMappings && courseMappings.length > 0 ? (
+                  <div className="space-y-2">
+                    {courseMappings.map((mapping) => (
+                      <div key={mapping.id} className="flex justify-between items-center p-2 border rounded">
+                        <div>
+                          <span className="font-medium">{mapping.localCourseId}</span>
+                          <span className="text-sm text-muted-foreground ml-2">
+                            → {mapping.thinkificCourseId}
+                          </span>
+                        </div>
+                        <Badge variant={mapping.isActive ? "default" : "secondary"}>
+                          {mapping.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No course mappings configured
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Enrollments with Selection */}
+            <EnrollmentTable
+              enrollments={enrollments}
+              isLoading={enrollmentsLoading}
+              searchTerm={searchTerm}
+              onApprove={(id) => console.log('Approve:', id)}
+              onReject={(id, reason) => console.log('Reject:', id, reason)}
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="bulk" className="space-y-4">

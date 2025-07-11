@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Table,
@@ -10,7 +9,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, UserCheck, UserX, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,16 +27,26 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Enrollment } from '@/types/enrollment';
-import { formatDistanceToNow } from 'date-fns';
+import { 
+  Enrollment, 
+  EnrollmentWithThinkific, 
+  EnrollmentSyncStatus,
+  getSyncHealthColor,
+  getDisplayProgress,
+  getDisplayScore,
+  getSyncStatusBadgeVariant,
+  formatSyncStatus
+} from '@/types/enrollment';
 import { useUpdateAttendance, useCancelEnrollment } from '@/hooks/useEnrollment';
+import { useThinkificSync } from '@/hooks/useThinkificSync';
 import { type EnrollmentWithDetails } from '@/services/enrollment/enrollmentService';
 
 interface EnrollmentTableProps {
-  enrollments: EnrollmentWithDetails[];
+  enrollments: (EnrollmentWithDetails & Partial<EnrollmentWithThinkific>)[];
   isLoading: boolean;
   compact?: boolean;
   searchTerm?: string;
+  showThinkific?: boolean;
   onApprove?: (enrollmentId: string) => void;
   onReject?: (enrollmentId: string, reason: string) => void;
 }
@@ -47,6 +56,7 @@ export function EnrollmentTable({
   isLoading, 
   compact = false,
   searchTerm = '',
+  showThinkific = true,
   onApprove,
   onReject
 }: EnrollmentTableProps) {
@@ -58,6 +68,7 @@ export function EnrollmentTable({
   
   const updateAttendance = useUpdateAttendance();
   const cancelEnrollment = useCancelEnrollment();
+  const { syncEnrollment } = useThinkificSync();
 
   const filteredEnrollments = enrollments.filter(enrollment => {
     if (!searchTerm) return true;
@@ -69,7 +80,7 @@ export function EnrollmentTable({
     );
   });
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string): "default" | "destructive" | "outline" | "secondary" | "success" => {
     switch (status) {
       case 'ENROLLED':
         return 'default';
@@ -84,7 +95,7 @@ export function EnrollmentTable({
     }
   };
 
-  const getAttendanceColor = (attendance: string | null) => {
+  const getAttendanceColor = (attendance: string | null): "default" | "destructive" | "outline" | "secondary" | "success" => {
     switch (attendance) {
       case 'PRESENT':
         return 'success';
@@ -115,6 +126,31 @@ export function EnrollmentTable({
     }
   };
 
+  const handleSyncEnrollment = async (enrollmentId: string) => {
+    try {
+      await syncEnrollment(enrollmentId);
+    } catch (error) {
+      console.error('Failed to sync enrollment:', error);
+    }
+  };
+
+  const formatTimeAgo = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMins < 60) {
+      return `${diffMins} minutes ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours} hours ago`;
+    } else {
+      return `${diffDays} days ago`;
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -132,6 +168,13 @@ export function EnrollmentTable({
             {!compact && <TableHead>Course</TableHead>}
             <TableHead>Status</TableHead>
             {!compact && <TableHead>Attendance</TableHead>}
+            {showThinkific && !compact && (
+              <>
+                <TableHead>Progress</TableHead>
+                <TableHead>Score</TableHead>
+                <TableHead>Sync Status</TableHead>
+              </>
+            )}
             <TableHead>Enrolled</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
@@ -184,8 +227,50 @@ export function EnrollmentTable({
                   )}
                 </TableCell>
               )}
+              {showThinkific && !compact && (
+                <>
+                  <TableCell>
+                    {enrollment.completion_percentage !== undefined ? (
+                      <div className="space-y-1">
+                        <Progress value={enrollment.completion_percentage} className="w-16" />
+                        <div className="text-xs text-muted-foreground">
+                          {enrollment.completion_percentage}%
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">No data</div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      {enrollment.total_score !== undefined ? (
+                        <div className="font-medium">{enrollment.total_score}%</div>
+                      ) : (
+                        <div className="text-sm text-muted-foreground">N/A</div>
+                      )}
+                      {enrollment.practical_score !== undefined && enrollment.written_score !== undefined && (
+                        <div className="text-xs text-muted-foreground">
+                          P:{enrollment.practical_score}% W:{enrollment.written_score}%
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      <Badge variant={getSyncStatusBadgeVariant(enrollment.sync_status || null)}>
+                        {formatSyncStatus(enrollment.sync_status || null)}
+                      </Badge>
+                      {enrollment.last_thinkific_sync && (
+                        <div className="text-xs text-muted-foreground">
+                          {formatTimeAgo(enrollment.last_thinkific_sync)}
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                </>
+              )}
               <TableCell>
-                {formatDistanceToNow(new Date(enrollment.enrollment_date), { addSuffix: true })}
+                {formatTimeAgo(enrollment.enrollment_date)}
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
@@ -198,7 +283,7 @@ export function EnrollmentTable({
                         onClick={() => onApprove(enrollment.id)}
                         className="h-8 px-2"
                       >
-                        <CheckCircle className="h-3 w-3 text-green-600" />
+                        ✓
                       </Button>
                       <Button
                         size="sm"
@@ -206,7 +291,7 @@ export function EnrollmentTable({
                         onClick={() => setRejectDialog({ open: true, enrollmentId: enrollment.id })}
                         className="h-8 px-2"
                       >
-                        <XCircle className="h-3 w-3 text-red-600" />
+                        ✗
                       </Button>
                     </>
                   )}
@@ -215,7 +300,7 @@ export function EnrollmentTable({
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
+                        ⋯
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -226,28 +311,36 @@ export function EnrollmentTable({
                       <DropdownMenuItem 
                         onClick={() => handleAttendanceUpdate(enrollment.id, 'PRESENT')}
                       >
-                        <UserCheck className="mr-2 h-4 w-4" />
                         Mark Present
                       </DropdownMenuItem>
                       <DropdownMenuItem 
                         onClick={() => handleAttendanceUpdate(enrollment.id, 'ABSENT')}
                       >
-                        <UserX className="mr-2 h-4 w-4" />
                         Mark Absent
                       </DropdownMenuItem>
                       <DropdownMenuItem 
                         onClick={() => handleAttendanceUpdate(enrollment.id, 'LATE')}
                       >
-                        <Clock className="mr-2 h-4 w-4" />
                         Mark Late
                       </DropdownMenuItem>
                       
                       <DropdownMenuSeparator />
                       
+                      {/* Thinkific Actions */}
+                      {showThinkific && (
+                        <>
+                          <DropdownMenuItem 
+                            onClick={() => handleSyncEnrollment(enrollment.id)}
+                          >
+                            Sync with Thinkific
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                        </>
+                      )}
+                      
                       {/* Management Actions */}
                       {enrollment.status === 'WAITLISTED' && onApprove && (
                         <DropdownMenuItem onClick={() => onApprove(enrollment.id)}>
-                          <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
                           Approve Enrollment
                         </DropdownMenuItem>
                       )}
@@ -266,7 +359,7 @@ export function EnrollmentTable({
           ))}
           {filteredEnrollments.length === 0 && (
             <TableRow>
-              <TableCell colSpan={compact ? 4 : 6} className="text-center py-8">
+              <TableCell colSpan={showThinkific && !compact ? 9 : compact ? 4 : 6} className="text-center py-8">
                 No enrollments found
               </TableCell>
             </TableRow>
