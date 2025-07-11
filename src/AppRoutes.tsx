@@ -11,6 +11,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 // DIRECT: Bypassing wrapper redundancy
 import { SettingsLayout } from '@/components/settings/SettingsLayout';
 import UserManagementPage from '@/pages/UserManagementPage';
+import StudentManagement from '@/pages/StudentManagement';
 import { ApiIntegrationManager } from '@/components/integration/ApiIntegrationManager';
 import Profile from '@/pages/Profile';
 import CRM from '@/pages/CRM';
@@ -65,6 +66,12 @@ export function AppRoutes() {
       <Route path="/users" element={
         <ProtectedRoute>
           <UserManagementPage />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/students" element={
+        <ProtectedRoute>
+          <StudentManagement />
         </ProtectedRoute>
       } />
 

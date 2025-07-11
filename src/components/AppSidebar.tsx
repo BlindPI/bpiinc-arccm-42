@@ -62,6 +62,7 @@ const navigation: NavigationItem[] = [
   
   // User Management Group
   { name: 'Users', href: '/users', icon: Users, group: 'User Management' },
+  { name: 'Students', href: '/students', icon: GraduationCap, group: 'User Management' },
   { name: 'Teams', href: '/teams', icon: UsersIcon, group: 'User Management' },
   { name: 'Supervision', href: '/supervision', icon: UserCheck, group: 'User Management' },
   
