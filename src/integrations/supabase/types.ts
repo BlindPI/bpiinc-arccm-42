@@ -5717,7 +5717,6 @@ export type Database = {
           max_participants: number
           start_date: string
           status: string
-          thinkific_course_id: string | null
           updated_at: string
         }
         Insert: {
@@ -5730,7 +5729,6 @@ export type Database = {
           max_participants?: number
           start_date: string
           status?: string
-          thinkific_course_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -5743,7 +5741,6 @@ export type Database = {
           max_participants?: number
           start_date?: string
           status?: string
-          thinkific_course_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -17920,7 +17917,7 @@ export type Database = {
           p_email: string
           p_first_name?: string
           p_last_name?: string
-          p_thinkific_user_id?: string
+          p_external_student_id?: string
           p_student_metadata?: Json
         }
         Returns: string

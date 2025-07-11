@@ -172,7 +172,7 @@ export function useScoreValidation({
           message: 'No scores recorded yet',
           field: 'scores'
         });
-        suggestions.push('Import scores from Thinkific or enter manually');
+        suggestions.push('Enter scores manually or import from external system');
       } else if (config.requiresBothScores) {
         if (!practicalScore) {
           warnings.push({
