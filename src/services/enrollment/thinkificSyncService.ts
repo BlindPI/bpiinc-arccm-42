@@ -82,12 +82,12 @@ export class ThinkificSyncService {
             success += studentResult.enrollmentsCreated;
             importedStudents.push({
               student: student,
-              enrollmentsCreated: studentResult.enrollmentsCreated,
+              progressRecordsStored: studentResult.enrollmentsCreated,
               details: studentResult.details
             });
           } else {
             failed++;
-            errors.push(`Failed to import ${student.email}: ${studentResult.error}`);
+            errors.push(`Failed to import progress data for ${student.email}: ${studentResult.error}`);
           }
         } catch (error) {
           failed++;
@@ -105,7 +105,7 @@ export class ThinkificSyncService {
         current: 'Import completed'
       });
 
-      console.log(`✅ IMPORT COMPLETED: ${success} enrollments created, ${failed} failed`);
+      console.log(`✅ IMPORT COMPLETED: ${success} progress records stored, ${failed} failed`);
 
       return {
         success,
@@ -128,7 +128,7 @@ export class ThinkificSyncService {
   }
 
   /**
-   * Import enrollments for a single student from Thinkific
+   * Import Thinkific course progress data for a single student (no local enrollment creation)
    */
   static async importStudentEnrollments(student: any): Promise<{
     success: boolean;
@@ -136,11 +136,11 @@ export class ThinkificSyncService {
     error?: string;
     details?: any[];
   }> {
-    console.log(`👤 Importing enrollments for ${student.email}`);
+    console.log(`👤 Importing Thinkific progress data for ${student.email}`);
     
     try {
       const enrollments = student.enrollments || [];
-      let enrollmentsCreated = 0;
+      let progressRecordsStored = 0;
       const details: any[] = [];
 
       // Check if student profile exists in our system
@@ -154,58 +154,32 @@ export class ThinkificSyncService {
         };
       }
 
-      // Process each enrollment
+      // Store Thinkific course progress data in student metadata
       for (const enrollment of enrollments) {
         try {
-          // Find or create course offering
-          const courseOfferingId = await this.findOrCreateCourseOffering(enrollment.course_id, enrollment.course);
+          console.log(`📊 Storing progress data for Thinkific course ${enrollment.course_id}`);
           
-          if (!courseOfferingId) {
-            console.warn(`⚠️ Could not find or create course offering for Thinkific course ${enrollment.course_id}`);
-            continue;
-          }
-
-          // Check if enrollment already exists
-          const existingEnrollment = await this.findExistingEnrollment(studentProfileId, courseOfferingId);
+          // Store the Thinkific enrollment data for viewing and manual assignment
+          await this.storeThinkificProgressData(studentProfileId, enrollment, student);
           
-          if (existingEnrollment) {
-            console.log(`📝 Updating existing enrollment for ${student.email} in course ${enrollment.course_id}`);
-            
-            // Update existing enrollment with Thinkific data
-            await this.updateEnrollmentWithThinkificData(existingEnrollment.id, enrollment, student);
-            details.push({
-              action: 'updated',
-              enrollmentId: existingEnrollment.id,
-              thinkificEnrollmentId: enrollment.id
-            });
-          } else {
-            console.log(`📋 Creating new enrollment for ${student.email} in course ${enrollment.course_id}`);
-            
-            // Create new enrollment record
-            const newEnrollmentId = await this.createEnrollmentFromThinkific(
-              studentProfileId,
-              courseOfferingId,
-              enrollment,
-              student
-            );
-            
-            if (newEnrollmentId) {
-              enrollmentsCreated++;
-              details.push({
-                action: 'created',
-                enrollmentId: newEnrollmentId,
-                thinkificEnrollmentId: enrollment.id
-              });
-            }
-          }
+          progressRecordsStored++;
+          details.push({
+            action: 'progress_stored',
+            thinkificCourseId: enrollment.course_id,
+            thinkificEnrollmentId: enrollment.id,
+            courseName: enrollment.course?.name || `Course ${enrollment.course_id}`,
+            progress: enrollment.percentage_completed || 0,
+            completionStatus: enrollment.completed_at ? 'COMPLETED' : 'IN_PROGRESS'
+          });
+          
         } catch (error) {
-          console.error(`Error processing enrollment ${enrollment.id}:`, error);
+          console.error(`Error storing progress data for enrollment ${enrollment.id}:`, error);
         }
       }
 
       return {
         success: true,
-        enrollmentsCreated,
+        enrollmentsCreated: progressRecordsStored, // Rename this to be more accurate
         details
       };
 
@@ -216,6 +190,88 @@ export class ThinkificSyncService {
         enrollmentsCreated: 0,
         error: error instanceof Error ? error.message : 'Unknown error'
       };
+    }
+  }
+
+  /**
+   * Store Thinkific progress data in student profile for viewing and manual assignment
+   */
+  private static async storeThinkificProgressData(
+    studentProfileId: string,
+    enrollment: any,
+    student: any
+  ): Promise<void> {
+    try {
+      // Get existing student profile
+      const { data: profile, error: fetchError } = await supabase
+        .from('student_enrollment_profiles')
+        .select('student_metadata')
+        .eq('id', studentProfileId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching student profile:', fetchError);
+        return;
+      }
+
+      // Extract existing metadata
+      const existingMetadata = profile?.student_metadata || {};
+      const thinkificCourses = existingMetadata.thinkific_courses || [];
+
+      // Create course progress record
+      const courseProgress = {
+        thinkific_course_id: enrollment.course_id,
+        thinkific_enrollment_id: enrollment.id,
+        course_name: enrollment.course?.name || `Course ${enrollment.course_id}`,
+        progress_percentage: enrollment.percentage_completed || 0,
+        completion_status: enrollment.completed_at ? 'COMPLETED' : 'IN_PROGRESS',
+        started_at: enrollment.started_at,
+        completed_at: enrollment.completed_at,
+        practical_score: enrollment.practical_score,
+        written_score: enrollment.written_score,
+        total_score: enrollment.total_score,
+        last_synced: new Date().toISOString(),
+        raw_enrollment_data: enrollment
+      };
+
+      // Update or add course progress
+      const existingCourseIndex = thinkificCourses.findIndex(
+        (course: any) => course.thinkific_course_id === enrollment.course_id
+      );
+
+      if (existingCourseIndex >= 0) {
+        thinkificCourses[existingCourseIndex] = courseProgress;
+      } else {
+        thinkificCourses.push(courseProgress);
+      }
+
+      // Update student metadata
+      const updatedMetadata = {
+        ...existingMetadata,
+        thinkific_courses: thinkificCourses,
+        last_thinkific_sync: new Date().toISOString(),
+        total_thinkific_courses: thinkificCourses.length
+      };
+
+      // Save updated metadata
+      const { error: updateError } = await supabase
+        .from('student_enrollment_profiles')
+        .update({
+          student_metadata: updatedMetadata,
+          last_sync_date: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', studentProfileId);
+
+      if (updateError) {
+        console.error('Error updating student progress data:', updateError);
+        return;
+      }
+
+      console.log(`✅ Stored progress data for ${student.email} in course ${enrollment.course_id}`);
+
+    } catch (error) {
+      console.error('Error storing Thinkific progress data:', error);
     }
   }
 

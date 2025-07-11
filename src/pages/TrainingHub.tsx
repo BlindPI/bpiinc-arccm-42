@@ -23,13 +23,15 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Loader2, BookOpen, Users, Calendar, BarChart3, Activity, UserCheck, MapPin, ClipboardList, Plus, Clock, Award, TrendingUp, Search, AlertTriangle, Zap } from 'lucide-react';
+import { Loader2, BookOpen, Users, Calendar, BarChart3, Activity, UserCheck, MapPin, ClipboardList, Plus, Clock, Award, TrendingUp, Search, AlertTriangle, Zap, ExternalLink } from 'lucide-react';
 import { useTeachingManagement } from '@/hooks/useTeachingManagement';
 import { useCourseScheduling } from '@/hooks/useCourseScheduling';
+import { useNavigate } from 'react-router-dom';
 
 export default function TrainingHub() {
   const { user } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('sessions');
   const [showCourseForm, setShowCourseForm] = useState(false);
   const [showLocationForm, setShowLocationForm] = useState(false);
@@ -675,6 +677,49 @@ export default function TrainingHub() {
           onCreateSession={handleCreateSession}
           onExportData={handleExportData}
         />
+
+        {/* External Integrations Section */}
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-blue-800">
+              <ExternalLink className="h-5 w-5" />
+              External Training Integrations
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/thinkific-progress')}>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <BookOpen className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900">Thinkific Progress</h4>
+                      <p className="text-sm text-gray-600">View student progress from Thinkific courses and assign to local training</p>
+                    </div>
+                    <ExternalLink className="h-4 w-4 text-gray-400" />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="opacity-60">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gray-100 rounded-lg">
+                      <Users className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-600">Other LMS Integrations</h4>
+                      <p className="text-sm text-gray-500">Additional external learning management system integrations</p>
+                      <Badge variant="outline" className="mt-1 text-xs">Coming Soon</Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Navigation Cards with real data */}
         <TrainingHubNavigation
