@@ -302,14 +302,30 @@ class ThinkificAPIService {
     try {
       console.log('🔍 Fetching all students and enrollments from Thinkific...')
       
-      // Fetch all users and enrollments in parallel
-      const [usersData, enrollmentsData] = await Promise.all([
-        this.getAllUsers(1, 1000), // Get first 1000 users
-        this.getAllEnrollments(1, 1000) // Get first 1000 enrollments
-      ])
+      let usersData, enrollmentsData;
+      
+      try {
+        console.log('📋 Fetching users from Thinkific API...')
+        usersData = await this.getAllUsers(1, 1000);
+        console.log(`👥 Successfully fetched ${usersData.users?.length || 0} users`)
+      } catch (userError) {
+        console.error('❌ Error fetching users:', userError)
+        throw new Error(`Failed to fetch users: ${userError.message}`)
+      }
+      
+      try {
+        console.log('📚 Fetching enrollments from Thinkific API...')
+        enrollmentsData = await this.getAllEnrollments(1, 1000);
+        console.log(`📖 Successfully fetched ${enrollmentsData.enrollments?.length || 0} enrollments`)
+      } catch (enrollmentError) {
+        console.error('❌ Error fetching enrollments:', enrollmentError)
+        throw new Error(`Failed to fetch enrollments: ${enrollmentError.message}`)
+      }
 
       const users = usersData.users || []
       const enrollments = enrollmentsData.enrollments || []
+
+      console.log(`🔄 Processing ${users.length} users and ${enrollments.length} enrollments...`)
 
       // Group enrollments by user ID
       const enrollmentsByUser = enrollments.reduce((acc, enrollment) => {
@@ -334,7 +350,12 @@ class ThinkificAPIService {
         totalEnrollments: enrollments.length
       }
     } catch (error) {
-      console.error('Error fetching all students with enrollments:', error)
+      console.error('💥 Error in getAllStudentsWithEnrollments:', error)
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      })
       throw error
     }
   }
