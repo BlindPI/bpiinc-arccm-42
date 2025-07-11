@@ -9,7 +9,7 @@ import { ArrowLeft, BookOpen, Users, CheckCircle, AlertTriangle } from 'lucide-r
 import { ThinkificProgressDashboard } from '@/components/enrollment/ThinkificProgressDashboard';
 import { StudentWithProgress, ThinkificCourseProgress } from '@/services/enrollment/thinkificProgressService';
 import { useCourses } from '@/hooks/useCourses';
-import { useCreateEnrollment } from '@/hooks/useEnrollments';
+import { useCreateEnrollment } from '@/hooks/useEnrollment';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
