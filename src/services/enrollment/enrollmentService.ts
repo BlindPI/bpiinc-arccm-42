@@ -13,17 +13,6 @@ export interface EnrollmentMetrics {
     lastMonth: number;
     percentageChange: number;
   };
-  thinkificStats?: {
-    totalEnrollments: number;
-    syncedEnrollments: number;
-    syncedPercentage: number;
-    completedWithThinkific: number;
-    thinkificCompletionRate: number;
-    averageProgress: number;
-    averageScore: number;
-    syncHealth: 'healthy' | 'warning' | 'critical';
-    lastSyncDate: string | null;
-  };
 }
 
 export interface EnrollmentFilters {
@@ -100,76 +89,6 @@ export class EnrollmentService {
     }
   }
 
-  static async getEnrollmentMetricsWithThinkific(): Promise<EnrollmentMetrics> {
-    try {
-      // Get basic metrics first
-      const basicMetrics = await this.getEnrollmentMetrics();
-
-      // Get enrollments with Thinkific fields
-      const { data: enrollments, error } = await supabase
-        .from('enrollments')
-        .select(`
-          status,
-          enrollment_date,
-          sync_status,
-          completion_percentage,
-          practical_score,
-          written_score,
-          total_score,
-          last_thinkific_sync
-        `);
-
-      if (error) throw error;
-
-      const totalEnrollments = enrollments?.length || 0;
-      const syncedEnrollments = enrollments?.filter(e => e.sync_status === 'SYNCED').length || 0;
-      const completedWithThinkific = enrollments?.filter(e =>
-        (e.completion_percentage && e.completion_percentage >= 100)
-      ).length || 0;
-
-      // Calculate averages
-      const progressValues = enrollments?.filter(e => e.completion_percentage != null).map(e => e.completion_percentage) || [];
-      const scoreValues = enrollments?.filter(e => e.total_score != null).map(e => e.total_score) || [];
-      
-      const averageProgress = progressValues.length > 0
-        ? progressValues.reduce((sum, val) => sum + val, 0) / progressValues.length
-        : 0;
-      
-      const averageScore = scoreValues.length > 0
-        ? scoreValues.reduce((sum, val) => sum + val, 0) / scoreValues.length
-        : 0;
-
-      // Get most recent sync date
-      const syncDates = enrollments?.filter(e => e.last_thinkific_sync).map(e => e.last_thinkific_sync) || [];
-      const lastSyncDate = syncDates.length > 0
-        ? syncDates.sort((a, b) => new Date(b!).getTime() - new Date(a!).getTime())[0]
-        : null;
-
-      // Calculate sync health
-      const syncPercentage = totalEnrollments > 0 ? (syncedEnrollments / totalEnrollments) : 0;
-      const syncHealth: 'healthy' | 'warning' | 'critical' =
-        syncPercentage >= 0.8 ? 'healthy' :
-        syncPercentage >= 0.5 ? 'warning' : 'critical';
-
-      return {
-        ...basicMetrics,
-        thinkificStats: {
-          totalEnrollments,
-          syncedEnrollments,
-          syncedPercentage: syncPercentage * 100,
-          completedWithThinkific,
-          thinkificCompletionRate: totalEnrollments > 0 ? (completedWithThinkific / totalEnrollments) * 100 : 0,
-          averageProgress,
-          averageScore,
-          syncHealth,
-          lastSyncDate
-        }
-      };
-    } catch (error) {
-      console.error('Error fetching Thinkific-enhanced enrollment metrics:', error);
-      throw error;
-    }
-  }
 
   static async getFilteredEnrollments(filters: EnrollmentFilters = {}): Promise<EnrollmentWithDetails[]> {
     try {

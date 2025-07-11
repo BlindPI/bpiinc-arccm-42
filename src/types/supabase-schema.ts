@@ -190,10 +190,6 @@ export interface CertificateRequest {
   practical_completion_date?: string;
   pass_threshold?: number;
   calculated_status?: 'AUTO_PASS' | 'AUTO_FAIL' | 'MANUAL_REVIEW' | 'PENDING_SCORES';
-  // Thinkific integration fields
-  thinkific_course_id?: string;
-  thinkific_enrollment_id?: string;
-  last_score_sync?: string;
   // Score weighting configuration
   practical_weight?: number;
   written_weight?: number;
@@ -327,17 +323,6 @@ export function safeAssignmentType(type: string): AssignmentType {
 // Enhanced certificate status types
 export type CertificateCalculatedStatus = 'AUTO_PASS' | 'AUTO_FAIL' | 'MANUAL_REVIEW' | 'PENDING_SCORES';
 
-// Thinkific integration types
-export interface ThinkificCourseData {
-  course_id: string;
-  course_name: string;
-  enrollment_id: string;
-  completion_status: 'completed' | 'in_progress' | 'not_started';
-  completion_date?: string;
-  score?: number;
-  last_accessed?: string;
-}
-
 export interface ScoreThresholds {
   passThreshold: number;
   conditionalMin: number;
@@ -357,7 +342,6 @@ export interface EnhancedCertificateRequest extends CertificateRequest {
   isScoreComplete: boolean;
   passFailStatus: 'PASS' | 'FAIL' | 'CONDITIONAL' | 'PENDING';
   scoreProgress: number; // 0-100 percentage
-  thinkificData?: ThinkificCourseData;
   validationErrors: ValidationError[];
   hasCourseMismatch?: boolean;
 }

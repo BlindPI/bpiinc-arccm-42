@@ -21,7 +21,6 @@ import UnifiedTeams from '@/pages/UnifiedTeams';
 // UNIFIED: RoleManagement → AdminHub
 import Supervision from '@/pages/Supervision';
 import TrainingHub from '@/pages/TrainingHub';
-import ThinkificProgress from '@/pages/ThinkificProgress';
 // UNIFIED: Courses, Locations, Rosters → TrainingHub
 import Enrollments from '@/pages/Enrollments';
 import Certifications from '@/pages/Certifications';
@@ -133,12 +132,6 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      {/* Thinkific Progress Management */}
-      <Route path="/thinkific-progress" element={
-        <ProtectedRoute>
-          <ThinkificProgress />
-        </ProtectedRoute>
-      } />
 
       {/* UNIFIED: Course Management → Training Hub */}
       <Route path="/courses" element={

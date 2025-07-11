@@ -27,36 +27,24 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Enrollment, 
-  EnrollmentWithThinkific, 
-  EnrollmentSyncStatus,
-  getSyncHealthColor,
-  getDisplayProgress,
-  getDisplayScore,
-  getSyncStatusBadgeVariant,
-  formatSyncStatus
-} from '@/types/enrollment';
+import { Enrollment } from '@/types/enrollment';
 import { useUpdateAttendance, useCancelEnrollment } from '@/hooks/useEnrollment';
-import { useThinkificSync } from '@/hooks/useThinkificSync';
 import { type EnrollmentWithDetails } from '@/services/enrollment/enrollmentService';
 
 interface EnrollmentTableProps {
-  enrollments: (EnrollmentWithDetails & Partial<EnrollmentWithThinkific>)[];
+  enrollments: EnrollmentWithDetails[];
   isLoading: boolean;
   compact?: boolean;
   searchTerm?: string;
-  showThinkific?: boolean;
   onApprove?: (enrollmentId: string) => void;
   onReject?: (enrollmentId: string, reason: string) => void;
 }
 
-export function EnrollmentTable({ 
-  enrollments, 
-  isLoading, 
+export function EnrollmentTable({
+  enrollments,
+  isLoading,
   compact = false,
   searchTerm = '',
-  showThinkific = true,
   onApprove,
   onReject
 }: EnrollmentTableProps) {
@@ -68,7 +56,6 @@ export function EnrollmentTable({
   
   const updateAttendance = useUpdateAttendance();
   const cancelEnrollment = useCancelEnrollment();
-  const { syncEnrollment } = useThinkificSync();
 
   const filteredEnrollments = enrollments.filter(enrollment => {
     if (!searchTerm) return true;
@@ -126,13 +113,6 @@ export function EnrollmentTable({
     }
   };
 
-  const handleSyncEnrollment = async (enrollmentId: string) => {
-    try {
-      await syncEnrollment(enrollmentId);
-    } catch (error) {
-      console.error('Failed to sync enrollment:', error);
-    }
-  };
 
   const formatTimeAgo = (dateString: string): string => {
     const date = new Date(dateString);
@@ -168,13 +148,6 @@ export function EnrollmentTable({
             {!compact && <TableHead>Course</TableHead>}
             <TableHead>Status</TableHead>
             {!compact && <TableHead>Attendance</TableHead>}
-            {showThinkific && !compact && (
-              <>
-                <TableHead>Progress</TableHead>
-                <TableHead>Score</TableHead>
-                <TableHead>Sync Status</TableHead>
-              </>
-            )}
             <TableHead>Enrolled</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
@@ -226,48 +199,6 @@ export function EnrollmentTable({
                     <Badge variant="outline">Not marked</Badge>
                   )}
                 </TableCell>
-              )}
-              {showThinkific && !compact && (
-                <>
-                  <TableCell>
-                    {enrollment.completion_percentage !== undefined ? (
-                      <div className="space-y-1">
-                        <Progress value={enrollment.completion_percentage} className="w-16" />
-                        <div className="text-xs text-muted-foreground">
-                          {enrollment.completion_percentage}%
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-sm text-muted-foreground">No data</div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      {enrollment.total_score !== undefined ? (
-                        <div className="font-medium">{enrollment.total_score}%</div>
-                      ) : (
-                        <div className="text-sm text-muted-foreground">N/A</div>
-                      )}
-                      {enrollment.practical_score !== undefined && enrollment.written_score !== undefined && (
-                        <div className="text-xs text-muted-foreground">
-                          P:{enrollment.practical_score}% W:{enrollment.written_score}%
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <Badge variant={getSyncStatusBadgeVariant(enrollment.sync_status || null)}>
-                        {formatSyncStatus(enrollment.sync_status || null)}
-                      </Badge>
-                      {enrollment.last_thinkific_sync && (
-                        <div className="text-xs text-muted-foreground">
-                          {formatTimeAgo(enrollment.last_thinkific_sync)}
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                </>
               )}
               <TableCell>
                 {formatTimeAgo(enrollment.enrollment_date)}
@@ -326,17 +257,6 @@ export function EnrollmentTable({
                       
                       <DropdownMenuSeparator />
                       
-                      {/* Thinkific Actions */}
-                      {showThinkific && (
-                        <>
-                          <DropdownMenuItem 
-                            onClick={() => handleSyncEnrollment(enrollment.id)}
-                          >
-                            Sync with Thinkific
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                        </>
-                      )}
                       
                       {/* Management Actions */}
                       {enrollment.status === 'WAITLISTED' && onApprove && (
@@ -359,7 +279,7 @@ export function EnrollmentTable({
           ))}
           {filteredEnrollments.length === 0 && (
             <TableRow>
-              <TableCell colSpan={showThinkific && !compact ? 9 : compact ? 4 : 6} className="text-center py-8">
+              <TableCell colSpan={compact ? 4 : 6} className="text-center py-8">
                 No enrollments found
               </TableCell>
             </TableRow>

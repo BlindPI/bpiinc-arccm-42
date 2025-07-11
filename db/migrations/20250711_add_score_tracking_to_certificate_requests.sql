@@ -1,4 +1,4 @@
--- Add comprehensive score tracking and Thinkific integration fields to certificate_requests
+-- Add comprehensive score tracking fields to certificate_requests
 -- This migration enhances the certificate review process with automatic pass/fail determination
 
 -- Add score and completion tracking fields
@@ -10,11 +10,6 @@ ALTER TABLE public.certificate_requests ADD COLUMN IF NOT EXISTS online_completi
 ALTER TABLE public.certificate_requests ADD COLUMN IF NOT EXISTS practical_completion_date TIMESTAMP NULL;
 ALTER TABLE public.certificate_requests ADD COLUMN IF NOT EXISTS pass_threshold DECIMAL(5,2) DEFAULT 80.00;
 ALTER TABLE public.certificate_requests ADD COLUMN IF NOT EXISTS calculated_status VARCHAR(20) NULL;
-
--- Thinkific integration fields
-ALTER TABLE public.certificate_requests ADD COLUMN IF NOT EXISTS thinkific_course_id VARCHAR(50) NULL;
-ALTER TABLE public.certificate_requests ADD COLUMN IF NOT EXISTS thinkific_enrollment_id VARCHAR(50) NULL;
-ALTER TABLE public.certificate_requests ADD COLUMN IF NOT EXISTS last_score_sync TIMESTAMP NULL;
 
 -- Score weighting and configuration
 ALTER TABLE public.certificate_requests ADD COLUMN IF NOT EXISTS practical_weight DECIMAL(3,2) DEFAULT 0.50;
@@ -41,8 +36,6 @@ ALTER TABLE public.certificate_requests ADD CONSTRAINT check_calculated_status
 CREATE INDEX IF NOT EXISTS idx_certificate_requests_calculated_status ON certificate_requests(calculated_status);
 CREATE INDEX IF NOT EXISTS idx_certificate_requests_total_score ON certificate_requests(total_score);
 CREATE INDEX IF NOT EXISTS idx_certificate_requests_completion_date ON certificate_requests(completion_date);
-CREATE INDEX IF NOT EXISTS idx_certificate_requests_thinkific_course ON certificate_requests(thinkific_course_id);
-CREATE INDEX IF NOT EXISTS idx_certificate_requests_last_sync ON certificate_requests(last_score_sync);
 
 -- Create function to calculate total score and status
 CREATE OR REPLACE FUNCTION calculate_certificate_status(
@@ -134,23 +127,19 @@ CREATE TRIGGER trigger_update_certificate_calculations
 
 -- Add comments for documentation
 COMMENT ON COLUMN certificate_requests.practical_score IS 'Hands-on practical assessment score (0-100)';
-COMMENT ON COLUMN certificate_requests.written_score IS 'Online written test score from Thinkific (0-100)';
+COMMENT ON COLUMN certificate_requests.written_score IS 'Online written test score (0-100)';
 COMMENT ON COLUMN certificate_requests.total_score IS 'Calculated weighted total score (0-100)';
 COMMENT ON COLUMN certificate_requests.completion_date IS 'Overall completion date (latest of online/practical)';
-COMMENT ON COLUMN certificate_requests.online_completion_date IS 'Date when online portion was completed via Thinkific';
+COMMENT ON COLUMN certificate_requests.online_completion_date IS 'Date when online portion was completed';
 COMMENT ON COLUMN certificate_requests.practical_completion_date IS 'Date when practical assessment was completed';
 COMMENT ON COLUMN certificate_requests.pass_threshold IS 'Minimum score required to pass (configurable per request)';
 COMMENT ON COLUMN certificate_requests.calculated_status IS 'Auto-calculated pass/fail status based on scores and thresholds';
-COMMENT ON COLUMN certificate_requests.thinkific_course_id IS 'Reference to associated Thinkific course';
-COMMENT ON COLUMN certificate_requests.thinkific_enrollment_id IS 'Reference to specific Thinkific enrollment';
-COMMENT ON COLUMN certificate_requests.last_score_sync IS 'Timestamp of last score synchronization from Thinkific';
 
 -- Migration completion notification
 DO $$
 BEGIN
   RAISE NOTICE 'Certificate Requests Score Tracking Enhancement Complete:';
   RAISE NOTICE '✅ Added comprehensive score tracking fields (practical, written, total)';
-  RAISE NOTICE '✅ Added Thinkific integration fields (course_id, enrollment_id, sync tracking)';
   RAISE NOTICE '✅ Added completion date tracking (online, practical, overall)';
   RAISE NOTICE '✅ Added configurable pass/fail thresholds and score weighting';
   RAISE NOTICE '✅ Added automatic score calculation and status determination';

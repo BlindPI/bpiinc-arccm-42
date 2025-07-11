@@ -41,13 +41,3 @@ export const useEnrollmentTrends = () => {
   });
 };
 
-export const useEnrollmentMetricsWithThinkific = () => {
-  const { user } = useAuth();
-
-  return useQuery({
-    queryKey: ['enrollment-metrics-with-thinkific'],
-    queryFn: () => EnrollmentService.getEnrollmentMetricsWithThinkific(),
-    enabled: !!user,
-    refetchInterval: 60000, // Refresh every minute for Thinkific data
-  });
-};
