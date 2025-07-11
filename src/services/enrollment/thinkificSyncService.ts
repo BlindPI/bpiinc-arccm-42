@@ -454,7 +454,7 @@ export class ThinkificSyncService {
     /**
      * Test function to directly call Thinkific API
      */
-    static async testThinkificAPICall(): Promise<ThinkificAPIResponse> {
+    static async; testThinkificAPICall(): Promise<ThinkificAPIResponse> {
       console.log('🧪 TESTING THINKIFIC API CALL DIRECTLY');
       
       const testRequest = {
