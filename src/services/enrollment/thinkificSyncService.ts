@@ -379,7 +379,6 @@ export class ThinkificSyncService {
       const courseData = {
         name: courseName,
         description: `Course imported from Thinkific (ID: ${thinkificCourseId})`,
-        credits: 1, // Default credits
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
