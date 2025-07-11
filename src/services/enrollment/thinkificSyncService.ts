@@ -450,6 +450,21 @@ export class ThinkificSyncService {
       console.error('Error logging sync operation:', error);
       // Don't throw here as this is just logging
     }
+  
+    /**
+     * Test function to directly call Thinkific API
+     */
+    static async testThinkificAPICall(): Promise<ThinkificAPIResponse> {
+      console.log('🧪 TESTING THINKIFIC API CALL DIRECTLY');
+      
+      const testRequest = {
+        action: 'getStudentData',
+        email: 'test@example.com',
+        courseId: '123'  // Test course ID
+      };
+      
+      return this.callThinkificAPI(testRequest);
+    }
   }
 
   /**

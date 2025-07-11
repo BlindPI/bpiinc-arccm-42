@@ -31,6 +31,7 @@ import { WaitlistManager } from './WaitlistManager';
 import { BulkEnrollmentForm } from './BulkEnrollmentForm';
 import { EnrollmentStats } from './EnrollmentStats';
 import { EnrollmentService, type EnrollmentWithDetails } from '@/services/enrollment/enrollmentService';
+import { ThinkificSyncService } from '@/services/enrollment/thinkificSyncService';
 import {
   useThinkificSync,
   useSyncStatistics,
@@ -139,6 +140,23 @@ export function EnrollmentManagementDashboard() {
       toast.success(`Started sync for ${selectedEnrollments.length} enrollments`);
     } catch (error) {
       toast.error('Failed to start sync');
+    }
+  };
+
+  // Test Thinkific API directly
+  const handleTestThinkificAPI = async () => {
+    console.log('🧪 TESTING THINKIFIC API DIRECTLY');
+    try {
+      const response = await ThinkificSyncService.testThinkificAPICall();
+      console.log('🧪 Test API Response:', response);
+      if (response.success) {
+        toast.success('Thinkific API test successful!');
+      } else {
+        toast.error(`Thinkific API test failed: ${response.error}`);
+      }
+    } catch (error) {
+      console.error('🧪 Test API Error:', error);
+      toast.error('Test API call failed');
     }
   };
 
@@ -393,6 +411,13 @@ export function EnrollmentManagementDashboard() {
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-semibold">Thinkific Integration</h3>
               <div className="flex gap-2">
+                <Button
+                  onClick={handleTestThinkificAPI}
+                  variant="destructive"
+                  size="sm"
+                >
+                  🧪 Test API
+                </Button>
                 <Button
                   onClick={handleSyncAllEnrollments}
                   disabled={isBatchSyncing}
