@@ -158,6 +158,11 @@ class ThinkificAPIService {
       const response = await this.makeRequest(`/assessments/${assessmentId}/results?filter[user_id]=${userId}`)
       return response.items || []
     } catch (error) {
+      // Handle 404 errors gracefully - some students may not have assessment results
+      if (error.message.includes('404')) {
+        console.log(`📊 No assessment results found for assessment ${assessmentId} and user ${userId} (this is normal)`)
+        return []
+      }
       console.error('Error fetching assessment results:', error)
       throw error
     }
@@ -313,12 +318,13 @@ class ThinkificAPIService {
   }
 
   async getAllStudentsWithEnrollments(): Promise<{
-    students: Array<ThinkificUser & { 
-      enrollments: Array<ThinkificEnrollment & { course_name?: string }> 
+    students: Array<ThinkificUser & {
+      enrollments: Array<ThinkificEnrollment & { course_name?: string, assessments?: ThinkificAssessment[] }>
     }>
     totalStudents: number
     totalEnrollments: number
     totalCourses: number
+    assessments: ThinkificAssessment[]
   }> {
     try {
       console.log('🔍 Fetching ALL students, enrollments, and courses from Thinkific with pagination...')
@@ -400,27 +406,51 @@ class ThinkificAPIService {
 
       console.log(`🔄 Processing ${allUsers.length} users, ${allEnrollments.length} enrollments, and ${allCourses.length} courses...`)
 
+      // Fetch assessments for all courses
+      console.log('🧪 Fetching assessments for all courses...')
+      const allAssessments: ThinkificAssessment[] = []
+      for (const course of allCourses) {
+        try {
+          const assessments = await this.getAssessments(course.id.toString())
+          allAssessments.push(...assessments)
+        } catch (error) {
+          console.log(`⚠️ Skipping assessments for course ${course.id}: ${error.message}`)
+        }
+      }
+      
+      console.log(`📝 Found ${allAssessments.length} total assessments across all courses`)
+
       // Create course lookup map for name resolution
       const courseLookup = allCourses.reduce((acc, course) => {
         acc[course.id] = course.name
         return acc
       }, {} as Record<number, string>)
 
-      // Group enrollments by user ID and enrich with course names
+      // Create assessments lookup by course
+      const assessmentsByCourse = allAssessments.reduce((acc, assessment) => {
+        if (!acc[assessment.course_id]) {
+          acc[assessment.course_id] = []
+        }
+        acc[assessment.course_id].push(assessment)
+        return acc
+      }, {} as Record<number, ThinkificAssessment[]>)
+
+      // Group enrollments by user ID and enrich with course names and assessments
       const enrollmentsByUser = allEnrollments.reduce((acc, enrollment) => {
         if (!acc[enrollment.user_id]) {
           acc[enrollment.user_id] = []
         }
         
-        // Enrich enrollment with course name
+        // Enrich enrollment with course name and assessments
         const enrichedEnrollment = {
           ...enrollment,
-          course_name: courseLookup[enrollment.course_id] || `Course ${enrollment.course_id}`
+          course_name: courseLookup[enrollment.course_id] || `Course ${enrollment.course_id}`,
+          assessments: assessmentsByCourse[enrollment.course_id] || []
         }
         
         acc[enrollment.user_id].push(enrichedEnrollment)
         return acc
-      }, {} as Record<number, Array<ThinkificEnrollment & { course_name?: string }>>)
+      }, {} as Record<number, Array<ThinkificEnrollment & { course_name?: string, assessments?: ThinkificAssessment[] }>>)
 
       // Combine users with their enriched enrollments
       const studentsWithEnrollments = allUsers.map(user => ({
@@ -439,7 +469,8 @@ class ThinkificAPIService {
         students: studentsWithEnrollments,
         totalStudents: studentsWithEnrollments.length,
         totalEnrollments: allEnrollments.length,
-        totalCourses: allCourses.length
+        totalCourses: allCourses.length,
+        assessments: allAssessments
       }
     } catch (error) {
       console.error('💥 Error in getAllStudentsWithEnrollments:', error)

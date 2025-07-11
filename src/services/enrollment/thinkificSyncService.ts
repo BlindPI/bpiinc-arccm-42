@@ -44,9 +44,10 @@ export class ThinkificSyncService {
     console.log('Options:', options);
     
     try {
-      // Call Thinkific API to get all students with enrollments using comprehensive method
+      // Call Thinkific API to get all students with enrollments and assessments using BULK method
+      console.log('🚀 Calling BULK getAllStudentsWithEnrollments method...');
       const response = await this.callThinkificAPI({
-        action: 'getAllStudents' // This maps to getAllStudentsWithEnrollments in the edge function
+        action: 'getAllStudentsWithEnrollments' // Use the correct bulk method name
       });
 
       if (!response.success) {
@@ -55,16 +56,18 @@ export class ThinkificSyncService {
 
       const thinkificData = response.data;
       const students = thinkificData.students || [];
+      const assessments = thinkificData.assessments || [];
       
-      console.log(`📊 Found ${students.length} students with ${thinkificData.totalEnrollments} enrollments in Thinkific`);
-      console.log(`🎯 Starting ENHANCED sync to pull detailed progress data for all students...`);
+      console.log(`📊 BULK FETCH SUCCESS: ${students.length} students with ${thinkificData.totalEnrollments} enrollments`);
+      console.log(`🎯 Assessment data included: ${assessments.length} assessment records`);
+      console.log(`🎯 Starting BULK processing to store all data...`);
 
       let success = 0;
       let failed = 0;
       const errors: string[] = [];
       const importedStudents: any[] = [];
 
-      // Process each student and their enrollments with enhanced data collection
+      // Process each student using the BULK data (no additional API calls needed)
       for (let i = 0; i < students.length; i++) {
         const student = students[i];
         
@@ -72,12 +75,12 @@ export class ThinkificSyncService {
           total: students.length,
           completed: i,
           failed: failed,
-          current: `Processing ${student.first_name} ${student.last_name} (${student.email}) - Enhanced Sync`
+          current: `Processing ${student.first_name} ${student.last_name} (${student.email}) - BULK Processing`
         });
 
         try {
-          // Import this student's enrollments with comprehensive progress data
-          const studentResult = await this.importStudentEnrollmentsEnhanced(student);
+          // Import this student's enrollments using BULK data (no additional API calls)
+          const studentResult = await this.importStudentEnrollmentsBulk(student, assessments);
           
           if (studentResult.success) {
             success += studentResult.enrollmentsCreated;
@@ -96,17 +99,17 @@ export class ThinkificSyncService {
         }
 
         // Small delay to avoid overwhelming the database
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
 
       onProgress?.({
         total: students.length,
         completed: success,
         failed: failed,
-        current: 'Import completed'
+        current: 'BULK import completed'
       });
 
-      console.log(`✅ IMPORT COMPLETED: ${success} progress records stored, ${failed} failed`);
+      console.log(`✅ BULK IMPORT COMPLETED: ${success} progress records stored, ${failed} failed`);
 
       return {
         success,
@@ -124,6 +127,120 @@ export class ThinkificSyncService {
         total: 0,
         errors: [error instanceof Error ? error.message : 'Unknown error'],
         importedStudents: []
+      };
+    }
+  }
+
+  /**
+   * BULK: Import comprehensive Thinkific progress data using pre-fetched bulk assessment data (NO additional API calls)
+   */
+  static async importStudentEnrollmentsBulk(student: any, allAssessments: any[] = []): Promise<{
+    success: boolean;
+    enrollmentsCreated: number;
+    error?: string;
+    details?: any[];
+  }> {
+    console.log(`👤 BULK: Importing comprehensive Thinkific data for ${student.email} using pre-fetched bulk data`);
+    
+    try {
+      const enrollments = student.enrollments || [];
+      let progressRecordsStored = 0;
+      const details: any[] = [];
+
+      // Check if student profile exists in our system
+      let studentProfileId = await this.findOrCreateUser(student);
+      
+      if (!studentProfileId) {
+        return {
+          success: false,
+          enrollmentsCreated: 0,
+          error: 'Failed to find or create student profile in local system'
+        };
+      }
+
+      // For each enrollment, use the bulk assessment data (NO API calls)
+      for (const enrollment of enrollments) {
+        try {
+          console.log(`📊 BULK: Processing course ${enrollment.course_id} using bulk assessment data...`);
+          
+          // Find assessment data from bulk assessments array
+          const courseAssessments = allAssessments.filter(
+            (assessment: any) => assessment.course_id === enrollment.course_id
+          );
+          
+          let assessmentData = null;
+          let overallScore = null;
+
+          if (courseAssessments.length > 0) {
+            // Build assessment data from bulk fetch
+            assessmentData = {
+              assessments: courseAssessments,
+              assessmentResults: [], // This would need to be populated if available in bulk data
+              course: enrollment.course || null
+            };
+            
+            // Calculate overall score if assessment data is available
+            if (courseAssessments.length > 0) {
+              const totalPossible = courseAssessments.reduce((sum: number, assessment: any) => sum + (assessment.points_possible || 0), 0);
+              const totalScore = enrollment.total_score || 0;
+              overallScore = {
+                total: totalScore,
+                possible: totalPossible,
+                percentage: totalPossible > 0 ? (totalScore / totalPossible) * 100 : 0,
+                practical: enrollment.practical_score,
+                written: enrollment.written_score,
+                passed: enrollment.passed || false
+              };
+            }
+            
+            console.log(`✅ BULK: Found ${courseAssessments.length} assessments for course ${enrollment.course_id}`);
+          } else {
+            console.log(`ℹ️ BULK: No assessments found for course ${enrollment.course_id} in bulk data`);
+          }
+          
+          // Store the enhanced Thinkific enrollment and assessment data
+          await this.storeEnhancedThinkificProgressData(
+            studentProfileId,
+            enrollment,
+            student,
+            assessmentData,
+            overallScore
+          );
+          
+          progressRecordsStored++;
+          details.push({
+            action: 'bulk_enhanced_progress_stored',
+            thinkificCourseId: enrollment.course_id,
+            thinkificEnrollmentId: enrollment.id,
+            courseName: enrollment.course?.name || `Course ${enrollment.course_id}`,
+            progress: enrollment.percentage_completed || 0,
+            completionStatus: enrollment.completed_at ? 'COMPLETED' : 'IN_PROGRESS',
+            assessmentsCount: courseAssessments.length,
+            resultsCount: 0, // Would need to be calculated from bulk data
+            overallScore: overallScore,
+            dataSource: 'BULK_FETCH'
+          });
+          
+        } catch (error) {
+          console.error(`Error storing bulk progress data for enrollment ${enrollment.id}:`, error);
+          // Fallback to basic storage
+          await this.storeThinkificProgressData(studentProfileId, enrollment, student);
+          progressRecordsStored++;
+        }
+      }
+
+      return {
+        success: true,
+        enrollmentsCreated: progressRecordsStored,
+        details
+      };
+
+    } catch (error) {
+      console.error(`Error importing bulk student data for ${student.email}:`, error);
+      return {
+        success: false,
+        enrollmentsCreated: 0,
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   }
