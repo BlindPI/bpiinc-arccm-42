@@ -143,14 +143,14 @@ export class ThinkificSyncService {
       let enrollmentsCreated = 0;
       const details: any[] = [];
 
-      // Check if user exists in our system
-      let userId = await this.findOrCreateUser(student);
+      // Check if student profile exists in our system
+      let studentProfileId = await this.findOrCreateUser(student);
       
-      if (!userId) {
+      if (!studentProfileId) {
         return {
           success: false,
           enrollmentsCreated: 0,
-          error: 'Failed to find or create user in local system'
+          error: 'Failed to find or create student profile in local system'
         };
       }
 
@@ -166,7 +166,7 @@ export class ThinkificSyncService {
           }
 
           // Check if enrollment already exists
-          const existingEnrollment = await this.findExistingEnrollment(userId, courseOfferingId);
+          const existingEnrollment = await this.findExistingEnrollment(studentProfileId, courseOfferingId);
           
           if (existingEnrollment) {
             console.log(`📝 Updating existing enrollment for ${student.email} in course ${enrollment.course_id}`);
@@ -183,7 +183,7 @@ export class ThinkificSyncService {
             
             // Create new enrollment record
             const newEnrollmentId = await this.createEnrollmentFromThinkific(
-              userId,
+              studentProfileId,
               courseOfferingId,
               enrollment,
               student
@@ -220,49 +220,38 @@ export class ThinkificSyncService {
   }
 
   /**
-   * Find existing user by email or create profile record
+   * Find existing student profile by email or create new one using dedicated student profiles table
    */
   private static async findOrCreateUser(student: any): Promise<string | null> {
     try {
-      // First, try to find existing user by email
-      const { data: existingUser, error: findError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', student.email)
-        .single();
-
-      if (existingUser) {
-        console.log(`👤 Found existing user: ${student.email}`);
-        return existingUser.id;
-      }
-
-      if (findError && findError.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.error('Error finding user:', findError);
-        return null;
-      }
-
-      // Create a new profile record (Note: In real system, this would require proper user creation)
-      console.log(`➕ Creating new profile for: ${student.email}`);
+      console.log(`👤 Finding or creating student profile for: ${student.email}`);
       
-      const { data: newUser, error: createError } = await supabase
-        .from('profiles')
-        .insert({
-          email: student.email,
-          display_name: `${student.first_name} ${student.last_name}`.trim(),
-          first_name: student.first_name,
-          last_name: student.last_name,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select('id')
-        .single();
+      // Use the database function to find or create student profile
+      const { data: result, error } = await supabase
+        .rpc('find_or_create_student_profile', {
+          p_email: student.email,
+          p_first_name: student.first_name || null,
+          p_last_name: student.last_name || null,
+          p_thinkific_user_id: student.id?.toString() || null,
+          p_student_metadata: {
+            thinkific_import: true,
+            import_date: new Date().toISOString(),
+            original_student_data: {
+              id: student.id,
+              email: student.email,
+              first_name: student.first_name,
+              last_name: student.last_name
+            }
+          }
+        });
 
-      if (createError) {
-        console.error('Error creating user:', createError);
+      if (error) {
+        console.error('Error finding or creating student profile:', error);
         return null;
       }
 
-      return newUser?.id || null;
+      console.log(`✅ Student profile resolved: ${result}`);
+      return result;
 
     } catch (error) {
       console.error('Error in findOrCreateUser:', error);
@@ -320,12 +309,12 @@ export class ThinkificSyncService {
   /**
    * Find existing enrollment
    */
-  private static async findExistingEnrollment(userId: string, courseOfferingId: string): Promise<any> {
+  private static async findExistingEnrollment(studentProfileId: string, courseOfferingId: string): Promise<any> {
     try {
       const { data: enrollment, error } = await supabase
         .from('enrollments')
         .select('id')
-        .eq('user_id', userId)
+        .eq('student_profile_id', studentProfileId)
         .eq('course_offering_id', courseOfferingId)
         .single();
 
@@ -345,14 +334,14 @@ export class ThinkificSyncService {
    * Create new enrollment from Thinkific data
    */
   private static async createEnrollmentFromThinkific(
-    userId: string,
+    studentProfileId: string,
     courseOfferingId: string,
     thinkificEnrollment: any,
     student: any
   ): Promise<string | null> {
     try {
       const enrollmentData = {
-        user_id: userId,
+        student_profile_id: studentProfileId, // Link to student profile instead of user_id
         course_offering_id: courseOfferingId,
         status: 'ENROLLED',
         enrollment_date: thinkificEnrollment.started_at || new Date().toISOString(),
@@ -366,6 +355,8 @@ export class ThinkificSyncService {
         updated_at: new Date().toISOString()
       };
 
+      console.log(`📋 Creating enrollment with data:`, enrollmentData);
+
       const { data: newEnrollment, error } = await supabase
         .from('enrollments')
         .insert(enrollmentData)
@@ -376,6 +367,8 @@ export class ThinkificSyncService {
         console.error('Error creating enrollment:', error);
         return null;
       }
+
+      console.log(`✅ Created enrollment: ${newEnrollment.id}`);
 
       // Log the import operation
       await this.logSyncOperation({
