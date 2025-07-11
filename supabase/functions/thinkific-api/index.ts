@@ -2,12 +2,14 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { corsHeaders } from "../_shared/cors.ts"
 
 interface ThinkificRequest {
-  action: 'getEnrollment' | 'getAssessments' | 'getAssessmentResults' | 'getCourse' | 'getStudentData' | 'syncScores'
+  action: 'getEnrollment' | 'getAssessments' | 'getAssessmentResults' | 'getCourse' | 'getStudentData' | 'syncScores' | 'getAllStudents' | 'getAllEnrollments' | 'getAllCourses'
   email?: string
   courseId?: string
   enrollmentId?: string
   assessmentId?: string
   userIds?: string[]
+  page?: number
+  per_page?: number
 }
 
 interface ThinkificEnrollment {
@@ -46,6 +48,27 @@ interface ThinkificCourse {
   slug: string
   description: string
   status: string
+}
+
+interface ThinkificUser {
+  id: number
+  email: string
+  first_name: string
+  last_name: string
+  created_at: string
+  updated_at: string
+  roles: string[]
+}
+
+interface BulkDataResponse {
+  users?: ThinkificUser[]
+  enrollments?: ThinkificEnrollment[]
+  courses?: ThinkificCourse[]
+  pagination?: {
+    current_page: number
+    total_pages: number
+    total_items: number
+  }
 }
 
 class ThinkificAPIService {
@@ -217,6 +240,105 @@ class ThinkificAPIService {
     }
   }
 
+  async getAllUsers(page: number = 1, perPage: number = 100): Promise<BulkDataResponse> {
+    try {
+      const response = await this.makeRequest(`/users?page=${page}&per_page=${perPage}`)
+      
+      return {
+        users: response.items || [],
+        pagination: {
+          current_page: response.meta?.pagination?.current_page || page,
+          total_pages: response.meta?.pagination?.total_pages || 1,
+          total_items: response.meta?.pagination?.total_items || response.items?.length || 0
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching all users:', error)
+      throw error
+    }
+  }
+
+  async getAllCourses(page: number = 1, perPage: number = 100): Promise<BulkDataResponse> {
+    try {
+      const response = await this.makeRequest(`/courses?page=${page}&per_page=${perPage}`)
+      
+      return {
+        courses: response.items || [],
+        pagination: {
+          current_page: response.meta?.pagination?.current_page || page,
+          total_pages: response.meta?.pagination?.total_pages || 1,
+          total_items: response.meta?.pagination?.total_items || response.items?.length || 0
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching all courses:', error)
+      throw error
+    }
+  }
+
+  async getAllEnrollments(page: number = 1, perPage: number = 100): Promise<BulkDataResponse> {
+    try {
+      const response = await this.makeRequest(`/enrollments?page=${page}&per_page=${perPage}`)
+      
+      return {
+        enrollments: response.items || [],
+        pagination: {
+          current_page: response.meta?.pagination?.current_page || page,
+          total_pages: response.meta?.pagination?.total_pages || 1,
+          total_items: response.meta?.pagination?.total_items || response.items?.length || 0
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching all enrollments:', error)
+      throw error
+    }
+  }
+
+  async getAllStudentsWithEnrollments(): Promise<{
+    students: Array<ThinkificUser & { enrollments: ThinkificEnrollment[] }>
+    totalStudents: number
+    totalEnrollments: number
+  }> {
+    try {
+      console.log('🔍 Fetching all students and enrollments from Thinkific...')
+      
+      // Fetch all users and enrollments in parallel
+      const [usersData, enrollmentsData] = await Promise.all([
+        this.getAllUsers(1, 1000), // Get first 1000 users
+        this.getAllEnrollments(1, 1000) // Get first 1000 enrollments
+      ])
+
+      const users = usersData.users || []
+      const enrollments = enrollmentsData.enrollments || []
+
+      // Group enrollments by user ID
+      const enrollmentsByUser = enrollments.reduce((acc, enrollment) => {
+        if (!acc[enrollment.user_id]) {
+          acc[enrollment.user_id] = []
+        }
+        acc[enrollment.user_id].push(enrollment)
+        return acc
+      }, {} as Record<number, ThinkificEnrollment[]>)
+
+      // Combine users with their enrollments
+      const studentsWithEnrollments = users.map(user => ({
+        ...user,
+        enrollments: enrollmentsByUser[user.id] || []
+      })).filter(student => student.enrollments.length > 0) // Only include students with enrollments
+
+      console.log(`✅ Found ${studentsWithEnrollments.length} students with ${enrollments.length} total enrollments`)
+
+      return {
+        students: studentsWithEnrollments,
+        totalStudents: studentsWithEnrollments.length,
+        totalEnrollments: enrollments.length
+      }
+    } catch (error) {
+      console.error('Error fetching all students with enrollments:', error)
+      throw error
+    }
+  }
+
   async syncScores(userIds: string[]): Promise<{ success: number; failed: number; errors: string[] }> {
     let success = 0
     let failed = 0
@@ -245,7 +367,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, email, courseId, enrollmentId, assessmentId, userIds }: ThinkificRequest = await req.json()
+    const { action, email, courseId, enrollmentId, assessmentId, userIds, page, per_page }: ThinkificRequest = await req.json()
 
     const thinkificService = new ThinkificAPIService()
 
@@ -292,6 +414,22 @@ serve(async (req) => {
           throw new Error('UserIds array is required for syncScores')
         }
         result = await thinkificService.syncScores(userIds)
+        break
+
+      case 'getAllStudents':
+        result = await thinkificService.getAllStudentsWithEnrollments()
+        break
+
+      case 'getAllCourses':
+        const coursePage = page || 1
+        const coursePerPage = per_page || 100
+        result = await thinkificService.getAllCourses(coursePage, coursePerPage)
+        break
+
+      case 'getAllEnrollments':
+        const enrollmentPage = page || 1
+        const enrollmentPerPage = per_page || 100
+        result = await thinkificService.getAllEnrollments(enrollmentPage, enrollmentPerPage)
         break
 
       default:

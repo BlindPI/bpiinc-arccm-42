@@ -110,6 +110,50 @@ export function EnrollmentManagementDashboard() {
     }
   });
 
+  // Thinkific import functionality
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState<{
+    total: number;
+    completed: number;
+    failed: number;
+    current?: string;
+  } | null>(null);
+
+  const { mutate: importFromThinkific, isPending: isImportPending } = useMutation({
+    mutationFn: async () => {
+      setIsImporting(true);
+      setImportProgress({ total: 0, completed: 0, failed: 0 });
+      
+      return ThinkificSyncService.importStudentsFromThinkific(
+        {}, // options
+        (progress) => {
+          setImportProgress(progress);
+        }
+      );
+    },
+    onSuccess: (result) => {
+      setIsImporting(false);
+      setImportProgress(null);
+      
+      if (result.total > 0) {
+        toast.success(
+          `Import completed! ${result.success} enrollments created, ${result.failed} failed`
+        );
+      } else {
+        toast.info('No students found in Thinkific to import');
+      }
+      
+      // Refresh data
+      queryClient.invalidateQueries({ queryKey: ['enrollments-filtered'] });
+      queryClient.invalidateQueries({ queryKey: ['enrollment-metrics'] });
+    },
+    onError: (error) => {
+      setIsImporting(false);
+      setImportProgress(null);
+      toast.error('Import failed: ' + error.message);
+    }
+  });
+
   // Thinkific sync handlers
   const handleSyncAllEnrollments = async () => {
     console.log('🎬 SYNC ALL BUTTON CLICKED');
@@ -126,6 +170,15 @@ export function EnrollmentManagementDashboard() {
     } catch (error) {
       console.error('❌ Failed to start batch sync:', error);
       toast.error('Failed to start batch sync');
+    }
+  };
+
+  const handleImportFromThinkific = () => {
+    if (window.confirm(
+      'This will import all students and enrollments from Thinkific. ' +
+      'Existing enrollments will be updated. Continue?'
+    )) {
+      importFromThinkific();
     }
   };
 
@@ -419,8 +472,25 @@ export function EnrollmentManagementDashboard() {
                   🧪 Test API
                 </Button>
                 <Button
+                  onClick={handleImportFromThinkific}
+                  disabled={isImporting || isBatchSyncing}
+                  variant="default"
+                >
+                  {isImporting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Importing...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Import from Thinkific
+                    </>
+                  )}
+                </Button>
+                <Button
                   onClick={handleSyncAllEnrollments}
-                  disabled={isBatchSyncing}
+                  disabled={isBatchSyncing || isImporting}
                   variant="outline"
                 >
                   {isBatchSyncing ? (
@@ -438,13 +508,47 @@ export function EnrollmentManagementDashboard() {
                 {selectedEnrollments.length > 0 && (
                   <Button
                     onClick={handleSyncSelectedEnrollments}
-                    disabled={isBatchSyncing}
+                    disabled={isBatchSyncing || isImporting}
                   >
                     Sync Selected ({selectedEnrollments.length})
                   </Button>
                 )}
               </div>
             </div>
+
+            {/* Import Progress */}
+            {isImporting && importProgress && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Download className="h-4 w-4" />
+                    Importing from Thinkific
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex justify-between text-sm">
+                      <span>Progress</span>
+                      <span>{importProgress.completed} of {importProgress.total} students</span>
+                    </div>
+                    <Progress
+                      value={importProgress.total > 0 ? (importProgress.completed / importProgress.total) * 100 : 0}
+                      className="w-full"
+                    />
+                    {importProgress.current && (
+                      <div className="text-sm text-muted-foreground">
+                        {importProgress.current}
+                      </div>
+                    )}
+                    {importProgress.failed > 0 && (
+                      <div className="text-sm text-red-600">
+                        {importProgress.failed} errors occurred
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Sync Statistics */}
             {syncStats && (

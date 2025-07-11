@@ -28,6 +28,426 @@ export interface SyncProgress {
 
 export class ThinkificSyncService {
   /**
+   * Import all students from Thinkific and create local enrollment records
+   */
+  static async importStudentsFromThinkific(
+    options: SyncOptions = {},
+    onProgress?: (progress: SyncProgress) => void
+  ): Promise<{
+    success: number;
+    failed: number;
+    total: number;
+    errors: string[];
+    importedStudents: any[];
+  }> {
+    console.log('🚀 STARTING THINKIFIC STUDENT IMPORT');
+    console.log('Options:', options);
+    
+    try {
+      // Call Thinkific API to get all students with enrollments
+      const response = await this.callThinkificAPI({
+        action: 'getAllStudents'
+      });
+
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to fetch students from Thinkific');
+      }
+
+      const thinkificData = response.data;
+      const students = thinkificData.students || [];
+      
+      console.log(`📊 Found ${students.length} students with ${thinkificData.totalEnrollments} enrollments in Thinkific`);
+
+      let success = 0;
+      let failed = 0;
+      const errors: string[] = [];
+      const importedStudents: any[] = [];
+
+      // Process each student and their enrollments
+      for (let i = 0; i < students.length; i++) {
+        const student = students[i];
+        
+        onProgress?.({
+          total: students.length,
+          completed: i,
+          failed: failed,
+          current: `Processing ${student.first_name} ${student.last_name} (${student.email})`
+        });
+
+        try {
+          // Import this student's enrollments
+          const studentResult = await this.importStudentEnrollments(student);
+          
+          if (studentResult.success) {
+            success += studentResult.enrollmentsCreated;
+            importedStudents.push({
+              student: student,
+              enrollmentsCreated: studentResult.enrollmentsCreated,
+              details: studentResult.details
+            });
+          } else {
+            failed++;
+            errors.push(`Failed to import ${student.email}: ${studentResult.error}`);
+          }
+        } catch (error) {
+          failed++;
+          errors.push(`Error importing ${student.email}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+
+        // Small delay to avoid overwhelming the database
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      onProgress?.({
+        total: students.length,
+        completed: success,
+        failed: failed,
+        current: 'Import completed'
+      });
+
+      console.log(`✅ IMPORT COMPLETED: ${success} enrollments created, ${failed} failed`);
+
+      return {
+        success,
+        failed,
+        total: students.length,
+        errors,
+        importedStudents
+      };
+
+    } catch (error) {
+      console.error('💥 Error importing students from Thinkific:', error);
+      return {
+        success: 0,
+        failed: 0,
+        total: 0,
+        errors: [error instanceof Error ? error.message : 'Unknown error'],
+        importedStudents: []
+      };
+    }
+  }
+
+  /**
+   * Import enrollments for a single student from Thinkific
+   */
+  static async importStudentEnrollments(student: any): Promise<{
+    success: boolean;
+    enrollmentsCreated: number;
+    error?: string;
+    details?: any[];
+  }> {
+    console.log(`👤 Importing enrollments for ${student.email}`);
+    
+    try {
+      const enrollments = student.enrollments || [];
+      let enrollmentsCreated = 0;
+      const details: any[] = [];
+
+      // Check if user exists in our system
+      let userId = await this.findOrCreateUser(student);
+      
+      if (!userId) {
+        return {
+          success: false,
+          enrollmentsCreated: 0,
+          error: 'Failed to find or create user in local system'
+        };
+      }
+
+      // Process each enrollment
+      for (const enrollment of enrollments) {
+        try {
+          // Find or create course offering
+          const courseOfferingId = await this.findOrCreateCourseOffering(enrollment.course_id);
+          
+          if (!courseOfferingId) {
+            console.warn(`⚠️ Could not find course offering for Thinkific course ${enrollment.course_id}`);
+            continue;
+          }
+
+          // Check if enrollment already exists
+          const existingEnrollment = await this.findExistingEnrollment(userId, courseOfferingId);
+          
+          if (existingEnrollment) {
+            console.log(`📝 Updating existing enrollment for ${student.email} in course ${enrollment.course_id}`);
+            
+            // Update existing enrollment with Thinkific data
+            await this.updateEnrollmentWithThinkificData(existingEnrollment.id, enrollment, student);
+            details.push({
+              action: 'updated',
+              enrollmentId: existingEnrollment.id,
+              thinkificEnrollmentId: enrollment.id
+            });
+          } else {
+            console.log(`📋 Creating new enrollment for ${student.email} in course ${enrollment.course_id}`);
+            
+            // Create new enrollment record
+            const newEnrollmentId = await this.createEnrollmentFromThinkific(
+              userId,
+              courseOfferingId,
+              enrollment,
+              student
+            );
+            
+            if (newEnrollmentId) {
+              enrollmentsCreated++;
+              details.push({
+                action: 'created',
+                enrollmentId: newEnrollmentId,
+                thinkificEnrollmentId: enrollment.id
+              });
+            }
+          }
+        } catch (error) {
+          console.error(`Error processing enrollment ${enrollment.id}:`, error);
+        }
+      }
+
+      return {
+        success: true,
+        enrollmentsCreated,
+        details
+      };
+
+    } catch (error) {
+      console.error(`Error importing student ${student.email}:`, error);
+      return {
+        success: false,
+        enrollmentsCreated: 0,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Find existing user by email or create profile record
+   */
+  private static async findOrCreateUser(student: any): Promise<string | null> {
+    try {
+      // First, try to find existing user by email
+      const { data: existingUser, error: findError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', student.email)
+        .single();
+
+      if (existingUser) {
+        console.log(`👤 Found existing user: ${student.email}`);
+        return existingUser.id;
+      }
+
+      if (findError && findError.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.error('Error finding user:', findError);
+        return null;
+      }
+
+      // Create a new profile record (Note: In real system, this would require proper user creation)
+      console.log(`➕ Creating new profile for: ${student.email}`);
+      
+      const { data: newUser, error: createError } = await supabase
+        .from('profiles')
+        .insert({
+          email: student.email,
+          display_name: `${student.first_name} ${student.last_name}`.trim(),
+          first_name: student.first_name,
+          last_name: student.last_name,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select('id')
+        .single();
+
+      if (createError) {
+        console.error('Error creating user:', createError);
+        return null;
+      }
+
+      return newUser?.id || null;
+
+    } catch (error) {
+      console.error('Error in findOrCreateUser:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Find course offering by Thinkific course ID
+   */
+  private static async findOrCreateCourseOffering(thinkificCourseId: number): Promise<string | null> {
+    try {
+      // First, try to find existing mapping
+      const { data: mapping, error: mappingError } = await supabase
+        .from('course_thinkific_mappings')
+        .select('course_offering_id')
+        .eq('thinkific_course_id', thinkificCourseId.toString())
+        .eq('is_active', true)
+        .single();
+
+      if (mapping) {
+        console.log(`🗺️ Found course mapping for Thinkific course ${thinkificCourseId}`);
+        return mapping.course_offering_id;
+      }
+
+      if (mappingError && mappingError.code !== 'PGRST116') {
+        console.error('Error finding course mapping:', mappingError);
+      }
+
+      // Try to find course offering by thinkific_course_id field
+      const { data: courseOffering, error: courseError } = await supabase
+        .from('course_offerings')
+        .select('id')
+        .eq('thinkific_course_id', thinkificCourseId.toString())
+        .single();
+
+      if (courseOffering) {
+        console.log(`📚 Found course offering with Thinkific ID ${thinkificCourseId}`);
+        return courseOffering.id;
+      }
+
+      if (courseError && courseError.code !== 'PGRST116') {
+        console.error('Error finding course offering:', courseError);
+      }
+
+      console.warn(`⚠️ No course offering found for Thinkific course ${thinkificCourseId}`);
+      return null;
+
+    } catch (error) {
+      console.error('Error in findOrCreateCourseOffering:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Find existing enrollment
+   */
+  private static async findExistingEnrollment(userId: string, courseOfferingId: string): Promise<any> {
+    try {
+      const { data: enrollment, error } = await supabase
+        .from('enrollments')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('course_offering_id', courseOfferingId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error finding existing enrollment:', error);
+        return null;
+      }
+
+      return enrollment;
+    } catch (error) {
+      console.error('Error in findExistingEnrollment:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Create new enrollment from Thinkific data
+   */
+  private static async createEnrollmentFromThinkific(
+    userId: string,
+    courseOfferingId: string,
+    thinkificEnrollment: any,
+    student: any
+  ): Promise<string | null> {
+    try {
+      const enrollmentData = {
+        user_id: userId,
+        course_offering_id: courseOfferingId,
+        status: 'ENROLLED',
+        enrollment_date: thinkificEnrollment.started_at || new Date().toISOString(),
+        thinkific_enrollment_id: thinkificEnrollment.id.toString(),
+        thinkific_course_id: thinkificEnrollment.course_id.toString(),
+        completion_percentage: thinkificEnrollment.percentage_completed || 0,
+        thinkific_completed_at: thinkificEnrollment.completed_at,
+        last_thinkific_sync: new Date().toISOString(),
+        sync_status: 'SYNCED',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data: newEnrollment, error } = await supabase
+        .from('enrollments')
+        .insert(enrollmentData)
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error('Error creating enrollment:', error);
+        return null;
+      }
+
+      // Log the import operation
+      await this.logSyncOperation({
+        enrollment_id: newEnrollment.id,
+        operation_type: 'INDIVIDUAL_SYNC',
+        status: 'SUCCESS',
+        thinkific_course_id: thinkificEnrollment.course_id.toString(),
+        details: {
+          action: 'imported_from_thinkific',
+          student_email: student.email,
+          thinkific_enrollment_id: thinkificEnrollment.id,
+          progress: thinkificEnrollment.percentage_completed
+        }
+      });
+
+      return newEnrollment.id;
+
+    } catch (error) {
+      console.error('Error creating enrollment from Thinkific:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Update existing enrollment with Thinkific data
+   */
+  private static async updateEnrollmentWithThinkificData(
+    enrollmentId: string,
+    thinkificEnrollment: any,
+    student: any
+  ): Promise<void> {
+    try {
+      const updateData = {
+        thinkific_enrollment_id: thinkificEnrollment.id.toString(),
+        thinkific_course_id: thinkificEnrollment.course_id.toString(),
+        completion_percentage: thinkificEnrollment.percentage_completed || 0,
+        thinkific_completed_at: thinkificEnrollment.completed_at,
+        last_thinkific_sync: new Date().toISOString(),
+        sync_status: 'SYNCED',
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('enrollments')
+        .update(updateData)
+        .eq('id', enrollmentId);
+
+      if (error) {
+        console.error('Error updating enrollment:', error);
+        return;
+      }
+
+      // Log the sync operation
+      await this.logSyncOperation({
+        enrollment_id: enrollmentId,
+        operation_type: 'INDIVIDUAL_SYNC',
+        status: 'SUCCESS',
+        thinkific_course_id: thinkificEnrollment.course_id.toString(),
+        details: {
+          action: 'updated_from_thinkific',
+          student_email: student.email,
+          thinkific_enrollment_id: thinkificEnrollment.id,
+          progress: thinkificEnrollment.percentage_completed
+        }
+      });
+
+    } catch (error) {
+      console.error('Error updating enrollment with Thinkific data:', error);
+    }
+  }
+
+  /**
    * Sync a single enrollment with Thinkific data
    */
   static async syncEnrollment(
