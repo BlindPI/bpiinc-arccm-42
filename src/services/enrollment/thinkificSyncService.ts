@@ -158,10 +158,10 @@ export class ThinkificSyncService {
       for (const enrollment of enrollments) {
         try {
           // Find or create course offering
-          const courseOfferingId = await this.findOrCreateCourseOffering(enrollment.course_id);
+          const courseOfferingId = await this.findOrCreateCourseOffering(enrollment.course_id, enrollment.course);
           
           if (!courseOfferingId) {
-            console.warn(`⚠️ Could not find course offering for Thinkific course ${enrollment.course_id}`);
+            console.warn(`⚠️ Could not find or create course offering for Thinkific course ${enrollment.course_id}`);
             continue;
           }
 
@@ -260,9 +260,9 @@ export class ThinkificSyncService {
   }
 
   /**
-   * Find course offering by Thinkific course ID
+   * Find course offering by Thinkific course ID or create one from Thinkific data
    */
-  private static async findOrCreateCourseOffering(thinkificCourseId: number): Promise<string | null> {
+  private static async findOrCreateCourseOffering(thinkificCourseId: number, thinkificCourseData?: any): Promise<string | null> {
     try {
       // First, try to find existing mapping
       const { data: mapping, error: mappingError } = await supabase
@@ -297,11 +297,109 @@ export class ThinkificSyncService {
         console.error('Error finding course offering:', courseError);
       }
 
-      console.warn(`⚠️ No course offering found for Thinkific course ${thinkificCourseId}`);
-      return null;
+      // If no course offering exists, create one from Thinkific course data
+      console.log(`🏗️ Creating course offering for Thinkific course ${thinkificCourseId}`);
+      return await this.createCourseOfferingFromThinkific(thinkificCourseId, thinkificCourseData);
 
     } catch (error) {
       console.error('Error in findOrCreateCourseOffering:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Create course offering from Thinkific course data
+   */
+  private static async createCourseOfferingFromThinkific(thinkificCourseId: number, thinkificCourseData?: any): Promise<string | null> {
+    try {
+      // First, we need to get or create a course record
+      const courseId = await this.findOrCreateCourse(thinkificCourseId, thinkificCourseData);
+      
+      if (!courseId) {
+        console.error(`Failed to find or create course for Thinkific course ${thinkificCourseId}`);
+        return null;
+      }
+
+      // Create course offering
+      const offeringData = {
+        course_id: courseId,
+        start_date: new Date().toISOString().split('T')[0], // Today's date
+        end_date: null, // Open-ended
+        max_enrollment: null, // No limit
+        thinkific_course_id: thinkificCourseId.toString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data: newOffering, error } = await supabase
+        .from('course_offerings')
+        .insert(offeringData)
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error('Error creating course offering:', error);
+        return null;
+      }
+
+      console.log(`✅ Created course offering ${newOffering.id} for Thinkific course ${thinkificCourseId}`);
+      return newOffering.id;
+
+    } catch (error) {
+      console.error('Error creating course offering from Thinkific:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Find or create a course record for Thinkific course
+   */
+  private static async findOrCreateCourse(thinkificCourseId: number, thinkificCourseData?: any): Promise<string | null> {
+    try {
+      // Try to find existing course by name or create a new one
+      const courseName = thinkificCourseData?.name || `Thinkific Course ${thinkificCourseId}`;
+      
+      // Check if course already exists by name
+      const { data: existingCourse, error: findError } = await supabase
+        .from('courses')
+        .select('id')
+        .eq('name', courseName)
+        .single();
+
+      if (existingCourse) {
+        console.log(`📚 Found existing course: ${courseName}`);
+        return existingCourse.id;
+      }
+
+      if (findError && findError.code !== 'PGRST116') {
+        console.error('Error finding course:', findError);
+      }
+
+      // Create new course
+      const courseData = {
+        name: courseName,
+        description: `Course imported from Thinkific (ID: ${thinkificCourseId})`,
+        credits: 1, // Default credits
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data: newCourse, error: createError } = await supabase
+        .from('courses')
+        .insert(courseData)
+        .select('id')
+        .single();
+
+      if (createError) {
+        console.error('Error creating course:', createError);
+        return null;
+      }
+
+      console.log(`✅ Created course ${newCourse.id}: ${courseName}`);
+      return newCourse.id;
+
+    } catch (error) {
+      console.error('Error finding or creating course:', error);
       return null;
     }
   }
