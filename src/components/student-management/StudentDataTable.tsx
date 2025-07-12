@@ -1,13 +1,13 @@
-import React, { useState, useMemo } from 'react';
-import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from '@tanstack/react-table';
+import React, { useState, useMemo, useEffect } from 'react';
+import { flexRender, getCoreRowModel, useReactTable, type ColumnDef, type VisibilityState } from '@tanstack/react-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, Search, Filter, Download, Plus } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { MoreHorizontal, Search, Filter, Download, Plus, ChevronUp, ChevronDown, Columns } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { StudentProfile, StudentFilters, PaginationParams } from '@/hooks/useStudentManagement';
 
 interface StudentDataTableProps {
@@ -42,6 +42,62 @@ export function StudentDataTable({
   onExport
 }: StudentDataTableProps) {
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+
+  // Load preferences from localStorage on mount
+  useEffect(() => {
+    const savedConfig = localStorage.getItem('studentTable_config');
+    if (savedConfig) {
+      try {
+        const config = JSON.parse(savedConfig);
+        if (config.columnVisibility) {
+          setColumnVisibility(config.columnVisibility);
+        }
+        if (config.sortBy && config.sortOrder && !filters.sortBy) {
+          onFiltersChange({ 
+            ...filters, 
+            sortBy: config.sortBy, 
+            sortOrder: config.sortOrder 
+          });
+        }
+      } catch (error) {
+        console.warn('Failed to load table configuration:', error);
+      }
+    }
+  }, []);
+
+  // Save preferences to localStorage when they change
+  useEffect(() => {
+    const config = {
+      columnVisibility,
+      sortBy: filters.sortBy,
+      sortOrder: filters.sortOrder
+    };
+    localStorage.setItem('studentTable_config', JSON.stringify(config));
+  }, [columnVisibility, filters.sortBy, filters.sortOrder]);
+
+  const handleSort = (columnId: string) => {
+    const currentSortBy = filters.sortBy;
+    const currentSortOrder = filters.sortOrder;
+    
+    let newSortOrder: 'asc' | 'desc' = 'asc';
+    if (currentSortBy === columnId && currentSortOrder === 'asc') {
+      newSortOrder = 'desc';
+    }
+    
+    onFiltersChange({
+      ...filters,
+      sortBy: columnId,
+      sortOrder: newSortOrder
+    });
+  };
+
+  const getSortIcon = (columnId: string) => {
+    if (filters.sortBy !== columnId) return null;
+    return filters.sortOrder === 'asc' ? 
+      <ChevronUp className="h-4 w-4 ml-1" /> : 
+      <ChevronDown className="h-4 w-4 ml-1" />;
+  };
 
   const columns: ColumnDef<StudentProfile>[] = useMemo(() => [
     {
@@ -78,21 +134,48 @@ export function StudentDataTable({
     },
     {
       accessorKey: 'first_name',
-      header: 'First Name',
+      header: ({ column }) => (
+        <Button 
+          variant="ghost" 
+          onClick={() => handleSort('first_name')}
+          className="h-8 p-0 font-semibold hover:bg-transparent"
+        >
+          First Name
+          {getSortIcon('first_name')}
+        </Button>
+      ),
       cell: ({ row }) => (
         <div className="font-medium">{row.original.first_name || 'N/A'}</div>
       ),
     },
     {
       accessorKey: 'last_name',
-      header: 'Last Name',
+      header: ({ column }) => (
+        <Button 
+          variant="ghost" 
+          onClick={() => handleSort('last_name')}
+          className="h-8 p-0 font-semibold hover:bg-transparent"
+        >
+          Last Name
+          {getSortIcon('last_name')}
+        </Button>
+      ),
       cell: ({ row }) => (
         <div className="font-medium">{row.original.last_name || 'N/A'}</div>
       ),
     },
     {
       id: 'date_created',
-      header: 'Date Created',
+      header: ({ column }) => (
+        <Button 
+          variant="ghost" 
+          onClick={() => handleSort('created_at')}
+          className="h-8 p-0 font-semibold hover:bg-transparent"
+        >
+          Date Created
+          {getSortIcon('created_at')}
+        </Button>
+      ),
       cell: ({ row }) => {
         const dateCreated = row.original.student_metadata?.date_created;
         return (
@@ -104,7 +187,16 @@ export function StudentDataTable({
     },
     {
       accessorKey: 'email',
-      header: 'Email',
+      header: ({ column }) => (
+        <Button 
+          variant="ghost" 
+          onClick={() => handleSort('email')}
+          className="h-8 p-0 font-semibold hover:bg-transparent"
+        >
+          Email
+          {getSortIcon('email')}
+        </Button>
+      ),
       cell: ({ row }) => (
         <div className="text-muted-foreground">{row.original.email}</div>
       ),
@@ -177,6 +269,10 @@ export function StudentDataTable({
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     pageCount: Math.ceil(totalCount / pageSize),
+    state: {
+      columnVisibility,
+    },
+    onColumnVisibilityChange: setColumnVisibility,
   });
 
   const totalPages = Math.ceil(totalCount / pageSize);
@@ -250,6 +346,40 @@ export function StudentDataTable({
               </SelectContent>
             </Select>
           )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Columns className="h-4 w-4 mr-2" />
+                Columns
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              {table
+                .getAllColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => {
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      className="capitalize"
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) =>
+                        column.toggleVisibility(!!value)
+                      }
+                    >
+                      {column.id === 'first_name' ? 'First Name' :
+                       column.id === 'last_name' ? 'Last Name' :
+                       column.id === 'date_created' ? 'Date Created' :
+                       column.id === 'enrollments_list' ? 'Enrollments' :
+                       column.id === 'referred_by' ? 'Referred By' :
+                       column.id === 'referred_from' ? 'Referred From' :
+                       column.id === 'enrollment_status' ? 'Status' :
+                       column.id}
+                    </DropdownMenuCheckboxItem>
+                  )
+                })}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="outline" onClick={onExport}>
             <Download className="h-4 w-4 mr-2" />
             Export

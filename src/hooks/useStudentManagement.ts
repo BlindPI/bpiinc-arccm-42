@@ -55,6 +55,8 @@ export interface StudentFilters {
   enrollment_status?: string;
   imported_from?: string;
   is_active?: boolean;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 export interface PaginationParams {
@@ -106,8 +108,12 @@ export function useStudentManagement() {
       const to = from + pagination.pageSize - 1;
       query = query.range(from, to);
 
-      // Order by created_at desc
-      query = query.order('created_at', { ascending: false });
+      // Apply sorting
+      if (filters.sortBy && filters.sortOrder) {
+        query = query.order(filters.sortBy, { ascending: filters.sortOrder === 'asc' });
+      } else {
+        query = query.order('created_at', { ascending: false });
+      }
 
       const { data, error, count } = await query;
 
