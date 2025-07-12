@@ -1,7 +1,29 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import type { Json } from '@/integrations/supabase/types';
+import { parseJsonToRecord } from '@/types/user-management';
 
+// Database row interface matching the actual schema
+interface StudentProfileRow {
+  id: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  display_name?: string;
+  external_student_id?: string;
+  is_active: boolean;
+  enrollment_status: string;
+  imported_from: string;
+  import_date: string;
+  last_sync_date?: string;
+  sync_status: string;
+  student_metadata: Json | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Public interface with transformed metadata
 export interface StudentProfile {
   id: string;
   email: string;
@@ -18,6 +40,14 @@ export interface StudentProfile {
   student_metadata: Record<string, any>;
   created_at: string;
   updated_at: string;
+}
+
+// Helper function to transform database row to public interface
+function transformStudentProfile(row: StudentProfileRow): StudentProfile {
+  return {
+    ...row,
+    student_metadata: parseJsonToRecord(row.student_metadata) || {}
+  };
 }
 
 export interface StudentFilters {
@@ -87,8 +117,11 @@ export function useStudentManagement() {
 
       const totalPages = Math.ceil((count || 0) / pagination.pageSize);
 
+      // Transform the data to convert Json metadata to Record<string, any>
+      const transformedData = (data as StudentProfileRow[] || []).map(transformStudentProfile);
+
       return {
-        data: data || [],
+        data: transformedData,
         count: count || 0,
         totalPages
       };
