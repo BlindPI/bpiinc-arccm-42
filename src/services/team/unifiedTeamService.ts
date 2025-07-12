@@ -6,6 +6,22 @@ import { SafeTeamService } from './safeTeamService';
 // Re-export types for easier importing
 export type { EnhancedTeam, TeamAnalytics } from '@/types/team-management';
 
+// RPC Function Response Interfaces
+interface BulkAddMembersResponse {
+  success_count: number;
+  failed_users: string[];
+  error_messages: string[];
+}
+
+interface TeamAnalyticsResponse {
+  total_teams: number;
+  total_members: number;
+  active_teams: number;
+  inactive_teams: number;
+  performance_average: number;
+  compliance_score: number;
+}
+
 export interface CreateTeamRequest {
   name: string;
   description?: string;
@@ -354,7 +370,7 @@ export class UnifiedTeamService {
         throw error;
       }
 
-      const result = data && data[0] ? data[0] : {};
+      const result = data && data[0] ? data[0] as BulkAddMembersResponse : { success_count: 0, failed_users: [], error_messages: [] };
       console.log(`Bulk add completed: ${result.success_count || 0} successful, ${result.failed_users?.length || 0} failed`);
       
       if (result.failed_users && result.failed_users.length > 0) {
@@ -464,7 +480,14 @@ export class UnifiedTeamService {
             return await SafeTeamService.getAnalyticsSafely();
           }
 
-          const analyticsData = data && data[0] ? data[0] : {};
+          const analyticsData = data && data[0] ? data[0] as TeamAnalyticsResponse : { 
+            total_teams: 0, 
+            total_members: 0, 
+            active_teams: 0, 
+            inactive_teams: 0, 
+            performance_average: 0, 
+            compliance_score: 0 
+          };
           
           return {
             totalTeams: analyticsData.total_teams || 0,
