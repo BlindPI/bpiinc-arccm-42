@@ -156,11 +156,11 @@ export function TeamManagementHub() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
-                  {currentTeam.teams?.name || 'My Team'}
+                  {(currentTeam as any).teams?.name || (currentTeam as any).team_name || 'My Team'}
                   <Badge variant="outline">{currentTeam.role}</Badge>
                 </CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {currentTeam.teams?.description || 'No description available'}
+                  {(currentTeam as any).teams?.description || (currentTeam as any).team_description || 'No description available'}
                 </p>
               </div>
             </div>
@@ -185,7 +185,7 @@ export function TeamManagementHub() {
                   <div>
                     <Label className="text-sm font-medium">Team Type</Label>
                     <p className="text-sm text-muted-foreground">
-                      {currentTeam.teams?.team_type || 'Not specified'}
+                      {(currentTeam as any).teams?.team_type || (currentTeam as any).team_type || 'Not specified'}
                     </p>
                   </div>
                   <div>
@@ -197,12 +197,12 @@ export function TeamManagementHub() {
                   <div>
                     <Label className="text-sm font-medium">Member Since</Label>
                     <p className="text-sm text-muted-foreground">
-                      {new Date(currentTeam.created_at).toLocaleDateString()}
+                      {new Date((currentTeam as any).created_at || (currentTeam as any).assignment_start_date).toLocaleDateString()}
                     </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Status</Label>
-                    <Badge variant="default">{currentTeam.teams?.status || 'active'}</Badge>
+                    <Badge variant="default">{(currentTeam as any).teams?.status || currentTeam.status || 'active'}</Badge>
                   </div>
                 </div>
               </div>
