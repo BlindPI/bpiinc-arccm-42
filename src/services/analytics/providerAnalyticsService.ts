@@ -60,7 +60,7 @@ export class ProviderAnalyticsService {
     const { data: provider, error: providerError } = await supabase
       .from('authorized_providers')
       .select('*')
-      .eq('id', parseInt(providerId))
+      .eq('id', providerId)
       .single();
 
     if (providerError || !provider) {
@@ -71,7 +71,7 @@ export class ProviderAnalyticsService {
     const { data: teams, error: teamsError } = await supabase
       .from('teams')
       .select('id')
-      .eq('provider_id', parseInt(providerId));
+      .eq('provider_id', providerId);
 
     if (teamsError) throw teamsError;
 
@@ -79,7 +79,7 @@ export class ProviderAnalyticsService {
     const { data: instructors, error: instructorsError } = await supabase
       .from('instructors')
       .select('id')
-      .eq('provider_id', parseInt(providerId))
+      .eq('provider_id', providerId)
       .eq('status', 'ACTIVE');
 
     if (instructorsError) throw instructorsError;
