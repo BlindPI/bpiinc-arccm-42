@@ -1,15 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-
-export interface Course {
-  id: string;
-  title: string;
-  description?: string;
-  course_type_id?: string;
-  status: string;
-  created_at: string;
-  updated_at: string;
-}
+import { Course } from '@/types/courses';
 
 export function useCourses() {
   return useQuery({
@@ -21,15 +12,21 @@ export function useCourses() {
         .from('courses')
         .select(`
           id,
-          title,
+          name,
           description,
-          course_type_id,
+          expiration_months,
           status,
           created_at,
-          updated_at
+          created_by,
+          updated_at,
+          course_type_id,
+          assessment_type_id,
+          first_aid_level,
+          cpr_level,
+          length
         `)
         .eq('status', 'ACTIVE')
-        .order('title');
+        .order('name');
       
       if (error) {
         console.error('Error fetching courses:', error);
