@@ -258,7 +258,7 @@ export function ManualEnrollmentForm() {
                   {courseOfferings.map((offering) => (
                     <SelectItem key={offering.id} value={offering.id}>
                       <div className="flex flex-col">
-                        <span>{offering.courses?.name || 'Course'}</span>
+                        <span>{(offering.courses as any)?.name || 'Course'}</span>
                         <span className="text-sm text-muted-foreground">
                           {offering.locations?.name} - {new Date(offering.start_date).toLocaleDateString()}
                           {offering.max_participants ? ` (${offering.max_participants} max participants)` : ''}

@@ -33,13 +33,27 @@ export function NotificationTester() {
     queryKey: ['notification-queue'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('notification_queue')
+        .from('certificate_notifications')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(10);
         
       if (error) throw error;
-      return data as NotificationQueueEntry[];
+      // Transform certificate_notifications to match expected interface
+      return (data || []).map(item => ({
+        id: item.id,
+        created_at: item.created_at,
+        notification_id: item.id,
+        recipient: item.user_id,
+        subject: item.title,
+        content: item.message,
+        status: item.email_sent ? 'sent' : 'pending',
+        priority: 'normal',
+        processed_at: item.email_sent_at,
+        error: item.email_sent === false ? 'Failed to send' : undefined,
+        category: item.notification_type,
+        updated_at: item.created_at
+      })) as NotificationQueueEntry[];
     },
     refetchInterval: 10000
   });

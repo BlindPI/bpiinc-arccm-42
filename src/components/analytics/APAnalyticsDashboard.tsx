@@ -124,7 +124,6 @@ export function APAnalyticsDashboard({ className }: APAnalyticsDashboardProps) {
     const { data, error } = await supabase
       .from('certificates')
       .select('*')
-      .eq('provider_id', providerId)
       .gte('created_at', dateRange.from.toISOString())
       .lte('created_at', dateRange.to.toISOString());
     
@@ -150,8 +149,7 @@ export function APAnalyticsDashboard({ className }: APAnalyticsDashboardProps) {
         *,
         teams(count),
         certificates(count)
-      `)
-      .eq('provider_id', providerId);
+      `);
     
     if (error) throw error;
 
@@ -334,7 +332,7 @@ export function APAnalyticsDashboard({ className }: APAnalyticsDashboardProps) {
               <Award className="h-4 w-4 text-blue-600" />
               <span className="text-sm font-medium">Certificates Issued</span>
             </div>
-            <p className="text-2xl font-bold mt-1">{analyticsData.kpis.certificatesIssued}</p>
+            <p className="text-2xl font-bold mt-1">{analyticsData.kpis?.certificatesIssued || 0}</p>
             <p className="text-xs text-muted-foreground">This period</p>
           </CardContent>
         </Card>
@@ -344,7 +342,7 @@ export function APAnalyticsDashboard({ className }: APAnalyticsDashboardProps) {
               <Users className="h-4 w-4 text-green-600" />
               <span className="text-sm font-medium">Team Members</span>
             </div>
-            <p className="text-2xl font-bold mt-1">{analyticsData.kpis.teamMembersManaged}</p>
+            <p className="text-2xl font-bold mt-1">{analyticsData.kpis?.teamMembersManaged || 0}</p>
             <p className="text-xs text-muted-foreground">Active members</p>
           </CardContent>
         </Card>
@@ -354,7 +352,7 @@ export function APAnalyticsDashboard({ className }: APAnalyticsDashboardProps) {
               <Building2 className="h-4 w-4 text-purple-600" />
               <span className="text-sm font-medium">Locations Served</span>
             </div>
-            <p className="text-2xl font-bold mt-1">{analyticsData.kpis.locationsServed}</p>
+            <p className="text-2xl font-bold mt-1">{analyticsData.kpis?.locationsServed || 0}</p>
             <p className="text-xs text-muted-foreground">Active locations</p>
           </CardContent>
         </Card>
@@ -364,7 +362,7 @@ export function APAnalyticsDashboard({ className }: APAnalyticsDashboardProps) {
               <TrendingUp className="h-4 w-4 text-orange-600" />
               <span className="text-sm font-medium">Performance Score</span>
             </div>
-            <p className="text-2xl font-bold mt-1">{analyticsData.performanceData?.averageSatisfactionScore?.toFixed(1) || 'N/A'}</p>
+            <p className="text-2xl font-bold mt-1">{(analyticsData.performanceData as any)?.performance_rating?.toFixed(1) || 'N/A'}</p>
             <p className="text-xs text-muted-foreground">Out of 5.0</p>
           </CardContent>
         </Card>
@@ -461,7 +459,7 @@ export function APAnalyticsDashboard({ className }: APAnalyticsDashboardProps) {
                   <Target className="h-4 w-4 text-purple-600" />
                   <span className="text-sm font-medium">Quality Score</span>
                 </div>
-                <p className="text-2xl font-bold mt-1">{analyticsData.performanceData?.complianceScore?.toFixed(1) || 'N/A'}</p>
+                <p className="text-2xl font-bold mt-1">{(analyticsData.performanceData as any)?.compliance_score?.toFixed(1) || 'N/A'}</p>
                 <p className="text-xs text-muted-foreground">out of 100</p>
               </CardContent>
             </Card>
@@ -491,10 +489,6 @@ export function APAnalyticsDashboard({ className }: APAnalyticsDashboardProps) {
                         </Badge>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold">{assignment.performance_score}/100</p>
-                      <p className="text-xs text-muted-foreground">Performance</p>
-                    </div>
                   </div>
                 ))}
               </div>
@@ -503,75 +497,40 @@ export function APAnalyticsDashboard({ className }: APAnalyticsDashboardProps) {
         </TabsContent>
 
         <TabsContent value="locations" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Location Performance</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={analyticsData.locationData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="certificateCount" fill="#8884d8" name="Certificates" />
-                  <Bar dataKey="teamCount" fill="#82ca9d" name="Teams" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {analyticsData.locationData.map((location) => (
+              <Card key={location.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MapPin className="h-4 w-4 text-blue-600" />
+                    <h4 className="font-medium">{location.name}</h4>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <p>Teams: {location.teamCount}</p>
+                    <p>Certificates: {location.certificateCount}</p>
+                    <p>Performance: {location.performance.toFixed(1)}%</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </TabsContent>
 
         <TabsContent value="performance" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>Performance Metrics</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span>Performance Rating</span>
-                    <span className="font-bold">{analyticsData.performanceData?.performanceRating?.toFixed(1) || 'N/A'}/5.0</span>
+                  <div className="flex justify-between">
+                    <span>Performance Rating:</span>
+                    <span className="font-bold">{(analyticsData.performanceData as any)?.performance_rating?.toFixed(1) || 'N/A'}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span>Satisfaction Score</span>
-                    <span className="font-bold">{analyticsData.performanceData?.averageSatisfactionScore?.toFixed(1) || 'N/A'}/5.0</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Efficiency Rating</span>
-                    <span className="font-bold">{analyticsData.performanceData?.efficiencyRating?.toFixed(1) || 'N/A'}/5.0</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Compliance Score</span>
-                    <span className="font-bold">{analyticsData.performanceData?.complianceScore?.toFixed(1) || 'N/A'}%</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Team Statistics</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span>Total Teams</span>
-                    <span className="font-bold">{analyticsData.teamStats.totalTeams || 0}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Active Assignments</span>
-                    <span className="font-bold">{analyticsData.teamStats.activeAssignments || 0}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Avg Team Size</span>
-                    <span className="font-bold">{analyticsData.teamStats.averageTeamSize?.toFixed(1) || 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Team Performance</span>
-                    <span className="font-bold">{analyticsData.teamStats?.performanceScore?.toFixed(1) || 'N/A'}%</span>
+                  <div className="flex justify-between">
+                    <span>Compliance Score:</span>
+                    <span className="font-bold">{(analyticsData.performanceData as any)?.compliance_score?.toFixed(1) || 'N/A'}</span>
                   </div>
                 </div>
               </CardContent>

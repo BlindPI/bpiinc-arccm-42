@@ -76,7 +76,24 @@ export function extractDataFromFile(processedRows: ProcessedRow[]): ExtractedDat
   };
 }
 
-export async function processRosterFile(file: File): Promise<ProcessedRow[]> {
-  // Alias for processExcelFile for roster file processing
-  return processExcelFile(file);
+export interface ProcessedData {
+  data: ProcessedRow[];
+  totalCount: number;
+  errorCount: number;
+}
+
+export async function processRosterFile(
+  file: File, 
+  courses: any[] = [], 
+  enableCourseMatching: boolean = false, 
+  selectedCourseId?: string
+): Promise<ProcessedData> {
+  const processedRows = await processExcelFile(file);
+  const extractedData = extractDataFromFile(processedRows);
+  
+  return {
+    data: processedRows,
+    totalCount: extractedData.totalRows,
+    errorCount: extractedData.totalRows - extractedData.validRows
+  };
 }

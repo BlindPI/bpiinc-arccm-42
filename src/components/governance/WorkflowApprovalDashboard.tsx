@@ -23,37 +23,34 @@ export function WorkflowApprovalDashboard() {
           *,
           workflow_instances!inner(
             id,
-            instance_name,
-            entity_type,
-            entity_id,
-            workflow_status,
+            status,
             initiated_by,
-            initiated_at
+            created_at
           )
         `)
-        .eq('approval_status', 'pending')
+        .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       
-      // Transform the data to match our interface
+      // Transform the data to match our interface using existing columns
       return (data || []).map(item => ({
         id: item.id,
         workflow_instance_id: item.workflow_instance_id,
-        step_number: item.step_number,
+        step_number: 1, // Default step number
         approver_id: item.approver_id || '',
-        approval_status: item.approval_status as 'pending' | 'approved' | 'rejected',
-        approval_date: item.approval_date || undefined,
+        approval_status: item.status as 'pending' | 'approved' | 'rejected',
+        approval_date: item.responded_at || undefined,
         comments: item.comments || undefined,
-        created_at: item.created_at,
+        created_at: item.requested_at,
         workflow_instance: item.workflow_instances ? {
           id: item.workflow_instances.id,
-          instance_name: item.workflow_instances.instance_name || '',
-          entity_type: item.workflow_instances.entity_type,
-          entity_id: item.workflow_instances.entity_id,
-          workflow_status: item.workflow_instances.workflow_status,
+          instance_name: 'Workflow Request', // Default name
+          entity_type: 'general',
+          entity_id: item.workflow_instances.id,
+          workflow_status: item.workflow_instances.status,
           initiated_by: item.workflow_instances.initiated_by || '',
-          initiated_at: item.workflow_instances.initiated_at
+          initiated_at: item.workflow_instances.created_at
         } : undefined
       })) as WorkflowApproval[];
     }
@@ -64,8 +61,8 @@ export function WorkflowApprovalDashboard() {
       const { error } = await supabase
         .from('workflow_approvals')
         .update({
-          approval_status: decision,
-          approval_date: new Date().toISOString()
+          status: decision,
+          responded_at: new Date().toISOString()
         })
         .eq('id', approvalId);
 
@@ -131,7 +128,7 @@ export function WorkflowApprovalDashboard() {
                               {approval.workflow_instance?.instance_name || 'Workflow Request'}
                             </h4>
                             <p className="text-sm text-muted-foreground">
-                              Step {approval.step_number} • {approval.workflow_instance?.entity_type}
+                              {approval.workflow_instance?.entity_type}
                             </p>
                             <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                               <User className="h-3 w-3" />
@@ -187,8 +184,8 @@ export function WorkflowApprovalDashboard() {
                       </Badge>
                     </div>
                     <div>
-                      <span className="font-medium">Step:</span>
-                      <p>{selectedApproval.step_number}</p>
+                      <span className="font-medium">Type:</span>
+                      <p>Workflow Request</p>
                     </div>
                     <div>
                       <span className="font-medium">Initiated:</span>

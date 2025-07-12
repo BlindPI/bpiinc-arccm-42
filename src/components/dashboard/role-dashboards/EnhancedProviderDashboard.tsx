@@ -406,10 +406,9 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({
       const {
         ComplianceRequirementsService
       } = await import('@/services/compliance/complianceRequirementsService');
-      await ComplianceRequirementsService.initializeDefaultRequirements();
+      await ComplianceRequirementsService.initializeDefaultRequirements(selectedMember.user_id, complianceRole);
 
-      // Then assign requirements to the user
-      await ComplianceRequirementsService.assignRoleRequirementsToUser(selectedMember.user_id, complianceRole);
+      // Requirements initialized with default compliance role
 
       // Refresh the member compliance data
       await refetchMemberCompliance();

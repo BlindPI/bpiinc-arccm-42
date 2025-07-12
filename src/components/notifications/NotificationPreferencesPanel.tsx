@@ -37,10 +37,11 @@ export function NotificationPreferencesPanel() {
   React.useEffect(() => {
     if (preferences.length > 0) {
       const prefMap = preferences.reduce((acc, pref) => {
-        acc[pref.category] = {
-          in_app_enabled: pref.in_app_enabled,
-          email_enabled: pref.email_enabled,
-          browser_enabled: pref.browser_enabled,
+        const category = (pref as any).category || 'general';
+        acc[category] = {
+          in_app_enabled: (pref as any).in_app_enabled || false,
+          email_enabled: (pref as any).email_enabled || false,
+          browser_enabled: (pref as any).browser_enabled || false,
         };
         return acc;
       }, {} as Record<string, any>);
@@ -85,10 +86,11 @@ export function NotificationPreferencesPanel() {
     // Reset to original preferences
     if (preferences.length > 0) {
       const prefMap = preferences.reduce((acc, pref) => {
-        acc[pref.category] = {
-          in_app_enabled: pref.in_app_enabled,
-          email_enabled: pref.email_enabled,
-          browser_enabled: pref.browser_enabled,
+        const category = (pref as any).category || 'general';
+        acc[category] = {
+          in_app_enabled: (pref as any).in_app_enabled || false,
+          email_enabled: (pref as any).email_enabled || false,
+          browser_enabled: (pref as any).browser_enabled || false,
         };
         return acc;
       }, {} as Record<string, any>);
@@ -108,10 +110,11 @@ export function NotificationPreferencesPanel() {
 
   // Group notification types by category
   const groupedTypes = notificationTypes.reduce((acc, type) => {
-    if (!acc[type.category]) {
-      acc[type.category] = [];
+    const category = (type as any).category || 'general';
+    if (!acc[category]) {
+      acc[category] = [];
     }
-    acc[type.category].push(type);
+    acc[category].push(type);
     return acc;
   }, {} as Record<string, typeof notificationTypes>);
 
@@ -267,8 +270,8 @@ export function NotificationPreferencesPanel() {
                   <div className="text-xs text-gray-500 mb-2">Includes these notification types:</div>
                   <div className="flex flex-wrap gap-1">
                     {types.map((type) => (
-                      <Badge key={type.id} variant="outline" className="text-xs">
-                        {type.display_name}
+                      <Badge key={(type as any).id} variant="outline" className="text-xs">
+                        {(type as any).display_name || 'Notification'}
                       </Badge>
                     ))}
                   </div>

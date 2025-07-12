@@ -13,32 +13,22 @@ export function NotificationQueueMonitor() {
   const [processing, setProcessing] = useState(false);
   const queryClient = useQueryClient();
   
-  // Query to get the queue status
+  // Query to get the queue status using certificate_notifications instead of notification_queue
   const { data: queueStatus, isLoading, error } = useQuery({
     queryKey: ['notification-queue-status'],
     queryFn: async () => {
-      // Get counts by status
+      // Get counts by status from certificate_notifications
       const { data: countData, error: countError } = await supabase
-        .from('notification_queue')
-        .select('status, count')
-        .select()
-        .select('status')
-        .select('id, status, notification_id, created_at, processed_at, error')
-        .limit(50)
+        .from('certificate_notifications')
+        .select('id, notification_type, email_sent, created_at, email_sent_at')
         .order('created_at', { ascending: false });
         
       if (countError) throw countError;
       
       // Get the latest few entries
-      const { data: latestItems, error: latestError } = await supabase
-        .from('notification_queue')
-        .select('id, status, notification_id, created_at, processed_at, error')
-        .order('created_at', { ascending: false })
-        .limit(10);
-        
-      if (latestError) throw latestError;
+      const latestItems = countData || [];
       
-      // Calculate counts by status
+      // Calculate counts by status from certificate_notifications
       const counts = {
         PENDING: 0,
         SENT: 0,
@@ -48,15 +38,26 @@ export function NotificationQueueMonitor() {
       
       if (countData) {
         countData.forEach(item => {
-          if (counts.hasOwnProperty(item.status)) {
-            counts[item.status as keyof typeof counts]++;
+          if (item.email_sent === null) {
+            counts.PENDING++;
+          } else if (item.email_sent === true) {
+            counts.SENT++;
+          } else {
+            counts.FAILED++;
           }
         });
       }
       
       return {
         counts,
-        latestItems: latestItems || []
+        latestItems: latestItems.slice(0, 10).map(item => ({
+          id: item.id,
+          status: item.email_sent === null ? 'PENDING' : item.email_sent ? 'SENT' : 'FAILED',
+          notification_id: item.id,
+          created_at: item.created_at,
+          processed_at: item.email_sent_at,
+          error: item.email_sent === false ? 'Email send failed' : null
+        }))
       };
     },
     refetchInterval: 30000 // Refresh every 30 seconds
