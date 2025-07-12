@@ -132,6 +132,7 @@ export class CleanAPTeamService {
     totalMembers: number;
     averagePerformance: number;
     recentActivity: any[];
+    locations: any[];
   }> {
     try {
       const teams = await this.getAPUserTeams(userId);
@@ -142,7 +143,8 @@ export class CleanAPTeamService {
         averagePerformance: teams.length > 0 
           ? Math.round(teams.reduce((sum, team) => sum + team.performance_score, 0) / teams.length)
           : 0,
-        recentActivity: []
+        recentActivity: [],
+        locations: []
       };
     } catch (error) {
       console.error('Error fetching AP user dashboard:', error);
@@ -150,7 +152,8 @@ export class CleanAPTeamService {
         totalTeams: 0,
         totalMembers: 0,
         averagePerformance: 0,
-        recentActivity: []
+        recentActivity: [],
+        locations: []
       };
     }
   }
@@ -175,12 +178,13 @@ export class CleanAPTeamService {
     }
   }
 
-  static async removeTeamMember(memberId: string): Promise<boolean> {
+  static async removeTeamMember(teamId: string, userId: string): Promise<boolean> {
     try {
       const { error } = await supabase
         .from('team_members')
         .update({ status: 'inactive' })
-        .eq('id', memberId);
+        .eq('team_id', teamId)
+        .eq('user_id', userId);
 
       if (error) throw error;
       return true;

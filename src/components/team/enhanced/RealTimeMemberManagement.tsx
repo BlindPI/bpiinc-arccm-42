@@ -113,7 +113,7 @@ export function RealTimeMemberManagement({ teamId }: RealTimeMemberManagementPro
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Compliance Rate</p>
-                <p className="text-2xl font-bold">{Math.round(complianceData?.complianceRate || 0)}%</p>
+                <p className="text-2xl font-bold">{Math.round(complianceData?.overallComplianceRate || 0)}%</p>
               </div>
             </div>
           </CardContent>
@@ -173,7 +173,7 @@ export function RealTimeMemberManagement({ teamId }: RealTimeMemberManagementPro
                   <p className="text-sm text-muted-foreground">Total Sessions</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold">{complianceData?.compliantCount || 0}</p>
+                  <p className="text-2xl font-bold">{complianceData?.compliantMembers || 0}</p>
                   <p className="text-sm text-muted-foreground">Compliant Members</p>
                 </div>
                 <div className="text-center">
@@ -232,15 +232,15 @@ export function RealTimeMemberManagement({ teamId }: RealTimeMemberManagementPro
                 <div className="space-y-4">
                   <div className="grid grid-cols-3 gap-4">
                     <div className="text-center p-4 border rounded-lg">
-                      <p className="text-2xl font-bold text-green-600">{complianceData.compliantCount}</p>
+                      <p className="text-2xl font-bold text-green-600">{complianceData.compliantMembers}</p>
                       <p className="text-sm text-muted-foreground">Compliant</p>
                     </div>
                     <div className="text-center p-4 border rounded-lg">
-                      <p className="text-2xl font-bold text-yellow-600">{complianceData.pendingCount}</p>
+                      <p className="text-2xl font-bold text-yellow-600">{complianceData.pendingMembers}</p>
                       <p className="text-sm text-muted-foreground">Pending</p>
                     </div>
                     <div className="text-center p-4 border rounded-lg">
-                      <p className="text-2xl font-bold text-red-600">{complianceData.nonCompliantCount}</p>
+                      <p className="text-2xl font-bold text-red-600">{complianceData.nonCompliantMembers}</p>
                       <p className="text-sm text-muted-foreground">Non-Compliant</p>
                     </div>
                   </div>

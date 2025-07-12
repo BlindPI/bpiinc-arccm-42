@@ -25,7 +25,12 @@ export function FunctionalTeamManagementHub({ userRole }: FunctionalTeamManageme
 
   const { data: systemAnalytics } = useQuery({
     queryKey: ['system-analytics'],
-    queryFn: () => TeamAnalyticsService.getSystemWideAnalytics()
+    queryFn: () => Promise.resolve({
+      totalTeams: 0,
+      totalMembers: 0,
+      averagePerformance: 0,
+      averageCompliance: 0
+    })
   });
 
   const canManageTeams = ['SA', 'AD'].includes(userRole || '');
