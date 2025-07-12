@@ -88,6 +88,9 @@ type Props = {
 };
 
 export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, isAdmin }) => {
+  // Early return BEFORE any hooks to prevent hook order violations
+  if (!user) return null;
+
   const [tab, setTab] = useState('profile');
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [supervisionRelationships, setSupervisionRelationships] = useState<SupervisionRelationship[]>([]);
@@ -95,8 +98,6 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
   const [loadingActivity, setLoadingActivity] = useState(false);
   const [loadingSupervision, setLoadingSupervision] = useState(false);
   const [loadingCertifications, setLoadingCertifications] = useState(false);
-
-  if (!user) return null;
 
   // Load activity logs
   const loadActivityLogs = async () => {
