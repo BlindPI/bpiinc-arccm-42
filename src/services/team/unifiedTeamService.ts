@@ -131,27 +131,45 @@ export class UnifiedTeamService {
         return teams as unknown as EnhancedTeam[];
       }
 
-      // For SA/AD users, use direct database access (NO MORE BYPASS RPC)
+      // For SA/AD users, use direct database access with simplified query
       console.log('🔍 UNIFIEDTEAMSERVICE: Loading teams with direct database access...');
-      const { data, error } = await supabase
+      
+      // First get teams with locations
+      const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select(`
           *,
-          locations (name, address),
-          team_members!team_id (id, status)
+          locations (name, address)
         `);
 
-      if (error) {
-        console.error('Error fetching teams with direct query:', error);
-        throw error;
+      if (teamsError) {
+        console.error('Error fetching teams:', teamsError);
+        throw teamsError;
       }
 
-      // Transform to match EnhancedTeam interface
-      const teams = (data || []).map((team: any) => ({
-        ...team,
-        location: team.locations ? { name: team.locations.name } : null,
-        member_count: (team.team_members || []).filter((m: any) => m.status === 'active').length
+      // Then get member counts for each team
+      const teamsWithMemberCounts = await Promise.all((teamsData || []).map(async (team: any) => {
+        const { count, error: memberError } = await supabase
+          .from('team_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('team_id', team.id)
+          .eq('status', 'active');
+
+        if (memberError) {
+          console.error(`Error fetching member count for team ${team.id}:`, memberError);
+        }
+
+        return {
+          ...team,
+          location: team.locations ? { name: team.locations.name } : null,
+          member_count: count || 0
+        };
       }));
+
+      const data = teamsWithMemberCounts;
+
+      // Teams already have member_count calculated
+      const teams = data;
 
       console.log(`🔍 UNIFIEDTEAMSERVICE: Found ${teams.length} teams with direct access`);
       return teams as unknown as EnhancedTeam[];
