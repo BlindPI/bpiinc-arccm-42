@@ -28,8 +28,6 @@ export interface Provider {
 export interface AuthorizedProvider extends Provider {
   // Relations populated by joins
   primary_location?: Location;
-  teams?: Team[];
-  assignments?: ProviderTeamAssignment[];
 }
 
 // =============================================================================
@@ -50,9 +48,9 @@ export interface Team {
   updated_at: string;
   // Relations
   location?: Location;
-  provider?: AuthorizedProvider;
   members?: TeamMemberWithProfile[];
 }
+
 
 export interface TeamMember {
   id: string;
@@ -96,12 +94,22 @@ export interface ProviderTeamAssignment {
   assigned_at: string;
   created_at: string;
   updated_at: string;
-  // Relations
-  provider?: AuthorizedProvider;
-  team?: Team;
 }
 
-export interface ProviderTeamAssignmentDetailed extends ProviderTeamAssignment {
+export interface ProviderTeamAssignmentDetailed {
+  id: string;
+  provider_id: string;
+  team_id: string;
+  assignment_role: 'primary' | 'secondary' | 'supervisor' | 'coordinator';
+  oversight_level: 'monitor' | 'standard' | 'manage' | 'admin';
+  assignment_type: 'ongoing' | 'project_based' | 'temporary';
+  start_date: string;
+  end_date?: string;
+  status: 'active' | 'inactive' | 'suspended' | 'completed';
+  assigned_by?: string;
+  assigned_at: string;
+  created_at: string;
+  updated_at: string;
   team_name: string;
   team_type: string;
   team_status: string;
@@ -122,9 +130,6 @@ export interface Location {
   address?: string;
   created_at: string;
   updated_at: string;
-  // Relations
-  teams?: Team[];
-  providers?: AuthorizedProvider[];
 }
 
 // =============================================================================
@@ -141,7 +146,7 @@ export interface ProviderPerformanceMetrics {
 export interface ProviderWithRelationships {
   provider_data: AuthorizedProvider;
   location_data?: Location;
-  teams_data: Team[];
+  teams_data: { id: string; name: string; team_type: string; status: string; performance_score: number; }[];
   performance_metrics: ProviderPerformanceMetrics;
 }
 
