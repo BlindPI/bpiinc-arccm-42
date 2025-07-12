@@ -6,17 +6,17 @@ export class ComplianceRequirementsService {
     const defaultRequirements = this.getDefaultRequirementsByRole(role);
     
     for (const requirement of defaultRequirements) {
-      await supabase
-        .from('user_compliance_records')
-        .insert({
-          user_id: userId,
-          metric_id: requirement.metric_id,
-          compliance_status: 'non_compliant',
-          target_date: requirement.target_date
-        })
-        .on('conflict', () => {
-          // Ignore conflicts - requirement already exists
-        });
+await supabase
+  .from('user_compliance_records')
+  .upsert({
+    user_id: userId,
+    metric_id: requirement.metric_id,
+    compliance_status: 'non_compliant',
+    target_date: requirement.target_date
+  }, { 
+    onConflict: 'user_id,metric_id',
+    ignoreDuplicates: true 
+  });
     }
     
     return true;
