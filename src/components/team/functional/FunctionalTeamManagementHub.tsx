@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Settings, BarChart3, Users } from 'lucide-react';
 import { RealMemberTable } from './RealMemberTable';
 import { AddTeamMemberModal } from './AddTeamMemberModal';
-import { teamAnalyticsService } from '@/services/team/teamAnalyticsService';
+import { TeamAnalyticsService } from '@/services/team/teamAnalyticsService';
 import { RealTeamDataService } from '@/services/team/realTeamDataService';
 
 interface FunctionalTeamManagementHubProps {
@@ -25,7 +25,7 @@ export function FunctionalTeamManagementHub({ userRole }: FunctionalTeamManageme
 
   const { data: systemAnalytics } = useQuery({
     queryKey: ['system-analytics'],
-    queryFn: () => teamAnalyticsService.getSystemWideAnalytics()
+    queryFn: () => TeamAnalyticsService.getSystemWideAnalytics()
   });
 
   const canManageTeams = ['SA', 'AD'].includes(userRole || '');

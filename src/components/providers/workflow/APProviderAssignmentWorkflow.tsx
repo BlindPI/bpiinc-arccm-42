@@ -25,7 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
-import { providerRelationshipService } from '@/services/provider/ProviderRelationshipService';
+import { providerRelationshipService } from '@/services/provider/providerRelationshipService';
 import { toast } from 'sonner';
 
 // =====================================================================================
