@@ -77,13 +77,6 @@ export function StudentDataTable({
       enableHiding: false,
     },
     {
-      accessorKey: 'external_student_id',
-      header: 'ID',
-      cell: ({ row }) => (
-        <div className="text-sm font-mono">{row.original.external_student_id || 'N/A'}</div>
-      ),
-    },
-    {
       accessorKey: 'first_name',
       header: 'First Name',
       cell: ({ row }) => (
@@ -96,14 +89,6 @@ export function StudentDataTable({
       cell: ({ row }) => (
         <div className="font-medium">{row.original.last_name || 'N/A'}</div>
       ),
-    },
-    {
-      id: 'amount_spent',
-      header: 'Amount Spent',
-      cell: ({ row }) => {
-        const amount = row.original.student_metadata?.amount_spent;
-        return <div className="text-sm">{amount || '$0'}</div>;
-      },
     },
     {
       id: 'date_created',
@@ -125,14 +110,6 @@ export function StudentDataTable({
       ),
     },
     {
-      id: 'enrollments',
-      header: 'Enrollments',
-      cell: ({ row }) => {
-        const enrollments = row.original.student_metadata?.enrollments || 0;
-        return <div className="text-center">{enrollments}</div>;
-      },
-    },
-    {
       id: 'enrollments_list',
       header: 'Enrollments - List',
       cell: ({ row }) => {
@@ -140,26 +117,6 @@ export function StudentDataTable({
         return (
           <div className="text-sm max-w-32 truncate" title={enrollmentsList}>
             {enrollmentsList || 'N/A'}
-          </div>
-        );
-      },
-    },
-    {
-      id: 'external_source',
-      header: 'External Source',
-      cell: ({ row }) => {
-        const externalSource = row.original.student_metadata?.external_source;
-        return <div className="text-sm">{externalSource || 'N/A'}</div>;
-      },
-    },
-    {
-      id: 'last_sign_in',
-      header: 'Last Sign In',
-      cell: ({ row }) => {
-        const lastSignIn = row.original.student_metadata?.last_sign_in;
-        return (
-          <div className="text-sm text-muted-foreground">
-            {lastSignIn ? new Date(lastSignIn).toLocaleDateString() : 'Never'}
           </div>
         );
       },
@@ -173,22 +130,6 @@ export function StudentDataTable({
       },
     },
     {
-      id: 'roles',
-      header: 'Roles',
-      cell: ({ row }) => {
-        const roles = row.original.student_metadata?.roles;
-        return <Badge variant="outline">{roles || 'Student'}</Badge>;
-      },
-    },
-    {
-      id: 'sign_in_count',
-      header: 'Sign In Count',
-      cell: ({ row }) => {
-        const signInCount = row.original.student_metadata?.sign_in_count || 0;
-        return <div className="text-center">{signInCount}</div>;
-      },
-    },
-    {
       id: 'referred_from',
       header: 'Referred From',
       cell: ({ row }) => {
@@ -197,27 +138,14 @@ export function StudentDataTable({
       },
     },
     {
-      id: 'country',
-      header: 'Country',
+      accessorKey: 'enrollment_status',
+      header: 'Status',
       cell: ({ row }) => {
-        const country = row.original.student_metadata?.country;
-        return <div className="text-sm">{country || 'N/A'}</div>;
-      },
-    },
-    {
-      id: 'postal_code',
-      header: 'Postal Code',
-      cell: ({ row }) => {
-        const postalCode = row.original.student_metadata?.postal_code;
-        return <div className="text-sm">{postalCode || 'N/A'}</div>;
-      },
-    },
-    {
-      id: 'region',
-      header: 'Region',
-      cell: ({ row }) => {
-        const region = row.original.student_metadata?.region;
-        return <div className="text-sm">{region || 'N/A'}</div>;
+        const status = row.original.enrollment_status;
+        const variant = status === 'ACTIVE' ? 'default' : 
+                      status === 'INACTIVE' ? 'secondary' : 
+                      status === 'SUSPENDED' ? 'destructive' : 'outline';
+        return <Badge variant={variant}>{status}</Badge>;
       },
     },
     {
