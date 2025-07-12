@@ -70,12 +70,14 @@ interface SupervisionRelationship {
 interface UserCertification {
   id: string;
   user_id: string;
+  certificate_id?: string;
   certification_name: string;
-  certification_type: string;
   issued_date: string;
   expiry_date?: string;
-  status: string;
-  issuing_authority?: string;
+  status: string; // Use string to match database values
+  metadata?: any;
+  created_at: string;
+  updated_at: string;
 }
 
 type Props = {
@@ -112,7 +114,9 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
         id: log.id,
         user_id: log.user_id,
         activity_type: log.activity_type,
-        description: log.description,
+        description: log.metadata && typeof log.metadata === 'object' && 'description' in log.metadata 
+          ? String(log.metadata.description) 
+          : log.activity_category || 'Activity',
         metadata: log.metadata,
         created_at: log.created_at
       })));
@@ -180,6 +184,7 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
         .order('issued_date', { ascending: false });
 
       if (error) throw error;
+      // Use data directly since the interface now matches the database
       setCertifications(data || []);
     } catch (error: any) {
       console.error('Error loading certifications:', error);
@@ -504,14 +509,14 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
                             <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100">
                               {cert.certification_name}
                             </h4>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                              {cert.certification_type}
-                            </p>
-                            {cert.issuing_authority && (
-                              <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
-                                Issued by: {cert.issuing_authority}
+                            {cert.certificate_id && (
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                Certificate ID: {cert.certificate_id}
                               </p>
                             )}
+                            <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+                              Created: {new Date(cert.created_at).toLocaleDateString()}
+                            </p>
                             <div className="flex items-center gap-4 mt-2 text-xs text-slate-500 dark:text-slate-400">
                               <span>Issued: {new Date(cert.issued_date).toLocaleDateString()}</span>
                               {cert.expiry_date && (
@@ -525,7 +530,7 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
                             <Badge variant="outline" className={`text-xs ${
                               cert.status === 'active' ? 'bg-green-100 text-green-800 border-green-300' :
                               cert.status === 'expired' ? 'bg-red-100 text-red-800 border-red-300' :
-                              cert.status === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                              cert.status === 'revoked' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
                               'bg-gray-100 text-gray-800 border-gray-300'
                             }`}>
                               {cert.status}

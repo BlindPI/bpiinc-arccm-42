@@ -10,13 +10,11 @@ import { hasRequiredRole } from '@/utils/roleUtils';
 import { ComplianceTierManager } from '@/components/compliance/ComplianceTierManager'; // New import
 import { FileText, Shield } from 'lucide-react'; // New: Icons for tiers
 
-// Extend Profile type locally to include compliance_tier if not already present in supabase-schema
-interface UserWithCompliance extends Profile {
-  compliance_tier: 'basic' | 'robust' | null;
-}
+// Use ExtendedProfile which includes compliance_tier
+import type { ExtendedProfile } from '@/types/user-management';
 
 interface UserTableRowProps {
-  user: UserWithCompliance; // Use the extended type
+  user: ExtendedProfile; // Use ExtendedProfile which includes compliance_tier
   isSelected: boolean;
   onSelect: (userId: string, selected: boolean) => void;
   onEdit: (userId: string) => void;
@@ -50,7 +48,8 @@ export function UserTableRow({
   onResetPassword,
   onChangeRole,
   canManageUsers = false,
-  onViewDetail
+  onViewDetail,
+  showTierManagerInModal
 }: UserTableRowProps) {
   const handleSelectChange = (checked: boolean) => {
     onSelect(user.id, checked);
@@ -71,7 +70,7 @@ export function UserTableRow({
   };
 
   const isAdmin = hasRequiredRole(user.role, 'AD');
-  const userStatus: 'ACTIVE' | 'INACTIVE' | 'PENDING' = user.status || 'ACTIVE';
+  const userStatus: 'ACTIVE' | 'INACTIVE' | 'PENDING' = (user as any).status || 'ACTIVE';
 
   // New: Compliance badge helper
   const getComplianceBadge = () => {

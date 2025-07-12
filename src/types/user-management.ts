@@ -13,7 +13,8 @@ export interface Profile {
 }
 
 export interface ExtendedProfile extends Profile {
-  compliance_tier?: string;
+  display_name: string; // Make display_name required
+  status?: 'ACTIVE' | 'INACTIVE' | 'PENDING'; // Add status property
 }
 
 export interface ActivityLog {

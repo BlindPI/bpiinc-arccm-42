@@ -188,8 +188,10 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
         .insert({
           user_id: 'system', // System-generated activity
           activity_type: 'bulk_email_sent',
-          description: `Bulk email sent to ${totalSent} users`,
+          activity_category: 'email_campaign',
+          resource_type: 'bulk_operation',
           metadata: {
+            description: `Bulk email sent to ${totalSent} users`,
             total_recipients: totalSent,
             failed_batches: errors.length,
             selected_user_count: selectedUsers.length,
