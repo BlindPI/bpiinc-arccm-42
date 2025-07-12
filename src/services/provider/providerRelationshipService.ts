@@ -1250,7 +1250,7 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
       if (teamIds.length > 0) {
         const { count, error } = await supabase
           .from('courses')
-          .select('*', { count: 'exact', head: true }) // Simpler select to avoid deep type inference
+          .select('id', { count: 'exact', head: true })
           .in('team_id', teamIds);
         
         if (error) {
