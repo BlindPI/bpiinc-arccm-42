@@ -44,7 +44,7 @@ export class SafeTeamService {
   }
 
   /**
-   * Create team safely
+   * Create team safely using direct INSERT with RLS policies
    */
   static async createTeamSafely(teamData: {
     name: string;
@@ -54,19 +54,30 @@ export class SafeTeamService {
     status?: string;
   }) {
     try {
+      console.log('🔨 SAFETEAMSERVICE: Creating team safely with INSERT:', teamData);
+      
       const { data, error } = await supabase
         .from('teams')
         .insert({
           name: teamData.name,
           description: teamData.description || null,
           location_id: teamData.location_id || null,
-          team_type: teamData.team_type || 'standard',
-          status: teamData.status || 'active'
+          team_type: teamData.team_type || 'operational',
+          status: teamData.status || 'active',
+          performance_score: 85,
+          metadata: {},
+          monthly_targets: {},
+          current_metrics: {}
         })
         .select('*')
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('💥 SAFETEAMSERVICE: Error creating team:', error);
+        throw error;
+      }
+      
+      console.log('✅ SAFETEAMSERVICE: Team created successfully:', data);
       return data;
     } catch (error) {
       console.error('Error creating team safely:', error);

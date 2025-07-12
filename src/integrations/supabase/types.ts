@@ -17995,20 +17995,37 @@ export type Database = {
         }[]
       }
       create_team_bypass_rls: {
-        Args: {
-          p_name: string
-          p_description?: string
-          p_location_id?: string
-          p_team_type?: string
-          p_status?: string
-        }
+        Args:
+          | {
+              p_name: string
+              p_description?: string
+              p_location_id?: string
+              p_team_type?: string
+              p_status?: string
+            }
+          | {
+              p_name: string
+              p_description?: string
+              p_team_type?: string
+              p_location_id?: string
+              p_provider_id?: string
+              p_created_by?: string
+            }
         Returns: {
           id: string
           name: string
           description: string
           team_type: string
           status: string
+          performance_score: number
+          location_id: string
+          provider_id: string
+          created_by: string
           created_at: string
+          updated_at: string
+          metadata: Json
+          monthly_targets: Json
+          current_metrics: Json
         }[]
       }
       create_user_from_invitation: {

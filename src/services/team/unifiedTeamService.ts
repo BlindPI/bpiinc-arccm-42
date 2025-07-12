@@ -174,14 +174,17 @@ export class UnifiedTeamService {
    */
   static async createTeam(teamData: CreateTeamRequest): Promise<EnhancedTeam> {
     try {
-      // Use the new bypass RPC function that avoids RLS recursion
+      console.log('🔨 UNIFIEDTEAMSERVICE: Creating team with data:', teamData);
+      
+      // Use the corrected bypass RPC function that returns proper team structure
       const { data, error } = await supabase
         .rpc('create_team_bypass_rls', {
           p_name: teamData.name,
           p_description: teamData.description || null,
-          p_location_id: teamData.location_id || null,
-          p_team_type: teamData.team_type || 'standard',
-          p_status: teamData.status || 'active'
+          p_team_type: teamData.team_type || 'operational',
+          p_location_id: teamData.location_id ? teamData.location_id : null,
+          p_provider_id: null,
+          p_created_by: null
         });
 
       if (error) {
@@ -191,10 +194,16 @@ export class UnifiedTeamService {
         return safeResult as unknown as EnhancedTeam;
       }
 
-      return (data && data[0]) as unknown as EnhancedTeam;
+      // The function now returns proper team table structure
+      if (data && data.length > 0) {
+        console.log('✅ UNIFIEDTEAMSERVICE: Team created successfully via RPC:', data[0]);
+        return data[0] as unknown as EnhancedTeam;
+      } else {
+        throw new Error('No team data returned from create function');
+      }
     } catch (error) {
       console.error('Error creating team, using safe fallback:', error);
-      // Fallback to safe method
+      // Fallback to safe method with INSERT policy
       const safeResult = await SafeTeamService.createTeamSafely(teamData);
       return safeResult as unknown as EnhancedTeam;
     }
