@@ -37,7 +37,7 @@ export function MemberInvitationWorkflow({ teamId }: MemberInvitationWorkflowPro
         `)
         .eq('entity_type', 'team_member_invitation')
         .eq('entity_id', teamId)
-        .in('workflow_status', ['pending', 'in_progress']);
+        .in('status', ['pending', 'in_progress']);
       
       if (error) throw error;
       return data;
@@ -175,20 +175,20 @@ export function MemberInvitationWorkflow({ teamId }: MemberInvitationWorkflowPro
               {pendingInvitations.map((invitation) => (
                 <div key={invitation.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center gap-3">
-                    {getStatusIcon(invitation.workflow_status)}
+                    {getStatusIcon(invitation.status)}
                     <div>
-                      <p className="font-medium">{invitation.instance_name}</p>
+                      <p className="font-medium">Team Member Invitation</p>
                       <p className="text-sm text-muted-foreground">
-                        Initiated {new Date(invitation.initiated_at).toLocaleDateString()}
+                        Initiated {new Date(invitation.created_at).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
                   <Badge variant={
-                    invitation.workflow_status === 'completed' ? 'default' :
-                    invitation.workflow_status === 'rejected' ? 'destructive' :
+                    invitation.status === 'completed' ? 'default' :
+                    invitation.status === 'rejected' ? 'destructive' :
                     'secondary'
                   }>
-                    {invitation.workflow_status}
+                    {invitation.status}
                   </Badge>
                 </div>
               ))}
