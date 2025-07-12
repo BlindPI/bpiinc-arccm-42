@@ -34,8 +34,8 @@ export class EdgeFunctionService {
     return this.invokeFunction('send-certificate-email', { certificateId });
   }
 
-  static async generateCertificate(requestId: string): Promise<EdgeFunctionResult> {
-    return this.invokeFunction('generate-certificate', { requestId });
+  static async generateCertificate(requestId: string, issuerId: string): Promise<EdgeFunctionResult> {
+    return this.invokeFunction('generate-certificate', { requestId, issuerId });
   }
 
   static async sendBatchEmails(batchId: string): Promise<EdgeFunctionResult> {

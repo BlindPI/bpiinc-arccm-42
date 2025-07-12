@@ -34,7 +34,7 @@ export function useEdgeFunctions() {
   });
 
   const generateCertificate = useMutation({
-    mutationFn: (requestId: string) => EdgeFunctionService.generateCertificate(requestId),
+    mutationFn: ({ requestId, issuerId }: { requestId: string; issuerId: string }) => EdgeFunctionService.generateCertificate(requestId, issuerId),
     onSuccess: (result) => {
       if (result.success) {
         toast.success('Certificate generated successfully');
