@@ -1980,6 +1980,191 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
       return [];
     }
   }
+
+  // =====================================================================================
+  // RELATIONSHIP VALIDATION AND CREATION METHODS
+  // =====================================================================================
+
+  /**
+   * Validate provider relationship before creation
+   * Checks for conflicts and existing relationships
+   */
+  async validateRelationship(params: {
+    apUserId: string;
+    locationId: string;
+  }): Promise<{
+    isValid: boolean;
+    conflicts: Array<{
+      type: 'existing_assignment' | 'invalid_location' | 'invalid_user';
+      message: string;
+      suggestions?: string[];
+    }>;
+  }> {
+    try {
+      const conflicts: Array<{
+        type: 'existing_assignment' | 'invalid_location' | 'invalid_user';
+        message: string;
+        suggestions?: string[];
+      }> = [];
+
+      // Validate location exists
+      const locationValid = await this.validateLocationUUID(params.locationId);
+      if (!locationValid) {
+        conflicts.push({
+          type: 'invalid_location',
+          message: `Location ${params.locationId} does not exist or is inactive`,
+          suggestions: ['Select a different location', 'Verify location ID']
+        });
+      }
+
+      // Check if user exists and has proper role
+      const { data: user, error: userError } = await supabase
+        .from('profiles')
+        .select('id, role, status')
+        .eq('id', params.apUserId)
+        .maybeSingle();
+
+      if (userError || !user) {
+        conflicts.push({
+          type: 'invalid_user',
+          message: `User ${params.apUserId} does not exist or cannot be accessed`,
+          suggestions: ['Verify user ID', 'Check user permissions']
+        });
+      } else if (user.role !== 'AP') {
+        conflicts.push({
+          type: 'invalid_user',
+          message: `User must have AP role to be assigned as a provider`,
+          suggestions: ['Update user role to AP', 'Select a different user']
+        });
+      }
+
+      // Check for existing assignments
+      const { data: existingAssignments, error: assignmentError } = await supabase
+        .from('ap_user_location_assignments')
+        .select('id, location_id, status')
+        .eq('ap_user_id', params.apUserId)
+        .eq('status', 'active');
+
+      if (!assignmentError && existingAssignments && existingAssignments.length > 0) {
+        const conflictingLocation = existingAssignments.find(a => a.location_id === params.locationId);
+        if (conflictingLocation) {
+          conflicts.push({
+            type: 'existing_assignment',
+            message: `User is already assigned to this location`,
+            suggestions: ['Update existing assignment', 'Remove existing assignment first']
+          });
+        }
+      }
+
+      return {
+        isValid: conflicts.length === 0,
+        conflicts
+      };
+    } catch (error) {
+      console.error('Error validating relationship:', error);
+      return {
+        isValid: false,
+        conflicts: [{
+          type: 'invalid_user',
+          message: 'An error occurred while validating the relationship',
+          suggestions: ['Try again', 'Contact support']
+        }]
+      };
+    }
+  }
+
+  /**
+   * Create complete provider relationship with all necessary entities
+   * Creates provider, team, and assignments in a coordinated manner
+   */
+  async createCompleteRelationship(
+    apUserId: string,
+    locationId: string,
+    createdBy: string,
+    options: {
+      createProvider?: boolean;
+      providerName?: string;
+      createTeam?: boolean;
+      teamName?: string;
+    }
+  ): Promise<{
+    providerId?: string;
+    teamId?: string;
+    assignmentId: string;
+    success: boolean;
+    message: string;
+  }> {
+    try {
+      // First validate the relationship
+      const validation = await this.validateRelationship({ apUserId, locationId });
+      if (!validation.isValid) {
+        throw new Error(`Validation failed: ${validation.conflicts.map(c => c.message).join(', ')}`);
+      }
+
+      let providerId: string | undefined;
+      let teamId: string | undefined;
+
+      // Create provider if requested
+      if (options.createProvider && options.providerName) {
+        const newProvider = await this.createProvider({
+          name: options.providerName,
+          provider_type: 'training_provider',
+          primary_location_id: locationId,
+          status: 'active',
+          user_id: apUserId
+        });
+        providerId = newProvider.id;
+      }
+
+      // Create team if requested
+      if (options.createTeam && options.teamName) {
+        const { data: newTeam, error: teamError } = await supabase
+          .from('teams')
+          .insert({
+            name: options.teamName,
+            description: `Team managed by ${options.providerName || 'AP Provider'}`,
+            location_id: locationId,
+            provider_id: providerId,
+            team_type: 'provider_team',
+            status: 'active',
+            performance_score: 0,
+            created_by: createdBy
+          })
+          .select('id')
+          .single();
+
+        if (teamError) throw teamError;
+        teamId = newTeam.id;
+      }
+
+      // Create location assignment
+      const { data: assignment, error: assignmentError } = await supabase
+        .from('ap_user_location_assignments')
+        .insert({
+          ap_user_id: apUserId,
+          location_id: locationId,
+          assignment_role: 'provider',
+          status: 'active',
+          start_date: new Date().toISOString().split('T')[0],
+          assigned_by: createdBy
+        })
+        .select('id')
+        .single();
+
+      if (assignmentError) throw assignmentError;
+
+      return {
+        providerId,
+        teamId,
+        assignmentId: assignment.id,
+        success: true,
+        message: 'Provider relationship created successfully'
+      };
+    } catch (error) {
+      console.error('Error creating complete relationship:', error);
+      throw new Error(`Failed to create provider relationship: ${error.message}`);
+    }
+  }
 }
 
 // =====================================================================================
