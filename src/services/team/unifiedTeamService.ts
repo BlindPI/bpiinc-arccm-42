@@ -108,7 +108,8 @@ export class UnifiedTeamService {
             status,
             teams!inner (
               *,
-              locations (name, address)
+              locations (name, address),
+              team_members!left (id, status)
             )
           `)
           .eq('provider_id', providerData.id)
@@ -122,7 +123,8 @@ export class UnifiedTeamService {
         const teams = (assignmentData || [])
           .map((assignment: any) => ({
             ...assignment.teams,
-            location: assignment.teams.locations ? { name: assignment.teams.locations.name } : null
+            location: assignment.teams.locations ? { name: assignment.teams.locations.name } : null,
+            member_count: (assignment.teams.team_members || []).filter((m: any) => m.status === 'active').length
           }));
 
         console.log(`🔍 UNIFIEDTEAMSERVICE: Found ${teams.length} teams for AP user (provider-filtered)`);
@@ -135,7 +137,8 @@ export class UnifiedTeamService {
         .from('teams')
         .select(`
           *,
-          locations (name, address)
+          locations (name, address),
+          team_members!left (id, status)
         `);
 
       if (error) {
@@ -146,7 +149,8 @@ export class UnifiedTeamService {
       // Transform to match EnhancedTeam interface
       const teams = (data || []).map((team: any) => ({
         ...team,
-        location: team.locations ? { name: team.locations.name } : null
+        location: team.locations ? { name: team.locations.name } : null,
+        member_count: (team.team_members || []).filter((m: any) => m.status === 'active').length
       }));
 
       console.log(`🔍 UNIFIEDTEAMSERVICE: Found ${teams.length} teams with direct access`);
