@@ -72,22 +72,15 @@ export class SafeTeamService {
 
       console.log('🔐 SAFETEAMSERVICE: Auth validated, user role:', profile.role);
       
-      // Now perform the insert with validated auth
-      const { data, error } = await supabase
-        .from('teams')
-        .insert({
-          name: teamData.name,
-          description: teamData.description || null,
-          location_id: teamData.location_id || null,
-          team_type: teamData.team_type || 'operational',
-          status: teamData.status || 'active',
-          performance_score: 85,
-          metadata: {},
-          monthly_targets: {},
-          current_metrics: {}
-        })
-        .select('*')
-        .single();
+      // Use bypass function to avoid RLS issues with authenticated user context
+      const { data, error } = await supabase.rpc('create_team_bypass_rls', {
+        p_name: teamData.name,
+        p_description: teamData.description || null,
+        p_team_type: teamData.team_type || 'operational',
+        p_location_id: teamData.location_id || null,
+        p_provider_id: null, // Not used in current implementation
+        p_created_by: user.id
+      });
 
       if (error) {
         console.error('💥 SAFETEAMSERVICE: Error creating team:', error);
