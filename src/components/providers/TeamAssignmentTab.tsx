@@ -110,7 +110,6 @@ export function TeamAssignmentTab({ providerId, assignments, onAssignmentChange 
               assignment_end_date,
               team_position,
               permissions,
-              last_activity,
               profiles:user_id (
                 id,
                 display_name,
@@ -181,14 +180,14 @@ export function TeamAssignmentTab({ providerId, assignments, onAssignmentChange 
         // Fetch enrollments for team members
         const { data: enrollments } = await supabase
           .from('enrollments')
-          .select('id, status, created_at, user_id, progress')
+          .select('id, status, created_at, user_id, thinkific_passed')
           .in('user_id', teamMembersData?.map((m: any) => m.user_id) || []);
         
         // Calculate metrics
         const totalMembers = teamMembersData?.length || 0;
         const activeCertificates = certificates?.filter(c => c.status === 'active').length || 0;
-        const completedEnrollments = enrollments?.filter(e => e.status === 'completed').length || 0;
-        const inProgressEnrollments = enrollments?.filter(e => e.status === 'in_progress').length || 0;
+        const completedEnrollments = enrollments?.filter(e => e.status === 'COMPLETED').length || 0;
+        const inProgressEnrollments = enrollments?.filter(e => e.status === 'ENROLLED').length || 0;
         
         return {
           totalMembers,
@@ -198,9 +197,9 @@ export function TeamAssignmentTab({ providerId, assignments, onAssignmentChange 
           certificationRate: totalMembers > 0 ? (activeCertificates / totalMembers) * 100 : 0,
           completionRate: enrollments?.length > 0 ? (completedEnrollments / enrollments.length) * 100 : 0,
           averageProgress: enrollments?.length > 0 ?
-            enrollments.reduce((sum, e) => sum + (e.progress || 0), 0) / enrollments.length : 0,
+            (enrollments.filter(e => e.thinkific_passed).length / enrollments.length) * 100 : 0,
           recentActivity: teamMembersData?.filter((m: any) => {
-            const lastActivity = new Date(m.last_activity || m.assignment_start_date);
+            const lastActivity = new Date(m.assignment_start_date);
             const thirtyDaysAgo = new Date();
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
             return lastActivity > thirtyDaysAgo;
@@ -609,11 +608,9 @@ export function TeamAssignmentTab({ providerId, assignments, onAssignmentChange 
                               <p className="text-muted-foreground">
                                 Since {new Date(member.assignment_start_date).toLocaleDateString()}
                               </p>
-                              {member.last_activity && (
-                                <p className="text-xs text-muted-foreground">
-                                  Last active: {new Date(member.last_activity).toLocaleDateString()}
-                                </p>
-                              )}
+                              <p className="text-xs text-muted-foreground">
+                                Member since: {new Date(member.assignment_start_date).toLocaleDateString()}
+                              </p>
                             </div>
                           </div>
                         </CardContent>
