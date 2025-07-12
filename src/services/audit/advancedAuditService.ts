@@ -159,7 +159,7 @@ export class AdvancedAuditService extends AuditLogService {
     const { error } = await supabase
       .from('authorized_providers')
       .update(oldValues)
-      .eq('id', parseInt(providerId));
+      .eq('id', providerId);
 
     if (error) throw error;
   }
