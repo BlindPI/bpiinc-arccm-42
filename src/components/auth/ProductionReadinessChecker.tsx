@@ -18,42 +18,5 @@ export const ProductionReadinessChecker: React.FC = () => {
         {isValid ? "Ready" : "Issues"}
       </Badge>;
   };
-  return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          {getStatusIcon(validation.isValid)}
-          Production Readiness Status
-          {getStatusBadge(validation.isValid)}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            {validation.message}
-          </AlertDescription>
-        </Alert>
-        
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-          <div className="flex items-center gap-2">
-            {getStatusIcon(validation.checks.database)}
-            <span className="text-sm">Database</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {getStatusIcon(validation.checks.auth)}
-            <span className="text-sm">Authentication</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {getStatusIcon(validation.checks.storage)}
-            <span className="text-sm">Storage</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {getStatusIcon(validation.checks.functions)}
-            <span className="text-sm">Functions</span>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  return;
 };

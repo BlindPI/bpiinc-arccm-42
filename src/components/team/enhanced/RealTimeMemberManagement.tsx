@@ -17,7 +17,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { ActivityMonitoringService } from '@/services/monitoring/activityMonitoringService';
-import { ComplianceService } from '@/services/team/complianceService';
+import { ComplianceService } from '@/services/compliance/complianceService';
 import { SkillsMatrixService } from '@/services/skills/skillsMatrixService';
 import { toast } from 'sonner';
 

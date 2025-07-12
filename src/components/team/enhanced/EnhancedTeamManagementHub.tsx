@@ -18,7 +18,7 @@ import { RealTimeMemberManagement } from './RealTimeMemberManagement';
 import { BulkOperationsManager } from './BulkOperationsManager';
 import { RealTimeAnalyticsDashboard } from '@/components/analytics/RealTimeAnalyticsDashboard';
 import { ExecutiveReportBuilder } from '@/components/analytics/ExecutiveReportBuilder';
-import WorkflowApprovalDashboard from '@/components/governance/WorkflowApprovalDashboard';
+import { WorkflowApprovalDashboard } from '@/components/governance/WorkflowApprovalDashboard';
 import { AuditTrailViewer } from '@/components/governance/AuditTrailViewer';
 import { ComplianceDashboard } from '@/components/governance/ComplianceDashboard';
 import { PerformanceDashboard } from '@/components/performance/PerformanceDashboard';

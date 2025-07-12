@@ -76,7 +76,7 @@ export function FunctionalTeamManagementHub({ userRole }: FunctionalTeamManageme
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Members</p>
-                  <p className="text-2xl font-bold">{systemAnalytics.totalUsers}</p>
+                  <p className="text-2xl font-bold">{systemAnalytics.totalMembers}</p>
                 </div>
                 <Users className="h-5 w-5 text-green-500" />
               </div>
@@ -100,7 +100,7 @@ export function FunctionalTeamManagementHub({ userRole }: FunctionalTeamManageme
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Compliance</p>
-                  <p className="text-2xl font-bold">95%</p>
+                  <p className="text-2xl font-bold">{systemAnalytics.averageCompliance}%</p>
                 </div>
                 <Settings className="h-5 w-5 text-orange-500" />
               </div>

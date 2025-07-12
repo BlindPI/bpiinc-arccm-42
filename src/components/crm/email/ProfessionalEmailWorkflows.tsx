@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from 'sonner';
 import {
   Select,
   SelectContent,
@@ -124,16 +123,16 @@ export function ProfessionalEmailWorkflows() {
           c.created_at && new Date(c.created_at).toDateString() === today
         );
         
-        const totalSent = campaigns.reduce((sum, c) => sum + (c.status === 'sent' ? 1 : 0), 0);
-        const totalOpened = campaigns.reduce((sum, c) => sum + (c.status === 'sent' ? 1 : 0), 0);
-        const totalDelivered = campaigns.reduce((sum, c) => sum + (c.status === 'sent' ? 1 : 0), 0);
+        const totalSent = campaigns.reduce((sum, c) => sum + (c.sent_count || 0), 0);
+        const totalOpened = campaigns.reduce((sum, c) => sum + (c.opened_count || 0), 0);
+        const totalDelivered = campaigns.reduce((sum, c) => sum + (c.delivered_count || 0), 0);
         
         const openRate = totalDelivered > 0 ? Math.round((totalOpened / totalDelivered) * 100) : 0;
         const automationSuccess = campaigns.length > 0 ?
           Math.round((campaigns.filter(c => c.status === 'sent').length / campaigns.length) * 100) : 0;
 
         return {
-          emailsSentToday: todaysCampaigns.filter(c => c.status === 'sent').length,
+          emailsSentToday: todaysCampaigns.reduce((sum, c) => sum + (c.sent_count || 0), 0),
           openRate,
           automationSuccess,
           totalCampaigns: campaigns.length

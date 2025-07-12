@@ -147,7 +147,7 @@ export function ProviderTeamManagement() {
                     <div className="text-sm">
                       <span className="text-muted-foreground">Location: </span>
                       <span className="font-medium">
-                        None
+                        {teamMembership.teams?.locations?.name || 'None'}
                       </span>
                     </div>
                   </div>
@@ -158,7 +158,7 @@ export function ProviderTeamManagement() {
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Team Score:</span>
                         <span className="font-medium">
-                          85%
+                          {teamMembership.teams?.performance_score || 'N/A'}
                         </span>
                       </div>
                       <div className="flex justify-between">

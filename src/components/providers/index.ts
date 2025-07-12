@@ -6,6 +6,6 @@ export { ProviderPerformanceView } from './ProviderPerformanceView';
 
 // Supporting components that are still functional
 export { LocationProviderTeamWorkflow } from './LocationProviderTeamWorkflow';
-export { default as ProviderLocationAssignments } from './ProviderLocationAssignments';
+export { ProviderLocationAssignments } from './ProviderLocationAssignments';
 export { TeamProviderIntegration } from './TeamProviderIntegration';
 export { APUserSync } from './APUserSync';

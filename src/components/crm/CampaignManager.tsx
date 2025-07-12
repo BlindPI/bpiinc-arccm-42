@@ -492,7 +492,7 @@ const CampaignForm: React.FC<CampaignFormProps> = ({ campaign, onSubmit, isLoadi
           <Label htmlFor="campaign_type">Campaign Type</Label>
           <Select
             value={formData.campaign_type}
-            onValueChange={(value) => setFormData({ ...formData, campaign_type: value as "newsletter" | "promotional" | "drip" | "event" | "follow_up" })}
+            onValueChange={(value) => setFormData({ ...formData, campaign_type: value })}
           >
             <SelectTrigger>
               <SelectValue />

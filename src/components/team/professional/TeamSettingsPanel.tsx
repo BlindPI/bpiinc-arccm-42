@@ -64,7 +64,7 @@ export function TeamSettingsPanel({ team, canManage }: TeamSettingsPanelProps) {
           description: teamData.description,
           team_type: teamData.team_type,
           location_id: teamData.location_id || null,
-          provider_id: teamData.provider_id || null,
+          provider_id: teamData.provider_id ? parseInt(teamData.provider_id) : null,
           status: teamData.status,
           metadata: teamData.metadata,
           monthly_targets: teamData.monthly_targets,

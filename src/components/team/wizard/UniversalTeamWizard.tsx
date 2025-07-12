@@ -68,7 +68,7 @@ export function UniversalTeamWizard({ userRole = 'IT', onTeamCreated }: Universa
       const { data, error } = await supabase
         .from('authorized_providers')
         .select('name')
-        .eq('id', formData.provider_id)
+        .eq('id', parseInt(formData.provider_id))
         .single();
       
       if (error) throw error;

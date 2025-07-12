@@ -47,7 +47,8 @@ export function ManualEnrollmentForm() {
           max_participants,
           courses:course_id(
             id,
-            name
+            name,
+            title
           ),
           locations:location_id(
             id,
@@ -118,8 +119,7 @@ export function ManualEnrollmentForm() {
           student_profile_id: studentProfileId,
           course_offering_id: courseOfferingId,
           status: status,
-          enrollment_date: new Date().toISOString(),
-          user_id: studentProfileId // Use student profile ID as user_id for enrollment
+          enrollment_date: new Date().toISOString()
         }])
         .select('id')
         .single();
@@ -257,7 +257,7 @@ export function ManualEnrollmentForm() {
                   {courseOfferings.map((offering) => (
                     <SelectItem key={offering.id} value={offering.id}>
                       <div className="flex flex-col">
-                        <span>{offering.courses?.name || 'Course'}</span>
+                        <span>{offering.courses?.title || offering.courses?.name || 'Course'}</span>
                         <span className="text-sm text-muted-foreground">
                           {offering.locations?.name} - {new Date(offering.start_date).toLocaleDateString()}
                           {offering.max_participants ? ` (${offering.max_participants} max participants)` : ''}

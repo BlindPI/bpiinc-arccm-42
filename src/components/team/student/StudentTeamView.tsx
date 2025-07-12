@@ -79,7 +79,7 @@ export function StudentTeamView() {
                       <div>
                         <span className="text-muted-foreground">Location:</span>
                         <div className="font-medium">
-                          None
+                          {teamMembership.teams?.locations?.name || 'None'}
                         </div>
                       </div>
                     </div>
