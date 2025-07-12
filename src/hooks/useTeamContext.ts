@@ -81,7 +81,7 @@ export function useTeamContext(): TeamContext {
       isTeamMember: hasTeams,
       teamRole,
       shouldUseTeamDashboard,
-      teamLocation: primaryTeam?.teams?.locations || null,
+      teamLocation: null, // Location data not available in flat structure
       isTeamAdmin,
       canManageTeamNavigation,
       isSystemAdmin,
