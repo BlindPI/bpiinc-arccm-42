@@ -142,39 +142,11 @@ export function StudentDataTable({
     });
   };
 
-  const sortCertificatesData = (data: StudentProfile[], sortOrder: 'asc' | 'desc') => {
-    console.log('Certificate sorting - data sample:', data.slice(0, 3).map(d => ({
-      email: d.email,
-      certificate_count: d.certificate_count,
-      has_certificates: d.has_certificates,
-      certificate_status_summary: d.certificate_status_summary,
-      latest_certificate_date: d.latest_certificate_date
-    })));
-    
-    return [...data].sort((a, b) => {
-      const aCount = a.certificate_count || 0;
-      const bCount = b.certificate_count || 0;
-      
-      // Secondary sort by certificate status priority if counts are equal
-      if (aCount === bCount) {
-        const aActive = a.certificate_status_summary?.active || 0;
-        const bActive = b.certificate_status_summary?.active || 0;
-        const activeComparison = aActive - bActive;
-        if (activeComparison !== 0) {
-          return sortOrder === 'asc' ? activeComparison : -activeComparison;
-        }
-        
-        // Tertiary sort by latest certificate date
-        const aDate = a.latest_certificate_date ? new Date(a.latest_certificate_date).getTime() : 0;
-        const bDate = b.latest_certificate_date ? new Date(b.latest_certificate_date).getTime() : 0;
-        const dateComparison = aDate - bDate;
-        return sortOrder === 'asc' ? dateComparison : -dateComparison;
-      }
-      
-      const comparison = aCount - bCount;
-      return sortOrder === 'asc' ? comparison : -comparison;
-    });
-  };
+  // Remove client-side certificate sorting since it's now handled server-side
+  // const sortCertificatesData = (data: StudentProfile[], sortOrder: 'asc' | 'desc') => {
+  //   // This is now handled in the fetchStudentsForCertificateSorting function
+  //   return data;
+  // };
 
   const getSortIcon = (columnId: string) => {
     if (filters.sortBy !== columnId) return null;
@@ -431,14 +403,13 @@ export function StudentDataTable({
     },
   ], [data, selectedStudents, onStudentEdit, onStudentDelete]);
 
-  // Apply client-side sorting for advanced enrollment sorting and certificate sorting
+  // Apply client-side sorting for advanced enrollment sorting only
+  // Certificate sorting is now handled server-side in the hook
   const sortedData = useMemo(() => {
     if (filters.sortBy === 'enrollments_list' && enrollmentSortType && enrollmentSortType !== 'alphabetical') {
       return sortEnrollmentsData(data, enrollmentSortType, filters.sortOrder || 'asc');
     }
-    if (filters.sortBy === 'certificates') {
-      return sortCertificatesData(data, filters.sortOrder || 'asc');
-    }
+    // Certificate sorting is handled server-side, so just return data as-is
     return data;
   }, [data, filters.sortBy, filters.sortOrder, enrollmentSortType]);
 

@@ -148,6 +148,101 @@ export function useStudentManagement() {
     });
   }, []);
 
+  // Special function for certificate sorting that fetches all students, enriches, sorts, then paginates
+  const fetchStudentsForCertificateSorting = useCallback(async (
+    filters: StudentFilters,
+    pagination: PaginationParams
+  ): Promise<StudentQueryResult> => {
+    console.log('🔍 Using certificate sorting function');
+    
+    // First, get all students matching the filters (except certificate sorting)
+    let query = supabase
+      .from('student_enrollment_profiles')
+      .select('*', { count: 'exact' });
+
+    // Apply non-certificate filters
+    if (filters.search) {
+      query = query.or(`email.ilike.%${filters.search}%,first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,display_name.ilike.%${filters.search}%`);
+    }
+
+    if (filters.enrollment_status) {
+      query = query.eq('enrollment_status', filters.enrollment_status);
+    }
+
+    if (filters.imported_from) {
+      query = query.eq('imported_from', filters.imported_from);
+    }
+
+    if (filters.is_active !== undefined) {
+      query = query.eq('is_active', filters.is_active);
+    }
+
+    // Don't apply pagination yet - we need all matching students to sort properly
+    query = query.order('created_at', { ascending: false });
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    // Transform all the data
+    const transformedData = (data as StudentProfileRow[] || []).map(transformStudentProfile);
+    
+    // Enrich ALL students with certificate data
+    const enrichedData = await enrichStudentsWithCertificates(transformedData);
+    
+    console.log('🔍 Certificate enriched data:', enrichedData.slice(0, 3).map(d => ({
+      email: d.email,
+      certificate_count: d.certificate_count,
+      has_certificates: d.has_certificates
+    })));
+    
+    // Sort by certificate data
+    const sortedData = [...enrichedData].sort((a, b) => {
+      const aCount = a.certificate_count || 0;
+      const bCount = b.certificate_count || 0;
+      
+      // Primary sort by certificate count
+      if (aCount !== bCount) {
+        const comparison = aCount - bCount;
+        return filters.sortOrder === 'asc' ? comparison : -comparison;
+      }
+      
+      // Secondary sort by active certificates if counts are equal
+      const aActive = a.certificate_status_summary?.active || 0;
+      const bActive = b.certificate_status_summary?.active || 0;
+      if (aActive !== bActive) {
+        const activeComparison = aActive - bActive;
+        return filters.sortOrder === 'asc' ? activeComparison : -activeComparison;
+      }
+      
+      // Tertiary sort by latest certificate date
+      const aDate = a.latest_certificate_date ? new Date(a.latest_certificate_date).getTime() : 0;
+      const bDate = b.latest_certificate_date ? new Date(b.latest_certificate_date).getTime() : 0;
+      const dateComparison = aDate - bDate;
+      return filters.sortOrder === 'asc' ? dateComparison : -dateComparison;
+    });
+    
+    console.log('🔍 Sorted data:', sortedData.slice(0, 3).map(d => ({
+      email: d.email,
+      certificate_count: d.certificate_count,
+      has_certificates: d.has_certificates
+    })));
+    
+    // Now apply pagination to the sorted results
+    const totalPages = Math.ceil((count || 0) / pagination.pageSize);
+    const from = (pagination.page - 1) * pagination.pageSize;
+    const to = from + pagination.pageSize;
+    const paginatedData = sortedData.slice(from, to);
+
+    return {
+      data: paginatedData,
+      count: count || 0,
+      totalPages
+    };
+  }, [enrichStudentsWithCertificates]);
+
   const fetchStudents = useCallback(async (
     filters: StudentFilters = {},
     pagination: PaginationParams = { page: 1, pageSize: 50 }
@@ -156,9 +251,12 @@ export function useStudentManagement() {
     setError(null);
 
     try {
-      // Special handling for certificate sorting
+      // Special handling for certificate sorting - route to different function
       if (filters.sortBy === 'certificates') {
-        return await fetchStudentsForCertificateSorting(filters, pagination);
+        console.log('🔍 Routing to certificate sorting function with filters:', filters);
+        const result = await fetchStudentsForCertificateSorting(filters, pagination);
+        setIsLoading(false);
+        return result;
       }
 
       let query = supabase
@@ -225,88 +323,7 @@ export function useStudentManagement() {
     } finally {
       setIsLoading(false);
     }
-  }, [enrichStudentsWithCertificates]);
-
-  // Special function for certificate sorting that fetches all students, enriches, sorts, then paginates
-  const fetchStudentsForCertificateSorting = useCallback(async (
-    filters: StudentFilters,
-    pagination: PaginationParams
-  ): Promise<StudentQueryResult> => {
-    // First, get all students matching the filters (except certificate sorting)
-    let query = supabase
-      .from('student_enrollment_profiles')
-      .select('*', { count: 'exact' });
-
-    // Apply non-certificate filters
-    if (filters.search) {
-      query = query.or(`email.ilike.%${filters.search}%,first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,display_name.ilike.%${filters.search}%`);
-    }
-
-    if (filters.enrollment_status) {
-      query = query.eq('enrollment_status', filters.enrollment_status);
-    }
-
-    if (filters.imported_from) {
-      query = query.eq('imported_from', filters.imported_from);
-    }
-
-    if (filters.is_active !== undefined) {
-      query = query.eq('is_active', filters.is_active);
-    }
-
-    // Don't apply pagination yet - we need all matching students to sort properly
-    query = query.order('created_at', { ascending: false });
-
-    const { data, error, count } = await query;
-
-    if (error) {
-      throw error;
-    }
-
-    // Transform all the data
-    const transformedData = (data as StudentProfileRow[] || []).map(transformStudentProfile);
-    
-    // Enrich ALL students with certificate data
-    const enrichedData = await enrichStudentsWithCertificates(transformedData);
-    
-    // Sort by certificate data
-    const sortedData = [...enrichedData].sort((a, b) => {
-      const aCount = a.certificate_count || 0;
-      const bCount = b.certificate_count || 0;
-      
-      // Primary sort by certificate count
-      if (aCount !== bCount) {
-        const comparison = aCount - bCount;
-        return filters.sortOrder === 'asc' ? comparison : -comparison;
-      }
-      
-      // Secondary sort by active certificates if counts are equal
-      const aActive = a.certificate_status_summary?.active || 0;
-      const bActive = b.certificate_status_summary?.active || 0;
-      if (aActive !== bActive) {
-        const activeComparison = aActive - bActive;
-        return filters.sortOrder === 'asc' ? activeComparison : -activeComparison;
-      }
-      
-      // Tertiary sort by latest certificate date
-      const aDate = a.latest_certificate_date ? new Date(a.latest_certificate_date).getTime() : 0;
-      const bDate = b.latest_certificate_date ? new Date(b.latest_certificate_date).getTime() : 0;
-      const dateComparison = aDate - bDate;
-      return filters.sortOrder === 'asc' ? dateComparison : -dateComparison;
-    });
-    
-    // Now apply pagination to the sorted results
-    const totalPages = Math.ceil((count || 0) / pagination.pageSize);
-    const from = (pagination.page - 1) * pagination.pageSize;
-    const to = from + pagination.pageSize;
-    const paginatedData = sortedData.slice(from, to);
-
-    return {
-      data: paginatedData,
-      count: count || 0,
-      totalPages
-    };
-  }, [enrichStudentsWithCertificates]);
+  }, [enrichStudentsWithCertificates, fetchStudentsForCertificateSorting]);
 
   const updateStudent = useCallback(async (
     id: string,
