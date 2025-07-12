@@ -10,14 +10,14 @@ export const validateSupabaseConfiguration = (): ConfigurationValidation => {
   const warnings: string[] = [];
 
   // Check if Supabase URL is configured
-  const supabaseUrl = 'https://seaxchrsbldrppupupbw.supabase.co';
-  if (!supabaseUrl || supabaseUrl === 'your-project-url') {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  if (!supabaseUrl || supabaseUrl === 'your-project-url' || supabaseUrl === 'https://your-project-id.supabase.co') {
     errors.push('Supabase URL is not configured properly');
   }
 
   // Check if Supabase anon key is configured
-  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlYXhjaHJzYmxkcnBwdXB1cGJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyMTUyMDMsImV4cCI6MjA1OTc5MTIwM30._3sOX2_EkBFp4mzC0_MjBkAlAHxHWitsMShszmLITOQ';
-  if (!supabaseKey || supabaseKey === 'your-anon-key') {
+  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  if (!supabaseKey || supabaseKey === 'your-anon-key' || supabaseKey === 'your-anon-key-here') {
     errors.push('Supabase anon key is not configured properly');
   }
 

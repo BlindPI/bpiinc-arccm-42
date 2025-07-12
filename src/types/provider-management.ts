@@ -190,6 +190,8 @@ export interface CreateProviderRequest {
   contact_email?: string;
   contact_phone?: string;
   address?: string;
+  status?: string;
+  user_id?: string;
 }
 
 export interface UpdateProviderRequest extends Partial<CreateProviderRequest> {
