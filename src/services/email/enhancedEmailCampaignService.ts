@@ -70,6 +70,8 @@ export class EnhancedEmailCampaignService {
           campaign_type: campaignData.campaign_type,
           subject_line: campaignData.subject_line || template.subject_template,
           content: template.html_template,
+          sender_name: 'Professional Training Institute',
+          sender_email: 'noreply@company.com',
           status: campaignData.send_immediately ? 'sending' : 'draft',
           send_date: campaignData.scheduled_send_time?.toISOString(),
           created_at: new Date().toISOString(),

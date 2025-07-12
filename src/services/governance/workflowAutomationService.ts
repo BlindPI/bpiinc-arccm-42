@@ -45,21 +45,40 @@ export class WorkflowAutomationService {
     const { data, error } = await supabase
       .from('workflow_definitions')
       .insert({
-        ...definition,
-        workflow_steps: definition.workflow_steps as any,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        name: definition.workflow_name,
+        description: definition.description,
+        workflow_type: definition.workflow_type,
+        definition_json: {
+          workflow_steps: definition.workflow_steps,
+          conditional_routing: definition.conditional_routing,
+          escalation_rules: definition.escalation_rules,
+          sla_config: definition.sla_config,
+          version: definition.version
+        },
+        business_rules: {},
+        is_active: definition.is_active,
+        created_by: definition.created_by
       })
       .select()
       .single();
 
     if (error) throw error;
 
+    const definitionJson = data.definition_json as any || {};
     return {
-      ...data,
-      workflow_steps: typeof data.workflow_steps === 'object' && data.workflow_steps !== null 
-        ? data.workflow_steps 
-        : {}
+      id: data.id,
+      workflow_name: data.name,
+      workflow_type: data.workflow_type,
+      description: data.description,
+      workflow_steps: definitionJson.workflow_steps || {},
+      conditional_routing: definitionJson.conditional_routing || {},
+      escalation_rules: definitionJson.escalation_rules || {},
+      sla_config: definitionJson.sla_config || {},
+      is_active: data.is_active,
+      version: definitionJson.version || 1,
+      created_by: data.created_by,
+      created_at: data.created_at,
+      updated_at: data.updated_at
     } as WorkflowDefinition;
   }
 
@@ -72,96 +91,119 @@ export class WorkflowAutomationService {
 
     if (error) throw error;
 
-    return (data || []).map(item => ({
-      ...item,
-      workflow_steps: typeof item.workflow_steps === 'object' && item.workflow_steps !== null 
-        ? item.workflow_steps 
-        : {},
-      conditional_routing: typeof item.conditional_routing === 'object' && item.conditional_routing !== null 
-        ? item.conditional_routing 
-        : {},
-      escalation_rules: typeof item.escalation_rules === 'object' && item.escalation_rules !== null 
-        ? item.escalation_rules 
-        : {},
-      sla_config: typeof item.sla_config === 'object' && item.sla_config !== null 
-        ? item.sla_config 
-        : {},
-      description: item.description || undefined,
-      created_by: item.created_by || undefined,
-      created_at: item.created_at || new Date().toISOString(),
-      updated_at: item.updated_at || new Date().toISOString()
-    })) as WorkflowDefinition[];
+    return (data || []).map(item => {
+      const definitionJson = item.definition_json as any || {};
+      return {
+        id: item.id,
+        workflow_name: item.name,
+        workflow_type: item.workflow_type,
+        description: item.description,
+        workflow_steps: definitionJson.workflow_steps || {},
+        conditional_routing: definitionJson.conditional_routing || {},
+        escalation_rules: definitionJson.escalation_rules || {},
+        sla_config: definitionJson.sla_config || {},
+        is_active: item.is_active,
+        version: definitionJson.version || 1,
+        created_by: item.created_by,
+        created_at: item.created_at,
+        updated_at: item.updated_at
+      } as WorkflowDefinition;
+    });
   }
 
   static async getWorkflowInstances(
     entityType?: string,
     entityId?: string
   ): Promise<WorkflowInstance[]> {
-    let query = supabase
+    const { data, error } = await supabase
       .from('workflow_instances')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (entityType) {
-      query = query.eq('entity_type', entityType);
-    }
-
-    if (entityId) {
-      query = query.eq('entity_id', entityId);
-    }
-
-    const { data, error } = await query;
-
     if (error) throw error;
 
-    return (data || []).map(item => ({
-      ...item,
-      workflow_data: typeof item.workflow_data === 'object' && item.workflow_data !== null 
-        ? item.workflow_data 
-        : {},
-      step_history: parseStepHistory(item.step_history),
-      current_step: item.current_step || 1,
-      escalation_count: item.escalation_count || 0,
-      workflow_status: (item.workflow_status as any) || 'pending',
-      instance_name: item.instance_name || undefined,
-      initiated_by: item.initiated_by || undefined,
-      completed_at: item.completed_at || undefined,
-      sla_deadline: item.sla_deadline || undefined,
-      created_at: item.created_at || new Date().toISOString(),
-      updated_at: item.updated_at || new Date().toISOString()
-    })) as WorkflowInstance[];
+    return (data || []).map(item => {
+      const instanceData = item.instance_data as any || {};
+      return {
+        id: item.id,
+        workflow_definition_id: item.workflow_definition_id,
+        instance_name: instanceData.instance_name,
+        entity_type: instanceData.entity_type || 'general',
+        entity_id: instanceData.entity_id || item.id,
+        current_step: parseInt(item.current_step_id) || 1,
+        workflow_status: item.status as any || 'pending',
+        initiated_by: item.initiated_by,
+        initiated_at: item.created_at,
+        completed_at: item.completed_at,
+        sla_deadline: instanceData.sla_deadline,
+        escalation_count: instanceData.escalation_count || 0,
+        workflow_data: instanceData,
+        step_history: parseStepHistory(instanceData.step_history),
+        created_at: item.created_at,
+        updated_at: item.updated_at
+      } as WorkflowInstance;
+    });
   }
 
   static async updateWorkflowInstance(
     instanceId: string,
     updates: Partial<WorkflowInstance>
   ): Promise<WorkflowInstance> {
-    // Serialize step_history if it exists in updates
-    const serializedUpdates: any = {
-      ...updates,
-      updated_at: new Date().toISOString()
+    // Get current instance to merge data
+    const { data: currentData, error: fetchError } = await supabase
+      .from('workflow_instances')
+      .select('*')
+      .eq('id', instanceId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    const currentInstanceData = currentData.instance_data as any || {};
+    const updatedInstanceData = {
+      ...currentInstanceData,
+      instance_name: updates.instance_name || currentInstanceData.instance_name,
+      entity_type: updates.entity_type || currentInstanceData.entity_type,
+      entity_id: updates.entity_id || currentInstanceData.entity_id,
+      sla_deadline: updates.sla_deadline || currentInstanceData.sla_deadline,
+      escalation_count: updates.escalation_count ?? currentInstanceData.escalation_count,
+      step_history: updates.step_history ? serializeStepHistory(updates.step_history) : currentInstanceData.step_history,
+      ...updates.workflow_data
     };
-    
-    if (updates.step_history) {
-      serializedUpdates.step_history = serializeStepHistory(updates.step_history);
-    }
 
     const { data, error } = await supabase
       .from('workflow_instances')
-      .update(serializedUpdates)
+      .update({
+        current_step_id: updates.current_step?.toString() || currentData.current_step_id,
+        status: updates.workflow_status || currentData.status,
+        assigned_to: updates.initiated_by || currentData.assigned_to,
+        completed_at: updates.completed_at || currentData.completed_at,
+        instance_data: updatedInstanceData,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', instanceId)
       .select()
       .single();
 
     if (error) throw error;
 
+    const instanceData = data.instance_data as any || {};
     return {
-      ...data,
-      workflow_data: typeof data.workflow_data === 'object' && data.workflow_data !== null 
-        ? data.workflow_data 
-        : {},
-      step_history: parseStepHistory(data.step_history),
-      workflow_status: (data.workflow_status as any) || 'pending'
+      id: data.id,
+      workflow_definition_id: data.workflow_definition_id,
+      instance_name: instanceData.instance_name,
+      entity_type: instanceData.entity_type || 'general',
+      entity_id: instanceData.entity_id || data.id,
+      current_step: parseInt(data.current_step_id) || 1,
+      workflow_status: data.status as any || 'pending',
+      initiated_by: data.initiated_by,
+      initiated_at: data.created_at,
+      completed_at: data.completed_at,
+      sla_deadline: instanceData.sla_deadline,
+      escalation_count: instanceData.escalation_count || 0,
+      workflow_data: instanceData,
+      step_history: parseStepHistory(instanceData.step_history),
+      created_at: data.created_at,
+      updated_at: data.updated_at
     } as WorkflowInstance;
   }
 
@@ -180,8 +222,10 @@ export class WorkflowAutomationService {
 
     if (fetchError) throw fetchError;
 
+    const instanceData = instance.instance_data as any || {};
+    
     // Update step history
-    const currentStepHistory = parseStepHistory(instance.step_history);
+    const currentStepHistory = parseStepHistory(instanceData.step_history);
     const newStepHistory = [
       ...currentStepHistory,
       {
