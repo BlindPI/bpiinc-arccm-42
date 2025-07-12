@@ -14,7 +14,8 @@ export interface Profile {
 
 export interface ExtendedProfile extends Profile {
   display_name: string; // Make display_name required
-  status?: 'ACTIVE' | 'INACTIVE' | 'PENDING'; // Add status property
+  status: 'ACTIVE' | 'INACTIVE' | 'PENDING'; // Add status property (required)
+  compliance_tier?: string; // Add compliance_tier property (optional as per database)
 }
 
 export interface ActivityLog {
