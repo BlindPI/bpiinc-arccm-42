@@ -54,9 +54,25 @@ export class SafeTeamService {
     status?: string;
   }) {
     try {
-      console.log('🔨 SAFETEAMSERVICE: Creating team with direct INSERT:', teamData);
+      console.log('🔨 SAFETEAMSERVICE: Creating team with manual auth validation:', teamData);
       
-      // Use direct table insert like deleteTeam does - this works!
+      // Manual auth validation - same pattern as AdminTeamService.deleteTeam
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (!profile || !['SA', 'AD'].includes(profile.role)) {
+        throw new Error('Insufficient permissions to create teams');
+      }
+
+      console.log('🔐 SAFETEAMSERVICE: Auth validated, user role:', profile.role);
+      
+      // Now perform the insert with validated auth
       const { data, error } = await supabase
         .from('teams')
         .insert({
