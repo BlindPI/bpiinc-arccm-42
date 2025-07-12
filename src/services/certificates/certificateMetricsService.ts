@@ -144,7 +144,7 @@ export class CertificateMetricsService {
 
       // Filter by user if not admin
       if (!isAdmin && userId) {
-        query = query.eq('created_by', userId);
+        query = query.eq('user_id', userId);
       }
 
       const { count, error } = await query;
@@ -170,7 +170,7 @@ export class CertificateMetricsService {
 
       // Filter by user if not admin
       if (!isAdmin && userId) {
-        baseQuery = baseQuery.eq('created_by', userId);
+        baseQuery = baseQuery.eq('user_id', userId);
       }
 
       // Get total requests
@@ -192,7 +192,7 @@ export class CertificateMetricsService {
         .eq('status', 'APPROVED');
 
       if (!isAdmin && userId) {
-        approvedQuery = approvedQuery.eq('created_by', userId);
+        approvedQuery = approvedQuery.eq('user_id', userId);
       }
 
       const { count: approvedRequests, error: approvedError } = await approvedQuery;
@@ -255,7 +255,7 @@ export class CertificateMetricsService {
 
       // Filter by user if not admin
       if (!isAdmin && userId) {
-        query = query.eq('created_by', userId);
+        query = query.eq('user_id', userId);
       }
 
       const { count, error } = await query;
