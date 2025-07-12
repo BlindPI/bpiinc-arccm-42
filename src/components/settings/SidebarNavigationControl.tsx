@@ -17,7 +17,7 @@ import { ROLE_LABELS } from '@/lib/roles';
 // Navigation structure matching AppSidebar - UPDATED to include all implemented CRM components and Provider Management
 const NAVIGATION_GROUPS = {
   'Dashboard': ['Dashboard', 'Profile'],
-  'User Management': ['Users', 'Teams', 'Role Management', 'Supervision'],
+  'User Management': ['Users', 'Teams', 'Students', 'Role Management', 'Supervision'],
   'Provider Management': ['Provider Management'],
   'Training Management': ['Training Hub', 'Courses', 'Enrollments', 'Enrollment Management', 'Locations'],
   'Certificates': ['Certificates', 'Certificate Analytics', 'Rosters'],
