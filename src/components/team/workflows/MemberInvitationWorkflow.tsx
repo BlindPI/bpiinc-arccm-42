@@ -28,8 +28,8 @@ export function MemberInvitationWorkflow({ teamId }: MemberInvitationWorkflowPro
   // Get pending invitations
   const { data: pendingInvitations = [] } = useQuery({
     queryKey: ['team-invitations', teamId],
-    queryFn: async () => {
-      const { data, error } = await supabase
+    queryFn: async (): Promise<any[]> => {
+      const response = await supabase
         .from('workflow_instances')
         .select(`
           *,
@@ -38,6 +38,8 @@ export function MemberInvitationWorkflow({ teamId }: MemberInvitationWorkflowPro
         .eq('entity_type', 'team_member_invitation')
         .eq('entity_id', teamId)
         .in('status', ['pending', 'in_progress']);
+
+      const { data, error } = response;
       
       if (error) throw error;
       return data;
