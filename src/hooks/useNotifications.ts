@@ -4,6 +4,22 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
+// Static notification types data
+const NOTIFICATION_TYPES = [
+  { id: 'certificate', display_name: 'Certificate Notifications', description: 'Certificate generation and updates', category: 'CERTIFICATE', icon: 'Award', default_priority: 'normal' },
+  { id: 'course', display_name: 'Course Notifications', description: 'Course enrollment and completion', category: 'COURSE', icon: 'BookOpen', default_priority: 'normal' },
+  { id: 'account', display_name: 'Account Notifications', description: 'Account security and updates', category: 'ACCOUNT', icon: 'User', default_priority: 'high' },
+  { id: 'system', display_name: 'System Notifications', description: 'System maintenance and updates', category: 'SYSTEM', icon: 'Settings', default_priority: 'low' }
+];
+
+// Default notification preferences
+const DEFAULT_PREFERENCES = {
+  CERTIFICATE: { in_app_enabled: true, email_enabled: true, browser_enabled: false },
+  COURSE: { in_app_enabled: true, email_enabled: true, browser_enabled: false },
+  ACCOUNT: { in_app_enabled: true, email_enabled: true, browser_enabled: true },
+  SYSTEM: { in_app_enabled: true, email_enabled: false, browser_enabled: false }
+};
+
 // Notification preferences hooks
 export function useNotificationPreferences() {
   const { user } = useAuth();
@@ -13,18 +29,33 @@ export function useNotificationPreferences() {
     queryFn: async () => {
       if (!user?.id) throw new Error('User not authenticated');
 
+      // Use user_preferences table with notification_preferences JSON column
       const { data, error } = await supabase
-        .from('notification_preferences')
-        .select('*')
-        .eq('user_id', user.id);
+        .from('user_preferences')
+        .select('notification_preferences')
+        .eq('user_id', user.id)
+        .single();
 
       if (error) {
         console.error('🔍 Error fetching notification preferences:', error);
-        throw error;
+        // Return default preferences if none exist
+        return Object.entries(DEFAULT_PREFERENCES).map(([category, prefs]) => ({
+          category,
+          ...prefs
+        }));
       }
 
-      console.log('🔍 Fetched notification preferences:', data);
-      return data || [];
+      const preferences = data?.notification_preferences as any || {};
+      
+      // Merge with defaults for any missing categories
+      const result = Object.entries(DEFAULT_PREFERENCES).map(([category, defaultPrefs]) => ({
+        category,
+        ...defaultPrefs,
+        ...(preferences[category] || {})
+      }));
+
+      console.log('🔍 Fetched notification preferences:', result);
+      return result;
     },
     enabled: !!user?.id
   });
@@ -34,18 +65,8 @@ export function useNotificationTypes() {
   return useQuery({
     queryKey: ['notification-types'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('notification_types')
-        .select('*')
-        .order('category, display_name');
-
-      if (error) {
-        console.error('🔍 Error fetching notification types:', error);
-        throw error;
-      }
-
-      console.log('🔍 Fetched notification types:', data);
-      return data || [];
+      console.log('🔍 Returning static notification types:', NOTIFICATION_TYPES);
+      return NOTIFICATION_TYPES;
     }
   });
 }
@@ -70,18 +91,28 @@ export function useUpdateNotificationPreferences() {
 
       console.log('🔍 Updating notification preferences for category:', { category, updates, userId: user.id });
 
-      // Use upsert to handle the unique constraint properly
+      // First get existing preferences
+      const { data: existing } = await supabase
+        .from('user_preferences')
+        .select('notification_preferences')
+        .eq('user_id', user.id)
+        .single();
+
+      const currentPrefs = (existing?.notification_preferences as any) || {};
+      const updatedPrefs = {
+        ...currentPrefs,
+        [category]: updates
+      };
+
+      // Upsert the updated preferences
       const { data, error } = await supabase
-        .from('notification_preferences')
+        .from('user_preferences')
         .upsert({
           user_id: user.id,
-          category: category,
-          in_app_enabled: updates.in_app_enabled,
-          email_enabled: updates.email_enabled,
-          browser_enabled: updates.browser_enabled,
+          notification_preferences: updatedPrefs,
           updated_at: new Date().toISOString()
         }, {
-          onConflict: 'user_id,category'
+          onConflict: 'user_id'
         })
         .select()
         .single();
@@ -92,7 +123,7 @@ export function useUpdateNotificationPreferences() {
       }
 
       console.log('🔍 Successfully updated preference:', data);
-      return data;
+      return { category, ...updates };
     },
     onSuccess: () => {
       console.log('🔍 Notification preference update successful');
