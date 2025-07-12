@@ -22,13 +22,13 @@ interface ResendResponse {
 
 interface EmailTemplate {
   id: string;
-  name: string;
-  category: string;
-  subject_template: string;
-  html_template: string;
-  text_template?: string;
-  variables: string[];
-  is_active: boolean;
+  name: string | null;
+  category: string | null;
+  subject_template: string | null;
+  html_template: string | null;
+  text_template?: string | null;
+  variables: string[] | null;
+  is_active: boolean | null;
   created_at: string;
   updated_at: string;
 }
@@ -100,7 +100,7 @@ export class ResendEmailService {
       // Log email send to database
       await ResendEmailService.logEmailSend({
         resend_id: result.id,
-        to_email: Array.isArray(emailData.to) ? emailData.to[0] : emailData.to,
+        recipient_email: Array.isArray(emailData.to) ? emailData.to[0] : emailData.to,
         subject: emailData.subject,
         status: 'sent',
         sent_at: new Date().toISOString()
@@ -390,7 +390,7 @@ export class ResendEmailService {
    */
   private static async logEmailSend(logData: {
     resend_id: string;
-    to_email: string;
+    recipient_email: string;
     subject: string;
     status: string;
     sent_at: string;
