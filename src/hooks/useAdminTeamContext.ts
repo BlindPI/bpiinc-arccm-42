@@ -49,6 +49,14 @@ export interface GlobalTeamData {
   };
 }
 
+export interface TeamStatisticsResult {
+  total_teams: number;
+  active_teams: number;
+  inactive_teams: number;
+  suspended_teams: number;
+  average_performance: number;
+}
+
 // Hook for administrative team context - bypasses team membership requirements
 export function useAdminTeamContext(): AdminTeamContext {
   const { user } = useAuth();
@@ -235,7 +243,7 @@ export function useAdminTeamStatistics() {
           // Fallback to direct query
           const { data: teams, error: teamsError } = await supabase
             .from('teams')
-            .select('status, team_type, performance_score');
+            .select('id, status, team_type, performance_score');
           
           if (teamsError) {
             console.error('🔧 ADMIN-STATS: Teams query failed:', teamsError);
@@ -301,7 +309,7 @@ export function useAdminTeamStatistics() {
         } else {
           // Safe function succeeded
           console.log('🔧 ADMIN-STATS: Safe function successful:', statsData);
-          const stats = statsData[0] || {};
+          const stats = (statsData[0] || {}) as TeamStatisticsResult;
           return {
             totalTeams: Number(stats.total_teams) || 0,
             totalMembers: 0, // Will be calculated separately
