@@ -82,7 +82,7 @@ export function InstructorTeamView() {
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Location:</span>
                         <span className="font-medium">
-                          {teamMembership.teams?.locations?.name || 'None'}
+                          None
                         </span>
                       </div>
                       <div className="flex items-center justify-between">

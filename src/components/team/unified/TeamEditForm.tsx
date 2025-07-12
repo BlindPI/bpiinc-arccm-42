@@ -52,7 +52,7 @@ export function TeamEditForm({ team, onCancel, onSuccess }: TeamEditFormProps) {
     description: team.description || '',
     location_id: team.location_id || '',
     team_type: team.team_type || 'standard',
-    status: team.status || 'active'
+    status: (team.status === 'suspended' ? 'archived' : team.status) || 'active'
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [hasChanges, setHasChanges] = useState(false);
@@ -155,7 +155,7 @@ export function TeamEditForm({ team, onCancel, onSuccess }: TeamEditFormProps) {
       description: team.description || '',
       location_id: team.location_id || '',
       team_type: team.team_type || 'standard',
-      status: team.status || 'active'
+      status: (team.status === 'suspended' ? 'archived' : team.status) || 'active'
     });
     setErrors({});
   };

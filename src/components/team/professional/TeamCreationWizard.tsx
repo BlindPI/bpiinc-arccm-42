@@ -86,7 +86,7 @@ export function TeamCreationWizard({ onClose, onTeamCreated }: TeamCreationWizar
           description: teamData.description,
           team_type: teamData.team_type,
           location_id: teamData.location_id || null,
-          provider_id: teamData.provider_id ? parseInt(teamData.provider_id) : null,
+          provider_id: teamData.provider_id || null,
           status: 'active',
           performance_score: 0,
           created_by: user?.id,

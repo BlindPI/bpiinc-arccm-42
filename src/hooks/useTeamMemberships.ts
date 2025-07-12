@@ -19,34 +19,42 @@ export function useTeamMemberships() {
       console.log('🔧 useTeamMemberships: Fetching teams for user ID:', user.id);
       
       try {
-        // Use the new RLS-safe function to get user memberships
+        // Use direct query with proper joins to get complete team membership data
         const { data: memberships, error } = await supabase
-          .rpc('fetch_user_team_memberships', { p_user_id: user.id });
+          .from('team_members')
+          .select(`
+            id,
+            team_id,
+            user_id,
+            role,
+            status,
+            team_position,
+            assignment_start_date,
+            created_at,
+            teams!team_members_team_id_fkey(
+              id,
+              name,
+              description,
+              team_type,
+              status,
+              locations!teams_location_id_fkey(
+                id,
+                name,
+                address,
+                city,
+                state
+              )
+            )
+          `)
+          .eq('user_id', user.id)
+          .eq('status', 'active');
 
         if (error) {
-          console.error('🔧 useTeamMemberships: RPC function failed:', error);
-          
-          // Fallback: Try direct query with limited fields to avoid recursion
-          try {
-            const { data: fallbackData, error: fallbackError } = await supabase
-              .from('team_members')
-              .select('id, team_id, role, status')
-              .eq('user_id', user.id);
-
-            if (fallbackError) {
-              console.error('🔧 useTeamMemberships: Fallback query also failed:', fallbackError);
-              return [];
-            }
-
-            console.log('🔧 useTeamMemberships: Fallback query successful:', fallbackData?.length || 0, 'memberships');
-            return fallbackData || [];
-          } catch (fallbackException) {
-            console.error('🔧 useTeamMemberships: All queries failed:', fallbackException);
-            return [];
-          }
+          console.error('🔧 useTeamMemberships: Direct query failed:', error);
+          return [];
         }
 
-        console.log('🔧 useTeamMemberships: RPC function successful:', memberships?.length || 0, 'memberships');
+        console.log('🔧 useTeamMemberships: Direct query successful:', memberships?.length || 0, 'memberships');
         return memberships || [];
 
       } catch (exception) {
