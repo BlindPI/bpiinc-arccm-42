@@ -26,11 +26,33 @@ export function useTeamMemberships() {
         if (error) {
           console.error('🔧 useTeamMemberships: RPC function failed:', error);
           
-          // Fallback: Try direct query with limited fields to avoid recursion
+          // Fallback: Try direct query with proper joins to include team and location data
           try {
             const { data: fallbackData, error: fallbackError } = await supabase
               .from('team_members')
-              .select('id, team_id, role, status')
+              .select(`
+                id,
+                team_id,
+                role,
+                status,
+                assignment_start_date,
+                team_position,
+                teams!team_id(
+                  id,
+                  name,
+                  description,
+                  location_id,
+                  team_type,
+                  performance_score,
+                  locations!location_id(
+                    id,
+                    name,
+                    address,
+                    city,
+                    state
+                  )
+                )
+              `)
               .eq('user_id', user.id);
 
             if (fallbackError) {
