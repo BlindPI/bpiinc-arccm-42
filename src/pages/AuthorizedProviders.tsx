@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UnifiedProviderDashboard } from '@/components/providers/UnifiedProviderDashboard';
 import { ProviderAssignmentManager } from '@/components/providers/ProviderAssignmentManager';
+import { ProviderSettingsPanel } from '@/components/providers/settings/ProviderSettingsPanel';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Settings, BarChart3 } from 'lucide-react';
 
@@ -58,12 +59,7 @@ export default function AuthorizedProviders() {
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-4">
-            <Card>
-              <CardContent className="text-center py-8">
-                <Settings className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-muted-foreground">Provider settings panel coming soon</p>
-              </CardContent>
-            </Card>
+            <ProviderSettingsPanel />
           </TabsContent>
         </Tabs>
       </div>

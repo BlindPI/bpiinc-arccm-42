@@ -11179,6 +11179,153 @@ export type Database = {
           },
         ]
       }
+      provider_settings: {
+        Row: {
+          api_access_enabled: boolean | null
+          audit_trail_retention_days: number | null
+          auto_assignment_enabled: boolean | null
+          auto_reporting_enabled: boolean | null
+          branding_logo_url: string | null
+          branding_primary_color: string | null
+          branding_secondary_color: string | null
+          bulk_operation_limit: number | null
+          compliance_reminder_days: number | null
+          created_at: string
+          dashboard_layout: Json | null
+          default_assignment_role: string | null
+          delegation_permissions: Json | null
+          display_name: string | null
+          email_templates: Json | null
+          export_format: string | null
+          external_integrations: Json | null
+          id: string
+          language_preference: string | null
+          location_specific_settings: Json | null
+          notification_preferences: Json | null
+          operating_hours: Json | null
+          performance_targets: Json | null
+          preferred_communication_method: string | null
+          provider_id: string | null
+          reporting_schedule: string | null
+          session_timeout_minutes: number | null
+          team_naming_convention: string | null
+          theme_preferences: Json | null
+          timezone: string | null
+          two_factor_enabled: boolean | null
+          updated_at: string
+          user_id: string
+          workflow_triggers: Json | null
+        }
+        Insert: {
+          api_access_enabled?: boolean | null
+          audit_trail_retention_days?: number | null
+          auto_assignment_enabled?: boolean | null
+          auto_reporting_enabled?: boolean | null
+          branding_logo_url?: string | null
+          branding_primary_color?: string | null
+          branding_secondary_color?: string | null
+          bulk_operation_limit?: number | null
+          compliance_reminder_days?: number | null
+          created_at?: string
+          dashboard_layout?: Json | null
+          default_assignment_role?: string | null
+          delegation_permissions?: Json | null
+          display_name?: string | null
+          email_templates?: Json | null
+          export_format?: string | null
+          external_integrations?: Json | null
+          id?: string
+          language_preference?: string | null
+          location_specific_settings?: Json | null
+          notification_preferences?: Json | null
+          operating_hours?: Json | null
+          performance_targets?: Json | null
+          preferred_communication_method?: string | null
+          provider_id?: string | null
+          reporting_schedule?: string | null
+          session_timeout_minutes?: number | null
+          team_naming_convention?: string | null
+          theme_preferences?: Json | null
+          timezone?: string | null
+          two_factor_enabled?: boolean | null
+          updated_at?: string
+          user_id: string
+          workflow_triggers?: Json | null
+        }
+        Update: {
+          api_access_enabled?: boolean | null
+          audit_trail_retention_days?: number | null
+          auto_assignment_enabled?: boolean | null
+          auto_reporting_enabled?: boolean | null
+          branding_logo_url?: string | null
+          branding_primary_color?: string | null
+          branding_secondary_color?: string | null
+          bulk_operation_limit?: number | null
+          compliance_reminder_days?: number | null
+          created_at?: string
+          dashboard_layout?: Json | null
+          default_assignment_role?: string | null
+          delegation_permissions?: Json | null
+          display_name?: string | null
+          email_templates?: Json | null
+          export_format?: string | null
+          external_integrations?: Json | null
+          id?: string
+          language_preference?: string | null
+          location_specific_settings?: Json | null
+          notification_preferences?: Json | null
+          operating_hours?: Json | null
+          performance_targets?: Json | null
+          preferred_communication_method?: string | null
+          provider_id?: string | null
+          reporting_schedule?: string | null
+          session_timeout_minutes?: number | null
+          team_naming_convention?: string | null
+          theme_preferences?: Json | null
+          timezone?: string | null
+          two_factor_enabled?: boolean | null
+          updated_at?: string
+          user_id?: string
+          workflow_triggers?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_settings_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "authorized_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "provider_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "provider_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "provider_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       provider_team_assignments: {
         Row: {
           assigned_at: string | null
