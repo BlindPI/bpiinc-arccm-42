@@ -109,7 +109,7 @@ export class UnifiedTeamService {
             teams!inner (
               *,
               locations (name, address),
-              team_members!left (id, status)
+              team_members!team_id (id, status)
             )
           `)
           .eq('provider_id', providerData.id)
@@ -138,7 +138,7 @@ export class UnifiedTeamService {
         .select(`
           *,
           locations (name, address),
-          team_members!left (id, status)
+          team_members!team_id (id, status)
         `);
 
       if (error) {
