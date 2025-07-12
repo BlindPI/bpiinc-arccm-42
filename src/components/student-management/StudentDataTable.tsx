@@ -77,46 +77,51 @@ export function StudentDataTable({
       enableHiding: false,
     },
     {
-      accessorKey: 'display_name',
-      header: 'Name',
+      accessorKey: 'external_student_id',
+      header: 'ID',
       cell: ({ row }) => (
-        <div className="font-medium">
-          {row.original.display_name || `${row.original.first_name || ''} ${row.original.last_name || ''}`.trim() || 'Unnamed Student'}
-        </div>
+        <div className="text-sm font-mono">{row.original.external_student_id || 'N/A'}</div>
       ),
+    },
+    {
+      accessorKey: 'first_name',
+      header: 'First Name',
+      cell: ({ row }) => (
+        <div className="font-medium">{row.original.first_name || 'N/A'}</div>
+      ),
+    },
+    {
+      accessorKey: 'last_name',
+      header: 'Last Name',
+      cell: ({ row }) => (
+        <div className="font-medium">{row.original.last_name || 'N/A'}</div>
+      ),
+    },
+    {
+      id: 'amount_spent',
+      header: 'Amount Spent',
+      cell: ({ row }) => {
+        const amount = row.original.student_metadata?.amount_spent;
+        return <div className="text-sm">{amount || '$0'}</div>;
+      },
+    },
+    {
+      id: 'date_created',
+      header: 'Date Created',
+      cell: ({ row }) => {
+        const dateCreated = row.original.student_metadata?.date_created;
+        return (
+          <div className="text-sm text-muted-foreground">
+            {dateCreated ? new Date(dateCreated).toLocaleDateString() : 'N/A'}
+          </div>
+        );
+      },
     },
     {
       accessorKey: 'email',
       header: 'Email',
       cell: ({ row }) => (
         <div className="text-muted-foreground">{row.original.email}</div>
-      ),
-    },
-    {
-      accessorKey: 'enrollment_status',
-      header: 'Status',
-      cell: ({ row }) => {
-        const status = row.original.enrollment_status;
-        const variant = status === 'ACTIVE' ? 'default' : 
-                      status === 'INACTIVE' ? 'secondary' : 
-                      status === 'SUSPENDED' ? 'destructive' : 'outline';
-        return <Badge variant={variant}>{status}</Badge>;
-      },
-    },
-    {
-      accessorKey: 'imported_from',
-      header: 'Source',
-      cell: ({ row }) => (
-        <Badge variant="outline">{row.original.imported_from}</Badge>
-      ),
-    },
-    {
-      accessorKey: 'import_date',
-      header: 'Import Date',
-      cell: ({ row }) => (
-        <div className="text-sm text-muted-foreground">
-          {new Date(row.original.import_date).toLocaleDateString()}
-        </div>
       ),
     },
     {
@@ -128,11 +133,91 @@ export function StudentDataTable({
       },
     },
     {
+      id: 'enrollments_list',
+      header: 'Enrollments - List',
+      cell: ({ row }) => {
+        const enrollmentsList = row.original.student_metadata?.enrollments_list;
+        return (
+          <div className="text-sm max-w-32 truncate" title={enrollmentsList}>
+            {enrollmentsList || 'N/A'}
+          </div>
+        );
+      },
+    },
+    {
+      id: 'external_source',
+      header: 'External Source',
+      cell: ({ row }) => {
+        const externalSource = row.original.student_metadata?.external_source;
+        return <div className="text-sm">{externalSource || 'N/A'}</div>;
+      },
+    },
+    {
+      id: 'last_sign_in',
+      header: 'Last Sign In',
+      cell: ({ row }) => {
+        const lastSignIn = row.original.student_metadata?.last_sign_in;
+        return (
+          <div className="text-sm text-muted-foreground">
+            {lastSignIn ? new Date(lastSignIn).toLocaleDateString() : 'Never'}
+          </div>
+        );
+      },
+    },
+    {
+      id: 'referred_by',
+      header: 'Referred By',
+      cell: ({ row }) => {
+        const referredBy = row.original.student_metadata?.referred_by;
+        return <div className="text-sm">{referredBy || 'N/A'}</div>;
+      },
+    },
+    {
+      id: 'roles',
+      header: 'Roles',
+      cell: ({ row }) => {
+        const roles = row.original.student_metadata?.roles;
+        return <Badge variant="outline">{roles || 'Student'}</Badge>;
+      },
+    },
+    {
+      id: 'sign_in_count',
+      header: 'Sign In Count',
+      cell: ({ row }) => {
+        const signInCount = row.original.student_metadata?.sign_in_count || 0;
+        return <div className="text-center">{signInCount}</div>;
+      },
+    },
+    {
+      id: 'referred_from',
+      header: 'Referred From',
+      cell: ({ row }) => {
+        const referredFrom = row.original.student_metadata?.referred_from;
+        return <div className="text-sm">{referredFrom || 'N/A'}</div>;
+      },
+    },
+    {
       id: 'country',
       header: 'Country',
       cell: ({ row }) => {
         const country = row.original.student_metadata?.country;
         return <div className="text-sm">{country || 'N/A'}</div>;
+      },
+    },
+    {
+      id: 'postal_code',
+      header: 'Postal Code',
+      cell: ({ row }) => {
+        const postalCode = row.original.student_metadata?.postal_code;
+        return <div className="text-sm">{postalCode || 'N/A'}</div>;
+      },
+    },
+    {
+      id: 'region',
+      header: 'Region',
+      cell: ({ row }) => {
+        const region = row.original.student_metadata?.region;
+        return <div className="text-sm">{region || 'N/A'}</div>;
       },
     },
     {
