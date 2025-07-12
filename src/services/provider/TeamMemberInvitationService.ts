@@ -1,15 +1,21 @@
 import { supabase } from '@/integrations/supabase/client';
-import { InvitationEmailService } from './invitationEmailService';
 
 export interface TeamMemberInvitation {
   id: string;
   team_id: string;
-  email: string;
+  invited_email: string;
   role: 'ADMIN' | 'MEMBER';
   invited_by: string;
+  invitation_token: string;
   expires_at: string;
-  status: 'pending' | 'accepted' | 'expired';
+  status: 'pending' | 'accepted' | 'expired' | 'cancelled' | 'declined';
   created_at: string;
+  updated_at: string;
+  invited_at?: string;
+  accepted_at?: string;
+  cancelled_at?: string;
+  declined_at?: string;
+  custom_message?: string;
 }
 
 export interface InvitationResult {
@@ -71,14 +77,16 @@ export class TeamMemberInvitationService {
       // Create invitation for new user
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
+      const invitationToken = crypto.randomUUID();
 
       const { data: invitation, error: inviteError } = await supabase
         .from('team_member_invitations')
         .insert({
           team_id: teamId,
-          email: email,
+          invited_email: email,
           role: role,
           invited_by: invitedBy,
+          invitation_token: invitationToken,
           expires_at: expiresAt.toISOString(),
           status: 'pending'
         })
@@ -87,18 +95,29 @@ export class TeamMemberInvitationService {
 
       if (inviteError) throw inviteError;
 
-      // Send invitation email
-      await InvitationEmailService.sendTeamInvitation(
-        email,
-        teamId,
-        role,
-        invitation.id
-      );
+      // Send invitation email via edge function
+      try {
+        await supabase.functions.invoke('send-invitation', {
+          body: {
+            email,
+            teamId,
+            role,
+            invitationId: invitation.id,
+            invitationToken
+          }
+        });
+      } catch (emailError) {
+        console.warn('Failed to send invitation email:', emailError);
+        // Don't fail the invitation creation if email fails
+      }
 
       return {
         success: true,
         message: 'Invitation sent successfully',
-        invitation: invitation as TeamMemberInvitation
+        invitation: {
+          ...invitation,
+          invited_email: invitation.invited_email
+        } as TeamMemberInvitation
       };
 
     } catch (error: any) {
@@ -183,7 +202,12 @@ export class TeamMemberInvitationService {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      // Map the database results to our interface, ensuring role type safety
+      return (data || []).map(item => ({
+        ...item,
+        role: item.role as 'ADMIN' | 'MEMBER'
+      })) as TeamMemberInvitation[];
 
     } catch (error) {
       console.error('Error fetching pending invitations:', error);
