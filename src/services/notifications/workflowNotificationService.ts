@@ -29,7 +29,7 @@ export class WorkflowNotificationService {
       message: `${requesterName} has submitted "${workflowTitle}" for your approval`,
       type: 'workflow_approval',
       category: 'WORKFLOW',
-      priority: 'high',
+      priority: 'HIGH',
       actionUrl: `/workflows/${workflowId}`,
       sendEmail: true,
       metadata: {

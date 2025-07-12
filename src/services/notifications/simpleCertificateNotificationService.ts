@@ -98,7 +98,7 @@ export class SimpleCertificateNotificationService {
         throw error;
       }
 
-      return data || [];
+      return (data || []) as CertificateNotification[];
 
     } catch (error) {
       console.error('Failed to fetch certificate notifications:', error);
