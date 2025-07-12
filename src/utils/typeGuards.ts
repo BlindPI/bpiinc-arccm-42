@@ -25,18 +25,16 @@ export function isValidUserRole(role: any): role is UserRole {
   return typeof role === 'string' && validRoles.includes(role);
 }
 
-export function hasValidCompliance(data: any): data is Profile & { compliance_status?: boolean; compliance_tier?: string } {
+export function hasValidCompliance(data: any): data is Profile & { compliance_status?: boolean } {
   return isValidProfile(data) &&
-    (data.compliance_status === undefined || typeof data.compliance_status === 'boolean') &&
-    (data.compliance_tier === undefined || typeof data.compliance_tier === 'string');
+    (data.compliance_status === undefined || typeof data.compliance_status === 'boolean');
 }
 
 // Enhanced type guards for ExtendedProfile
 export function isValidExtendedProfile(data: any): data is ExtendedProfile {
   return isValidProfile(data) &&
     typeof data.display_name === 'string' && // Required in ExtendedProfile
-    (typeof data.status === 'string' && ['ACTIVE', 'INACTIVE', 'PENDING'].includes(data.status)) &&
-    (data.compliance_tier === undefined || typeof data.compliance_tier === 'string');
+    (typeof data.status === 'string' && ['ACTIVE', 'INACTIVE', 'PENDING'].includes(data.status));
 }
 
 // ActivityLog type guard

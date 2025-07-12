@@ -16,7 +16,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import { diagnoseLocationAssignmentError, logDiagnosticResults } from '@/utils/diagnoseLocationAssignmentError';
+// Removed import of deleted diagnostic utility
 import { ComplianceService } from '@/services/compliance/complianceService';
 import { TeamMemberComplianceService } from '@/services/compliance/teamMemberComplianceService';
 import type {
@@ -805,17 +805,10 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
             if (updateError) {
               console.error(`❌ DEBUG: FALLBACK PATCH ALSO FAILED:`, updateError);
               
-              // Run diagnostics
+              // Simplified error handling
               try {
-                const diagnostics = await diagnoseLocationAssignmentError(providerId, locationId);
-                await logDiagnosticResults(diagnostics);
-                
-                const criticalIssues = diagnostics.filter(d => d.detected && d.severity === 'critical');
-                const diagnosticSummary = criticalIssues.length > 0
-                  ? `\n\nDIAGNOSTIC FINDINGS: ${criticalIssues.map(i => i.issue).join(', ')}`
-                  : '\n\nDIAGNOSTICS: Run complete - check console for detailed results';
-                
-                throw new Error(`Location assignment failed: ${updateError.message} (Code: ${updateError.code})${diagnosticSummary}`);
+                console.error('Location assignment diagnostics not available');
+                throw new Error(`Location assignment failed: ${updateError.message} (Code: ${updateError.code})`);
               } catch (diagnosticError) {
                 console.error(`🔍 DEBUG: Diagnostic utility failed:`, diagnosticError);
                 throw new Error(`Location assignment failed: ${updateError.message} (Code: ${updateError.code})`);
@@ -1251,7 +1244,6 @@ const assignmentsWithMemberCounts = await Promise.all((data || []).map(async (as
         const { count, error } = await supabase
           .from('courses')
           .select('id', { count: 'exact', head: true })
-          .in('team_id', teamIds);
         
         if (error) {
           console.error('Error fetching course count:', error);

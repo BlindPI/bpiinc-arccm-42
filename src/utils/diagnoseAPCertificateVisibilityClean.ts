@@ -47,11 +47,8 @@ export async function diagnoseAPCertificateVisibilityClean(): Promise<{
     // 1. Get AP user location assignments (same as Team Management)
     const { data: locationAssignments, error: locError } = await supabase
       .from('ap_user_location_assignments')
-      .select(`
-        location_id,
-        locations!inner(id, name, city)
-      `)
-      .eq('user_id', user.id);
+      .select('location_id')
+      .eq('ap_user_id', user.id);
 
     if (locError) {
       issues.push({

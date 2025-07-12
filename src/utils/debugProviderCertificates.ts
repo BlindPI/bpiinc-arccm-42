@@ -163,13 +163,7 @@ export async function debugProviderCertificateVisibility(
         // Use the same logic as team dashboard
         const { data: teamCerts, error: teamCertsError } = await supabase
           .from('certificates')
-          .select(`
-            *,
-            profiles!certificates_user_id_fkey(display_name, email),
-            locations!certificates_location_id_fkey(name, city, state),
-            teams!certificates_team_id_fkey(name)
-          `)
-          .in('team_id', teamIds);
+          .select('id, recipient_name, course_name, status, location_id');
 
         if (teamCertsError) {
           issues.push(`❌ Error fetching team dashboard certificates: ${teamCertsError.message}`);

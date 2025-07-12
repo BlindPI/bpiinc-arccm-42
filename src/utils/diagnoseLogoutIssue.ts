@@ -65,32 +65,6 @@ export async function diagnoseLogoutIssue(): Promise<LogoutDiagnostic[]> {
               recommended_fix: 'URGENT: Apply provider_navigation_configs UUID migration and add error boundaries'
             });
           }
-          
-          if (navError) {
-            const isTypeMismatchError = navError.message?.includes('invalid input syntax for type bigint');
-            
-            diagnostics.push({
-              issue_type: 'navigation_config_blocks_logout',
-              severity: 'critical',
-              detected: isTypeMismatchError,
-              description: isTypeMismatchError 
-                ? 'Navigation config UUID/bigint error is blocking logout process'
-                : 'Navigation config query failed during logout',
-              evidence: { navError, providerId: providerData.id },
-              recommended_fix: isTypeMismatchError 
-                ? 'Apply the provider_navigation_configs UUID migration immediately'
-                : 'Check navigation config table permissions'
-            });
-          } else {
-            diagnostics.push({
-              issue_type: 'navigation_config_query_success',
-              severity: 'low',
-              detected: false,
-              description: 'Navigation config query works - not the cause of logout issue',
-              evidence: { configCount: navConfig?.length || 0 },
-              recommended_fix: 'Look for other causes of logout hanging'
-            });
-          }
         } else {
           diagnostics.push({
             issue_type: 'no_provider_found',
