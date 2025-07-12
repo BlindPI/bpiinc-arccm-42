@@ -88,16 +88,33 @@ export function useStudentManagement() {
     if (students.length === 0) return students;
     
     const emails = students.map(s => s.email);
+    const BATCH_SIZE = 50; // Process emails in batches to avoid URL length limits
     
-    // Fetch certificate counts and status for these emails
-    const { data: certificateData, error: certError } = await supabase
-      .from('certificate_requests')
-      .select('recipient_email, status, created_at')
-      .in('recipient_email', emails);
+    let certificateData: any[] = [];
     
-    if (certError) {
-      console.warn('Failed to fetch certificate data:', certError);
-      return students;
+    // Process emails in batches to avoid URL length limits
+    for (let i = 0; i < emails.length; i += BATCH_SIZE) {
+      const emailBatch = emails.slice(i, i + BATCH_SIZE);
+      console.log(`🔍 Processing certificate batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(emails.length / BATCH_SIZE)} (${emailBatch.length} emails)`);
+      
+      try {
+        const { data: batchData, error: batchError } = await supabase
+          .from('certificate_requests')
+          .select('recipient_email, status, created_at')
+          .in('recipient_email', emailBatch);
+        
+        if (batchError) {
+          console.warn(`Failed to fetch certificate data for batch ${Math.floor(i / BATCH_SIZE) + 1}:`, batchError);
+          continue; // Continue with other batches even if one fails
+        }
+        
+        if (batchData) {
+          certificateData.push(...batchData);
+        }
+      } catch (error) {
+        console.warn(`Error processing certificate batch ${Math.floor(i / BATCH_SIZE) + 1}:`, error);
+        continue; // Continue with other batches even if one fails
+      }
     }
     
     // Group certificates by email
