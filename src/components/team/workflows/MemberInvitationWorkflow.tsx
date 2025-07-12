@@ -10,9 +10,10 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { WorkflowService } from '@/services/team/workflowService';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Mail, User, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { queryWorkflowInstances, safeQueryResult } from '@/utils/supabaseQueryUtils';
+import { WorkflowInstanceRow } from '@/types/supabase-helpers';
 
 interface MemberInvitationWorkflowProps {
   teamId: string;
@@ -28,21 +29,15 @@ export function MemberInvitationWorkflow({ teamId }: MemberInvitationWorkflowPro
   // Get pending invitations
   const { data: pendingInvitations = [] } = useQuery({
     queryKey: ['team-invitations', teamId],
-    queryFn: async (): Promise<any[]> => {
-      const response = await supabase
-        .from('workflow_instances')
-        .select(`
-          *,
-          workflow_approvals(*)
-        `)
-        .eq('entity_type', 'team_member_invitation')
-        .eq('entity_id', teamId)
-        .in('status', ['pending', 'in_progress']);
-
-      const { data, error } = response;
+    queryFn: async (): Promise<WorkflowInstanceRow[]> => {
+      const response = await queryWorkflowInstances({
+        entity_type: 'team_member_invitation',
+        entity_id: teamId,
+        status: ['pending', 'in_progress']
+      });
       
-      if (error) throw error;
-      return data;
+      if (response.error) throw response.error;
+      return safeQueryResult<WorkflowInstanceRow>(response.data);
     }
   });
 

@@ -12,7 +12,16 @@ export type LocationRow = Tables['locations']['Row'];
 export type CertificateRow = Tables['certificates']['Row'];
 export type CourseScheduleRow = Tables['course_schedules']['Row'];
 export type WorkflowInstanceRow = Tables['workflow_instances']['Row'];
-export type WorkflowApprovalRow = Tables['workflow_approvals']['Row'];
+
+// Workflow approval type (may not exist in current schema)
+export type WorkflowApprovalRow = {
+  id: string;
+  workflow_instance_id: string;
+  approver_id: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
 
 // Insert types
 export type ProfileInsert = Tables['profiles']['Insert'];
