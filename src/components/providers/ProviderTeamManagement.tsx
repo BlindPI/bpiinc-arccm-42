@@ -49,7 +49,7 @@ import type {
   AssignProviderToTeamRequest,
   ProviderTeamAssignment
 } from '@/types/provider-management';
-import { TeamMemberManagement } from './TeamMemberManagement';
+import TeamMemberManagement from './TeamMemberManagement';
 
 // =====================================================================================
 // PHASE 4: PROVIDER TEAM MANAGEMENT COMPONENT
