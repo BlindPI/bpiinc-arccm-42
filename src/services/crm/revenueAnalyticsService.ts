@@ -168,7 +168,7 @@ export class RevenueAnalyticsService {
         .from('crm_opportunities')
         .select(`
           estimated_value,
-          crm_leads!inner(lead_source)
+          lead_source
         `)
         .eq('stage', 'closed_won');
 
@@ -178,7 +178,7 @@ export class RevenueAnalyticsService {
       let totalRevenue = 0;
 
       data?.forEach(opportunity => {
-        const source = opportunity.crm_leads?.lead_source || 'unknown';
+        const source = opportunity.lead_source || 'unknown';
         const revenue = opportunity.estimated_value || 0;
         
         if (!sourceData[source]) {
