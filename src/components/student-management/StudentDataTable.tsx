@@ -143,9 +143,33 @@ export function StudentDataTable({
   };
 
   const sortCertificatesData = (data: StudentProfile[], sortOrder: 'asc' | 'desc') => {
+    console.log('Certificate sorting - data sample:', data.slice(0, 3).map(d => ({
+      email: d.email,
+      certificate_count: d.certificate_count,
+      has_certificates: d.has_certificates,
+      certificate_status_summary: d.certificate_status_summary,
+      latest_certificate_date: d.latest_certificate_date
+    })));
+    
     return [...data].sort((a, b) => {
       const aCount = a.certificate_count || 0;
       const bCount = b.certificate_count || 0;
+      
+      // Secondary sort by certificate status priority if counts are equal
+      if (aCount === bCount) {
+        const aActive = a.certificate_status_summary?.active || 0;
+        const bActive = b.certificate_status_summary?.active || 0;
+        const activeComparison = aActive - bActive;
+        if (activeComparison !== 0) {
+          return sortOrder === 'asc' ? activeComparison : -activeComparison;
+        }
+        
+        // Tertiary sort by latest certificate date
+        const aDate = a.latest_certificate_date ? new Date(a.latest_certificate_date).getTime() : 0;
+        const bDate = b.latest_certificate_date ? new Date(b.latest_certificate_date).getTime() : 0;
+        const dateComparison = aDate - bDate;
+        return sortOrder === 'asc' ? dateComparison : -dateComparison;
+      }
       
       const comparison = aCount - bCount;
       return sortOrder === 'asc' ? comparison : -comparison;
