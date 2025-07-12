@@ -129,25 +129,31 @@ export class UnifiedTeamService {
         return teams as unknown as EnhancedTeam[];
       }
 
-      // For other users, use the bypass RPC function
+      // For SA/AD users, use direct database access (NO MORE BYPASS RPC)
+      console.log('🔍 UNIFIEDTEAMSERVICE: Loading teams with direct database access...');
       const { data, error } = await supabase
-        .rpc('get_teams_bypass_rls');
+        .from('teams')
+        .select(`
+          *,
+          locations (name, address)
+        `);
 
       if (error) {
-        console.error('Error fetching teams with bypass function:', error);
-        // Fallback to safe method if RPC fails
-        return await SafeTeamService.getTeamsSafely(userRole, userId) as unknown as EnhancedTeam[];
+        console.error('Error fetching teams with direct query:', error);
+        throw error;
       }
 
-      // Transform the RPC result to match EnhancedTeam interface
-      return (data || []).map((team: any) => ({
+      // Transform to match EnhancedTeam interface
+      const teams = (data || []).map((team: any) => ({
         ...team,
-        location: team.location_name ? { name: team.location_name } : null
-      })) as unknown as EnhancedTeam[];
+        location: team.locations ? { name: team.locations.name } : null
+      }));
+
+      console.log(`🔍 UNIFIEDTEAMSERVICE: Found ${teams.length} teams with direct access`);
+      return teams as unknown as EnhancedTeam[];
     } catch (error) {
-      console.error('UnifiedTeamService.getTeams error, using safe fallback:', error);
-      // Fallback to safe method
-      return await SafeTeamService.getTeamsSafely(userRole, userId) as unknown as EnhancedTeam[];
+      console.error('UnifiedTeamService.getTeams error:', error);
+      throw error;
     }
   }
 
@@ -173,40 +179,10 @@ export class UnifiedTeamService {
    * Consolidates team creation logic
    */
   static async createTeam(teamData: CreateTeamRequest): Promise<EnhancedTeam> {
-    try {
-      console.log('🔨 UNIFIEDTEAMSERVICE: Creating team with data:', teamData);
-      
-      // Use the corrected bypass RPC function that returns proper team structure
-      const { data, error } = await supabase
-        .rpc('create_team_bypass_rls', {
-          p_name: teamData.name,
-          p_description: teamData.description || null,
-          p_team_type: teamData.team_type || 'operational',
-          p_location_id: teamData.location_id ? teamData.location_id : null,
-          p_provider_id: null,
-          p_created_by: null
-        });
-
-      if (error) {
-        console.error('Error creating team with bypass function:', error);
-        // Fallback to safe method
-        const safeResult = await SafeTeamService.createTeamSafely(teamData);
-        return safeResult as unknown as EnhancedTeam;
-      }
-
-      // The function now returns proper team table structure
-      if (data && data.length > 0) {
-        console.log('✅ UNIFIEDTEAMSERVICE: Team created successfully via RPC:', data[0]);
-        return data[0] as unknown as EnhancedTeam;
-      } else {
-        throw new Error('No team data returned from create function');
-      }
-    } catch (error) {
-      console.error('Error creating team, using safe fallback:', error);
-      // Fallback to safe method with INSERT policy
-      const safeResult = await SafeTeamService.createTeamSafely(teamData);
-      return safeResult as unknown as EnhancedTeam;
-    }
+    console.log('🔨 UNIFIEDTEAMSERVICE: Creating team with data:', teamData);
+    // Use SafeTeamService which has proven direct database access
+    const result = await SafeTeamService.createTeamSafely(teamData);
+    return result as unknown as EnhancedTeam;
   }
 
   /**
@@ -239,30 +215,8 @@ export class UnifiedTeamService {
    * Implements proper authorization checks
    */
   static async deleteTeam(teamId: string): Promise<void> {
-    try {
-      // Use the bypass function for deletion to avoid RLS issues
-      const { data, error } = await supabase
-        .rpc('delete_team_bypass_rls', { p_team_id: teamId });
-
-      if (error) {
-        console.error('Error deleting team with bypass function:', error);
-        // Fallback to direct delete if RPC fails
-        const { error: directError } = await supabase
-          .from('teams')
-          .delete()
-          .eq('id', teamId);
-        
-        if (directError) throw directError;
-        return;
-      }
-
-      if (!data) {
-        throw new Error('Team not found or could not be deleted');
-      }
-    } catch (error) {
-      console.error('Error deleting team:', error);
-      throw error;
-    }
+    // Use SafeTeamService which has proven direct database access
+    await SafeTeamService.deleteTeamSafely(teamId);
   }
 
   /**
@@ -288,35 +242,8 @@ export class UnifiedTeamService {
    * Replaces scattered member fetching logic
    */
   static async getTeamMembers(teamId: string): Promise<TeamMember[]> {
-    try {
-      // Use the new bypass RPC function that avoids RLS recursion
-      const { data, error } = await supabase
-        .rpc('get_team_members_bypass_rls', { p_team_id: teamId });
-
-      if (error) {
-        console.error('Error fetching team members with bypass function:', error);
-        // Fallback to safe method
-        return await SafeTeamService.getTeamMembersSafely(teamId) as unknown as TeamMember[];
-      }
-
-      // Transform the RPC result to match TeamMember interface
-      return (data || []).map((member: any) => ({
-        id: member.id,
-        user_id: member.user_id,
-        team_id: member.team_id,
-        role: member.role,
-        joined_at: member.joined_at,
-        profile: {
-          display_name: member.display_name,
-          email: member.email,
-          role: member.user_role
-        }
-      })) as unknown as TeamMember[];
-    } catch (error) {
-      console.error('Error fetching team members, using safe fallback:', error);
-      // Fallback to safe method
-      return await SafeTeamService.getTeamMembersSafely(teamId) as unknown as TeamMember[];
-    }
+    // Use SafeTeamService which has proven direct database access
+    return await SafeTeamService.getTeamMembersSafely(teamId) as unknown as TeamMember[];
   }
 
   /**
@@ -324,28 +251,8 @@ export class UnifiedTeamService {
    * Implements proper validation and workflows
    */
   static async addMember(teamId: string, userId: string, role: string = 'member'): Promise<void> {
-    try {
-      // Use the new bypass RPC function that avoids RLS recursion
-      const { data, error } = await supabase
-        .rpc('add_team_member_bypass_rls', {
-          p_team_id: teamId,
-          p_user_id: userId,
-          p_role: role
-        });
-
-      if (error) {
-        console.error('Error adding team member with bypass function:', error);
-        // Fallback to safe method
-        await SafeTeamService.addMemberSafely(teamId, userId, role);
-        return;
-      }
-
-      console.log('Team member added successfully:', data);
-    } catch (error) {
-      console.error('Error adding team member, using safe fallback:', error);
-      // Fallback to safe method
-      await SafeTeamService.addMemberSafely(teamId, userId, role);
-    }
+    // Use SafeTeamService which has proven direct database access
+    await SafeTeamService.addMemberSafely(teamId, userId, role);
   }
 
   /**
@@ -353,24 +260,8 @@ export class UnifiedTeamService {
    * Implements proper authorization checks
    */
   static async removeMember(teamId: string, userId: string): Promise<void> {
-    try {
-      // Use the new bypass RPC function that avoids RLS recursion
-      const { data, error } = await supabase
-        .rpc('remove_team_member_bypass_rls', {
-          p_team_id: teamId,
-          p_user_id: userId
-        });
-
-      if (error) {
-        console.error('Error removing team member with bypass function:', error);
-        throw error;
-      }
-
-      console.log('Team member removed successfully');
-    } catch (error) {
-      console.error('Error removing team member:', error);
-      throw error;
-    }
+    // Use SafeTeamService which has proven direct database access
+    await SafeTeamService.removeMemberSafely(teamId, userId);
   }
 
   /**
@@ -378,53 +269,24 @@ export class UnifiedTeamService {
    * Consolidates bulk operation logic
    */
   static async bulkAddMembers(teamId: string, userIds: string[]): Promise<void> {
-    try {
-      // Use the new bypass RPC function that avoids RLS recursion
-      const { data, error } = await supabase
-        .rpc('bulk_add_team_members_bypass_rls', {
-          p_team_id: teamId,
-          p_user_ids: userIds,
-          p_role: 'member'
-        });
-
-      if (error) {
-        console.error('Error bulk adding members with bypass function:', error);
-        throw error;
+    // Use direct database operations instead of failing RPC
+    for (const userId of userIds) {
+      try {
+        await SafeTeamService.addMemberSafely(teamId, userId, 'member');
+      } catch (error) {
+        console.error(`Error adding user ${userId} to team:`, error);
+        // Continue with other users instead of failing entirely
       }
-
-      const result = data && data[0] ? data[0] as BulkAddMembersResponse : { success_count: 0, failed_users: [], error_messages: [] };
-      console.log(`Bulk add completed: ${result.success_count || 0} successful, ${result.failed_users?.length || 0} failed`);
-      
-      if (result.failed_users && result.failed_users.length > 0) {
-        console.warn('Some users failed to be added:', result.failed_users, result.error_messages);
-      }
-    } catch (error) {
-      console.error('Error bulk adding members:', error);
-      throw error;
     }
   }
 
   /**
    * Get available users for team (not already members)
-   * Uses bypass function to avoid RLS issues
+   * Uses direct database access
    */
   static async getAvailableUsers(teamId: string): Promise<User[]> {
-    try {
-      const { data, error } = await supabase.rpc('get_available_users_for_team_bypass_rls', {
-        p_team_id: teamId
-      });
-
-      if (error) {
-        console.error('Error fetching available users with bypass function:', error);
-        throw error;
-      }
-
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching available users:', error);
-      // Fallback to SafeTeamService if RPC fails
-      return SafeTeamService.getAvailableUsers(teamId);
-    }
+    // Use SafeTeamService which has proven direct database access
+    return SafeTeamService.getAvailableUsers(teamId);
   }
 
   /**
@@ -492,36 +354,11 @@ export class UnifiedTeamService {
       } else {
         // Get global team analytics - use basic queries if function doesn't exist
         try {
-          // Use the new bypass RPC function that avoids RLS recursion
-          const { data, error } = await supabase
-            .rpc('get_team_analytics_bypass_rls');
-
-          if (error) {
-            console.error('Error fetching analytics with bypass function:', error);
-            // Fallback to safe method
-            return await SafeTeamService.getAnalyticsSafely();
-          }
-
-          const analyticsData = data && data[0] ? data[0] as TeamAnalyticsResponse : { 
-            total_teams: 0, 
-            total_members: 0, 
-            active_teams: 0, 
-            inactive_teams: 0, 
-            performance_average: 0, 
-            compliance_score: 0 
-          };
-          
-          return {
-            totalTeams: analyticsData.total_teams || 0,
-            totalMembers: analyticsData.total_members || 0,
-            averagePerformance: 85, // Default placeholder
-            averageCompliance: 90, // Default placeholder
-            teamsByLocation: {},
-            performanceByTeamType: {}
-          };
-        } catch (analyticsError) {
-          console.error('Analytics query failed, using safe fallback:', analyticsError);
+          // Use SafeTeamService which has proven direct database access
           return await SafeTeamService.getAnalyticsSafely();
+        } catch (analyticsError) {
+          console.error('Analytics query failed:', analyticsError);
+          throw analyticsError;
         }
       }
 
