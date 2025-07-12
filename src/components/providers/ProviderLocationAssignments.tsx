@@ -29,7 +29,7 @@ export function ProviderLocationAssignments() {
         .select(`
           *,
           primary_location:locations!primary_location_id(*),
-          profiles!inner(*)
+          profiles!authorized_providers_user_id_fkey(*)
         `)
         .order('name');
       

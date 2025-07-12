@@ -102,7 +102,7 @@ export const TeamMemberManagement: React.FC<TeamMemberManagementProps> = ({
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, email, role')
+        .select('id, email, role, display_name')
         .ilike('email', `%${searchEmail}%`)
         .limit(10);
         
