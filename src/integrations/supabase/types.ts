@@ -8536,6 +8536,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           delivered_count: number | null
+          from_email: string | null
           html_content: string | null
           id: string
           opened_count: number | null
@@ -8544,6 +8545,7 @@ export type Database = {
           sender_email: string
           sender_name: string
           status: string
+          subject: string | null
           subject_line: string
           target_audience: Json | null
           total_recipients: number | null
@@ -8561,6 +8563,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           delivered_count?: number | null
+          from_email?: string | null
           html_content?: string | null
           id?: string
           opened_count?: number | null
@@ -8569,6 +8572,7 @@ export type Database = {
           sender_email: string
           sender_name: string
           status?: string
+          subject?: string | null
           subject_line: string
           target_audience?: Json | null
           total_recipients?: number | null
@@ -8586,6 +8590,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           delivered_count?: number | null
+          from_email?: string | null
           html_content?: string | null
           id?: string
           opened_count?: number | null
@@ -8594,6 +8599,7 @@ export type Database = {
           sender_email?: string
           sender_name?: string
           status?: string
+          subject?: string | null
           subject_line?: string
           target_audience?: Json | null
           total_recipients?: number | null
@@ -8603,50 +8609,121 @@ export type Database = {
         }
         Relationships: []
       }
+      email_logs: {
+        Row: {
+          bounced_at: string | null
+          campaign_id: string | null
+          clicked_at: string | null
+          created_at: string | null
+          delivered_at: string | null
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          opened_at: string | null
+          recipient_email: string
+          sent_at: string | null
+          status: string | null
+          subject: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          bounced_at?: string | null
+          campaign_id?: string | null
+          clicked_at?: string | null
+          created_at?: string | null
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          opened_at?: string | null
+          recipient_email: string
+          sent_at?: string | null
+          status?: string | null
+          subject?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          bounced_at?: string | null
+          campaign_id?: string | null
+          clicked_at?: string | null
+          created_at?: string | null
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          opened_at?: string | null
+          recipient_email?: string
+          sent_at?: string | null
+          status?: string | null
+          subject?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_logs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "email_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_templates: {
         Row: {
+          category: string | null
           content: string
           created_at: string | null
           created_by: string | null
           design_data: Json | null
           email_content: string | null
           html_content: string | null
+          html_template: string | null
           id: string
           is_active: boolean | null
+          name: string | null
           personalization_fields: Json | null
           subject_line: string
+          subject_template: string | null
           template_name: string
           template_type: string
           updated_at: string | null
           variables: string[] | null
         }
         Insert: {
+          category?: string | null
           content: string
           created_at?: string | null
           created_by?: string | null
           design_data?: Json | null
           email_content?: string | null
           html_content?: string | null
+          html_template?: string | null
           id?: string
           is_active?: boolean | null
+          name?: string | null
           personalization_fields?: Json | null
           subject_line: string
+          subject_template?: string | null
           template_name: string
           template_type: string
           updated_at?: string | null
           variables?: string[] | null
         }
         Update: {
+          category?: string | null
           content?: string
           created_at?: string | null
           created_by?: string | null
           design_data?: Json | null
           email_content?: string | null
           html_content?: string | null
+          html_template?: string | null
           id?: string
           is_active?: boolean | null
+          name?: string | null
           personalization_fields?: Json | null
           subject_line?: string
+          subject_template?: string | null
           template_name?: string
           template_type?: string
           updated_at?: string | null
@@ -9221,7 +9298,7 @@ export type Database = {
           end_date: string | null
           id: string
           metadata: Json | null
-          provider_id: number
+          provider_id: string
           role: string
           specializations: Json | null
           start_date: string | null
@@ -9236,7 +9313,7 @@ export type Database = {
           end_date?: string | null
           id?: string
           metadata?: Json | null
-          provider_id: number
+          provider_id: string
           role?: string
           specializations?: Json | null
           start_date?: string | null
@@ -9251,7 +9328,7 @@ export type Database = {
           end_date?: string | null
           id?: string
           metadata?: Json | null
-          provider_id?: number
+          provider_id?: string
           role?: string
           specializations?: Json | null
           start_date?: string | null
@@ -17069,41 +17146,59 @@ export type Database = {
       workflow_templates: {
         Row: {
           category: string
+          conditional_routing: Json | null
           created_at: string | null
           created_by: string | null
           description: string | null
+          escalation_rules: Json | null
           id: string
           is_system_template: boolean | null
           name: string
+          sla_config: Json | null
           template_json: Json
           updated_at: string | null
           usage_count: number | null
+          version: number | null
+          workflow_name: string | null
+          workflow_steps: Json | null
           workflow_type: string
         }
         Insert: {
           category: string
+          conditional_routing?: Json | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          escalation_rules?: Json | null
           id?: string
           is_system_template?: boolean | null
           name: string
+          sla_config?: Json | null
           template_json: Json
           updated_at?: string | null
           usage_count?: number | null
+          version?: number | null
+          workflow_name?: string | null
+          workflow_steps?: Json | null
           workflow_type: string
         }
         Update: {
           category?: string
+          conditional_routing?: Json | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          escalation_rules?: Json | null
           id?: string
           is_system_template?: boolean | null
           name?: string
+          sla_config?: Json | null
           template_json?: Json
           updated_at?: string | null
           usage_count?: number | null
+          version?: number | null
+          workflow_name?: string | null
+          workflow_steps?: Json | null
           workflow_type?: string
         }
         Relationships: [
