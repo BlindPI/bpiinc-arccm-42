@@ -905,11 +905,13 @@ export class ProviderRelationshipService {
       }
 
       // Get courses conducted
-      let courses: { id: string }[] = [];
+      let courses: Array<{ id: string }> = [];
       if (teamIds.length > 0) {
         try {
-          const courseQuery = supabase.from('courses').select('id').in('team_id', teamIds);
-          const { data: courseData, error: courseError } = await courseQuery;
+          const { data: courseData, error: courseError } = await supabase
+            .from('courses')
+            .select('id')
+            .in('team_id', teamIds as readonly string[]);
           
           if (!courseError && courseData) {
             courses = courseData as { id: string }[];
