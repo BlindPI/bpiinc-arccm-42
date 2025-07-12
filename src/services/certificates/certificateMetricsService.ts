@@ -166,43 +166,51 @@ export class CertificateMetricsService {
    */
   static async getCompletionRate(userId?: string, isAdmin: boolean = false): Promise<number> {
     try {
-      let baseQuery = supabase.from('certificate_requests');
-
-      // Filter by user if not admin
+      // Get total requests
+      let totalResult;
       if (!isAdmin && userId) {
-        baseQuery = baseQuery.eq('user_id', userId);
+        totalResult = await supabase
+          .from('certificate_requests')
+          .select('id', { count: 'exact' })
+          .eq('user_id', userId);
+      } else {
+        totalResult = await supabase
+          .from('certificate_requests')
+          .select('id', { count: 'exact' });
       }
 
-      // Get total requests
-      const { count: totalRequests, error: totalError } = await baseQuery
-        .select('id', { count: 'exact' });
-
-      if (totalError) {
-        console.error('Error fetching total requests for completion rate:', totalError);
+      if (totalResult.error) {
+        console.error('Error fetching total requests for completion rate:', totalResult.error);
         return 0;
       }
 
-      if (!totalRequests || totalRequests === 0) {
+      const totalRequests = totalResult.count || 0;
+      if (totalRequests === 0) {
         return 0;
       }
 
       // Get approved requests
-      let approvedQuery = supabase.from('certificate_requests')
-        .select('id', { count: 'exact' })
-        .eq('status', 'APPROVED');
-
+      let approvedResult;
       if (!isAdmin && userId) {
-        approvedQuery = approvedQuery.eq('user_id', userId);
+        approvedResult = await supabase
+          .from('certificate_requests')
+          .select('id', { count: 'exact' })
+          .eq('status', 'APPROVED')
+          .eq('user_id', userId);
+      } else {
+        approvedResult = await supabase
+          .from('certificate_requests')
+          .select('id', { count: 'exact' })
+          .eq('status', 'APPROVED');
       }
 
-      const { count: approvedRequests, error: approvedError } = await approvedQuery;
-
-      if (approvedError) {
-        console.error('Error fetching approved requests for completion rate:', approvedError);
+      if (approvedResult.error) {
+        console.error('Error fetching approved requests for completion rate:', approvedResult.error);
         return 0;
       }
 
-      const rate = Math.round(((approvedRequests || 0) / totalRequests) * 100);
+      const approvedRequests = approvedResult.count || 0;
+      const rate = Math.round((approvedRequests / totalRequests) * 100);
       return rate;
 
     } catch (error) {
