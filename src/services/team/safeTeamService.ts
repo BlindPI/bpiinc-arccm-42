@@ -44,7 +44,7 @@ export class SafeTeamService {
   }
 
   /**
-   * Create team safely using direct INSERT with RLS policies
+   * Create team safely using direct INSERT (same pattern as deleteTeam)
    */
   static async createTeamSafely(teamData: {
     name: string;
@@ -54,8 +54,9 @@ export class SafeTeamService {
     status?: string;
   }) {
     try {
-      console.log('🔨 SAFETEAMSERVICE: Creating team safely with INSERT:', teamData);
+      console.log('🔨 SAFETEAMSERVICE: Creating team with direct INSERT:', teamData);
       
+      // Use direct table insert like deleteTeam does - this works!
       const { data, error } = await supabase
         .from('teams')
         .insert({

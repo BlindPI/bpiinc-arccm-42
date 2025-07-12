@@ -18716,7 +18716,7 @@ export type Database = {
         Returns: string
       }
       get_user_role_direct: {
-        Args: { user_uuid: string }
+        Args: { p_user_id: string }
         Returns: string
       }
       get_user_team_ids_direct: {
@@ -18782,7 +18782,7 @@ export type Database = {
         Returns: boolean
       }
       is_team_admin_direct: {
-        Args: { user_uuid: string; team_uuid: string }
+        Args: { p_user_id: string; p_team_id: string }
         Returns: boolean
       }
       is_team_member: {
