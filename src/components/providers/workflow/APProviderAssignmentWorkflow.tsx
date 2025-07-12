@@ -39,7 +39,7 @@ interface APUser {
   role: string;
   status: string;
   existing_assignments?: number;
-  last_activity?: string;
+  last_login?: string;
 }
 
 interface Location {
@@ -172,7 +172,7 @@ export const APProviderAssignmentWorkflow: React.FC<APProviderAssignmentWorkflow
           email,
           role,
           status,
-          last_activity
+          last_login
         `)
         .eq('role', 'AP')
         .eq('status', 'active')
@@ -340,8 +340,8 @@ export const APProviderAssignmentWorkflow: React.FC<APProviderAssignmentWorkflow
       warnings.push(`User has ${apUser.existing_assignments} existing location assignments`);
     }
 
-    if (apUser.last_activity) {
-      const lastActivity = new Date(apUser.last_activity);
+    if (apUser.last_login) {
+      const lastActivity = new Date(apUser.last_login);
       const daysSinceActivity = Math.floor((Date.now() - lastActivity.getTime()) / (1000 * 60 * 60 * 24));
       if (daysSinceActivity > 30) {
         warnings.push(`User last active ${daysSinceActivity} days ago`);
