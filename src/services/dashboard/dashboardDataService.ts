@@ -283,7 +283,7 @@ export class DashboardDataService {
             contact_email,
             contact_phone,
             user_id,
-            profiles:user_id (
+            profiles!authorized_providers_user_id_fkey (
               display_name,
               email,
               phone
