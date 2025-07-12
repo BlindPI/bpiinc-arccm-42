@@ -40,6 +40,15 @@ export interface StudentProfile {
   student_metadata: Record<string, any>;
   created_at: string;
   updated_at: string;
+  // Certificate data
+  certificate_count?: number;
+  has_certificates?: boolean;
+  latest_certificate_date?: string;
+  certificate_status_summary?: {
+    active: number;
+    archived: number;
+    pending: number;
+  };
 }
 
 // Helper function to transform database row to public interface
@@ -73,6 +82,71 @@ export interface StudentQueryResult {
 export function useStudentManagement() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Helper function to enrich students with certificate data
+  const enrichStudentsWithCertificates = useCallback(async (students: StudentProfile[]): Promise<StudentProfile[]> => {
+    if (students.length === 0) return students;
+    
+    const emails = students.map(s => s.email);
+    
+    // Fetch certificate counts and status for these emails
+    const { data: certificateData, error: certError } = await supabase
+      .from('certificate_requests')
+      .select('recipient_email, status, created_at')
+      .in('recipient_email', emails);
+    
+    if (certError) {
+      console.warn('Failed to fetch certificate data:', certError);
+      return students;
+    }
+    
+    // Group certificates by email
+    const certificatesByEmail = certificateData?.reduce((acc, cert) => {
+      const email = cert.recipient_email;
+      if (!acc[email]) {
+        acc[email] = [];
+      }
+      acc[email].push(cert);
+      return acc;
+    }, {} as Record<string, any[]>) || {};
+    
+    // Enrich students with certificate data
+    return students.map(student => {
+      const certificates = certificatesByEmail[student.email] || [];
+      const certificateCount = certificates.length;
+      const hasCertificates = certificateCount > 0;
+      
+      let latestCertificateDate: string | undefined;
+      const statusSummary = { active: 0, archived: 0, pending: 0 };
+      
+      if (certificates.length > 0) {
+        // Find latest certificate date
+        latestCertificateDate = certificates
+          .map(c => c.created_at)
+          .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
+        
+        // Count by status
+        certificates.forEach(cert => {
+          const status = cert.status?.toLowerCase();
+          if (status === 'approved' || status === 'generated') {
+            statusSummary.active++;
+          } else if (status === 'archived') {
+            statusSummary.archived++;
+          } else {
+            statusSummary.pending++;
+          }
+        });
+      }
+      
+      return {
+        ...student,
+        certificate_count: certificateCount,
+        has_certificates: hasCertificates,
+        latest_certificate_date: latestCertificateDate,
+        certificate_status_summary: statusSummary
+      };
+    });
+  }, []);
 
   const fetchStudents = useCallback(async (
     filters: StudentFilters = {},
@@ -130,9 +204,12 @@ export function useStudentManagement() {
 
       // Transform the data to convert Json metadata to Record<string, any>
       const transformedData = (data as StudentProfileRow[] || []).map(transformStudentProfile);
+      
+      // Enrich with certificate data
+      const enrichedData = await enrichStudentsWithCertificates(transformedData);
 
       return {
-        data: transformedData,
+        data: enrichedData,
         count: count || 0,
         totalPages
       };
@@ -143,7 +220,7 @@ export function useStudentManagement() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [enrichStudentsWithCertificates]);
 
   const updateStudent = useCallback(async (
     id: string,

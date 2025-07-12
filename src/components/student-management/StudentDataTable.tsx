@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, Search, Filter, Download, Plus, ChevronUp, ChevronDown, Columns, ArrowUpDown } from 'lucide-react';
+import { MoreHorizontal, Search, Filter, Download, Plus, ChevronUp, ChevronDown, Columns, ArrowUpDown, FileText, CheckCircle, Calendar } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { StudentProfile, StudentFilters, PaginationParams } from '@/hooks/useStudentManagement';
 
@@ -243,6 +243,65 @@ export function StudentDataTable({
       ),
     },
     {
+      id: 'certificates',
+      header: ({ column }) => (
+        <Button 
+          variant="ghost" 
+          onClick={() => handleSort('certificate_count')}
+          className="h-8 p-0 font-semibold hover:bg-transparent"
+        >
+          Certificates
+          <FileText className="h-3 w-3 ml-1" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const student = row.original;
+        const hasCerts = student.has_certificates;
+        const count = student.certificate_count || 0;
+        const latestDate = student.latest_certificate_date;
+        const summary = student.certificate_status_summary;
+        
+        return (
+          <div className="flex items-center space-x-2">
+            {/* Certificate Status Indicator */}
+            <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
+              hasCerts ? 'bg-success' : 'bg-muted'
+            }`} title={hasCerts ? 'Has Certificates' : 'No Certificates'} />
+            
+            {/* Certificate Count Badge */}
+            {count > 0 && (
+              <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
+                {count}
+              </Badge>
+            )}
+            
+            {/* Status Summary */}
+            {summary && count > 0 && (
+              <div className="flex items-center space-x-1">
+                {summary.active > 0 && (
+                  <div title={`${summary.active} Active`}>
+                    <CheckCircle className="h-3 w-3 text-success" />
+                  </div>
+                )}
+                {summary.pending > 0 && (
+                  <div title={`${summary.pending} Pending`}>
+                    <Calendar className="h-3 w-3 text-warning" />
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Latest Certificate Date */}
+            {latestDate && (
+              <div className="text-xs text-muted-foreground" title="Latest Certificate">
+                {new Date(latestDate).toLocaleDateString()}
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       id: 'enrollments_list',
       header: ({ column }) => (
         <DropdownMenu>
@@ -443,6 +502,7 @@ export function StudentDataTable({
                       {column.id === 'first_name' ? 'First Name' :
                        column.id === 'last_name' ? 'Last Name' :
                        column.id === 'date_created' ? 'Date Created' :
+                       column.id === 'certificates' ? 'Certificates' :
                        column.id === 'enrollments_list' ? 'Enrollments' :
                        column.id === 'referred_by' ? 'Referred By' :
                        column.id === 'referred_from' ? 'Referred From' :
