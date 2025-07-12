@@ -230,8 +230,8 @@ export function ProviderComplianceManagement() {
                             return acc;
                           }, {} as Record<string, typeof complianceData.metrics>)
                         ).slice(0, 4).map(([category, metrics]) => {
-                          const categoryRecords = complianceData.allRecords.filter(record =>
-                            metrics.some(m => m.id === record.metric_id)
+                          const categoryRecords = complianceData.allRecords.filter((record: any) =>
+                            Array.isArray(metrics) && metrics.some((m: any) => m.id === record.metric_id)
                           );
                           const compliantRecords = categoryRecords.filter(r => r.compliance_status === 'compliant');
                           const percentage = categoryRecords.length > 0
@@ -484,7 +484,7 @@ export function ProviderComplianceManagement() {
                       ).map(([category, count]) => (
                         <div key={category} className="flex justify-between">
                           <span className="capitalize">{category}:</span>
-                          <span>{count} metrics</span>
+                          <span>{typeof count === 'number' ? count : 0} metrics</span>
                         </div>
                       ))}
                     </div>

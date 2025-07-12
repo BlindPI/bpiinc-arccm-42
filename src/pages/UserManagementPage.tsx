@@ -449,11 +449,13 @@ export default function UserManagementPage() {
       // Log import activity
       try {
         await supabase
-          .from('activity_logs')
+          .from('user_activity_logs')
           .insert({
             user_id: (await supabase.auth.getUser()).data.user?.id,
             activity_type: 'bulk_import',
-            details: {
+            activity_category: 'user_management',
+            resource_type: 'user',
+            metadata: {
               total_processed: users.length,
               successful_imports: successCount,
               failed_imports: failureCount,

@@ -14,14 +14,15 @@ export function Toaster() {
 
   return (
     <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
+      {toasts.map(function (toast) {
+        const { id, title, description, action, ...props } = toast as any;
         // Add unread dot and accessible contrast for destructive, success, info, warnings
         let statusColor = "";
         if (props.variant === "destructive") statusColor = "border-red-400";
         // You can add more statuses here if your notification system has more
 
         return (
-          <Toast key={id} {...props} className={
+          <Toast key={id || Math.random()} {...props} className={
             `mb-2 shadow-lg border-l-4 ${statusColor} bg-white/95` +
             " rounded-lg transition-all"
           }>

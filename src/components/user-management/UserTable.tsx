@@ -86,7 +86,7 @@ export function UserTable({
               {users.map((user) => (
                 <UserTableRow
                   key={user.id}
-                  user={user}
+                  user={user as any} // Type assertion to fix compatibility
                   isSelected={selectedUsers.includes(user.id)}
                   onSelect={onSelectUser}
                   onEdit={dialogHandlers.handleEditClick}
