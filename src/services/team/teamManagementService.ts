@@ -75,7 +75,7 @@ export class TeamManagementService {
           description: teamData.description,
           team_type: teamData.team_type,
           location_id: teamData.location_id,
-          provider_id: teamData.provider_id ? parseInt(teamData.provider_id) : null,
+          provider_id: teamData.provider_id,
           created_by: teamData.created_by,
           metadata: teamData.metadata || {},
           status: 'active',

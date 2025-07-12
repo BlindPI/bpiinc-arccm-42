@@ -125,7 +125,7 @@ export class AdminTeamService {
           description: teamData.description,
           team_type: teamData.team_type,
           location_id: teamData.location_id,
-          provider_id: teamData.provider_id,
+          provider_id: teamData.provider_id?.toString(),
           created_by: user.id,
           status: 'active',
           performance_score: 0,

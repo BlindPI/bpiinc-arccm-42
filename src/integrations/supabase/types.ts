@@ -18039,6 +18039,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      delete_team_bypass_rls: {
+        Args: { p_team_id: string }
+        Returns: boolean
+      }
       evaluate_progression_eligibility: {
         Args: { p_user_id: string; p_target_role: string }
         Returns: Json
@@ -18999,6 +19003,10 @@ export type Database = {
           p_duration_seconds?: number
         }
         Returns: undefined
+      }
+      update_team_bypass_rls: {
+        Args: { p_team_id: string; p_updates: Json }
+        Returns: Json
       }
       update_team_member_role_bypass_rls: {
         Args: { p_team_id: string; p_user_id: string; p_new_role: string }

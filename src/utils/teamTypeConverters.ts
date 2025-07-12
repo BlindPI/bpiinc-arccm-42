@@ -11,7 +11,7 @@ export function enhancedTeamToSimpleTeam(enhancedTeam: EnhancedTeam): SimpleTeam
     status: enhancedTeam.status,
     performance_score: enhancedTeam.performance_score,
     location: enhancedTeam.location,
-    provider_id: enhancedTeam.provider_id ? parseInt(enhancedTeam.provider_id, 10) : undefined,
+    provider_id: enhancedTeam.provider_id,
     member_count: enhancedTeam.members?.length || 0,
     created_at: enhancedTeam.created_at,
     updated_at: enhancedTeam.updated_at

@@ -151,7 +151,7 @@ export class FallbackTeamService {
           description: teamData.description,
           team_type: teamData.team_type,
           location_id: teamData.location_id,
-          provider_id: teamData.provider_id ? Number(teamData.provider_id) : null,
+          provider_id: teamData.provider_id?.toString() ? Number(teamData.provider_id) : null,
           created_by: teamData.created_by,
           status: 'active',
           performance_score: 0,
