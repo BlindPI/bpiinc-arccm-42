@@ -78,6 +78,7 @@ export interface GlobalAnalytics {
   }>;
 }
 
+// Export both the class and a default instance for import flexibility
 export class TeamAnalyticsService {
   // Verify analytics access permissions
   private static async verifyAnalyticsAccess(userId: string): Promise<boolean> {
@@ -415,3 +416,6 @@ export class TeamAnalyticsService {
     }
   }
 }
+
+// Export an instance for backwards compatibility
+export const teamAnalyticsService = TeamAnalyticsService;
