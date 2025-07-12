@@ -182,15 +182,15 @@ export function useStudentManagement() {
       const to = from + pagination.pageSize - 1;
       query = query.range(from, to);
 
-      // Apply sorting
-      if (filters.sortBy && filters.sortOrder) {
+      // Apply sorting (skip database sorting for certificates as it's enriched client-side)
+      if (filters.sortBy && filters.sortOrder && filters.sortBy !== 'certificates') {
         // Handle special case for enrollments_list sorting
         if (filters.sortBy === 'enrollments_list') {
           query = query.order('student_metadata->enrollments_list', { ascending: filters.sortOrder === 'asc' });
         } else {
           query = query.order(filters.sortBy, { ascending: filters.sortOrder === 'asc' });
         }
-      } else {
+      } else if (!filters.sortBy || filters.sortBy !== 'certificates') {
         query = query.order('created_at', { ascending: false });
       }
 
