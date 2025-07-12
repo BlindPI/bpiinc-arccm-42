@@ -110,6 +110,15 @@ export function StudentDataTable({
     }
   };
 
+  const handleCertificateSort = () => {
+    const currentSortOrder = (filters.sortBy === 'certificates' && filters.sortOrder === 'asc') ? 'desc' : 'asc';
+    onFiltersChange({
+      ...filters,
+      sortBy: 'certificates',
+      sortOrder: currentSortOrder
+    });
+  };
+
   const sortEnrollmentsData = (data: StudentProfile[], sortType: 'course_type' | 'provider', sortOrder: 'asc' | 'desc') => {
     return [...data].sort((a, b) => {
       const aEnrollments = a.student_metadata?.enrollments_list || '';
@@ -129,6 +138,16 @@ export function StudentDataTable({
       }
       
       const comparison = aValue.localeCompare(bValue);
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+  };
+
+  const sortCertificatesData = (data: StudentProfile[], sortOrder: 'asc' | 'desc') => {
+    return [...data].sort((a, b) => {
+      const aCount = a.certificate_count || 0;
+      const bCount = b.certificate_count || 0;
+      
+      const comparison = aCount - bCount;
       return sortOrder === 'asc' ? comparison : -comparison;
     });
   };
@@ -247,11 +266,12 @@ export function StudentDataTable({
       header: ({ column }) => (
         <Button 
           variant="ghost" 
-          onClick={() => handleSort('certificate_count')}
+          onClick={() => handleCertificateSort()}
           className="h-8 p-0 font-semibold hover:bg-transparent"
         >
           Certificates
           <FileText className="h-3 w-3 ml-1" />
+          {filters.sortBy === 'certificates' && getSortIcon('certificates')}
         </Button>
       ),
       cell: ({ row }) => {
@@ -387,10 +407,13 @@ export function StudentDataTable({
     },
   ], [data, selectedStudents, onStudentEdit, onStudentDelete]);
 
-  // Apply client-side sorting for advanced enrollment sorting
+  // Apply client-side sorting for advanced enrollment sorting and certificate sorting
   const sortedData = useMemo(() => {
     if (filters.sortBy === 'enrollments_list' && enrollmentSortType && enrollmentSortType !== 'alphabetical') {
       return sortEnrollmentsData(data, enrollmentSortType, filters.sortOrder || 'asc');
+    }
+    if (filters.sortBy === 'certificates') {
+      return sortCertificatesData(data, filters.sortOrder || 'asc');
     }
     return data;
   }, [data, filters.sortBy, filters.sortOrder, enrollmentSortType]);
