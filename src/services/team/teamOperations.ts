@@ -59,7 +59,7 @@ export class TeamOperations {
           name: teamData.name,
           description: teamData.description,
           location_id: teamData.location_id,
-          provider_id: teamData.provider_id ? parseInt(teamData.provider_id) : null,
+          provider_id: teamData.provider_id || null, // Keep as string
           team_type: teamData.team_type || 'provider_team',
           status: 'active',
           created_by: teamData.created_by
@@ -185,7 +185,7 @@ export class TeamOperations {
             profile:profiles!fk_team_members_user_id(*)
           )
         `)
-        .eq('provider_id', parseInt(providerId))
+        .eq('provider_id', providerId) // Keep as string
         .order('created_at', { ascending: false });
 
       if (error) throw error;

@@ -151,7 +151,7 @@ export class FallbackTeamService {
           description: teamData.description,
           team_type: teamData.team_type,
           location_id: teamData.location_id,
-          provider_id: teamData.provider_id?.toString() ? Number(teamData.provider_id) : null,
+          provider_id: teamData.provider_id || null, // Keep as string
           created_by: teamData.created_by,
           status: 'active',
           performance_score: 0,
@@ -323,7 +323,7 @@ export class FallbackTeamService {
           team_type: updates.team_type,
           status: updates.status,
           location_id: updates.location_id,
-          provider_id: updates.provider_id ? (typeof updates.provider_id === 'string' ? Number(updates.provider_id) : updates.provider_id) : undefined,
+          provider_id: updates.provider_id || undefined, // Keep as string
           metadata: updates.metadata,
           monthly_targets: updates.monthly_targets,
           current_metrics: updates.current_metrics,

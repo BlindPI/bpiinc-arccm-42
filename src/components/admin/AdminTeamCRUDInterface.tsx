@@ -132,7 +132,7 @@ function TeamForm({ team, onClose, onSuccess }: TeamFormProps) {
       description: formData.description.trim() || undefined,
       team_type: formData.team_type,
       location_id: formData.location_id || undefined,
-      provider_id: formData.provider_id ? parseInt(formData.provider_id) : undefined,
+      provider_id: formData.provider_id || undefined, // Keep as string
       metadata: formData.metadata,
       monthly_targets: formData.monthly_targets,
     };

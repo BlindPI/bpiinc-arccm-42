@@ -10,7 +10,7 @@ export interface RealTeam {
   status: 'active' | 'inactive' | 'suspended';
   performance_score: number;
   location_id?: string;
-  provider_id?: number;
+  provider_id?: string; // Changed to string to match database schema
   created_by?: string;
   created_at: string;
   updated_at: string;
@@ -145,7 +145,7 @@ export class RealTeamService {
     description?: string;
     team_type: string;
     location_id?: string;
-    provider_id?: number;
+    provider_id?: string; // Changed to string
     created_by: string;
   }): Promise<RealTeam> {
     try {

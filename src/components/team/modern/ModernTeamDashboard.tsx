@@ -106,7 +106,7 @@ export function ModernTeamDashboard({ userRole, userId }: ModernTeamDashboardPro
         team_type: updates.team_type,
         status: updates.status,
         location_id: updates.location_id,
-        provider_id: updates.provider_id ? Number(updates.provider_id) : undefined,
+        provider_id: updates.provider_id || undefined, // Keep as string
         metadata: updates.metadata,
         monthly_targets: updates.monthly_targets,
         current_metrics: updates.current_metrics,

@@ -226,7 +226,7 @@ export class TeamManagementService {
             profiles(*)
           )
         `)
-        .eq('provider_id', parseInt(providerId));
+        .eq('provider_id', providerId); // Keep as string
 
       if (error) throw error;
 

@@ -6,7 +6,7 @@ export interface AdminTeamCreateData {
   description?: string;
   team_type: string;
   location_id?: string;
-  provider_id?: number;
+  provider_id?: string; // Changed to string to match database schema
   metadata?: Record<string, any>;
   monthly_targets?: Record<string, any>;
 }
@@ -17,7 +17,7 @@ export interface AdminTeamUpdateData {
   team_type?: string;
   status?: 'active' | 'inactive' | 'suspended';
   location_id?: string;
-  provider_id?: number;
+  provider_id?: string; // Changed to string to match database schema
   metadata?: Record<string, any>;
   monthly_targets?: Record<string, any>;
   current_metrics?: Record<string, any>;

@@ -72,7 +72,7 @@ export function CreateTeamModal({ open, onOpenChange }: CreateTeamModalProps) {
         description: formData.description || undefined,
         team_type: formData.team_type,
         location_id: formData.location_id || undefined,
-        provider_id: formData.provider_id ? parseInt(formData.provider_id) : undefined,
+        provider_id: formData.provider_id || undefined, // Keep as string
         created_by: user.id
       });
     },
