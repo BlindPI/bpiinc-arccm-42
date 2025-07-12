@@ -131,7 +131,7 @@ export class UnifiedTeamService {
 
       // For other users, use the bypass RPC function
       const { data, error } = await supabase
-        .rpc('get_teams_bypass_rls', { p_user_id: userId });
+        .rpc('get_teams_bypass_rls');
 
       if (error) {
         console.error('Error fetching teams with bypass function:', error);
@@ -231,12 +231,25 @@ export class UnifiedTeamService {
    */
   static async deleteTeam(teamId: string): Promise<void> {
     try {
-      const { error } = await supabase
-        .from('teams')
-        .delete()
-        .eq('id', teamId);
+      // Use the bypass function for deletion to avoid RLS issues
+      const { data, error } = await supabase
+        .rpc('delete_team_bypass_rls', { p_team_id: teamId });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting team with bypass function:', error);
+        // Fallback to direct delete if RPC fails
+        const { error: directError } = await supabase
+          .from('teams')
+          .delete()
+          .eq('id', teamId);
+        
+        if (directError) throw directError;
+        return;
+      }
+
+      if (!data) {
+        throw new Error('Team not found or could not be deleted');
+      }
     } catch (error) {
       console.error('Error deleting team:', error);
       throw error;

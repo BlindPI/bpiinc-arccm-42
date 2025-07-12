@@ -18625,16 +18625,22 @@ export type Database = {
         }[]
       }
       get_teams_bypass_rls: {
-        Args: { p_user_id?: string }
+        Args: Record<PropertyKey, never> | { p_user_id?: string }
         Returns: {
           id: string
           name: string
           description: string
           team_type: string
           status: string
+          performance_score: number
+          location_id: string
+          provider_id: string
+          created_by: string
           created_at: string
-          member_count: number
-          location_name: string
+          updated_at: string
+          metadata: Json
+          monthly_targets: Json
+          current_metrics: Json
         }[]
       }
       get_teams_safe: {
