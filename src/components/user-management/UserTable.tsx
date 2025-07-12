@@ -2,7 +2,7 @@ import React from 'react';
 import { Table, TableBody, TableCaption, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, User as UserIcon, Search as SearchIcon, Users as UsersIcon } from 'lucide-react';
 import { UserTableRow } from './UserTableRow';
-import { ExtendedProfile } from '@/types/supabase-schema';
+import { ExtendedProfile } from '@/types/user-management';
 import { EditUserDialog } from './dialogs/EditUserDialog';
 import { ResetPasswordDialog } from './dialogs/ResetPasswordDialog';
 import { ChangeRoleDialog } from './dialogs/ChangeRoleDialog';
@@ -78,6 +78,7 @@ export function UserTable({
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Compliance</TableHead>
+                <TableHead>Tier</TableHead>
                 <TableHead>Created At</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -86,7 +87,7 @@ export function UserTable({
               {users.map((user) => (
                 <UserTableRow
                   key={user.id}
-                  user={user as any} // Type assertion to fix compatibility
+                  user={user}
                   isSelected={selectedUsers.includes(user.id)}
                   onSelect={onSelectUser}
                   onEdit={dialogHandlers.handleEditClick}
@@ -96,6 +97,7 @@ export function UserTable({
                   onChangeRole={dialogHandlers.handleChangeRoleClick}
                   canManageUsers={isAdmin}
                   onViewDetail={dialogHandlers.handleViewUserDetail}
+                  showTierManagerInModal={dialogHandlers.handleShowTierManager}
                 />
               ))}
             </TableBody>
