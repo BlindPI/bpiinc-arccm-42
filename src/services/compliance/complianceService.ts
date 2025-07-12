@@ -427,6 +427,75 @@ export class ComplianceService {
     }
   }
 
+  // Get team compliance overview
+  static async getTeamComplianceOverview(teamId: string): Promise<{
+    compliantMembers: number;
+    nonCompliantMembers: number;
+    pendingMembers: number;
+    overallComplianceRate: number;
+  }> {
+    try {
+      // Get team members
+      const { data: teamMembers, error: membersError } = await supabase
+        .from('team_members')
+        .select('user_id')
+        .eq('team_id', teamId)
+        .eq('status', 'active');
+
+      if (membersError) throw membersError;
+
+      if (!teamMembers || teamMembers.length === 0) {
+        return {
+          compliantMembers: 0,
+          nonCompliantMembers: 0,
+          pendingMembers: 0,
+          overallComplianceRate: 0
+        };
+      }
+
+      // Get compliance summaries for all team members
+      const complianceSummaries = await Promise.all(
+        teamMembers.map(member => this.getUserComplianceSummary(member.user_id))
+      );
+
+      let compliantMembers = 0;
+      let nonCompliantMembers = 0;
+      let pendingMembers = 0;
+      let totalScore = 0;
+
+      complianceSummaries.forEach(summary => {
+        totalScore += summary.overall_score;
+        
+        if (summary.overall_score >= 85) {
+          compliantMembers++;
+        } else if (summary.overall_score >= 50) {
+          pendingMembers++;
+        } else {
+          nonCompliantMembers++;
+        }
+      });
+
+      const overallComplianceRate = teamMembers.length > 0 
+        ? Math.round(totalScore / teamMembers.length) 
+        : 0;
+
+      return {
+        compliantMembers,
+        nonCompliantMembers,
+        pendingMembers,
+        overallComplianceRate
+      };
+    } catch (error) {
+      console.error('Error getting team compliance overview:', error);
+      return {
+        compliantMembers: 0,
+        nonCompliantMembers: 0,
+        pendingMembers: 0,
+        overallComplianceRate: 0
+      };
+    }
+  }
+
   // Document Management Methods
 
   // Get document requirements for a metric

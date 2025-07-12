@@ -405,7 +405,7 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({
       // First, initialize default requirements if they don't exist
       const {
         ComplianceRequirementsService
-      } = await import('@/services/compliance/complianceRequirementsService');
+      } = await import('@/services/ComplianceRequirementsService');
       await ComplianceRequirementsService.initializeDefaultRequirements(selectedMember.user_id, complianceRole);
 
       // Requirements initialized with default compliance role
