@@ -10,9 +10,29 @@ import { ComplianceService } from '@/services/compliance/complianceService';
 import { Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
+// Define measurement type enum based on database constraints
+type MeasurementType = 'boolean' | 'percentage' | 'date' | 'numeric';
+
+const MEASUREMENT_TYPES: Array<{ value: MeasurementType; label: string }> = [
+  { value: 'boolean', label: 'Boolean (Yes/No)' },
+  { value: 'percentage', label: 'Percentage' },
+  { value: 'date', label: 'Date' },
+  { value: 'numeric', label: 'Numeric' }
+];
+
+const DEFAULT_MEASUREMENT_TYPE: MeasurementType = 'boolean';
+
 interface CreateComplianceMetricDialogProps {
   onMetricCreated: () => void;
 }
+
+// Validation function for measurement type
+const validateMeasurementType = (value: string): MeasurementType => {
+  const validTypes: MeasurementType[] = ['boolean', 'percentage', 'date', 'numeric'];
+  return validTypes.includes(value as MeasurementType) 
+    ? (value as MeasurementType) 
+    : DEFAULT_MEASUREMENT_TYPE;
+};
 
 export function CreateComplianceMetricDialog({ onMetricCreated }: CreateComplianceMetricDialogProps) {
   const [open, setOpen] = useState(false);
@@ -23,7 +43,7 @@ export function CreateComplianceMetricDialog({ onMetricCreated }: CreateComplian
     name: '',
     description: '',
     category: '',
-    measurement_type: 'boolean' as 'boolean' | 'percentage' | 'date' | 'numeric',
+    measurement_type: DEFAULT_MEASUREMENT_TYPE,
     target_value: {},
     weight: 1,
     required_for_roles: [] as string[]
@@ -76,7 +96,7 @@ export function CreateComplianceMetricDialog({ onMetricCreated }: CreateComplian
         name: '',
         description: '',
         category: '',
-        measurement_type: 'boolean',
+        measurement_type: DEFAULT_MEASUREMENT_TYPE,
         target_value: {},
         weight: 1,
         required_for_roles: []
@@ -156,18 +176,20 @@ export function CreateComplianceMetricDialog({ onMetricCreated }: CreateComplian
             <Label htmlFor="measurement_type">Measurement Type</Label>
             <Select 
               value={formData.measurement_type} 
-              onValueChange={(value: 'boolean' | 'percentage' | 'date' | 'numeric') => 
-                setFormData(prev => ({ ...prev, measurement_type: value }))
-              }
+              onValueChange={(value: string) => {
+                const validatedType = validateMeasurementType(value);
+                setFormData(prev => ({ ...prev, measurement_type: validatedType }));
+              }}
             >
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Select measurement type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="boolean">Boolean (Yes/No)</SelectItem>
-                <SelectItem value="percentage">Percentage</SelectItem>
-                <SelectItem value="date">Date</SelectItem>
-                <SelectItem value="numeric">Numeric</SelectItem>
+                {MEASUREMENT_TYPES.map(({ value, label }) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
