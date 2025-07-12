@@ -31,7 +31,7 @@ export const AutomationRulesManager: React.FC = () => {
   const [formData, setFormData] = useState<RuleFormData>({
     name: '',
     description: '',
-    rule_type: 'notification',
+  rule_type: 'compliance' as const,
     trigger_conditions: {},
     actions: {},
     is_active: true
@@ -105,7 +105,7 @@ export const AutomationRulesManager: React.FC = () => {
     setFormData({
       name: '',
       description: '',
-      rule_type: 'notification',
+      rule_type: 'compliance' as const,
       trigger_conditions: {},
       actions: {},
       is_active: true
@@ -136,7 +136,7 @@ export const AutomationRulesManager: React.FC = () => {
     setFormData({
       name: rule.name,
       description: rule.description,
-      rule_type: rule.rule_type,
+      rule_type: rule.rule_type as 'progression' | 'notification' | 'compliance' | 'certificate',
       trigger_conditions: rule.trigger_conditions,
       actions: rule.actions,
       is_active: rule.is_active

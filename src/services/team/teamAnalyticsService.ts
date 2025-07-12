@@ -415,6 +415,45 @@ export class TeamAnalyticsService {
       throw error;
     }
   }
+
+  // Add missing static method for system-wide analytics
+  static async getSystemWideAnalytics() {
+    try {
+      const { data: teamsData, error: teamsError } = await supabase
+        .from('teams')
+        .select('id, name, status, performance_score')
+        .eq('status', 'active');
+
+      if (teamsError) throw teamsError;
+
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, role, status')
+        .eq('status', 'ACTIVE');
+
+      if (profilesError) throw profilesError;
+
+      return {
+        totalTeams: teamsData?.length || 0,
+        activeTeams: teamsData?.filter(t => t.status === 'active').length || 0,
+        averagePerformance: teamsData?.reduce((sum, t) => sum + (t.performance_score || 0), 0) / (teamsData?.length || 1) || 0,
+        totalUsers: profilesData?.length || 0,
+        usersByRole: profilesData?.reduce((acc, p) => {
+          acc[p.role] = (acc[p.role] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>) || {}
+      };
+    } catch (error) {
+      console.error('Error fetching system-wide analytics:', error);
+      return {
+        totalTeams: 0,
+        activeTeams: 0,
+        averagePerformance: 0,
+        totalUsers: 0,
+        usersByRole: {}
+      };
+    }
+  }
 }
 
 // Export an instance for backwards compatibility

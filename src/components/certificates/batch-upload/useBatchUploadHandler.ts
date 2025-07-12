@@ -8,7 +8,7 @@ import * as XLSX from 'xlsx';
 import { ProcessedData, ProcessingStatus } from '@/types/batch-upload';
 import { format, addMonths, parse } from 'date-fns';
 import { useCourseData } from '@/hooks/useCourseData';
-import { processExcelFile, extractDataFromFile } from '../utils/fileProcessing';
+import { processExcelFile, extractDataFromFile } from '@/utils/fileProcessing';
 
 interface CourseMatch {
   courseId: string;

@@ -125,8 +125,8 @@ export function ProfessionalEmailWorkflows() {
         );
         
         const totalSent = campaigns.reduce((sum, c) => sum + (c.status === 'sent' ? 1 : 0), 0);
-        const totalOpened = campaigns.reduce((sum, c) => sum + (c.status === 'delivered' ? 1 : 0), 0);
-        const totalDelivered = campaigns.reduce((sum, c) => sum + (c.status === 'delivered' ? 1 : 0), 0);
+        const totalOpened = campaigns.reduce((sum, c) => sum + (c.status === 'sent' ? 1 : 0), 0);
+        const totalDelivered = campaigns.reduce((sum, c) => sum + (c.status === 'sent' ? 1 : 0), 0);
         
         const openRate = totalDelivered > 0 ? Math.round((totalOpened / totalDelivered) * 100) : 0;
         const automationSuccess = campaigns.length > 0 ?

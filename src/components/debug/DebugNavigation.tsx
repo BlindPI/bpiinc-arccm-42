@@ -1,5 +1,5 @@
 import React from 'react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 
@@ -22,7 +22,7 @@ export const DebugNavigation: React.FC = () => {
         <div className="text-xs font-medium mb-1 text-gray-300">Debug Tools</div>
         <div className="flex flex-col space-y-1">
           <Link 
-            href="/debug/dashboard-data-test" 
+            to="/debug/dashboard-data-test" 
             className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 rounded text-white"
           >
             Dashboard Data
