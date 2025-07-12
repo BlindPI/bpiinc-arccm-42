@@ -905,16 +905,16 @@ export class ProviderRelationshipService {
       }
 
       // Get courses conducted
-      let courses: Array<{ id: string }> = [];
+      let courses = [];
       if (teamIds.length > 0) {
         try {
           const { data: courseData, error: courseError } = await supabase
             .from('courses')
             .select('id')
-            .in('team_id', teamIds as readonly string[]);
+            .in('team_id', teamIds);
           
           if (!courseError && courseData) {
-            courses = courseData as { id: string }[];
+            courses = courseData;
           }
         } catch (error) {
           console.log('Error fetching courses:', error);
