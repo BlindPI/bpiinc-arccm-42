@@ -126,6 +126,7 @@ export function CertificateRequestsTable({
               <TableHead>Assessment</TableHead>
               <TableHead>Status</TableHead>
               {showBatchInfo && <TableHead>Batch</TableHead>}
+              <TableHead>Notes</TableHead>
               <TableHead>Submitted</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -134,7 +135,7 @@ export function CertificateRequestsTable({
             {requests.map((request) => {
               const isExpanded = expandedRows.has(request.id);
               const extendedRequest = request as CertificateRequest & { notes?: string | null };
-              const hasAdditionalData = extendedRequest.notes || request.phone || request.company ||
+              const hasAdditionalData = request.phone || request.company ||
                                       request.city || request.province || request.postal_code ||
                                       request.instructor_name || request.instructor_level;
               
@@ -161,7 +162,7 @@ export function CertificateRequestsTable({
                       <div>
                         <div className="font-medium">{request.recipient_name}</div>
                         {request.email && (
-                          <div className="text-sm text-gray-500">{request.email}</div>
+                          <div className="text-sm text-muted-foreground">{request.email}</div>
                         )}
                       </div>
                     </TableCell>
@@ -189,15 +190,25 @@ export function CertificateRequestsTable({
                       </TableCell>
                     )}
                     <TableCell>
+                      {extendedRequest.notes ? (
+                        <div className="bg-amber-50 border border-amber-200 rounded-sm px-2 py-1 text-xs text-amber-800 max-w-xs">
+                          <div className="flex items-center gap-1 mb-1">
+                            <StickyNote className="h-3 w-3" />
+                            <span className="font-medium">Notes:</span>
+                          </div>
+                          <div className="truncate" title={extendedRequest.notes}>
+                            {extendedRequest.notes}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       {format(new Date(request.created_at), 'MMM d, yyyy')}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {/* Always show view button */}
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        
                         {/* Only show management buttons for SA/AD users */}
                         {canManageRequests ? (
                           <>
@@ -244,7 +255,7 @@ export function CertificateRequestsTable({
                   {/* Expanded details row */}
                   {isExpanded && hasAdditionalData && (
                     <TableRow>
-                      <TableCell colSpan={showBatchInfo ? 9 : 8} className="bg-gray-50 p-4">
+                      <TableCell colSpan={showBatchInfo ? 10 : 9} className="bg-muted/50 p-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                           {/* Contact Information */}
                           {(request.phone || request.company) && (
@@ -303,18 +314,6 @@ export function CertificateRequestsTable({
                             </div>
                           )}
                           
-                          {/* Notes Section - Always full width if present */}
-                          {extendedRequest.notes && (
-                            <div className="col-span-full space-y-2">
-                              <h4 className="font-medium text-sm text-gray-700 flex items-center gap-1">
-                                <StickyNote className="h-4 w-4" />
-                                Notes
-                              </h4>
-                              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
-                                <p className="text-sm text-gray-700 whitespace-pre-wrap">{extendedRequest.notes}</p>
-                              </div>
-                            </div>
-                          )}
                         </div>
                       </TableCell>
                     </TableRow>
