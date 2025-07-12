@@ -1815,6 +1815,7 @@ export type Database = {
           id: string
           message: string
           notification_type: string
+          read: boolean | null
           read_at: string | null
           title: string
           user_id: string
@@ -1828,6 +1829,7 @@ export type Database = {
           id?: string
           message: string
           notification_type: string
+          read?: boolean | null
           read_at?: string | null
           title: string
           user_id: string
@@ -1841,6 +1843,7 @@ export type Database = {
           id?: string
           message?: string
           notification_type?: string
+          read?: boolean | null
           read_at?: string | null
           title?: string
           user_id?: string

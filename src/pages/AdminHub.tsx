@@ -270,7 +270,7 @@ export default function AdminHub() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <ProgressionDashboard />
+              <ProgressionDashboard userId={user?.id || ''} />
             </CardContent>
           </Card>
         </TabsContent>

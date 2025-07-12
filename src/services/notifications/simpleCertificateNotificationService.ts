@@ -11,6 +11,7 @@ export interface CertificateNotification {
   message: string;
   email_sent: boolean;
   email_sent_at?: string;
+  read: boolean;
   read_at?: string;
   created_at: string;
 }
