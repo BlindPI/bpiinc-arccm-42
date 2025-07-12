@@ -110,7 +110,12 @@ export function useStudentManagement() {
 
       // Apply sorting
       if (filters.sortBy && filters.sortOrder) {
-        query = query.order(filters.sortBy, { ascending: filters.sortOrder === 'asc' });
+        // Handle special case for enrollments_list sorting
+        if (filters.sortBy === 'enrollments_list') {
+          query = query.order('student_metadata->enrollments_list', { ascending: filters.sortOrder === 'asc' });
+        } else {
+          query = query.order(filters.sortBy, { ascending: filters.sortOrder === 'asc' });
+        }
       } else {
         query = query.order('created_at', { ascending: false });
       }

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, Search, Filter, Download, Plus, ChevronUp, ChevronDown, Columns } from 'lucide-react';
+import { MoreHorizontal, Search, Filter, Download, Plus, ChevronUp, ChevronDown, Columns, ArrowUpDown } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { StudentProfile, StudentFilters, PaginationParams } from '@/hooks/useStudentManagement';
 
@@ -43,6 +43,7 @@ export function StudentDataTable({
 }: StudentDataTableProps) {
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [enrollmentSortType, setEnrollmentSortType] = useState<'alphabetical' | 'course_type' | 'provider' | null>(null);
 
   // Load preferences from localStorage on mount
   useEffect(() => {
@@ -89,6 +90,46 @@ export function StudentDataTable({
       ...filters,
       sortBy: columnId,
       sortOrder: newSortOrder
+    });
+  };
+
+  const handleEnrollmentSort = (sortType: 'alphabetical' | 'course_type' | 'provider') => {
+    setEnrollmentSortType(sortType);
+    
+    if (sortType === 'alphabetical') {
+      // Use backend sorting for alphabetical
+      handleSort('enrollments_list');
+    } else {
+      // For advanced sorting, we'll sort the data client-side
+      const currentSortOrder = (filters.sortBy === 'enrollments_list' && filters.sortOrder === 'asc') ? 'desc' : 'asc';
+      onFiltersChange({
+        ...filters,
+        sortBy: 'enrollments_list',
+        sortOrder: currentSortOrder
+      });
+    }
+  };
+
+  const sortEnrollmentsData = (data: StudentProfile[], sortType: 'course_type' | 'provider', sortOrder: 'asc' | 'desc') => {
+    return [...data].sort((a, b) => {
+      const aEnrollments = a.student_metadata?.enrollments_list || '';
+      const bEnrollments = b.student_metadata?.enrollments_list || '';
+      
+      let aValue = '';
+      let bValue = '';
+      
+      if (sortType === 'course_type') {
+        // Extract course type (e.g., "Standard First Aid", "CPR")
+        aValue = aEnrollments.match(/(Standard First Aid|Emergency First Aid|CPR|First Aid)/i)?.[0] || '';
+        bValue = bEnrollments.match(/(Standard First Aid|Emergency First Aid|CPR|First Aid)/i)?.[0] || '';
+      } else if (sortType === 'provider') {
+        // Extract provider/location (e.g., "Oakville", "ParaCPR", "Unifirst")
+        aValue = aEnrollments.split(' ')[0] || '';
+        bValue = bEnrollments.split(' ')[0] || '';
+      }
+      
+      const comparison = aValue.localeCompare(bValue);
+      return sortOrder === 'asc' ? comparison : -comparison;
     });
   };
 
@@ -203,7 +244,31 @@ export function StudentDataTable({
     },
     {
       id: 'enrollments_list',
-      header: 'Enrollments - List',
+      header: ({ column }) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="ghost" 
+              className="h-8 p-0 font-semibold hover:bg-transparent flex items-center"
+            >
+              Enrollments - List
+              <ArrowUpDown className="h-3 w-3 ml-1" />
+              {getSortIcon('enrollments_list')}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => handleEnrollmentSort('alphabetical')}>
+              Sort Alphabetically
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleEnrollmentSort('course_type')}>
+              Sort by Course Type
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleEnrollmentSort('provider')}>
+              Sort by Provider/Location
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
       cell: ({ row }) => {
         const enrollmentsList = row.original.student_metadata?.enrollments_list;
         return (
@@ -263,8 +328,16 @@ export function StudentDataTable({
     },
   ], [data, selectedStudents, onStudentEdit, onStudentDelete]);
 
+  // Apply client-side sorting for advanced enrollment sorting
+  const sortedData = useMemo(() => {
+    if (filters.sortBy === 'enrollments_list' && enrollmentSortType && enrollmentSortType !== 'alphabetical') {
+      return sortEnrollmentsData(data, enrollmentSortType, filters.sortOrder || 'asc');
+    }
+    return data;
+  }, [data, filters.sortBy, filters.sortOrder, enrollmentSortType]);
+
   const table = useReactTable({
-    data,
+    data: sortedData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
