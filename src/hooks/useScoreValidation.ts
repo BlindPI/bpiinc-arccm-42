@@ -379,14 +379,14 @@ export function useBatchScoreValidation(
         requiresBothScores: request.requiresBothScores ?? defaultConfig.requiresBothScores ?? true
       };
 
-      const { validateScores } = useScoreValidation({
+      const { validateNow } = useScoreValidation({
         practicalScore: request.practicalScore,
         writtenScore: request.writtenScore,
         config,
         realTimeValidation: false
       });
 
-      results.set(request.id, validateScores());
+      results.set(request.id, validateNow());
     });
 
     setValidationResults(results);
