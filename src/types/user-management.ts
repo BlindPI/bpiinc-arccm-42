@@ -8,7 +8,34 @@ export interface Profile {
   created_at: string;
   updated_at: string;
   compliance_status?: boolean;
+  compliance_tier?: string;
   email?: string;
+}
+
+export interface ExtendedProfile extends Profile {
+  compliance_tier?: string;
+}
+
+export interface ActivityLog {
+  id: string;
+  user_id: string;
+  activity_type: string;
+  description: string;
+  metadata?: Record<string, any>;
+  created_at: string;
+}
+
+export interface UserCertification {
+  id: string;
+  user_id: string;
+  certificate_id?: string;
+  certification_name: string;
+  issued_date: string;
+  expiry_date?: string;
+  status: 'active' | 'expired' | 'revoked';
+  metadata?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface DocumentSubmission {

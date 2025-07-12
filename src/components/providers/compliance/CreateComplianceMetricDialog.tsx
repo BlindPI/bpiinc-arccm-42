@@ -154,7 +154,12 @@ export function CreateComplianceMetricDialog({ onMetricCreated }: CreateComplian
 
           <div>
             <Label htmlFor="measurement_type">Measurement Type</Label>
-            <Select value={formData.measurement_type} onValueChange={(value) => setFormData(prev => ({ ...prev, measurement_type: value }))}>
+            <Select 
+              value={formData.measurement_type} 
+              onValueChange={(value: 'boolean' | 'percentage' | 'date' | 'numeric') => 
+                setFormData(prev => ({ ...prev, measurement_type: value }))
+              }
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>

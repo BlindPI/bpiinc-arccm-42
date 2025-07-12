@@ -184,7 +184,7 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
       
       // Log the email activity
       const { error: logError } = await supabase
-        .from('activity_logs')
+        .from('user_activity_logs')
         .insert({
           user_id: 'system', // System-generated activity
           activity_type: 'bulk_email_sent',

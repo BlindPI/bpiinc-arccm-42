@@ -100,15 +100,22 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
   const loadActivityLogs = async () => {
     setLoadingActivity(true);
     try {
-      const { data, error } = await supabase
-        .from('activity_logs')
+  const { data, error } = await supabase
+        .from('user_activity_logs')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(50);
 
       if (error) throw error;
-      setActivityLogs(data || []);
+      setActivityLogs((data || []).map(log => ({
+        id: log.id,
+        user_id: log.user_id,
+        activity_type: log.activity_type,
+        description: log.description,
+        metadata: log.metadata,
+        created_at: log.created_at
+      })));
     } catch (error: any) {
       console.error('Error loading activity logs:', error);
       toast.error('Failed to load activity logs');

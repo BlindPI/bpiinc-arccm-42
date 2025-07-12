@@ -15620,6 +15620,90 @@ export type Database = {
         }
         Relationships: []
       }
+      user_certifications: {
+        Row: {
+          certificate_id: string | null
+          certificate_type: string | null
+          certification_name: string
+          created_at: string
+          expiry_date: string | null
+          id: string
+          issued_date: string
+          issuing_authority: string | null
+          metadata: Json | null
+          status: string
+          updated_at: string
+          user_id: string
+          verification_code: string | null
+        }
+        Insert: {
+          certificate_id?: string | null
+          certificate_type?: string | null
+          certification_name: string
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          issued_date: string
+          issuing_authority?: string | null
+          metadata?: Json | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          verification_code?: string | null
+        }
+        Update: {
+          certificate_id?: string | null
+          certificate_type?: string | null
+          certification_name?: string
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          issued_date?: string
+          issuing_authority?: string | null
+          metadata?: Json | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          verification_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_certifications_certificate_id_fkey"
+            columns: ["certificate_id"]
+            isOneToOne: false
+            referencedRelation: "certificates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_certifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_certifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_certifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_certifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_compliance_records: {
         Row: {
           approved_at: string | null
