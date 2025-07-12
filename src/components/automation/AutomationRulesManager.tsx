@@ -136,7 +136,7 @@ export const AutomationRulesManager: React.FC = () => {
     setFormData({
       name: rule.name,
       description: rule.description,
-      rule_type: rule.rule_type,
+      rule_type: rule.rule_type as "compliance" | "certificate" | "notification" | "progression",
       trigger_conditions: rule.trigger_conditions,
       actions: rule.actions,
       is_active: rule.is_active

@@ -364,7 +364,7 @@ export function APAnalyticsDashboard({ className }: APAnalyticsDashboardProps) {
               <TrendingUp className="h-4 w-4 text-orange-600" />
               <span className="text-sm font-medium">Performance Score</span>
             </div>
-            <p className="text-2xl font-bold mt-1">{analyticsData.performanceData.averageSatisfactionScore?.toFixed(1) || 'N/A'}</p>
+            <p className="text-2xl font-bold mt-1">{analyticsData.performanceData?.averageSatisfactionScore?.toFixed(1) || 'N/A'}</p>
             <p className="text-xs text-muted-foreground">Out of 5.0</p>
           </CardContent>
         </Card>
@@ -461,7 +461,7 @@ export function APAnalyticsDashboard({ className }: APAnalyticsDashboardProps) {
                   <Target className="h-4 w-4 text-purple-600" />
                   <span className="text-sm font-medium">Quality Score</span>
                 </div>
-                <p className="text-2xl font-bold mt-1">{analyticsData.performanceData.complianceScore?.toFixed(1) || 'N/A'}</p>
+                <p className="text-2xl font-bold mt-1">{analyticsData.performanceData?.complianceScore?.toFixed(1) || 'N/A'}</p>
                 <p className="text-xs text-muted-foreground">out of 100</p>
               </CardContent>
             </Card>
@@ -533,19 +533,19 @@ export function APAnalyticsDashboard({ className }: APAnalyticsDashboardProps) {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span>Performance Rating</span>
-                    <span className="font-bold">{analyticsData.performanceData.performanceRating?.toFixed(1) || 'N/A'}/5.0</span>
+                    <span className="font-bold">{analyticsData.performanceData?.performanceRating?.toFixed(1) || 'N/A'}/5.0</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Satisfaction Score</span>
-                    <span className="font-bold">{analyticsData.performanceData.averageSatisfactionScore?.toFixed(1) || 'N/A'}/5.0</span>
+                    <span className="font-bold">{analyticsData.performanceData?.averageSatisfactionScore?.toFixed(1) || 'N/A'}/5.0</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Efficiency Rating</span>
-                    <span className="font-bold">{analyticsData.performanceData.efficiencyRating?.toFixed(1) || 'N/A'}/5.0</span>
+                    <span className="font-bold">{analyticsData.performanceData?.efficiencyRating?.toFixed(1) || 'N/A'}/5.0</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Compliance Score</span>
-                    <span className="font-bold">{analyticsData.performanceData.complianceScore?.toFixed(1) || 'N/A'}%</span>
+                    <span className="font-bold">{analyticsData.performanceData?.complianceScore?.toFixed(1) || 'N/A'}%</span>
                   </div>
                 </div>
               </CardContent>
@@ -571,7 +571,7 @@ export function APAnalyticsDashboard({ className }: APAnalyticsDashboardProps) {
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Team Performance</span>
-                    <span className="font-bold">{analyticsData.teamStats.performanceScore?.toFixed(1) || 'N/A'}%</span>
+                    <span className="font-bold">{analyticsData.teamStats?.performanceScore?.toFixed(1) || 'N/A'}%</span>
                   </div>
                 </div>
               </CardContent>
