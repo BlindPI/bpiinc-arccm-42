@@ -19355,6 +19355,10 @@ export type Database = {
         }
         Returns: string
       }
+      create_default_instructor_availability: {
+        Args: { instructor_id: string }
+        Returns: undefined
+      }
       create_new_user: {
         Args: {
           admin_user_id: string
