@@ -7,12 +7,12 @@ import { WeeklyAvailabilityGrid } from './WeeklyAvailabilityGrid';
 import { AvailabilityExceptions } from './AvailabilityExceptions';
 import { AvailabilityBookings } from './AvailabilityBookings';
 import { AvailabilitySettings } from './AvailabilitySettings';
-import { ConflictDetectionPanel } from './ConflictDetectionPanel';
+
 import { InstructorSchedulingPanel } from './InstructorSchedulingPanel';
 import { useUserAvailability } from '@/hooks/useUserAvailability';
 
 export function AvailabilityManager() {
-  const [activeTab, setActiveTab] = useState('schedule');
+  const [activeTab, setActiveTab] = useState('course-scheduling');
   const { availability, exceptions, bookings, isLoading } = useUserAvailability();
 
   if (isLoading) {
@@ -39,7 +39,11 @@ export function AvailabilityManager() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="course-scheduling" className="gap-2">
+            <CalendarDays className="h-4 w-4" />
+            Course Scheduling
+          </TabsTrigger>
           <TabsTrigger value="schedule" className="gap-2">
             <CalendarDays className="h-4 w-4" />
             Weekly Schedule
@@ -51,14 +55,6 @@ export function AvailabilityManager() {
           <TabsTrigger value="bookings" className="gap-2">
             <CalendarDays className="h-4 w-4" />
             Bookings
-          </TabsTrigger>
-          <TabsTrigger value="conflicts" className="gap-2">
-            <Clock className="h-4 w-4" />
-            Conflict Check
-          </TabsTrigger>
-          <TabsTrigger value="course-scheduling" className="gap-2">
-            <CalendarDays className="h-4 w-4" />
-            Course Scheduling
           </TabsTrigger>
           <TabsTrigger value="settings" className="gap-2">
             <Settings className="h-4 w-4" />
@@ -108,10 +104,6 @@ export function AvailabilityManager() {
               <AvailabilityBookings bookings={bookings} />
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="conflicts" className="space-y-6">
-          <ConflictDetectionPanel />
         </TabsContent>
 
         <TabsContent value="course-scheduling" className="space-y-6">

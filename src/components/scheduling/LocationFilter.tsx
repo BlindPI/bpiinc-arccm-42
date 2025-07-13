@@ -16,14 +16,69 @@ export const LocationFilter: React.FC<LocationFilterProps> = ({
   const { data: locations } = useQuery({
     queryKey: ['locations-for-filtering'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      // If user is SA/AD, show all locations
+      if (userProfile?.role === 'SA' || userProfile?.role === 'AD') {
+        const { data, error } = await supabase
+          .from('locations')
+          .select('id, name, address')
+          .eq('status', 'ACTIVE')
+          .order('name');
+        
+        if (error) throw error;
+        return data;
+      }
+
+      // If user is AP, show only assigned locations
+      if (userProfile?.role === 'AP') {
+        const { data, error } = await supabase
+          .from('ap_user_location_assignments')
+          .select(`
+            location_id,
+            locations!inner(id, name, address)
+          `)
+          .eq('ap_user_id', (await supabase.auth.getUser()).data.user?.id)
+          .eq('status', 'active')
+          .eq('locations.status', 'ACTIVE');
+        
+        if (error) throw error;
+        return data?.map(assignment => assignment.locations) || [];
+      }
+
+      // For other roles, show locations where they have teams
+      const { data: teamMembers, error } = await supabase
+        .from('team_members')
+        .select(`
+          team_id,
+          teams!team_members_team_id_fkey(
+            location_id
+          )
+        `)
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .eq('status', 'active');
+      
+      if (error) throw error;
+      
+      const locationIds = teamMembers
+        ?.map(member => member.teams?.location_id)
+        .filter(Boolean) || [];
+      
+      if (locationIds.length === 0) return [];
+      
+      const { data: locations, error: locError } = await supabase
         .from('locations')
         .select('id, name, address')
+        .in('id', locationIds)
         .eq('status', 'ACTIVE')
         .order('name');
       
-      if (error) throw error;
-      return data;
+      if (locError) throw locError;
+      return locations || [];
     }
   });
 

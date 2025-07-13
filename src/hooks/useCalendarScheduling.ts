@@ -143,40 +143,94 @@ export const useCalendarScheduling = (locationId?: string, teamId?: string) => {
   const { data: instructorAvailability, isLoading: availabilityLoading } = useQuery({
     queryKey: ['instructor-availability', locationId, teamId],
     queryFn: async () => {
-      let userQuery = supabase
+      // First get the current user's role to apply proper filtering
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      // Build base query for instructors
+      let instructorQuery = supabase
         .from('profiles')
         .select(`
           id, display_name, role,
-          user_availability (day_of_week, start_time, end_time),
-          team_members!inner (team_id, teams!inner(location_id, name))
+          user_availability (day_of_week, start_time, end_time)
         `)
         .in('role', ['IC', 'IP', 'IT']);
 
-      // Apply location filter
+      // Get team memberships separately to handle role-based filtering
+      let teamQuery = supabase
+        .from('team_members')
+        .select(`
+          user_id,
+          team_id,
+          teams!team_members_team_id_fkey(id, name, location_id)
+        `)
+        .eq('status', 'active');
+
+      // Apply role-based location restrictions
+      if (userProfile?.role === 'AP') {
+        // AP users can only see instructors in their assigned locations
+        const { data: assignments } = await supabase
+          .from('ap_user_location_assignments')
+          .select('location_id')
+          .eq('ap_user_id', (await supabase.auth.getUser()).data.user?.id)
+          .eq('status', 'active');
+
+        const assignedLocationIds = assignments?.map(a => a.location_id) || [];
+        if (assignedLocationIds.length > 0) {
+          teamQuery = teamQuery.in('teams.location_id', assignedLocationIds);
+        }
+      }
+
+      // Apply filters if provided
       if (locationId) {
-        userQuery = userQuery.eq('team_members.teams.location_id', locationId);
+        teamQuery = teamQuery.eq('teams.location_id', locationId);
       }
-
-      // Apply team filter
       if (teamId) {
-        userQuery = userQuery.eq('team_members.team_id', teamId);
+        teamQuery = teamQuery.eq('team_id', teamId);
       }
 
-      const { data, error } = await userQuery;
-      if (error) throw error;
+      const [instructorResult, teamResult] = await Promise.all([
+        instructorQuery,
+        teamQuery
+      ]);
 
-      return data?.map((instructor: any): InstructorAvailability => ({
+      if (instructorResult.error) throw instructorResult.error;
+      if (teamResult.error) throw teamResult.error;
+
+      // Filter instructors based on team membership
+      const instructorIds = teamResult.data?.map(tm => tm.user_id) || [];
+      const filteredInstructors = instructorResult.data?.filter(instructor => 
+        instructorIds.includes(instructor.id)
+      ) || [];
+
+      // Create a map of team info for each instructor
+      const teamInfoMap = new Map();
+      teamResult.data?.forEach(tm => {
+        if (!teamInfoMap.has(tm.user_id)) {
+          teamInfoMap.set(tm.user_id, []);
+        }
+        teamInfoMap.get(tm.user_id).push({
+          teamId: tm.team_id,
+          teamName: tm.teams?.name,
+          locationId: tm.teams?.location_id
+        });
+      });
+
+      return filteredInstructors.map((instructor: any): InstructorAvailability => ({
         instructorId: instructor.id,
         instructorName: instructor.display_name || 'Unknown',
         role: instructor.role,
-        locationId: instructor.team_members?.[0]?.teams?.location_id,
-        teamId: instructor.team_members?.[0]?.team_id,
+        locationId: teamInfoMap.get(instructor.id)?.[0]?.locationId,
+        teamId: teamInfoMap.get(instructor.id)?.[0]?.teamId,
         availability: instructor.user_availability?.map((avail: any) => ({
           dayOfWeek: parseInt(avail.day_of_week),
           startTime: avail.start_time,
           endTime: avail.end_time
         })) || []
-      })) || [];
+      }));
     }
   });
 
