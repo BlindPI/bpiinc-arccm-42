@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { TrainingHubHeader } from '@/components/training/dashboard/TrainingHubHeader';
 import { TrainingHubNavigation } from '@/components/training/navigation/TrainingHubNavigation';
+import { TeamManagementPanel } from '@/components/training/team/TeamManagementPanel';
 import { TeachingSessionManager } from '@/components/teaching/TeachingSessionManager';
 import { EnrollmentManagementDashboard } from '@/components/enrollment/EnrollmentManagementDashboard';
 import { SimplifiedCourseTable } from '@/components/courses/SimplifiedCourseTable';
@@ -92,6 +93,16 @@ export default function TrainingHub() {
         throw locationsError;
       }
 
+      // Get team-related data
+      const { data: bulkOps, error: bulkError } = await supabase
+        .from('bulk_operation_queue')
+        .select('id, status')
+        .in('status', ['pending', 'processing']);
+
+      if (bulkError) {
+        console.error('Error fetching bulk operations:', bulkError);
+      }
+
       // Calculate compliance rate from sessions
       const complianceRate = sessions && sessions.length > 0 
         ? Math.round((sessions.filter(s => s.compliance_status === 'compliant').length / sessions.length) * 100)
@@ -102,7 +113,9 @@ export default function TrainingHub() {
         instructors: instructors?.length || 0,
         schedules: schedules?.length || 0,
         locations: locations?.length || 0,
-        compliance: complianceRate
+        compliance: complianceRate,
+        totalMembers: instructors?.length || 0,
+        activeBulkOps: bulkOps?.length || 0
       });
 
       return {
@@ -110,7 +123,9 @@ export default function TrainingHub() {
         activeInstructors: instructors?.length || 0,
         upcomingSchedules: schedules?.length || 0,
         activeLocations: locations?.length || 0,
-        complianceRate
+        complianceRate,
+        totalMembers: instructors?.length || 0,
+        activeBulkOps: bulkOps?.length || 0
       };
     },
     enabled: !!user && !!profile,
@@ -193,6 +208,10 @@ export default function TrainingHub() {
   const handleExportData = () => {
     console.log('Exporting training data...');
     // Export functionality would be implemented here
+  };
+
+  const handleNavigateToAvailability = () => {
+    navigate('/availability');
   };
 
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
@@ -606,6 +625,11 @@ export default function TrainingHub() {
             </Tabs>
           </div>
         );
+
+      case 'team-management':
+        return (
+          <TeamManagementPanel onNavigateToAvailability={handleNavigateToAvailability} />
+        );
         
       case 'analytics':
         return (
@@ -688,6 +712,8 @@ export default function TrainingHub() {
           upcomingSchedules={metrics?.upcomingSchedules || 0}
           activeLocations={metrics?.activeLocations || 0}
           complianceRate={metrics?.complianceRate || 0}
+          totalTeamMembers={metrics?.totalMembers || 0}
+          bulkOperations={metrics?.activeBulkOps || 0}
         />
 
         {/* Content Area */}

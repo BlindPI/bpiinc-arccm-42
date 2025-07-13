@@ -13,7 +13,8 @@ import {
   GraduationCap,
   TrendingUp,
   Clock,
-  ArrowRight
+  ArrowRight,
+  UserCheck
 } from 'lucide-react';
 
 interface NavigationCard {
@@ -43,6 +44,8 @@ interface TrainingHubNavigationProps {
   upcomingSchedules: number;
   activeLocations?: number;
   complianceRate: number;
+  totalTeamMembers?: number;
+  bulkOperations?: number;
 }
 
 export const TrainingHubNavigation: React.FC<TrainingHubNavigationProps> = ({
@@ -52,7 +55,9 @@ export const TrainingHubNavigation: React.FC<TrainingHubNavigationProps> = ({
   activeInstructors,
   upcomingSchedules,
   activeLocations = 0,
-  complianceRate
+  complianceRate,
+  totalTeamMembers = 0,
+  bulkOperations = 0
 }) => {
   const navigationCards: NavigationCard[] = [
     {
@@ -102,6 +107,23 @@ export const TrainingHubNavigation: React.FC<TrainingHubNavigationProps> = ({
         ? { text: 'Courses Available', variant: 'default' as const }
         : { text: 'No Courses', variant: 'secondary' as const },
       action: () => onTabChange('courses')
+    },
+    {
+      id: 'team-management',
+      title: 'Team Management',
+      description: 'Manage team availability, bulk scheduling operations, and team collaboration tools',
+      icon: UserCheck,
+      gradient: 'from-rose-500 to-pink-600',
+      stats: {
+        primary: totalTeamMembers,
+        secondary: bulkOperations,
+        label: 'Team members',
+        trend: 'up'
+      },
+      badge: totalTeamMembers > 0
+        ? { text: 'Teams Active', variant: 'default' as const }
+        : { text: 'No Teams', variant: 'secondary' as const },
+      action: () => onTabChange('team-management')
     },
     {
       id: 'locations',
@@ -167,7 +189,7 @@ export const TrainingHubNavigation: React.FC<TrainingHubNavigationProps> = ({
           Training Management Dashboard
         </h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
           {navigationCards.map((card) => (
             <Card 
               key={card.id}
