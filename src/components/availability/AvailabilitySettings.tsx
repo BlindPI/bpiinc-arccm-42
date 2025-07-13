@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Clock, Bell, Calendar, Save } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export function AvailabilitySettings() {
   const [settings, setSettings] = useState({
@@ -23,9 +25,22 @@ export function AvailabilitySettings() {
     timezone: 'America/New_York',
   });
 
-  const handleSave = () => {
-    // TODO: Implement settings save to user preferences or profile
-    console.log('Saving settings:', settings);
+  const handleSave = async () => {
+    try {
+      const { error } = await supabase
+        .from('user_availability_settings')
+        .upsert({
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          settings: settings,
+          updated_at: new Date().toISOString()
+        });
+      
+      if (error) throw error;
+      toast.success('Settings saved successfully');
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      toast.error('Failed to save settings');
+    }
   };
 
   return (
