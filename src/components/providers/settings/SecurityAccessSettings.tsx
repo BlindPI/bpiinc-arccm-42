@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Shield, Key, Clock, Database, AlertTriangle } from 'lucide-react';
 import { useProviderSettings } from '@/hooks/useProviderSettings';
+import { TooltipInfo } from '@/components/ui/tooltip-info';
+import { DataExportRequest } from './DataExportRequest';
 
 export function SecurityAccessSettings() {
   const { settings, updateSecurity, isUpdating } = useProviderSettings();
@@ -14,7 +16,12 @@ export function SecurityAccessSettings() {
     session_timeout_minutes: 480,
     two_factor_enabled: false,
     api_access_enabled: false,
-    audit_trail_retention_days: 365,
+    certificate_data_retention_days: 2555, // ~7 years
+    batch_processing_retention_days: 1095, // 3 years
+    communication_records_retention_days: 730, // 2 years
+    personal_data_retention_days: 2555, // ~7 years
+    audit_trail_retention_days: 365, // 1 year
+    assessment_data_retention_days: 2555, // ~7 years
   });
 
   React.useEffect(() => {
@@ -23,7 +30,12 @@ export function SecurityAccessSettings() {
         session_timeout_minutes: settings.session_timeout_minutes || 480,
         two_factor_enabled: settings.two_factor_enabled || false,
         api_access_enabled: settings.api_access_enabled || false,
+        certificate_data_retention_days: settings.certificate_data_retention_days || 2555,
+        batch_processing_retention_days: settings.batch_processing_retention_days || 1095,
+        communication_records_retention_days: settings.communication_records_retention_days || 730,
+        personal_data_retention_days: settings.personal_data_retention_days || 2555,
         audit_trail_retention_days: settings.audit_trail_retention_days || 365,
+        assessment_data_retention_days: settings.assessment_data_retention_days || 2555,
       });
     }
   }, [settings]);
@@ -144,15 +156,129 @@ export function SecurityAccessSettings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Database className="h-5 w-5" />
-              Data & Privacy
+              Data Retention Settings
             </CardTitle>
             <CardDescription>
-              Configure data retention and privacy settings
+              Configure how long different types of data are retained in the system
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
+            {/* Certificate Data Retention */}
             <div className="space-y-2">
-              <Label>Audit Trail Retention</Label>
+              <div className="flex items-center gap-2">
+                <Label>Certificate Data Retention</Label>
+                <TooltipInfo content="Certificate requests, recipient names, scores, completion dates, instructor details. Recommended: 7 years for compliance." />
+              </div>
+              <Select 
+                value={securitySettings.certificate_data_retention_days.toString()} 
+                onValueChange={(value) => updateSetting('certificate_data_retention_days', parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1095">3 years</SelectItem>
+                  <SelectItem value="1825">5 years</SelectItem>
+                  <SelectItem value="2555">7 years (Recommended)</SelectItem>
+                  <SelectItem value="3650">10 years</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Batch Processing Retention */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label>Batch Processing Data</Label>
+                <TooltipInfo content="Batch IDs, batch names, bulk upload records, processing logs. Used for tracking bulk operations and troubleshooting." />
+              </div>
+              <Select 
+                value={securitySettings.batch_processing_retention_days.toString()} 
+                onValueChange={(value) => updateSetting('batch_processing_retention_days', parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="365">1 year</SelectItem>
+                  <SelectItem value="730">2 years</SelectItem>
+                  <SelectItem value="1095">3 years (Recommended)</SelectItem>
+                  <SelectItem value="1825">5 years</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Assessment Data Retention */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label>Assessment Data</Label>
+                <TooltipInfo content="Practical/written scores, completion dates, pass/fail status. Critical for certification validation and appeals." />
+              </div>
+              <Select 
+                value={securitySettings.assessment_data_retention_days.toString()} 
+                onValueChange={(value) => updateSetting('assessment_data_retention_days', parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1095">3 years</SelectItem>
+                  <SelectItem value="1825">5 years</SelectItem>
+                  <SelectItem value="2555">7 years (Recommended)</SelectItem>
+                  <SelectItem value="3650">10 years</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Personal Data Retention */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label>Personal Data</Label>
+                <TooltipInfo content="Recipient emails, phone numbers, addresses, employment information. Subject to GDPR and privacy regulations." />
+              </div>
+              <Select 
+                value={securitySettings.personal_data_retention_days.toString()} 
+                onValueChange={(value) => updateSetting('personal_data_retention_days', parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1095">3 years</SelectItem>
+                  <SelectItem value="1825">5 years</SelectItem>
+                  <SelectItem value="2555">7 years (Recommended)</SelectItem>
+                  <SelectItem value="3650">10 years</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Communication Records */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label>Communication Records</Label>
+                <TooltipInfo content="Email notifications, batch communications, status updates. Used for tracking communications and troubleshooting delivery issues." />
+              </div>
+              <Select 
+                value={securitySettings.communication_records_retention_days.toString()} 
+                onValueChange={(value) => updateSetting('communication_records_retention_days', parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="365">1 year</SelectItem>
+                  <SelectItem value="730">2 years (Recommended)</SelectItem>
+                  <SelectItem value="1095">3 years</SelectItem>
+                  <SelectItem value="1825">5 years</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Audit Trail Retention */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label>Audit Trail</Label>
+                <TooltipInfo content="System access logs, setting changes, administrative actions. Required for security monitoring and compliance audits." />
+              </div>
               <Select 
                 value={securitySettings.audit_trail_retention_days.toString()} 
                 onValueChange={(value) => updateSetting('audit_trail_retention_days', parseInt(value))}
@@ -163,17 +289,16 @@ export function SecurityAccessSettings() {
                 <SelectContent>
                   <SelectItem value="90">90 days</SelectItem>
                   <SelectItem value="180">6 months</SelectItem>
-                  <SelectItem value="365">1 year</SelectItem>
+                  <SelectItem value="365">1 year (Recommended)</SelectItem>
                   <SelectItem value="730">2 years</SelectItem>
                   <SelectItem value="1095">3 years</SelectItem>
                 </SelectContent>
               </Select>
-              <div className="text-sm text-muted-foreground">
-                How long to keep audit logs and activity records
-              </div>
             </div>
           </CardContent>
         </Card>
+
+        <DataExportRequest />
 
         <Button type="submit" disabled={isUpdating} className="w-full">
           {isUpdating ? 'Saving Security Settings...' : 'Save Security Settings'}

@@ -8276,6 +8276,139 @@ export type Database = {
         }
         Relationships: []
       }
+      data_export_requests: {
+        Row: {
+          created_at: string | null
+          data_categories: string[]
+          date_range_end: string | null
+          date_range_start: string | null
+          download_count: number | null
+          estimated_records: number | null
+          export_expires_at: string | null
+          export_file_url: string | null
+          export_format: string | null
+          id: string
+          justification: string
+          provider_id: string | null
+          request_type: string
+          requested_at: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          data_categories: string[]
+          date_range_end?: string | null
+          date_range_start?: string | null
+          download_count?: number | null
+          estimated_records?: number | null
+          export_expires_at?: string | null
+          export_file_url?: string | null
+          export_format?: string | null
+          id?: string
+          justification: string
+          provider_id?: string | null
+          request_type: string
+          requested_at?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          data_categories?: string[]
+          date_range_end?: string | null
+          date_range_start?: string | null
+          download_count?: number | null
+          estimated_records?: number | null
+          export_expires_at?: string | null
+          export_file_url?: string | null
+          export_format?: string | null
+          id?: string
+          justification?: string
+          provider_id?: string | null
+          request_type?: string
+          requested_at?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_export_requests_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "authorized_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_export_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "data_export_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "data_export_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "data_export_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_export_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "data_export_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "data_export_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "data_export_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       data_retention_policies: {
         Row: {
           applicable_conditions: Json | null
@@ -11182,13 +11315,17 @@ export type Database = {
       provider_settings: {
         Row: {
           api_access_enabled: boolean | null
+          assessment_data_retention_days: number | null
           audit_trail_retention_days: number | null
           auto_assignment_enabled: boolean | null
           auto_reporting_enabled: boolean | null
+          batch_processing_retention_days: number | null
           branding_logo_url: string | null
           branding_primary_color: string | null
           branding_secondary_color: string | null
           bulk_operation_limit: number | null
+          certificate_data_retention_days: number | null
+          communication_records_retention_days: number | null
           compliance_reminder_days: number | null
           created_at: string
           dashboard_layout: Json | null
@@ -11204,6 +11341,7 @@ export type Database = {
           notification_preferences: Json | null
           operating_hours: Json | null
           performance_targets: Json | null
+          personal_data_retention_days: number | null
           preferred_communication_method: string | null
           provider_id: string | null
           reporting_schedule: string | null
@@ -11218,13 +11356,17 @@ export type Database = {
         }
         Insert: {
           api_access_enabled?: boolean | null
+          assessment_data_retention_days?: number | null
           audit_trail_retention_days?: number | null
           auto_assignment_enabled?: boolean | null
           auto_reporting_enabled?: boolean | null
+          batch_processing_retention_days?: number | null
           branding_logo_url?: string | null
           branding_primary_color?: string | null
           branding_secondary_color?: string | null
           bulk_operation_limit?: number | null
+          certificate_data_retention_days?: number | null
+          communication_records_retention_days?: number | null
           compliance_reminder_days?: number | null
           created_at?: string
           dashboard_layout?: Json | null
@@ -11240,6 +11382,7 @@ export type Database = {
           notification_preferences?: Json | null
           operating_hours?: Json | null
           performance_targets?: Json | null
+          personal_data_retention_days?: number | null
           preferred_communication_method?: string | null
           provider_id?: string | null
           reporting_schedule?: string | null
@@ -11254,13 +11397,17 @@ export type Database = {
         }
         Update: {
           api_access_enabled?: boolean | null
+          assessment_data_retention_days?: number | null
           audit_trail_retention_days?: number | null
           auto_assignment_enabled?: boolean | null
           auto_reporting_enabled?: boolean | null
+          batch_processing_retention_days?: number | null
           branding_logo_url?: string | null
           branding_primary_color?: string | null
           branding_secondary_color?: string | null
           bulk_operation_limit?: number | null
+          certificate_data_retention_days?: number | null
+          communication_records_retention_days?: number | null
           compliance_reminder_days?: number | null
           created_at?: string
           dashboard_layout?: Json | null
@@ -11276,6 +11423,7 @@ export type Database = {
           notification_preferences?: Json | null
           operating_hours?: Json | null
           performance_targets?: Json | null
+          personal_data_retention_days?: number | null
           preferred_communication_method?: string | null
           provider_id?: string | null
           reporting_schedule?: string | null

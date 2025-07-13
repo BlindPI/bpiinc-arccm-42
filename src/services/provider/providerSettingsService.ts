@@ -112,7 +112,12 @@ export class ProviderSettingsService {
     session_timeout_minutes?: number;
     two_factor_enabled?: boolean;
     api_access_enabled?: boolean;
+    certificate_data_retention_days?: number;
+    batch_processing_retention_days?: number;
+    communication_records_retention_days?: number;
+    personal_data_retention_days?: number;
     audit_trail_retention_days?: number;
+    assessment_data_retention_days?: number;
   }): Promise<ProviderSettings> {
     return this.updateProviderSettings(userId, settings);
   }
