@@ -23,9 +23,10 @@ export class DataExportService {
     const insertData: DataExportRequestInsert = {
       user_id: userId,
       provider_id: providerId,
+      request_type: 'provider_data',
       data_categories: requestData.dataCategories,
-      start_date: requestData.dateRange.from?.toISOString(),
-      end_date: requestData.dateRange.to?.toISOString(),
+      date_range_start: requestData.dateRange.from?.toISOString(),
+      date_range_end: requestData.dateRange.to?.toISOString(),
       justification: requestData.customJustification || requestData.justification,
       status: 'pending',
     };

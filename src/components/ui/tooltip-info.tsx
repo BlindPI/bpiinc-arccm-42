@@ -19,8 +19,8 @@ export function TooltipInfo({ content, className = "" }: TooltipInfoProps) {
         <TooltipTrigger asChild>
           <Info className={`h-4 w-4 text-muted-foreground hover:text-primary cursor-help ${className}`} />
         </TooltipTrigger>
-        <TooltipContent className="max-w-xs">
-          <div className="text-sm">{content}</div>
+        <TooltipContent className="max-w-xs bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+          <div className="text-sm text-gray-900 dark:text-gray-100">{content}</div>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
