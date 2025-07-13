@@ -49,7 +49,7 @@ export const InstructorSchedulingPanel: React.FC = () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, display_name, role')
-        .eq('role', 'IN')
+        .in('role', ['IC', 'IP', 'IT'])
         .order('display_name');
       
       if (error) throw error;
