@@ -133,7 +133,7 @@ export class RealEnterpriseTeamService {
     const { data, error } = await supabase.rpc('get_enhanced_teams_data');
     if (error) throw error;
     
-    return (data || []).map((row: any) => {
+    const teams = (data || []).map((row: any) => {
       const teamData = safeParseJsonResponse(row.team_data);
       return {
         ...teamData,
@@ -142,15 +142,51 @@ export class RealEnterpriseTeamService {
         monthly_targets: safeParseJsonResponse(teamData.monthly_targets),
         current_metrics: safeParseJsonResponse(teamData.current_metrics),
         member_count: teamData.member_count || 0,
-        // Include provider assignment information
-        provider: teamData.provider_id ? {
-          id: teamData.provider_id,
-          provider_name: teamData.provider_name,
-          provider_type: teamData.provider_type,
-          name: teamData.provider_name
-        } : null
+        provider: null // Will be populated from provider_team_assignments
       };
     });
+
+    // Now follow the working pattern - populate provider assignments for each team
+    for (const team of teams) {
+      try {
+        // Query provider_team_assignments table (the working pattern)
+        const { data: assignments, error: assignmentError } = await supabase
+          .from('provider_team_assignments')
+          .select(`
+            assignment_role,
+            status,
+            authorized_providers!inner(
+              id,
+              name,
+              provider_type,
+              status
+            )
+          `)
+          .eq('team_id', team.id)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (!assignmentError && assignments && assignments.length > 0) {
+          const assignment = assignments[0];
+          const provider = assignment.authorized_providers;
+          
+          team.provider = {
+            id: provider.id,
+            name: provider.name,
+            provider_name: provider.name,
+            provider_type: provider.provider_type,
+            assignment_role: assignment.assignment_role,
+            assignment_status: assignment.status
+          };
+        }
+      } catch (error) {
+        console.error(`Error fetching provider assignment for team ${team.id}:`, error);
+        // Continue without provider data rather than failing
+      }
+    }
+    
+    return teams;
   }
 
   static async getTeamAnalytics(): Promise<TeamAnalytics> {
