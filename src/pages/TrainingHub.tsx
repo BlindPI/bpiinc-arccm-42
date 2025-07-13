@@ -28,6 +28,7 @@ import { Loader2, BookOpen, Users, Calendar, BarChart3, Activity, UserCheck, Map
 import { useTeachingManagement } from '@/hooks/useTeachingManagement';
 import { useCourseScheduling } from '@/hooks/useCourseScheduling';
 import { useNavigate } from 'react-router-dom';
+import { realTeamDataService } from '@/services/team/realTeamDataService';
 
 export default function TrainingHub() {
   const { user } = useAuth();
@@ -122,8 +123,7 @@ export default function TrainingHub() {
         activeBulkOps: bulkOps?.length || 0
       });
 
-      // Use the real team data service for consolidated metrics
-      const { realTeamDataService } = await import('@/services/team/realTeamDataService');
+      // Get consolidated metrics from the database function
       const systemAnalytics = await realTeamDataService.getSystemAnalytics();
       
       return {
@@ -131,9 +131,10 @@ export default function TrainingHub() {
         activeInstructors: instructors?.length || 0,
         upcomingSchedules: schedules?.length || 0,
         activeLocations: locations?.length || 0,
-        complianceRate: complianceRate || systemAnalytics.averageCompliance,
+        complianceRate: systemAnalytics.averageCompliance,
         totalMembers: systemAnalytics.totalMembers,
-        activeBulkOps: bulkOps?.length || 0
+        activeBulkOps: bulkOps?.length || 0,
+        averagePerformance: systemAnalytics.averagePerformance
       };
     },
     enabled: !!user && !!profile,
