@@ -56,12 +56,15 @@ export function EnhancedTeamCard({ team, onViewDetails, onManage }: EnhancedTeam
     membersLength: team.members?.length,
     memberCount: team.member_count,
     performanceScore: team.performance_score,
-    hasMembersArray: !!team.members
+    hasMembersArray: !!team.members,
+    performanceScoreType: typeof team.performance_score,
+    performanceScoreIsNull: team.performance_score === null,
+    performanceScoreIsUndefined: team.performance_score === undefined
   });
   
   const memberCount = team.members?.length || 0;
   const activeMembers = team.members?.filter(m => m.status === 'active').length || 0;
-  const performanceScore = team.performance_score || 85;
+  const performanceScore = team.performance_score ?? null; // Step 2: Remove hardcoded fallback
   
   const getPerformanceColor = (score: number) => {
     if (score >= 90) return 'text-emerald-600 bg-emerald-50';
@@ -130,9 +133,15 @@ export function EnhancedTeamCard({ team, onViewDetails, onManage }: EnhancedTeam
                 <TrendingUp className="h-4 w-4" />
                 <span className="text-sm font-medium">Performance</span>
               </div>
-              <div className={`text-xl font-bold inline-flex items-center px-2 py-1 rounded-md ${getPerformanceColor(performanceScore)}`}>
-                {performanceScore}%
-              </div>
+              {performanceScore !== null ? (
+                <div className={`text-xl font-bold inline-flex items-center px-2 py-1 rounded-md ${getPerformanceColor(performanceScore)}`}>
+                  {performanceScore}%
+                </div>
+              ) : (
+                <div className="text-xl font-bold text-muted-foreground px-2 py-1">
+                  No Data
+                </div>
+              )}
             </div>
           </div>
 
