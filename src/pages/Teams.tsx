@@ -16,6 +16,7 @@ import { TeamAnalyticsDashboard } from '@/components/team/analytics/TeamAnalytic
 import { BulkOperationsInterface } from '@/components/team/bulk/BulkOperationsInterface';
 import { MemberInvitationWorkflow } from '@/components/team/workflows/MemberInvitationWorkflow';
 import { WorkflowQueue } from '@/components/team/workflow/WorkflowQueue';
+import { TeamSettings } from '@/components/team/settings/TeamSettings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Users, 
@@ -62,8 +63,20 @@ export default function Teams() {
     (team.description && team.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Check if user has professional access for enhanced functionality
-  const hasProfessionalAccess = ['SA', 'AD', 'AP', 'IP', 'IT'].includes(role || '');
+  // Role-based access control with clear indicators
+  const roleAccess = {
+    canViewAll: permissions.isSystemAdmin || permissions.isAdmin,
+    canManageAll: permissions.isSystemAdmin || permissions.isAdmin,
+    canManageAssigned: role === 'AP',
+    isInstructor: ['IC', 'IP', 'IT', 'IN'].includes(role || ''),
+    roleLabel: permissions.isSystemAdmin ? 'System Administrator' : 
+               permissions.isAdmin ? 'Administrator' :
+               role === 'AP' ? 'Authorized Provider' : 
+               role === 'IC' ? 'Instructor Certified' :
+               role === 'IP' ? 'Instructor Provisional' :
+               role === 'IT' ? 'Instructor Trainee' :
+               role === 'IN' ? 'Instructor New' : 'User'
+  };
 
   // Team action handlers
   const handleViewDetails = (teamId: string) => {
@@ -117,8 +130,9 @@ export default function Teams() {
         </div>
 
         <Tabs value={activeManagementTab} onValueChange={setActiveManagementTab}>
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
             <TabsTrigger value="members">Members</TabsTrigger>
             <TabsTrigger value="invitations">Invitations</TabsTrigger>
             <TabsTrigger value="bulk">Bulk Ops</TabsTrigger>
@@ -127,7 +141,7 @@ export default function Teams() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2">
@@ -160,38 +174,101 @@ export default function Teams() {
                   <p className="text-xs text-muted-foreground mt-1">Current team status</p>
                 </CardContent>
               </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-orange-600" />
+                    <span className="text-sm font-medium">Location</span>
+                  </div>
+                  <p className="text-2xl font-bold mt-1">
+                    {selectedTeam.location?.name || 'Not set'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {selectedTeam.location?.city && selectedTeam.location?.state 
+                      ? `${selectedTeam.location.city}, ${selectedTeam.location.state}`
+                      : 'Team location'
+                    }
+                  </p>
+                </CardContent>
+              </Card>
             </div>
             
             {/* Team Details */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Team Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium">Team Type</label>
-                    <p className="text-sm text-muted-foreground">{selectedTeam.team_type || 'operational'}</p>
-                  </div>
-                  {selectedTeam.location && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Team Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
                     <div>
-                      <label className="text-sm font-medium">Location</label>
+                      <label className="text-sm font-medium">Team Type</label>
+                      <p className="text-sm text-muted-foreground">{selectedTeam.team_type || 'operational'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Created By</label>
                       <p className="text-sm text-muted-foreground">
-                        {selectedTeam.location.name}
-                        {selectedTeam.location.city && `, ${selectedTeam.location.city}`}
-                        {selectedTeam.location.state && `, ${selectedTeam.location.state}`}
+                        {selectedTeam.created_by || 'System'}
                       </p>
                     </div>
-                  )}
-                  <div>
-                    <label className="text-sm font-medium">Created</label>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(selectedTeam.created_at).toLocaleDateString()}
-                    </p>
+                    <div>
+                      <label className="text-sm font-medium">Created</label>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(selectedTeam.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Last Updated</label>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(selectedTeam.updated_at).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quick Actions</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start"
+                      onClick={() => setActiveManagementTab('settings')}
+                    >
+                      <Shield className="h-4 w-4 mr-2" />
+                      Team Settings
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start"
+                      onClick={() => setActiveManagementTab('members')}
+                    >
+                      <Users className="h-4 w-4 mr-2" />
+                      Manage Members
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start"
+                      onClick={() => setActiveManagementTab('analytics')}
+                    >
+                      <TrendingUp className="h-4 w-4 mr-2" />
+                      View Analytics
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="settings" className="space-y-6">
+            <TeamSettings
+              team={selectedTeam}
+              canEdit={permissions.canManageTeams}
+              onUpdate={(updatedTeam) => setSelectedTeam(updatedTeam)}
+            />
           </TabsContent>
 
           <TabsContent value="members">
@@ -242,26 +319,37 @@ export default function Teams() {
             )}
           </h1>
           <p className="text-muted-foreground">
-            {permissions.isSystemAdmin || permissions.isAdmin 
-              ? 'Manage all teams across the organization'
-              : role === 'AP'
-              ? 'Manage your provider teams'
-              : 'View and participate in your teams'
+            {roleAccess.canManageAll 
+              ? 'Manage all teams across the organization with full administrative access'
+              : roleAccess.canManageAssigned
+              ? 'Manage teams assigned to your provider location'
+              : roleAccess.isInstructor
+              ? 'View and participate in teams where you are a member'
+              : 'View your team assignments and participation'
             }
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Current Role: {roleAccess.roleLabel}
           </p>
         </div>
         
         <div className="flex items-center gap-2">
-          {permissions.isSystemAdmin && (
+          {roleAccess.canManageAll && (
             <Badge variant="destructive" className="flex items-center gap-1">
               <Shield className="h-3 w-3" />
-              System Admin
+              {permissions.isSystemAdmin ? 'System Admin' : 'Administrator'}
             </Badge>
           )}
-          {permissions.isAdmin && !permissions.isSystemAdmin && (
-            <Badge variant="secondary" className="flex items-center gap-1">
+          {roleAccess.canManageAssigned && (
+            <Badge variant="default" className="flex items-center gap-1">
+              <Building2 className="h-3 w-3" />
+              Provider Manager
+            </Badge>
+          )}
+          {roleAccess.isInstructor && (
+            <Badge variant="outline" className="flex items-center gap-1">
               <UserCheck className="h-3 w-3" />
-              Administrator
+              {roleAccess.roleLabel}
             </Badge>
           )}
         </div>
