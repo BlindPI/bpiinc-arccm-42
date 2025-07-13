@@ -38,6 +38,7 @@ import CRMHub from '@/pages/CRMHub';
 import AuthorizedProviders from '@/pages/AuthorizedProviders';
 import CRMDiagnostics from '@/pages/CRMDiagnostics';
 import EmailWorkflowsPage from '@/app/crm/email-workflows/page';
+import { AvailabilityManager } from '@/components/availability/AvailabilityManager';
 
 export function AppRoutes() {
   const { user } = useAuth();
@@ -158,6 +159,13 @@ export function AppRoutes() {
       <Route path="/locations" element={
         <ProtectedRoute>
           <TrainingHub />
+        </ProtectedRoute>
+      } />
+
+      {/* Availability Management Routes */}
+      <Route path="/availability" element={
+        <ProtectedRoute>
+          <AvailabilityManager />
         </ProtectedRoute>
       } />
 

@@ -1329,6 +1329,348 @@ export type Database = {
           },
         ]
       }
+      availability_bookings: {
+        Row: {
+          billable_hours: number | null
+          booking_date: string
+          booking_type: Database["public"]["Enums"]["booking_type"]
+          course_id: string | null
+          course_offering_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_time: string
+          hours_credited: number | null
+          id: string
+          start_time: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          billable_hours?: number | null
+          booking_date: string
+          booking_type: Database["public"]["Enums"]["booking_type"]
+          course_id?: string | null
+          course_offering_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_time: string
+          hours_credited?: number | null
+          id?: string
+          start_time: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          billable_hours?: number | null
+          booking_date?: string
+          booking_type?: Database["public"]["Enums"]["booking_type"]
+          course_id?: string | null
+          course_offering_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_time?: string
+          hours_credited?: number | null
+          id?: string
+          start_time?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_bookings_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "certification_requirements"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "course_completion_summary"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_course_offering_id_fkey"
+            columns: ["course_offering_id"]
+            isOneToOne: false
+            referencedRelation: "course_offerings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      availability_exceptions: {
+        Row: {
+          availability_type: Database["public"]["Enums"]["availability_type"]
+          created_at: string
+          end_time: string | null
+          exception_date: string
+          id: string
+          reason: string | null
+          start_time: string | null
+          user_id: string
+        }
+        Insert: {
+          availability_type: Database["public"]["Enums"]["availability_type"]
+          created_at?: string
+          end_time?: string | null
+          exception_date: string
+          id?: string
+          reason?: string | null
+          start_time?: string | null
+          user_id: string
+        }
+        Update: {
+          availability_type?: Database["public"]["Enums"]["availability_type"]
+          created_at?: string
+          end_time?: string | null
+          exception_date?: string
+          id?: string
+          reason?: string | null
+          start_time?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_exceptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "availability_exceptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "availability_exceptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "availability_exceptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      availability_permissions: {
+        Row: {
+          expires_at: string | null
+          granted_at: string
+          grantee_id: string
+          grantor_id: string
+          id: string
+          is_active: boolean
+          location_id: string | null
+          permission_type: Database["public"]["Enums"]["permission_type"]
+          target_user_id: string | null
+          team_id: string | null
+        }
+        Insert: {
+          expires_at?: string | null
+          granted_at?: string
+          grantee_id: string
+          grantor_id: string
+          id?: string
+          is_active?: boolean
+          location_id?: string | null
+          permission_type: Database["public"]["Enums"]["permission_type"]
+          target_user_id?: string | null
+          team_id?: string | null
+        }
+        Update: {
+          expires_at?: string | null
+          granted_at?: string
+          grantee_id?: string
+          grantor_id?: string
+          id?: string
+          is_active?: boolean
+          location_id?: string | null
+          permission_type?: Database["public"]["Enums"]["permission_type"]
+          target_user_id?: string | null
+          team_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_permissions_grantee_id_fkey"
+            columns: ["grantee_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "availability_permissions_grantee_id_fkey"
+            columns: ["grantee_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "availability_permissions_grantee_id_fkey"
+            columns: ["grantee_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "availability_permissions_grantee_id_fkey"
+            columns: ["grantee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_permissions_grantor_id_fkey"
+            columns: ["grantor_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "availability_permissions_grantor_id_fkey"
+            columns: ["grantor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "availability_permissions_grantor_id_fkey"
+            columns: ["grantor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "availability_permissions_grantor_id_fkey"
+            columns: ["grantor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_permissions_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_permissions_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "availability_permissions_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "availability_permissions_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "availability_permissions_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_permissions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       backend_function_status: {
         Row: {
           alerts_enabled: boolean | null
@@ -15995,6 +16337,86 @@ export type Database = {
         }
         Relationships: []
       }
+      user_availability: {
+        Row: {
+          availability_type: Database["public"]["Enums"]["availability_type"]
+          created_at: string
+          day_of_week: Database["public"]["Enums"]["day_of_week"]
+          effective_date: string
+          end_time: string
+          expiry_date: string | null
+          id: string
+          is_active: boolean
+          notes: string | null
+          recurring_pattern: string | null
+          start_time: string
+          time_slot_duration: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          availability_type?: Database["public"]["Enums"]["availability_type"]
+          created_at?: string
+          day_of_week: Database["public"]["Enums"]["day_of_week"]
+          effective_date?: string
+          end_time: string
+          expiry_date?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          recurring_pattern?: string | null
+          start_time: string
+          time_slot_duration?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          availability_type?: Database["public"]["Enums"]["availability_type"]
+          created_at?: string
+          day_of_week?: Database["public"]["Enums"]["day_of_week"]
+          effective_date?: string
+          end_time?: string
+          expiry_date?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          recurring_pattern?: string | null
+          start_time?: string
+          time_slot_duration?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_availability_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_availability_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_availability_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_availability_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_certifications: {
         Row: {
           certificate_id: string | null
@@ -16660,6 +17082,123 @@ export type Database = {
             columns: ["requirement_id"]
             isOneToOne: false
             referencedRelation: "progression_requirements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_work_hours: {
+        Row: {
+          actual_end: string | null
+          actual_hours: number | null
+          actual_start: string | null
+          approved_at: string | null
+          approved_by: string | null
+          break_duration: number | null
+          created_at: string
+          id: string
+          notes: string | null
+          overtime_hours: number | null
+          payroll_period: string | null
+          scheduled_end: string | null
+          scheduled_hours: number | null
+          scheduled_start: string | null
+          updated_at: string
+          user_id: string
+          work_date: string
+        }
+        Insert: {
+          actual_end?: string | null
+          actual_hours?: number | null
+          actual_start?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          break_duration?: number | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          overtime_hours?: number | null
+          payroll_period?: string | null
+          scheduled_end?: string | null
+          scheduled_hours?: number | null
+          scheduled_start?: string | null
+          updated_at?: string
+          user_id: string
+          work_date: string
+        }
+        Update: {
+          actual_end?: string | null
+          actual_hours?: number | null
+          actual_start?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          break_duration?: number | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          overtime_hours?: number | null
+          payroll_period?: string | null
+          scheduled_end?: string | null
+          scheduled_hours?: number | null
+          scheduled_start?: string | null
+          updated_at?: string
+          user_id?: string
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_work_hours_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_work_hours_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_work_hours_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_work_hours_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_work_hours_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_work_hours_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_work_hours_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_work_hours_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -19418,7 +19957,15 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      availability_type: "available" | "busy" | "tentative" | "out_of_office"
+      booking_type:
+        | "course_instruction"
+        | "training_session"
+        | "meeting"
+        | "administrative"
+        | "personal"
+      day_of_week: "0" | "1" | "2" | "3" | "4" | "5" | "6"
+      permission_type: "view" | "edit" | "manage"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -19545,6 +20092,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      availability_type: ["available", "busy", "tentative", "out_of_office"],
+      booking_type: [
+        "course_instruction",
+        "training_session",
+        "meeting",
+        "administrative",
+        "personal",
+      ],
+      day_of_week: ["0", "1", "2", "3", "4", "5", "6"],
+      permission_type: ["view", "edit", "manage"],
+    },
   },
 } as const
