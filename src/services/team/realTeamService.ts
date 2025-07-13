@@ -149,38 +149,32 @@ export class RealTeamService {
     created_by: string;
   }): Promise<RealTeam> {
     try {
-      const { data, error } = await supabase
-        .from('teams')
-        .insert({
-          name: teamData.name,
-          description: teamData.description,
-          team_type: teamData.team_type,
-          location_id: teamData.location_id,
-          provider_id: teamData.provider_id?.toString(),
-          created_by: teamData.created_by,
-          status: 'active',
-          performance_score: 0,
-          metadata: {},
-          monthly_targets: {},
-          current_metrics: {}
-        })
-        .select()
-        .single();
+      const { data, error } = await supabase.rpc('create_team_bypass_rls', {
+        p_name: teamData.name,
+        p_description: teamData.description,
+        p_team_type: teamData.team_type,
+        p_location_id: teamData.location_id,
+        p_provider_id: teamData.provider_id?.toString(),
+        p_created_by: teamData.created_by
+      });
 
       if (error) throw error;
 
+      // The function returns an array, get the first item
+      const createdTeam = Array.isArray(data) ? data[0] : data;
+
       // Log team creation
       await supabase.rpc('log_team_lifecycle_event', {
-        p_team_id: data.id,
+        p_team_id: createdTeam.id,
         p_event_type: 'team_created',
         p_event_data: teamData
       });
 
       return {
-        ...data,
-        metadata: safeParseJsonResponse(data.metadata),
-        monthly_targets: safeParseJsonResponse(data.monthly_targets),
-        current_metrics: safeParseJsonResponse(data.current_metrics),
+        ...createdTeam,
+        metadata: safeParseJsonResponse(createdTeam.metadata),
+        monthly_targets: safeParseJsonResponse(createdTeam.monthly_targets),
+        current_metrics: safeParseJsonResponse(createdTeam.current_metrics),
         member_count: 0
       } as RealTeam;
     } catch (error) {

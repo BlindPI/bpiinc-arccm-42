@@ -69,26 +69,22 @@ export function CreateTeamDialog({
       console.log('Creating team with user ID:', user.id);
       console.log('Team data:', teamData);
 
-      const { data, error } = await supabase
-        .from('teams')
-        .insert({
-          name: teamData.name,
-          description: teamData.description || null,
-          team_type: teamData.team_type,
-          location_id: teamData.location_id === 'none' ? null : teamData.location_id,
-          status: 'active',
-          performance_score: 0,
-          created_by: user.id // Ensure this is a valid UUID
-        })
-        .select()
-        .single();
+      const { data, error } = await supabase.rpc('create_team_bypass_rls', {
+        p_name: teamData.name,
+        p_description: teamData.description || null,
+        p_team_type: teamData.team_type,
+        p_location_id: teamData.location_id === 'none' ? null : teamData.location_id,
+        p_provider_id: null,
+        p_created_by: user.id
+      });
 
       if (error) {
         console.error('Team creation error:', error);
         throw error;
       }
       
-      return data;
+      // The function returns an array, get the first item
+      return Array.isArray(data) ? data[0] : data;
     },
     onSuccess: () => {
       toast.success('Team created successfully');
