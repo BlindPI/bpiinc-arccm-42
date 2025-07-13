@@ -9,6 +9,9 @@ export interface TeamMemberWithProfile {
   status: string;
   joined_at: string;
   last_activity: string;
+  assignment_start_date?: string;
+  assignment_end_date?: string;
+  team_position?: string;
   permissions: string[];
   profiles: {
     id: string;

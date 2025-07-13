@@ -122,8 +122,15 @@ export function EnhancedMemberTable({
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case 'ADMIN': return 'default';
+      case 'LEAD': return 'default';
+      case 'SUPERVISOR': return 'default';
+      case 'COORDINATOR': return 'secondary';
+      case 'SPECIALIST': return 'secondary';
       case 'MEMBER': return 'secondary';
       case 'VIEWER': return 'outline';
+      case 'TRAINEE': return 'outline';
+      case 'OBSERVER': return 'outline';
+      case 'CONSULTANT': return 'outline';
       default: return 'outline';
     }
   };
@@ -234,7 +241,10 @@ export function EnhancedMemberTable({
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  {new Date(member.joined_at).toLocaleDateString()}
+                  {member.assignment_start_date 
+                    ? new Date(member.assignment_start_date).toLocaleDateString()
+                    : (member.joined_at ? new Date(member.joined_at).toLocaleDateString() : 'N/A')
+                  }
                 </TableCell>
                 <TableCell>
                   {activityData[member.user_id]?.lastLogin ? 
@@ -315,10 +325,66 @@ export function EnhancedMemberTable({
                   <DropdownMenuItem 
                     onClick={() => editMember && updateRoleMutation.mutate({ 
                       memberId: editMember.id, 
+                      newRole: 'LEAD' 
+                    })}
+                  >
+                    LEAD
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => editMember && updateRoleMutation.mutate({ 
+                      memberId: editMember.id, 
+                      newRole: 'SUPERVISOR' 
+                    })}
+                  >
+                    SUPERVISOR
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => editMember && updateRoleMutation.mutate({ 
+                      memberId: editMember.id, 
+                      newRole: 'COORDINATOR' 
+                    })}
+                  >
+                    COORDINATOR
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => editMember && updateRoleMutation.mutate({ 
+                      memberId: editMember.id, 
+                      newRole: 'SPECIALIST' 
+                    })}
+                  >
+                    SPECIALIST
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => editMember && updateRoleMutation.mutate({ 
+                      memberId: editMember.id, 
                       newRole: 'MEMBER' 
                     })}
                   >
                     MEMBER
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => editMember && updateRoleMutation.mutate({ 
+                      memberId: editMember.id, 
+                      newRole: 'TRAINEE' 
+                    })}
+                  >
+                    TRAINEE
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => editMember && updateRoleMutation.mutate({ 
+                      memberId: editMember.id, 
+                      newRole: 'OBSERVER' 
+                    })}
+                  >
+                    OBSERVER
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => editMember && updateRoleMutation.mutate({ 
+                      memberId: editMember.id, 
+                      newRole: 'CONSULTANT' 
+                    })}
+                  >
+                    CONSULTANT
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={() => editMember && updateRoleMutation.mutate({ 

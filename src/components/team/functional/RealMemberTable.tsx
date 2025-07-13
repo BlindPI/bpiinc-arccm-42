@@ -102,7 +102,14 @@ export function RealMemberTable({ teamId, userRole }: RealMemberTableProps) {
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case 'ADMIN': return 'default';
+      case 'LEAD': return 'default';
+      case 'SUPERVISOR': return 'default';
+      case 'COORDINATOR': return 'secondary';
+      case 'SPECIALIST': return 'secondary';
       case 'MEMBER': return 'secondary';
+      case 'TRAINEE': return 'outline';
+      case 'OBSERVER': return 'outline';
+      case 'CONSULTANT': return 'outline';
       default: return 'outline';
     }
   };
@@ -174,7 +181,14 @@ export function RealMemberTable({ teamId, userRole }: RealMemberTableProps) {
             <SelectContent>
               <SelectItem value="all">All Roles</SelectItem>
               <SelectItem value="ADMIN">Admin</SelectItem>
+              <SelectItem value="LEAD">Lead</SelectItem>
+              <SelectItem value="SUPERVISOR">Supervisor</SelectItem>
+              <SelectItem value="COORDINATOR">Coordinator</SelectItem>
+              <SelectItem value="SPECIALIST">Specialist</SelectItem>
               <SelectItem value="MEMBER">Member</SelectItem>
+              <SelectItem value="TRAINEE">Trainee</SelectItem>
+              <SelectItem value="OBSERVER">Observer</SelectItem>
+              <SelectItem value="CONSULTANT">Consultant</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -233,9 +247,12 @@ export function RealMemberTable({ teamId, userRole }: RealMemberTableProps) {
                         {member.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      {new Date(member.created_at).toLocaleDateString()}
-                    </TableCell>
+                     <TableCell>
+                       {member.assignment_start_date 
+                         ? new Date(member.assignment_start_date).toLocaleDateString()
+                         : new Date(member.created_at).toLocaleDateString()
+                       }
+                     </TableCell>
                     <TableCell>
                       {member.last_activity 
                         ? new Date(member.last_activity).toLocaleDateString()
@@ -256,7 +273,14 @@ export function RealMemberTable({ teamId, userRole }: RealMemberTableProps) {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="ADMIN">Admin</SelectItem>
+                              <SelectItem value="LEAD">Lead</SelectItem>
+                              <SelectItem value="SUPERVISOR">Supervisor</SelectItem>
+                              <SelectItem value="COORDINATOR">Coordinator</SelectItem>
+                              <SelectItem value="SPECIALIST">Specialist</SelectItem>
                               <SelectItem value="MEMBER">Member</SelectItem>
+                              <SelectItem value="TRAINEE">Trainee</SelectItem>
+                              <SelectItem value="OBSERVER">Observer</SelectItem>
+                              <SelectItem value="CONSULTANT">Consultant</SelectItem>
                             </SelectContent>
                           </Select>
                           <Button
