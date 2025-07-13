@@ -9,9 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { EnhancedTeamCard } from '@/components/teams/EnhancedTeamCard';
-import { ProfessionalTeamManagementHub } from '@/components/team/professional/ProfessionalTeamManagementHub';
 import { CreateTeamDialog } from '@/components/team/professional/CreateTeamDialog';
 import { TeamDetailsDialog } from '@/components/team/professional/TeamDetailsDialog';
+import { ComprehensiveMemberManagement } from '@/components/team/member-management/ComprehensiveMemberManagement';
+import { TeamAnalyticsDashboard } from '@/components/team/analytics/TeamAnalyticsDashboard';
+import { BulkOperationsInterface } from '@/components/team/bulk/BulkOperationsInterface';
+import { MemberInvitationWorkflow } from '@/components/team/workflows/MemberInvitationWorkflow';
+import { WorkflowQueue } from '@/components/team/workflow/WorkflowQueue';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Users, 
   Building2, 
@@ -34,6 +39,7 @@ export default function Teams() {
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [activeManagementTab, setActiveManagementTab] = useState('overview');
 
   // Fetch teams
   const { data: teams = [], isLoading, refetch } = useQuery({
@@ -72,11 +78,9 @@ export default function Teams() {
     const team = teams.find(t => t.id === teamId);
     if (team) {
       setSelectedTeam(team);
-      // For professional users, open professional management hub
-      if (hasProfessionalAccess) {
-        // Navigate to professional team management or show modal
-        setSelectedTeam(team);
-      }
+      setActiveManagementTab('overview');
+      // Reset details dialog to false when switching to management
+      setShowDetailsDialog(false);
     }
   };
 
@@ -92,19 +96,124 @@ export default function Teams() {
     );
   }
 
-  // If user has professional access and a team is selected for management, show professional hub
-  if (hasProfessionalAccess && selectedTeam && !showDetailsDialog) {
+  // If user has management permissions and a team is selected, show integrated management interface
+  if (permissions.canManageTeams && selectedTeam && !showDetailsDialog) {
     return (
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
-          <Button 
-            variant="outline" 
-            onClick={() => setSelectedTeam(null)}
-          >
-            ← Back to Teams
-          </Button>
+          <div>
+            <Button 
+              variant="outline" 
+              onClick={() => setSelectedTeam(null)}
+              className="mb-2"
+            >
+              ← Back to Teams
+            </Button>
+            <h1 className="text-2xl font-bold">{selectedTeam.name}</h1>
+            <p className="text-muted-foreground">
+              {selectedTeam.description || 'Team management and operations'}
+            </p>
+          </div>
         </div>
-        <ProfessionalTeamManagementHub userRole={role} />
+
+        <Tabs value={activeManagementTab} onValueChange={setActiveManagementTab}>
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="members">Members</TabsTrigger>
+            <TabsTrigger value="invitations">Invitations</TabsTrigger>
+            <TabsTrigger value="bulk">Bulk Ops</TabsTrigger>
+            <TabsTrigger value="workflows">Workflows</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium">Members</span>
+                  </div>
+                  <p className="text-2xl font-bold mt-1">{selectedTeam.members?.length || 0}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {selectedTeam.members?.filter(m => m.status === 'active').length || 0} active
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium">Performance</span>
+                  </div>
+                  <p className="text-2xl font-bold mt-1">{selectedTeam.performance_score || 0}%</p>
+                  <p className="text-xs text-muted-foreground mt-1">Team performance score</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-purple-600" />
+                    <span className="text-sm font-medium">Status</span>
+                  </div>
+                  <Badge className="mt-1">{selectedTeam.status}</Badge>
+                  <p className="text-xs text-muted-foreground mt-1">Current team status</p>
+                </CardContent>
+              </Card>
+            </div>
+            
+            {/* Team Details */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Team Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium">Team Type</label>
+                    <p className="text-sm text-muted-foreground">{selectedTeam.team_type || 'operational'}</p>
+                  </div>
+                  {selectedTeam.location && (
+                    <div>
+                      <label className="text-sm font-medium">Location</label>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedTeam.location.name}
+                        {selectedTeam.location.city && `, ${selectedTeam.location.city}`}
+                        {selectedTeam.location.state && `, ${selectedTeam.location.state}`}
+                      </p>
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-sm font-medium">Created</label>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(selectedTeam.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="members">
+            <ComprehensiveMemberManagement teamId={selectedTeam.id} />
+          </TabsContent>
+
+          <TabsContent value="invitations">
+            <MemberInvitationWorkflow teamId={selectedTeam.id} />
+          </TabsContent>
+
+          <TabsContent value="bulk">
+            <BulkOperationsInterface teamId={selectedTeam.id} />
+          </TabsContent>
+
+          <TabsContent value="workflows">
+            <WorkflowQueue teamId={selectedTeam.id} />
+          </TabsContent>
+
+          <TabsContent value="analytics">
+            <TeamAnalyticsDashboard teamId={selectedTeam.id} />
+          </TabsContent>
+        </Tabs>
       </div>
     );
   }
