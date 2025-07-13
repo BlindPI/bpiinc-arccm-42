@@ -36,7 +36,7 @@ export function CreateTeamDialog({
     name: '',
     description: '',
     team_type: 'standard',
-    location_id: '',
+    location_id: 'none',
   });
 
   const { data: locations = [] } = useQuery({
@@ -75,7 +75,7 @@ export function CreateTeamDialog({
           name: teamData.name,
           description: teamData.description || null,
           team_type: teamData.team_type,
-          location_id: teamData.location_id || null,
+          location_id: teamData.location_id === 'none' ? null : teamData.location_id,
           status: 'active',
           performance_score: 0,
           created_by: user.id // Ensure this is a valid UUID
@@ -97,7 +97,7 @@ export function CreateTeamDialog({
         name: '',
         description: '',
         team_type: 'standard',
-        location_id: '',
+        location_id: 'none',
       });
     },
     onError: (error: any) => {
@@ -183,7 +183,7 @@ export function CreateTeamDialog({
                 <SelectValue placeholder="Select a location (optional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No location assigned</SelectItem>
+                <SelectItem value="none">No location assigned</SelectItem>
                 {locations.map((location) => (
                   <SelectItem key={location.id} value={location.id}>
                     {location.name} {location.city && `- ${location.city}, ${location.state}`}
