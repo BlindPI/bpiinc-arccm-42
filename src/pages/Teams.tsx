@@ -9,6 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { EnhancedTeamCard } from '@/components/teams/EnhancedTeamCard';
+import { ProfessionalTeamManagementHub } from '@/components/team/professional/ProfessionalTeamManagementHub';
+import { CreateTeamDialog } from '@/components/team/professional/CreateTeamDialog';
+import { TeamDetailsDialog } from '@/components/team/professional/TeamDetailsDialog';
 import { 
   Users, 
   Building2, 
@@ -28,6 +31,9 @@ export default function Teams() {
   const { role, permissions } = useUserRole();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTeam, setSelectedTeam] = useState<any>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
 
   // Fetch teams
   const { data: teams = [], isLoading, refetch } = useQuery({
@@ -50,10 +56,55 @@ export default function Teams() {
     (team.description && team.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  // Check if user has professional access for enhanced functionality
+  const hasProfessionalAccess = ['SA', 'AD', 'AP', 'IP', 'IT'].includes(role || '');
+
+  // Team action handlers
+  const handleViewDetails = (teamId: string) => {
+    const team = teams.find(t => t.id === teamId);
+    if (team) {
+      setSelectedTeam(team);
+      setShowDetailsDialog(true);
+    }
+  };
+
+  const handleManageTeam = (teamId: string) => {
+    const team = teams.find(t => t.id === teamId);
+    if (team) {
+      setSelectedTeam(team);
+      // For professional users, open professional management hub
+      if (hasProfessionalAccess) {
+        // Navigate to professional team management or show modal
+        setSelectedTeam(team);
+      }
+    }
+  };
+
+  const handleCreateTeam = () => {
+    setShowCreateDialog(true);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // If user has professional access and a team is selected for management, show professional hub
+  if (hasProfessionalAccess && selectedTeam && !showDetailsDialog) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="flex items-center justify-between">
+          <Button 
+            variant="outline" 
+            onClick={() => setSelectedTeam(null)}
+          >
+            ← Back to Teams
+          </Button>
+        </div>
+        <ProfessionalTeamManagementHub userRole={role} />
       </div>
     );
   }
@@ -230,7 +281,7 @@ export default function Teams() {
         </div>
         
         {permissions.canManageTeams && (
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={handleCreateTeam}>
             <Plus className="h-4 w-4" />
             Create Team
           </Button>
@@ -243,8 +294,8 @@ export default function Teams() {
           <EnhancedTeamCard
             key={team.id}
             team={team}
-            onViewDetails={(teamId) => console.log('View team:', teamId)}
-            onManage={(teamId) => console.log('Manage team:', teamId)}
+            onViewDetails={handleViewDetails}
+            onManage={handleManageTeam}
           />
         ))}
       </div>
@@ -261,13 +312,37 @@ export default function Teams() {
               }
             </p>
             {permissions.canManageTeams && (
-              <Button className="gap-2">
+              <Button className="gap-2" onClick={handleCreateTeam}>
                 <Plus className="h-4 w-4" />
                 Create Your First Team
               </Button>
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Create Team Dialog */}
+      {showCreateDialog && (
+        <CreateTeamDialog
+          open={showCreateDialog}
+          onOpenChange={setShowCreateDialog}
+          onTeamCreated={() => {
+            setShowCreateDialog(false);
+            refetch(); // Refresh teams list
+          }}
+        />
+      )}
+
+      {/* Team Details Dialog */}
+      {showDetailsDialog && selectedTeam && (
+        <TeamDetailsDialog
+          team={selectedTeam}
+          open={showDetailsDialog}
+          onOpenChange={(open) => {
+            setShowDetailsDialog(open);
+            if (!open) setSelectedTeam(null);
+          }}
+        />
       )}
     </div>
   );
