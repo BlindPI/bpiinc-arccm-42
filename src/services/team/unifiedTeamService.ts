@@ -118,7 +118,7 @@ export class UnifiedTeamService {
                 state,
                 postal_code
               ),
-              team_members!team_id (
+              team_members!team_members_team_id_fkey (
                 id,
                 user_id,
                 role,
@@ -174,7 +174,7 @@ export class UnifiedTeamService {
             state,
             postal_code
           ),
-          team_members!team_id (
+          team_members!team_members_team_id_fkey (
             id,
             user_id,
             role,
