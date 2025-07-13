@@ -288,7 +288,7 @@ export default function Teams() {
           </TabsContent>
 
           <TabsContent value="analytics">
-            <TeamAnalyticsDashboard teamId={selectedTeam.id} team={selectedTeam} />
+            <TeamAnalyticsDashboard teamId={selectedTeam.id} />
           </TabsContent>
         </Tabs>
       </div>

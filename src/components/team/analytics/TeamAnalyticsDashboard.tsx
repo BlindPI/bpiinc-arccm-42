@@ -10,38 +10,25 @@ import {
   Users, 
   Shield,
   Target,
-  MapPin,
-  Building
+  MapPin
 } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar } from 'recharts';
 
 interface TeamAnalyticsDashboardProps {
   teamId: string;
-  team?: any; // Pass team data directly for better performance
 }
 
-export function TeamAnalyticsDashboard({ teamId, team }: TeamAnalyticsDashboardProps) {
+export function TeamAnalyticsDashboard({ teamId }: TeamAnalyticsDashboardProps) {
   const { data: performanceMetrics, isLoading } = useQuery({
     queryKey: ['team-performance-metrics', teamId],
     queryFn: () => RealTeamDataService.getTeamPerformanceMetrics(teamId)
   });
 
-  // Use team data if available for immediate display
-  const displayMetrics = team ? {
-    compliance_score: team.provider?.compliance_score || 85,
-    performance_score: team.performance_score || 85,
-    member_count: team.member_count || team.members?.length || 0,
-    active_members: team.members?.filter(m => m.status === 'active').length || team.member_count || 0,
-    location_name: team.location?.name || 'Unknown Location',
-    provider_name: team.provider?.name || 'No Provider Assigned'
-  } : performanceMetrics;
-
   const { data: trendData } = useQuery({
     queryKey: ['team-trend-data', teamId],
     queryFn: async () => {
-      // Generate trend data based on actual performance using display metrics
-      const baseScore = displayMetrics?.compliance_score || 85;
-      const performanceScore = displayMetrics?.performance_score || 85;
+      // Generate trend data based on actual performance
+      const baseScore = performanceMetrics?.compliance_score || 85;
       const trendData = [];
       
       for (let i = 6; i >= 0; i--) {
@@ -51,15 +38,15 @@ export function TeamAnalyticsDashboard({ teamId, team }: TeamAnalyticsDashboardP
         
         trendData.push({
           week: `Week ${7 - i}`,
-          performance: Math.max(0, Math.min(100, performanceScore + variation)),
-          compliance: Math.max(0, Math.min(100, baseScore + variation)),
-          satisfaction: Math.max(0, Math.min(100, (performanceScore + baseScore) / 2 + variation))
+          performance: Math.max(0, Math.min(100, baseScore + variation)),
+          compliance: Math.max(0, Math.min(100, baseScore - 3 + variation)),
+          satisfaction: Math.max(0, Math.min(100, baseScore + 2 + variation))
         });
       }
       
       return trendData;
     },
-    enabled: !!displayMetrics
+    enabled: !!performanceMetrics
   });
 
   if (isLoading) {
@@ -70,12 +57,11 @@ export function TeamAnalyticsDashboard({ teamId, team }: TeamAnalyticsDashboardP
     );
   }
 
-  // Use displayMetrics for immediate real data display
-  const metrics = displayMetrics || performanceMetrics || {};
+  const metrics = performanceMetrics || {};
   const certificates = metrics.certificates_issued || 0;
   const courses = metrics.courses_conducted || 0;
   const complianceScore = metrics.compliance_score || 0;
-  const memberCount = metrics.member_count || metrics.active_members || 0;
+  const memberCount = metrics.member_count || 0;
 
   return (
     <div className="space-y-6">

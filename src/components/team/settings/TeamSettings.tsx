@@ -295,23 +295,13 @@ export function TeamSettings({ team, canEdit, onUpdate }: TeamSettingsProps) {
           <div className="space-y-2">
             <Label>Primary Location</Label>
             <div className="p-3 bg-muted rounded-md">
-              <p className="text-sm font-medium">
+              <p className="text-sm">
                 {team.location?.name || 'No location assigned'}
               </p>
-              {team.location?.address && (
-                <p className="text-xs text-muted-foreground">
-                  {team.location.address}
-                </p>
-              )}
               {team.location?.city && team.location?.state && (
                 <p className="text-xs text-muted-foreground">
-                  {team.location.city}, {team.location.state} {team.location.postal_code}
+                  {team.location.city}, {team.location.state}
                 </p>
-              )}
-              {team.location?.id && (
-                <Badge variant="secondary" className="mt-1 text-xs">
-                  ID: {team.location.id.substring(0, 8)}...
-                </Badge>
               )}
             </div>
           </div>
@@ -319,37 +309,13 @@ export function TeamSettings({ team, canEdit, onUpdate }: TeamSettingsProps) {
           <div className="space-y-2">
             <Label>Provider Assignment</Label>
             <div className="p-3 bg-muted rounded-md">
-              <p className="text-sm font-medium">
+              <p className="text-sm">
                 {team.provider?.name || 'No provider assigned'}
               </p>
               {team.provider?.provider_type && (
                 <Badge variant="outline" className="mt-1">
                   {team.provider.provider_type}
                 </Badge>
-              )}
-              {team.provider?.compliance_score && (
-                <div className="flex gap-2 mt-2">
-                  <Badge variant="secondary" className="text-xs">
-                    Compliance: {team.provider.compliance_score}%
-                  </Badge>
-                  {team.provider.performance_rating && (
-                    <Badge variant="secondary" className="text-xs">
-                      Rating: {team.provider.performance_rating}/5
-                    </Badge>
-                  )}
-                </div>
-              )}
-              {team.provider_assignment && (
-                <div className="mt-2">
-                  <p className="text-xs text-muted-foreground">
-                    Role: {team.provider_assignment.role} • Status: {team.provider_assignment.status}
-                  </p>
-                  {team.provider_assignment.assigned_at && (
-                    <p className="text-xs text-muted-foreground">
-                      Assigned: {new Date(team.provider_assignment.assigned_at).toLocaleDateString()}
-                    </p>
-                  )}
-                </div>
               )}
             </div>
           </div>
@@ -367,17 +333,17 @@ export function TeamSettings({ team, canEdit, onUpdate }: TeamSettingsProps) {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
-              <p className="text-2xl font-bold">{team.member_count || team.members?.length || 0}</p>
+              <p className="text-2xl font-bold">{team.members?.length || 0}</p>
               <p className="text-sm text-muted-foreground">Total Members</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold">
-                {team.members?.filter(m => m.status === 'active').length || team.member_count || 0}
+                {team.members?.filter(m => m.status === 'active').length || 0}
               </p>
               <p className="text-sm text-muted-foreground">Active Members</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold">{formData.performance_score || team.performance_score || 85}%</p>
+              <p className="text-2xl font-bold">{formData.performance_score}%</p>
               <p className="text-sm text-muted-foreground">Performance</p>
             </div>
             <div className="text-center">
@@ -387,26 +353,6 @@ export function TeamSettings({ team, canEdit, onUpdate }: TeamSettingsProps) {
               <p className="text-sm text-muted-foreground mt-1">Status</p>
             </div>
           </div>
-          
-          {/* Additional Team Information */}
-          {(team.created_at || team.created_by) && (
-            <div className="mt-4 pt-4 border-t">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                {team.created_at && (
-                  <div>
-                    <p className="text-muted-foreground">Created</p>
-                    <p className="font-medium">{new Date(team.created_at).toLocaleDateString()}</p>
-                  </div>
-                )}
-                {team.updated_at && (
-                  <div>
-                    <p className="text-muted-foreground">Last Updated</p>
-                    <p className="font-medium">{new Date(team.updated_at).toLocaleDateString()}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 

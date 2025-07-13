@@ -80,27 +80,98 @@ export interface ComplianceMetrics {
 export class UnifiedTeamService {
   /**
    * Get teams based on user role and permissions
-   * Uses direct RLS bypass functions to avoid foreign key relationship errors
+   * Replaces multiple scattered getTeams methods
    */
   static async getTeams(userRole: DatabaseUserRole, userId: string): Promise<EnhancedTeam[]> {
     try {
-      console.log('🔍 UNIFIEDTEAMSERVICE: Loading teams using direct RLS bypass functions...');
+      // For AP users, filter teams based on provider assignments
+      if (userRole === 'AP') {
+        console.log('🔍 UNIFIEDTEAMSERVICE: Loading teams for AP user with provider filtering...');
+        
+        // Get the provider record for this user
+        const { data: providerData, error: providerError } = await supabase
+          .from('authorized_providers')
+          .select('id')
+          .eq('user_id', userId)
+          .single();
+
+        if (providerError || !providerData) {
+          console.error('Error fetching provider record:', providerError);
+          return [];
+        }
+
+        // Get teams assigned to this provider via provider_team_assignments
+        const { data: assignmentData, error: assignmentError } = await supabase
+          .from('provider_team_assignments')
+          .select(`
+            team_id,
+            status,
+            teams!inner (
+              *,
+              locations (name, address),
+              team_members!team_id (id, status)
+            )
+          `)
+          .eq('provider_id', providerData.id)
+          .eq('status', 'active');
+
+        if (assignmentError) {
+          console.error('Error fetching provider team assignments:', assignmentError);
+          return [];
+        }
+
+        const teams = (assignmentData || [])
+          .map((assignment: any) => ({
+            ...assignment.teams,
+            location: assignment.teams.locations ? { name: assignment.teams.locations.name } : null,
+            member_count: (assignment.teams.team_members || []).filter((m: any) => m.status === 'active').length
+          }));
+
+        console.log(`🔍 UNIFIEDTEAMSERVICE: Found ${teams.length} teams for AP user (provider-filtered)`);
+        return teams as unknown as EnhancedTeam[];
+      }
+
+      // For SA/AD users, use direct database access with simplified query
+      console.log('🔍 UNIFIEDTEAMSERVICE: Loading teams with direct database access...');
       
-      // Use the existing RLS bypass function for all users
-      const { data: teamsData, error: teamsError } = await supabase.rpc('get_teams_bypass_rls');
+      // First get teams with locations
+      const { data: teamsData, error: teamsError } = await supabase
+        .from('teams')
+        .select(`
+          *,
+          locations (name, address)
+        `);
 
       if (teamsError) {
-        console.error('Error fetching teams via RLS bypass:', teamsError);
+        console.error('Error fetching teams:', teamsError);
         throw teamsError;
       }
 
-      const teams = (teamsData || []).map((team: any) => ({
-        ...team,
-        members: [],
-        member_count: 0
+      // Then get member counts for each team
+      const teamsWithMemberCounts = await Promise.all((teamsData || []).map(async (team: any) => {
+        const { count, error: memberError } = await supabase
+          .from('team_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('team_id', team.id)
+          .eq('status', 'active');
+
+        if (memberError) {
+          console.error(`Error fetching member count for team ${team.id}:`, memberError);
+        }
+
+        return {
+          ...team,
+          location: team.locations ? { name: team.locations.name } : null,
+          member_count: count || 0
+        };
       }));
 
-      console.log(`🔍 UNIFIEDTEAMSERVICE: Found ${teams.length} teams using RLS bypass`);
+      const data = teamsWithMemberCounts;
+
+      // Teams already have member_count calculated
+      const teams = data;
+
+      console.log(`🔍 UNIFIEDTEAMSERVICE: Found ${teams.length} teams with direct access`);
       return teams as unknown as EnhancedTeam[];
     } catch (error) {
       console.error('UnifiedTeamService.getTeams error:', error);
