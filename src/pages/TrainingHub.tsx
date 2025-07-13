@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { TrainingHubHeader } from '@/components/training/dashboard/TrainingHubHeader';
 import { TrainingHubNavigation } from '@/components/training/navigation/TrainingHubNavigation';
-import { TeamManagementPanel } from '@/components/training/team/TeamManagementPanel';
+// Removed TeamManagementPanel - replaced with direct pages
 import { TeachingSessionManager } from '@/components/teaching/TeachingSessionManager';
 import { EnrollmentManagementDashboard } from '@/components/enrollment/EnrollmentManagementDashboard';
 import { SimplifiedCourseTable } from '@/components/courses/SimplifiedCourseTable';
@@ -638,10 +638,10 @@ export default function TrainingHub() {
           </div>
         );
 
-      case 'team-management':
-        return (
-          <TeamManagementPanel onNavigateToAvailability={handleNavigateToAvailability} />
-        );
+        case 'team-management':
+          // Redirect to clean direct pages
+          navigate('/teams');
+          return null;
         
       case 'analytics':
         return (

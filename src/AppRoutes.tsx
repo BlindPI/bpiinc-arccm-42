@@ -21,7 +21,9 @@ import CRMAnalytics from '@/pages/CRMAnalytics';
 // UNIFIED: UnifiedTeams → Training Hub (team management consolidated)
 // UNIFIED: RoleManagement → AdminHub
 import Supervision from '@/pages/Supervision';
-import TrainingHub from '@/pages/TrainingHub';
+import Teams from '@/pages/Teams';
+import Scheduling from '@/pages/Scheduling';
+import TrainingOverview from '@/pages/TrainingOverview';
 // UNIFIED: Courses, Locations, Rosters → TrainingHub
 import Enrollments from '@/pages/Enrollments';
 import Certifications from '@/pages/Certifications';
@@ -100,27 +102,63 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      {/* UNIFIED: Teams → Training Hub */}
+      {/* DIRECT CLEAN PAGES - No More Nested Interfaces */}
       <Route path="/teams" element={
         <ProtectedRoute>
-          <TrainingHub />
+          <Teams />
         </ProtectedRoute>
       } />
 
-      {/* DEPRECATED: Legacy team routes - redirect to Training Hub */}
+      <Route path="/scheduling" element={
+        <ProtectedRoute>
+          <Scheduling />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/training-overview" element={
+        <ProtectedRoute>
+          <TrainingOverview />
+        </ProtectedRoute>
+      } />
+
+      {/* Legacy redirects */}
       <Route path="/enhanced-teams" element={
         <ProtectedRoute>
-          <TrainingHub />
+          <Teams />
         </ProtectedRoute>
       } />
 
       <Route path="/modern-teams" element={
         <ProtectedRoute>
-          <TrainingHub />
+          <Teams />
         </ProtectedRoute>
       } />
 
-      {/* UNIFIED: Role Management → Admin Hub */}
+      <Route path="/training-hub" element={
+        <ProtectedRoute>
+          <TrainingOverview />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/courses" element={
+        <ProtectedRoute>
+          <TrainingOverview />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/enrollments" element={
+        <ProtectedRoute>
+          <TrainingOverview />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/locations" element={
+        <ProtectedRoute>
+          <TrainingOverview />
+        </ProtectedRoute>
+      } />
+
+      {/* Admin Routes */}
       <Route path="/role-management" element={
         <ProtectedRoute>
           <AdminHub />
@@ -130,35 +168,6 @@ export function AppRoutes() {
       <Route path="/supervision" element={
         <ProtectedRoute>
           <Supervision />
-        </ProtectedRoute>
-      } />
-
-      {/* Training Management Routes */}
-      <Route path="/training-hub" element={
-        <ProtectedRoute>
-          <TrainingHub />
-        </ProtectedRoute>
-      } />
-
-
-      {/* UNIFIED: Course Management → Training Hub */}
-      <Route path="/courses" element={
-        <ProtectedRoute>
-          <TrainingHub />
-        </ProtectedRoute>
-      } />
-
-      {/* UNIFIED: Enrollments → Training Hub */}
-      <Route path="/enrollments" element={
-        <ProtectedRoute>
-          <TrainingHub />
-        </ProtectedRoute>
-      } />
-
-      {/* UNIFIED: Locations → Training Hub */}
-      <Route path="/locations" element={
-        <ProtectedRoute>
-          <TrainingHub />
         </ProtectedRoute>
       } />
 
@@ -183,10 +192,10 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      {/* UNIFIED: Rosters → Training Hub */}
+      {/* UNIFIED: Rosters → Training Overview */}
       <Route path="/rosters" element={
         <ProtectedRoute>
-          <TrainingHub />
+          <TrainingOverview />
         </ProtectedRoute>
       } />
 
