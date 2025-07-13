@@ -44,23 +44,60 @@ export interface EnrollmentResult {
 
 export class CourseSchedulingService {
   static async createSchedule(schedule: Partial<CourseSchedule>): Promise<CourseSchedule> {
-    const { data, error } = await supabase
-      .from('course_schedules')
-      .insert({
-        course_id: schedule.course_id,
-        start_date: schedule.start_date,
-        end_date: schedule.end_date,
-        max_capacity: schedule.max_capacity || 40,
-        instructor_id: schedule.instructor_id,
-        location_id: schedule.location_id,
-        status: schedule.status || 'scheduled',
-        recurring_pattern: schedule.recurring_pattern as any
-      })
-      .select()
-      .single();
+    try {
+      console.log('Creating course schedule:', schedule);
 
-    if (error) throw error;
-    return data as CourseSchedule;
+      // Parse start and end dates to get date and time components
+      const startDateTime = new Date(schedule.start_date!);
+      const endDateTime = new Date(schedule.end_date!);
+      
+      const bookingDate = startDateTime.toISOString().split('T')[0]; // YYYY-MM-DD
+      const startTime = startDateTime.toTimeString().split(' ')[0]; // HH:MM:SS
+      const endTime = endDateTime.toTimeString().split(' ')[0]; // HH:MM:SS
+
+      // Create availability booking for the course
+      const { data, error } = await supabase
+        .from('availability_bookings')
+        .insert({
+          user_id: schedule.instructor_id!,
+          booking_date: bookingDate,
+          start_time: startTime,
+          end_time: endTime,
+          booking_type: 'course_instruction',
+          title: `Course: ${schedule.course_id}`,
+          description: `Course instruction session`,
+          course_id: schedule.course_id,
+          status: 'scheduled',
+          created_by: schedule.instructor_id
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating course schedule:', error);
+        throw error;
+      }
+
+      console.log('Course schedule created successfully:', data);
+
+      // Return in expected format
+      return {
+        id: data.id,
+        course_id: data.course_id!,
+        start_date: schedule.start_date!,
+        end_date: schedule.end_date!,
+        max_capacity: schedule.max_capacity || 40,
+        current_enrollment: 0,
+        instructor_id: data.user_id,
+        location_id: schedule.location_id,
+        status: data.status as any,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      } as CourseSchedule;
+    } catch (error: any) {
+      console.error('Course scheduling error:', error);
+      throw error;
+    }
   }
 
   static async getCourseSchedules(courseId?: string): Promise<CourseSchedule[]> {
