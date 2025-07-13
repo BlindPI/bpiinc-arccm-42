@@ -141,7 +141,14 @@ export class RealEnterpriseTeamService {
         metadata: safeParseJsonResponse(teamData.metadata),
         monthly_targets: safeParseJsonResponse(teamData.monthly_targets),
         current_metrics: safeParseJsonResponse(teamData.current_metrics),
-        member_count: teamData.member_count || 0
+        member_count: teamData.member_count || 0,
+        // Include provider assignment information
+        provider: teamData.provider_id ? {
+          id: teamData.provider_id,
+          provider_name: teamData.provider_name,
+          provider_type: teamData.provider_type,
+          name: teamData.provider_name
+        } : null
       };
     });
   }

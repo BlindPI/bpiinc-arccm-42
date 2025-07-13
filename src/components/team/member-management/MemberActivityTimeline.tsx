@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Activity, Clock, User, Shield, UserCheck } from 'lucide-react';
+import { Activity, Clock, User, Shield, UserCheck, Upload, FileText } from 'lucide-react';
 
 interface MemberActivityTimelineProps {
   teamId: string;
@@ -61,6 +61,8 @@ export function MemberActivityTimeline({ teamId }: MemberActivityTimelineProps) 
         return <Shield className="h-4 w-4 text-blue-600" />;
       case 'status_changed':
         return <Activity className="h-4 w-4 text-orange-600" />;
+      case 'batch_upload_submitted':
+        return <FileText className="h-4 w-4 text-purple-600" />;
       default:
         return <Clock className="h-4 w-4 text-gray-600" />;
     }
@@ -76,6 +78,8 @@ export function MemberActivityTimeline({ teamId }: MemberActivityTimelineProps) 
         return 'secondary';
       case 'status_changed':
         return 'outline';
+      case 'batch_upload_submitted':
+        return 'default';
       default:
         return 'outline';
     }
@@ -95,6 +99,8 @@ export function MemberActivityTimeline({ teamId }: MemberActivityTimelineProps) 
         return `${performerName} changed ${affectedName}'s role from ${eventData.old_role} to ${eventData.new_role}`;
       case 'status_changed':
         return `${performerName} changed ${affectedName}'s status from ${eventData.old_status} to ${eventData.new_status}`;
+      case 'batch_upload_submitted':
+        return `${performerName} submitted batch upload "${eventData.batch_name}" with ${eventData.certificate_count} certificates for ${eventData.course_name}`;
       default:
         return `${performerName} performed ${activity.event_type}`;
     }

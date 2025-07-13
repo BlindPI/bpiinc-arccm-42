@@ -191,6 +191,47 @@ export function useBatchSubmission() {
         // Don't fail the entire submission just because emails failed
       }
 
+      // Log activity to team lifecycle events
+      try {
+        // Find user's team based on location assignment
+        const { data: userLocationAssignment } = await supabase
+          .from('ap_user_location_assignments')
+          .select('location_id')
+          .eq('ap_user_id', user.id)
+          .eq('status', 'active')
+          .single();
+
+        if (userLocationAssignment) {
+          // Find team at this location
+          const { data: teamAtLocation } = await supabase
+            .from('teams')
+            .select('id')
+            .eq('location_id', userLocationAssignment.location_id)
+            .single();
+
+          if (teamAtLocation) {
+            await supabase
+              .from('team_lifecycle_events')
+              .insert({
+                team_id: teamAtLocation.id,
+                event_type: 'batch_upload_submitted',
+                event_data: {
+                  batch_id: batchId,
+                  batch_name: humanReadableBatchName,
+                  roster_id: rosterId,
+                  certificate_count: validRecords.length,
+                  course_name: validRecords[0]?.courseMatches?.[0]?.name || 'Unknown Course',
+                  location_id: selectedLocationId
+                },
+                performed_by: user.id,
+                event_timestamp: new Date().toISOString()
+              });
+          }
+        }
+      } catch (activityError) {
+        console.error('Failed to log team activity, but continuing:', activityError);
+      }
+
       // Success!
       console.log('Batch submission completed successfully');
       toast.success(`Successfully submitted ${validRecords.length} certificate requests!`);
