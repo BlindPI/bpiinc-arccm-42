@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -9,39 +9,83 @@ import { Separator } from '@/components/ui/separator';
 import { Clock, Bell, Calendar, Save } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
+const defaultSettings = {
+  defaultTimeSlotDuration: '60',
+  workingHoursStart: '09:00',
+  workingHoursEnd: '17:00',
+  weekendAvailability: false,
+  automaticBreaks: true,
+  breakDuration: '15',
+  notificationsEnabled: true,
+  reminderMinutes: '30',
+  allowOverlaps: false,
+  requireApproval: false,
+  timezone: 'America/New_York',
+};
 
 export function AvailabilitySettings() {
-  const [settings, setSettings] = useState({
-    defaultTimeSlotDuration: '60',
-    workingHoursStart: '09:00',
-    workingHoursEnd: '17:00',
-    weekendAvailability: false,
-    automaticBreaks: true,
-    breakDuration: '15',
-    notificationsEnabled: true,
-    reminderMinutes: '30',
-    allowOverlaps: false,
-    requireApproval: false,
-    timezone: 'America/New_York',
+  const [settings, setSettings] = useState(defaultSettings);
+  const queryClient = useQueryClient();
+
+  // Load settings from database
+  const { data: userSettings, isLoading } = useQuery({
+    queryKey: ['user-availability-settings'],
+    queryFn: async () => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('User not authenticated');
+
+      const { data, error } = await supabase
+        .from('user_availability_settings')
+        .select('settings')
+        .eq('user_id', user.user.id)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') throw error;
+      return data?.settings || {};
+    }
   });
 
-  const handleSave = async () => {
-    try {
+  // Update local state when data loads
+  useEffect(() => {
+    if (userSettings && typeof userSettings === 'object') {
+      setSettings({ ...defaultSettings, ...userSettings });
+    }
+  }, [userSettings]);
+
+  // Save settings mutation
+  const saveSettingsMutation = useMutation({
+    mutationFn: async (settingsData: typeof settings) => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('User not authenticated');
+
       const { error } = await supabase
         .from('user_availability_settings')
         .upsert({
-          user_id: (await supabase.auth.getUser()).data.user?.id,
-          settings: settings,
-          updated_at: new Date().toISOString()
+          user_id: user.user.id,
+          settings: settingsData,
         });
       
       if (error) throw error;
+    },
+    onSuccess: () => {
       toast.success('Settings saved successfully');
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ['user-availability-settings'] });
+    },
+    onError: (error) => {
       console.error('Failed to save settings:', error);
       toast.error('Failed to save settings');
     }
+  });
+
+  const handleSave = () => {
+    saveSettingsMutation.mutate(settings);
   };
+
+  if (isLoading) {
+    return <div className="flex justify-center py-8">Loading settings...</div>;
+  }
 
   return (
     <div className="space-y-6">
