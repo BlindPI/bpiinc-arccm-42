@@ -122,13 +122,17 @@ export default function TrainingHub() {
         activeBulkOps: bulkOps?.length || 0
       });
 
+      // Use the real team data service for consolidated metrics
+      const { realTeamDataService } = await import('@/services/team/realTeamDataService');
+      const systemAnalytics = await realTeamDataService.getSystemAnalytics();
+      
       return {
         totalSessions: sessions?.length || 0,
         activeInstructors: instructors?.length || 0,
         upcomingSchedules: schedules?.length || 0,
         activeLocations: locations?.length || 0,
-        complianceRate,
-        totalMembers: instructors?.length || 0,
+        complianceRate: complianceRate || systemAnalytics.averageCompliance,
+        totalMembers: systemAnalytics.totalMembers,
         activeBulkOps: bulkOps?.length || 0
       };
     },

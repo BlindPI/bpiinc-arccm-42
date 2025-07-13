@@ -14,12 +14,18 @@ export function EnhancedTeamManagement() {
 
   const { data: teams = [], isLoading: teamsLoading } = useQuery({
     queryKey: ['enhanced-teams'],
-    queryFn: () => teamManagementService.getEnhancedTeams()
+    queryFn: async () => {
+      const { realTeamDataService } = await import('@/services/team/realTeamDataService');
+      return realTeamDataService.getAllTeams();
+    }
   });
 
   const { data: analytics, isLoading: analyticsLoading } = useQuery({
     queryKey: ['team-analytics'],
-    queryFn: () => teamManagementService.getSystemWideAnalytics()
+    queryFn: async () => {
+      const { realTeamDataService } = await import('@/services/team/realTeamDataService');
+      return realTeamDataService.getSystemAnalytics();
+    }
   });
 
   if (teamsLoading || analyticsLoading) {

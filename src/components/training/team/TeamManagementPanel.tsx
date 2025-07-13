@@ -81,11 +81,34 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
     refetchInterval: 300000,
   });
 
-  // Enhanced team metrics with real Phase 3 data
+  // Enhanced team metrics with real data using consolidated service
   const { data: teamMetrics } = useQuery({
     queryKey: ['team-metrics', user?.id],
     queryFn: async () => {
-      if (!teams || teams.length === 0) {
+      const { realTeamDataService } = await import('@/services/team/realTeamDataService');
+      
+      try {
+        // Get system analytics for accurate counts
+        const analytics = await realTeamDataService.getSystemAnalytics();
+        
+        // Get instructor role counts
+        const instructorCounts = await realTeamDataService.getInstructorRoleCounts();
+        
+        return {
+          totalMembers: analytics.totalMembers,
+          activeBulkOps: 0, // This would be fetched from bulk operations
+          upcomingBookings: 0, // This would be fetched from bookings
+          teamMembers: [],
+          teamRoles: analytics.instructor_role_distribution || {},
+          instructorCounts: {
+            IC: instructorCounts['IC'] || 0,
+            IP: instructorCounts['IP'] || 0,
+            IT: instructorCounts['IT'] || 0,
+            AP: instructorCounts['AP'] || 0
+          }
+        };
+      } catch (error) {
+        console.error('Error fetching team metrics:', error);
         return {
           totalMembers: 0,
           activeBulkOps: 0,
