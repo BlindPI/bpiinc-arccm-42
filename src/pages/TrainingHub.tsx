@@ -185,7 +185,7 @@ export default function TrainingHub() {
     const labels = {
       'IC': 'Instructor Candidate',
       'IP': 'Instructor Provisional',
-      'IT': 'Certified Instructor',
+      'IT': 'Instructor Trainer',
       'AP': 'Authorized Provider'
     };
     return labels[role] || role;
