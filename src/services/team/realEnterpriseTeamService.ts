@@ -147,8 +147,12 @@ export class RealEnterpriseTeamService {
     });
 
     // Now follow the working pattern - populate provider assignments for each team
+    console.log('DEBUG: Fetching provider assignments for teams:', teams.length);
+    
     for (const team of teams) {
       try {
+        console.log(`DEBUG: Fetching provider assignment for team ${team.id} (${team.name})`);
+        
         // Query provider_team_assignments table (the working pattern)
         const { data: assignments, error: assignmentError } = await supabase
           .from('provider_team_assignments')
@@ -167,6 +171,8 @@ export class RealEnterpriseTeamService {
           .order('created_at', { ascending: false })
           .limit(1);
 
+        console.log(`DEBUG: Provider assignment query for team ${team.id}:`, { assignments, assignmentError });
+
         if (!assignmentError && assignments && assignments.length > 0) {
           const assignment = assignments[0];
           const provider = assignment.authorized_providers;
@@ -179,6 +185,10 @@ export class RealEnterpriseTeamService {
             assignment_role: assignment.assignment_role,
             assignment_status: assignment.status
           };
+          
+          console.log(`DEBUG: Provider assigned to team ${team.id}:`, team.provider);
+        } else {
+          console.log(`DEBUG: No provider assignment found for team ${team.id}`);
         }
       } catch (error) {
         console.error(`Error fetching provider assignment for team ${team.id}:`, error);
