@@ -118,13 +118,6 @@ export class UnifiedTeamService {
                 state,
                 postal_code
               ),
-              authorized_providers!teams_provider_id_fkey (
-                id,
-                name,
-                provider_type,
-                compliance_score,
-                performance_rating
-              ),
               team_members!team_id (
                 id,
                 user_id,
@@ -181,13 +174,6 @@ export class UnifiedTeamService {
             state,
             postal_code
           ),
-          authorized_providers!teams_provider_id_fkey (
-            id,
-            name,
-            provider_type,
-            compliance_score,
-            performance_rating
-          ),
           team_members!team_id (
             id,
             user_id,
@@ -201,13 +187,6 @@ export class UnifiedTeamService {
               role,
               email
             )
-          ),
-          provider_team_assignments!provider_team_assignments_team_id_fkey (
-            id,
-            provider_id,
-            assignment_role,
-            status,
-            assigned_at
           )
         `)
         .order('created_at', { ascending: false });
@@ -220,10 +199,8 @@ export class UnifiedTeamService {
       const teams = (teamsData || []).map((team: any) => ({
         ...team,
         location: team.locations,
-        provider: team.authorized_providers,
         members: team.team_members || [],
-        member_count: (team.team_members || []).filter((m: any) => m.status === 'active').length,
-        provider_assignments: team.provider_team_assignments || []
+        member_count: (team.team_members || []).filter((m: any) => m.status === 'active').length
       }));
 
       console.log(`🔍 UNIFIEDTEAMSERVICE: Found ${teams.length} teams with comprehensive access`);
