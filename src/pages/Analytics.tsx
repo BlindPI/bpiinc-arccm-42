@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AdvancedAnalyticsDashboard } from '@/components/analytics/AdvancedAnalyticsDashboard';
 import { ConsolidatedAnalyticsDashboard } from '@/components/analytics/ConsolidatedAnalyticsDashboard';
+import APAnalyticsDashboard from '@/components/analytics/APAnalyticsDashboard';
 import CertificateAnalyticsDashboard from '@/components/analytics/CertificateAnalyticsDashboard';
 import InstructorPerformanceDashboard from '@/components/analytics/InstructorPerformanceDashboard';
 import { ExecutiveDashboard } from '@/components/crm/analytics/ExecutiveDashboard';
@@ -46,7 +47,7 @@ export default function Analytics() {
           <Crown className="h-6 w-6 text-yellow-600" />
           <h1 className="text-3xl font-bold tracking-tight">Authorized Provider Analytics</h1>
         </div>
-        <ConsolidatedAnalyticsDashboard userRole="AP" />
+        <APAnalyticsDashboard />
       </div>
     );
   }
