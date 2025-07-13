@@ -84,14 +84,14 @@ export class UnifiedTeamService {
    */
   static async getTeams(userRole: DatabaseUserRole, userId: string): Promise<EnhancedTeam[]> {
     try {
-      // For AP users, filter teams based on provider assignments
+      // For AP users, filter teams based on provider assignments with complete data
       if (userRole === 'AP') {
         console.log('🔍 UNIFIEDTEAMSERVICE: Loading teams for AP user with provider filtering...');
         
         // Get the provider record for this user
         const { data: providerData, error: providerError } = await supabase
           .from('authorized_providers')
-          .select('id')
+          .select('id, name, provider_type')
           .eq('user_id', userId)
           .single();
 
@@ -100,16 +100,45 @@ export class UnifiedTeamService {
           return [];
         }
 
-        // Get teams assigned to this provider via provider_team_assignments
+        // Get teams assigned to this provider with complete relationships
         const { data: assignmentData, error: assignmentError } = await supabase
           .from('provider_team_assignments')
           .select(`
             team_id,
+            assignment_role,
             status,
+            assigned_at,
             teams!inner (
               *,
-              locations (name, address),
-              team_members!team_id (id, status)
+              locations (
+                id,
+                name,
+                address,
+                city,
+                state,
+                postal_code
+              ),
+              authorized_providers!teams_provider_id_fkey (
+                id,
+                name,
+                provider_type,
+                compliance_score,
+                performance_rating
+              ),
+              team_members!team_id (
+                id,
+                user_id,
+                role,
+                status,
+                assignment_start_date,
+                team_position,
+                profiles!team_members_user_id_fkey (
+                  id,
+                  display_name,
+                  role,
+                  email
+                )
+              )
             )
           `)
           .eq('provider_id', providerData.id)
@@ -120,58 +149,84 @@ export class UnifiedTeamService {
           return [];
         }
 
-        const teams = (assignmentData || [])
-          .map((assignment: any) => ({
-            ...assignment.teams,
-            location: assignment.teams.locations ? { name: assignment.teams.locations.name } : null,
-            member_count: (assignment.teams.team_members || []).filter((m: any) => m.status === 'active').length
-          }));
+        const teams = (assignmentData || []).map((assignment: any) => ({
+          ...assignment.teams,
+          location: assignment.teams.locations,
+          provider: assignment.teams.authorized_providers,
+          members: assignment.teams.team_members || [],
+          member_count: (assignment.teams.team_members || []).filter((m: any) => m.status === 'active').length,
+          provider_assignment: {
+            role: assignment.assignment_role,
+            status: assignment.status,
+            assigned_at: assignment.assigned_at
+          }
+        }));
 
         console.log(`🔍 UNIFIEDTEAMSERVICE: Found ${teams.length} teams for AP user (provider-filtered)`);
         return teams as unknown as EnhancedTeam[];
       }
 
-      // For SA/AD users, use direct database access with simplified query
-      console.log('🔍 UNIFIEDTEAMSERVICE: Loading teams with direct database access...');
+      // For SA/AD users, use comprehensive database query with all relationships
+      console.log('🔍 UNIFIEDTEAMSERVICE: Loading teams with comprehensive data access...');
       
-      // First get teams with locations
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select(`
           *,
-          locations (name, address)
-        `);
+          locations (
+            id,
+            name,
+            address,
+            city,
+            state,
+            postal_code
+          ),
+          authorized_providers!teams_provider_id_fkey (
+            id,
+            name,
+            provider_type,
+            compliance_score,
+            performance_rating
+          ),
+          team_members!team_id (
+            id,
+            user_id,
+            role,
+            status,
+            assignment_start_date,
+            team_position,
+            profiles!team_members_user_id_fkey (
+              id,
+              display_name,
+              role,
+              email
+            )
+          ),
+          provider_team_assignments!provider_team_assignments_team_id_fkey (
+            id,
+            provider_id,
+            assignment_role,
+            status,
+            assigned_at
+          )
+        `)
+        .order('created_at', { ascending: false });
 
       if (teamsError) {
         console.error('Error fetching teams:', teamsError);
         throw teamsError;
       }
 
-      // Then get member counts for each team
-      const teamsWithMemberCounts = await Promise.all((teamsData || []).map(async (team: any) => {
-        const { count, error: memberError } = await supabase
-          .from('team_members')
-          .select('*', { count: 'exact', head: true })
-          .eq('team_id', team.id)
-          .eq('status', 'active');
-
-        if (memberError) {
-          console.error(`Error fetching member count for team ${team.id}:`, memberError);
-        }
-
-        return {
-          ...team,
-          location: team.locations ? { name: team.locations.name } : null,
-          member_count: count || 0
-        };
+      const teams = (teamsData || []).map((team: any) => ({
+        ...team,
+        location: team.locations,
+        provider: team.authorized_providers,
+        members: team.team_members || [],
+        member_count: (team.team_members || []).filter((m: any) => m.status === 'active').length,
+        provider_assignments: team.provider_team_assignments || []
       }));
 
-      const data = teamsWithMemberCounts;
-
-      // Teams already have member_count calculated
-      const teams = data;
-
-      console.log(`🔍 UNIFIEDTEAMSERVICE: Found ${teams.length} teams with direct access`);
+      console.log(`🔍 UNIFIEDTEAMSERVICE: Found ${teams.length} teams with comprehensive access`);
       return teams as unknown as EnhancedTeam[];
     } catch (error) {
       console.error('UnifiedTeamService.getTeams error:', error);
