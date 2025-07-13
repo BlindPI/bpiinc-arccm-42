@@ -13,11 +13,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { RealTeamService } from '@/services/team/realTeamService';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useActivityTracker } from '@/hooks/useActivityTracker';
 import { Plus, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function CreateTeamDialog() {
   const { user } = useAuth();
+  const { trackTeamAction } = useActivityTracker();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -51,8 +53,18 @@ export function CreateTeamDialog() {
       location_id: formData.locationId,
       created_by: user?.id || ''
     }),
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success('Team created successfully!');
+      
+      // Track team creation activity
+      if (data?.id) {
+        trackTeamAction('team_created', data.id, {
+          team_name: formData.name,
+          team_type: formData.teamType,
+          location_id: formData.locationId
+        });
+      }
+      
       queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
       queryClient.invalidateQueries({ queryKey: ['team-analytics'] });
       setFormData({ name: '', description: '', locationId: '', teamType: 'standard' });

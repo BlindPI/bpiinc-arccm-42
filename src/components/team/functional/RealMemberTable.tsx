@@ -31,6 +31,8 @@ import {
   Phone
 } from 'lucide-react';
 import { teamMemberService } from '@/services/team/teamMemberService';
+import { useActivityTracker } from '@/hooks/useActivityTracker';
+import { ActivityIndicator } from '@/components/activity/ActivityIndicator';
 import type { TeamMemberWithProfile } from '@/types/team-management';
 import { toast } from 'sonner';
 
@@ -40,6 +42,7 @@ interface RealMemberTableProps {
 }
 
 export function RealMemberTable({ teamId, userRole }: RealMemberTableProps) {
+  const { trackTeamAction } = useActivityTracker();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -54,8 +57,17 @@ export function RealMemberTable({ teamId, userRole }: RealMemberTableProps) {
   const removeMemberMutation = useMutation({
     mutationFn: ({ userId }: { userId: string }) =>
       teamMemberService.removeTeamMember(teamId, userId),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       toast.success('Member removed successfully');
+      
+      // Track member removal activity
+      const removedMember = members.find(m => m.user_id === variables.userId);
+      trackTeamAction('member_removed', teamId, {
+        member_user_id: variables.userId,
+        member_name: removedMember?.profiles?.display_name || removedMember?.display_name || 'Unknown',
+        previous_role: removedMember?.role
+      });
+      
       queryClient.invalidateQueries({ queryKey: ['team-members', teamId] });
     },
     onError: () => {
@@ -66,8 +78,18 @@ export function RealMemberTable({ teamId, userRole }: RealMemberTableProps) {
   const updateRoleMutation = useMutation({
     mutationFn: ({ userId, newRole }: { userId: string; newRole: 'ADMIN' | 'MEMBER' }) =>
       teamMemberService.updateMemberRole(teamId, userId, newRole),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       toast.success('Member role updated successfully');
+      
+      // Track role change activity
+      const updatedMember = members.find(m => m.user_id === variables.userId);
+      trackTeamAction('member_role_updated', teamId, {
+        member_user_id: variables.userId,
+        member_name: updatedMember?.profiles?.display_name || updatedMember?.display_name || 'Unknown',
+        previous_role: updatedMember?.role,
+        new_role: variables.newRole
+      });
+      
       queryClient.invalidateQueries({ queryKey: ['team-members', teamId] });
     },
     onError: () => {
@@ -78,8 +100,18 @@ export function RealMemberTable({ teamId, userRole }: RealMemberTableProps) {
   const updateStatusMutation = useMutation({
     mutationFn: ({ userId, status }: { userId: string; status: 'active' | 'inactive' | 'on_leave' | 'suspended' }) =>
       teamMemberService.updateMemberStatus(teamId, userId, status),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       toast.success('Member status updated successfully');
+      
+      // Track status change activity
+      const updatedMember = members.find(m => m.user_id === variables.userId);
+      trackTeamAction('member_status_updated', teamId, {
+        member_user_id: variables.userId,
+        member_name: updatedMember?.profiles?.display_name || updatedMember?.display_name || 'Unknown',
+        previous_status: updatedMember?.status,
+        new_status: variables.status
+      });
+      
       queryClient.invalidateQueries({ queryKey: ['team-members', teamId] });
     },
     onError: () => {
@@ -253,12 +285,14 @@ export function RealMemberTable({ teamId, userRole }: RealMemberTableProps) {
                          : new Date(member.created_at).toLocaleDateString()
                        }
                      </TableCell>
-                    <TableCell>
-                      {member.last_activity 
-                        ? new Date(member.last_activity).toLocaleDateString()
-                        : 'Never'
-                      }
-                    </TableCell>
+                     <TableCell>
+                       <ActivityIndicator 
+                         userId={member.user_id}
+                         lastActivity={member.last_activity}
+                         variant="dot"
+                         showLabel={false}
+                       />
+                     </TableCell>
                     {canManageMembers && (
                       <TableCell>
                         <div className="flex items-center gap-2">

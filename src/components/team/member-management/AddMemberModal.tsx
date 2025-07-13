@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { teamMemberService } from '@/services/team/teamMemberService';
 import { supabase } from '@/integrations/supabase/client';
+import { useActivityTracker } from '@/hooks/useActivityTracker';
 import { toast } from 'sonner';
 import { UserPlus, X, Search } from 'lucide-react';
 
@@ -18,6 +19,7 @@ interface AddMemberModalProps {
 }
 
 export function AddMemberModal({ teamId, onClose, onSuccess }: AddMemberModalProps) {
+  const { trackTeamAction } = useActivityTracker();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<string>('');
@@ -53,6 +55,16 @@ export function AddMemberModal({ teamId, onClose, onSuccess }: AddMemberModalPro
     mutationFn: () => teamMemberService.addTeamMember(teamId, selectedUser, selectedRole),
     onSuccess: () => {
       toast.success('Member added successfully');
+      
+      // Track member addition activity
+      const selectedUserData = searchResults.find(user => user.id === selectedUser);
+      trackTeamAction('member_added', teamId, {
+        member_user_id: selectedUser,
+        member_name: selectedUserData?.display_name || 'Unknown',
+        member_email: selectedUserData?.email,
+        assigned_role: selectedRole
+      });
+      
       queryClient.invalidateQueries({ queryKey: ['team-members', teamId] });
       onSuccess();
     },
