@@ -18,7 +18,7 @@ import CRM from '@/pages/CRM';
 import CRMAnalytics from '@/pages/CRMAnalytics';
 
 // Import all pages
-import UnifiedTeams from '@/pages/UnifiedTeams';
+// UNIFIED: UnifiedTeams → Training Hub (team management consolidated)
 // UNIFIED: RoleManagement → AdminHub
 import Supervision from '@/pages/Supervision';
 import TrainingHub from '@/pages/TrainingHub';
@@ -100,23 +100,23 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      {/* User Management Routes - UNIFIED TEAMS */}
+      {/* UNIFIED: Teams → Training Hub */}
       <Route path="/teams" element={
         <ProtectedRoute>
-          <UnifiedTeams />
+          <TrainingHub />
         </ProtectedRoute>
       } />
 
-      {/* DEPRECATED: Legacy team routes - redirect to unified teams */}
+      {/* DEPRECATED: Legacy team routes - redirect to Training Hub */}
       <Route path="/enhanced-teams" element={
         <ProtectedRoute>
-          <UnifiedTeams />
+          <TrainingHub />
         </ProtectedRoute>
       } />
 
       <Route path="/modern-teams" element={
         <ProtectedRoute>
-          <UnifiedTeams />
+          <TrainingHub />
         </ProtectedRoute>
       } />
 

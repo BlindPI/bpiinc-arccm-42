@@ -17,8 +17,8 @@ export const PROTECTED_PAGES = [
   "/dashboard",
   "/profile", 
   "/users",
-  "/teams",
-  "/enhanced-teams",
+  "/teams", // UNIFIED: Redirects to Training Hub
+  "/enhanced-teams", // UNIFIED: Redirects to Training Hub
   "/role-management",
   "/supervision",
   "/certificates",

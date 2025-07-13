@@ -33,7 +33,11 @@ export default function TrainingHub() {
   const { user } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('sessions');
+  
+  // Check if user navigated from /teams route to auto-open team-management tab
+  const urlParams = new URLSearchParams(window.location.search);
+  const defaultTab = window.location.pathname === '/teams' || urlParams.get('tab') === 'team-management' ? 'team-management' : 'sessions';
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const [showCourseForm, setShowCourseForm] = useState(false);
   const [showLocationForm, setShowLocationForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
