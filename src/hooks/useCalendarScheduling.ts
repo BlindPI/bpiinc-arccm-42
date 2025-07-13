@@ -10,6 +10,7 @@ export interface CalendarEvent {
   backgroundColor?: string;
   borderColor?: string;
   textColor?: string;
+  display?: string;
   extendedProps: {
     instructorId: string;
     instructorName: string;
@@ -19,6 +20,7 @@ export interface CalendarEvent {
     courseName?: string;
     bookingType: string;
     status: string;
+    description?: string;
   };
 }
 
@@ -35,6 +37,74 @@ export interface InstructorAvailability {
   }[];
 }
 
+// Helper function to generate availability background events
+const generateAvailabilityBackgroundEvents = async (
+  instructors: any[], 
+  locationId?: string, 
+  teamId?: string
+): Promise<CalendarEvent[]> => {
+  const availabilityEvents: CalendarEvent[] = [];
+  const today = new Date();
+  const endDate = new Date();
+  endDate.setDate(today.getDate() + 30); // Show 30 days of availability
+
+  // Get team members to filter instructors
+  let teamQuery = supabase
+    .from('team_members')
+    .select('user_id, team_id, teams!team_members_team_id_fkey(location_id)')
+    .eq('status', 'active');
+
+  if (locationId) teamQuery = teamQuery.eq('teams.location_id', locationId);
+  if (teamId) teamQuery = teamQuery.eq('team_id', teamId);
+
+  const { data: teamMembers } = await teamQuery;
+  const instructorIds = teamMembers?.map(tm => tm.user_id) || [];
+
+  instructors
+    .filter(instructor => instructorIds.includes(instructor.id))
+    .forEach(instructor => {
+      instructor.user_availability?.forEach((avail: any) => {
+        const dayOfWeek = parseInt(avail.day_of_week);
+        
+        // Generate availability windows for the next 30 days
+        for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
+          if (d.getDay() === dayOfWeek) {
+            const startDateTime = new Date(d);
+            const [startHour, startMin] = avail.start_time.split(':');
+            startDateTime.setHours(parseInt(startHour), parseInt(startMin), 0, 0);
+            
+            const endDateTime = new Date(d);
+            const [endHour, endMin] = avail.end_time.split(':');
+            endDateTime.setHours(parseInt(endHour), parseInt(endMin), 0, 0);
+
+            availabilityEvents.push({
+              id: `avail-${instructor.id}-${d.toISOString().split('T')[0]}-${avail.start_time}`,
+              title: `Available: ${instructor.display_name}`,
+              start: startDateTime.toISOString(),
+              end: endDateTime.toISOString(),
+              backgroundColor: 'rgba(34, 197, 94, 0.1)', // light green
+              borderColor: '#22c55e',
+              textColor: '#16a34a',
+              display: 'background', // Makes it a background event
+              extendedProps: {
+                instructorId: instructor.id,
+                instructorName: instructor.display_name,
+                bookingType: 'availability_window',
+                status: 'available',
+                locationId: '',
+                locationName: '',
+                courseId: '',
+                courseName: ''
+              }
+            });
+          }
+        }
+      });
+    });
+
+  return availabilityEvents;
+};
+
 export const useCalendarScheduling = (locationId?: string, teamId?: string) => {
   const queryClient = useQueryClient();
 
@@ -42,11 +112,21 @@ export const useCalendarScheduling = (locationId?: string, teamId?: string) => {
   const { data: events, isLoading: eventsLoading } = useQuery({
     queryKey: ['calendar-events', locationId, teamId],
     queryFn: async () => {
+      // Get instructors first for availability windows
+      let instructorQuery = supabase
+        .from('profiles')
+        .select(`
+          id, display_name, role,
+          user_availability (day_of_week, start_time, end_time)
+        `)
+        .in('role', ['IC', 'IP', 'IT']);
+
+      const instructorResult = await instructorQuery;
       let query = supabase
         .from('availability_bookings')
         .select(`
           id, title, booking_date, start_time, end_time, 
-          booking_type, status, course_id,
+          booking_type, status, course_id, description,
           user_id,
           profiles:user_id (display_name, role),
           courses:course_id (name),
@@ -85,57 +165,65 @@ export const useCalendarScheduling = (locationId?: string, teamId?: string) => {
       const { data, error } = await query;
       if (error) throw error;
 
-      return data?.map((booking: any): CalendarEvent => {
-        const startDateTime = new Date(`${booking.booking_date}T${booking.start_time}`);
-        const endDateTime = new Date(`${booking.booking_date}T${booking.end_time}`);
+        // Also get availability windows as background events
+        const availabilityEvents = await generateAvailabilityBackgroundEvents(
+          instructorResult?.data || [], locationId, teamId
+        );
 
-        // Color coding based on booking type
-        let backgroundColor = '#3b82f6'; // blue for default
-        let borderColor = '#1d4ed8';
-        
-        switch (booking.booking_type) {
-          case 'course_instruction':
-            backgroundColor = '#059669'; // green for courses
-            borderColor = '#047857';
-            break;
-          case 'training_session':
-            backgroundColor = '#7c3aed'; // purple for training
-            borderColor = '#5b21b6';
-            break;
-          case 'meeting':
-            backgroundColor = '#dc2626'; // red for meetings
-            borderColor = '#991b1b';
-            break;
-          case 'administrative':
-            backgroundColor = '#10b981'; // emerald for admin
-            borderColor = '#047857';
-            break;
-          case 'personal':
-            backgroundColor = '#6b7280'; // gray for personal
-            borderColor = '#374151';
-            break;
-        }
+        const bookingEvents = data?.map((booking: any): CalendarEvent => {
+          const startDateTime = new Date(`${booking.booking_date}T${booking.start_time}`);
+          const endDateTime = new Date(`${booking.booking_date}T${booking.end_time}`);
 
-        return {
-          id: booking.id,
-          title: booking.title,
-          start: startDateTime.toISOString(),
-          end: endDateTime.toISOString(),
-          backgroundColor,
-          borderColor,
-          textColor: '#ffffff',
-          extendedProps: {
-            instructorId: booking.user_id,
-            instructorName: booking.profiles?.display_name || 'Unknown',
-            courseId: booking.course_id,
-            courseName: booking.courses?.name,
-            bookingType: booking.booking_type,
-            status: booking.status,
-            locationId: '',
-            locationName: ''
+          // Color coding based on booking type
+          let backgroundColor = '#3b82f6'; // blue for default
+          let borderColor = '#1d4ed8';
+          
+          switch (booking.booking_type) {
+            case 'course_instruction':
+              backgroundColor = '#059669'; // green for courses
+              borderColor = '#047857';
+              break;
+            case 'training_session':
+              backgroundColor = '#7c3aed'; // purple for training
+              borderColor = '#5b21b6';
+              break;
+            case 'meeting':
+              backgroundColor = '#dc2626'; // red for meetings
+              borderColor = '#991b1b';
+              break;
+            case 'administrative':
+              backgroundColor = '#10b981'; // emerald for admin
+              borderColor = '#047857';
+              break;
+            case 'personal':
+              backgroundColor = '#6b7280'; // gray for personal
+              borderColor = '#374151';
+              break;
           }
-        };
-      }) || [];
+
+          return {
+            id: booking.id,
+            title: booking.title,
+            start: startDateTime.toISOString(),
+            end: endDateTime.toISOString(),
+            backgroundColor,
+            borderColor,
+            textColor: '#ffffff',
+            extendedProps: {
+              instructorId: booking.user_id,
+              instructorName: booking.profiles?.display_name || 'Unknown',
+              courseId: booking.course_id,
+              courseName: booking.courses?.name,
+              bookingType: booking.booking_type,
+              status: booking.status,
+              locationId: '',
+              locationName: '',
+              description: booking.description || ''
+            }
+          };
+        }) || [];
+
+        return [...bookingEvents, ...availabilityEvents];
     }
   });
 

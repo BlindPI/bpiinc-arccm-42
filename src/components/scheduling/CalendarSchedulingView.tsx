@@ -13,6 +13,7 @@ import { LocationFilter } from './LocationFilter';
 import { TeamFilter } from './TeamFilter';
 import { QuickScheduleDialog } from './QuickScheduleDialog';
 import { EventDetailsPopover } from './EventDetailsPopover';
+import { AvailabilityVisualization } from './AvailabilityVisualization';
 
 interface CalendarSchedulingViewProps {
   defaultLocationId?: string;
@@ -34,7 +35,9 @@ export const CalendarSchedulingView: React.FC<CalendarSchedulingViewProps> = ({
     events,
     instructorAvailability,
     isLoading,
-    createBooking
+    createBooking,
+    updateBooking,
+    deleteBooking
   } = useCalendarScheduling(selectedLocationId, selectedTeamId);
 
   const handleDateSelect = (selectInfo: any) => {
@@ -189,36 +192,54 @@ export const CalendarSchedulingView: React.FC<CalendarSchedulingViewProps> = ({
         </CardContent>
       </Card>
 
-      {/* Color Legend */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Calendar Legend</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-green-600 rounded"></div>
-              <span className="text-sm">Course Instruction</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-purple-600 rounded"></div>
-              <span className="text-sm">Training Session</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-red-600 rounded"></div>
-              <span className="text-sm">Meeting</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-emerald-600 rounded"></div>
-              <span className="text-sm">Administrative</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-gray-600 rounded"></div>
-              <span className="text-sm">Personal</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Availability Analysis */}
+      <Tabs defaultValue="calendar" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="calendar">Calendar View</TabsTrigger>
+          <TabsTrigger value="availability">Availability Analysis</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="calendar">
+          {/* Color Legend */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Calendar Legend</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-green-600 rounded"></div>
+                  <span className="text-sm">Course Instruction</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-purple-600 rounded"></div>
+                  <span className="text-sm">Training Session</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-red-600 rounded"></div>
+                  <span className="text-sm">Meeting</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-emerald-600 rounded"></div>
+                  <span className="text-sm">Administrative</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-gray-600 rounded"></div>
+                  <span className="text-sm">Personal</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="availability">
+          <AvailabilityVisualization
+            instructorAvailability={instructorAvailability || []}
+            events={events || []}
+            selectedDate={selectedDate || new Date()}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* Quick Schedule Dialog */}
       <QuickScheduleDialog
@@ -238,6 +259,14 @@ export const CalendarSchedulingView: React.FC<CalendarSchedulingViewProps> = ({
         <EventDetailsPopover
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
+          onEdit={async (eventData) => {
+            await updateBooking.mutateAsync(eventData);
+            setSelectedEvent(null);
+          }}
+          onDelete={async (eventId) => {
+            await deleteBooking.mutateAsync(eventId);
+            setSelectedEvent(null);
+          }}
         />
       )}
     </div>
