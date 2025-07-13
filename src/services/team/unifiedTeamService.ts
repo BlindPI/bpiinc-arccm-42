@@ -128,7 +128,7 @@ export class UnifiedTeamService {
               user_id,
               role,
               status,
-              joined_at,
+              assignment_start_date,
               profiles!inner (
                 id,
                 display_name,
@@ -148,7 +148,7 @@ export class UnifiedTeamService {
             user_id: member.user_id,
             role: member.role,
             status: member.status,
-            joined_at: member.joined_at,
+            joined_at: member.assignment_start_date,
             user: member.profiles ? {
               display_name: member.profiles.display_name,
               email: member.profiles.email,
@@ -201,7 +201,7 @@ export class UnifiedTeamService {
             user_id,
             role,
             status,
-            joined_at,
+            assignment_start_date,
             profiles!inner (
               id,
               display_name,
@@ -221,7 +221,7 @@ export class UnifiedTeamService {
           user_id: member.user_id,
           role: member.role,
           status: member.status,
-          joined_at: member.joined_at,
+          joined_at: member.assignment_start_date,
           user: member.profiles ? {
             display_name: member.profiles.display_name,
             email: member.profiles.email,

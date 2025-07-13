@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { RealTeamDataService } from '@/services/team/realTeamDataService';
+import { TeamAnalyticsService } from '@/services/analytics/teamAnalyticsService';
 import { 
   TrendingUp, 
   BarChart3, 
@@ -19,16 +19,17 @@ interface TeamAnalyticsDashboardProps {
 }
 
 export function TeamAnalyticsDashboard({ teamId }: TeamAnalyticsDashboardProps) {
-  const { data: performanceMetrics, isLoading } = useQuery({
-    queryKey: ['team-performance-metrics', teamId],
-    queryFn: () => RealTeamDataService.getTeamPerformanceMetrics(teamId)
+  const { data: analyticsData, isLoading } = useQuery({
+    queryKey: ['team-analytics', teamId],
+    queryFn: () => TeamAnalyticsService.getTeamAnalytics(teamId),
+    refetchInterval: 30000 // Refresh every 30 seconds for real-time data
   });
 
   const { data: trendData } = useQuery({
     queryKey: ['team-trend-data', teamId],
     queryFn: async () => {
       // Generate trend data based on actual performance
-      const baseScore = performanceMetrics?.compliance_score || 85;
+      const baseScore = analyticsData?.complianceScore || 85;
       const trendData = [];
       
       for (let i = 6; i >= 0; i--) {
@@ -38,7 +39,7 @@ export function TeamAnalyticsDashboard({ teamId }: TeamAnalyticsDashboardProps) 
         
         trendData.push({
           week: `Week ${7 - i}`,
-          performance: Math.max(0, Math.min(100, baseScore + variation)),
+          performance: Math.max(0, Math.min(100, analyticsData?.performanceScore || 85 + variation)),
           compliance: Math.max(0, Math.min(100, baseScore - 3 + variation)),
           satisfaction: Math.max(0, Math.min(100, baseScore + 2 + variation))
         });
@@ -46,7 +47,7 @@ export function TeamAnalyticsDashboard({ teamId }: TeamAnalyticsDashboardProps) 
       
       return trendData;
     },
-    enabled: !!performanceMetrics
+    enabled: !!analyticsData
   });
 
   if (isLoading) {
@@ -57,11 +58,10 @@ export function TeamAnalyticsDashboard({ teamId }: TeamAnalyticsDashboardProps) 
     );
   }
 
-  const metrics = performanceMetrics || {};
-  const certificates = metrics.certificates_issued || 0;
-  const courses = metrics.courses_conducted || 0;
-  const complianceScore = metrics.compliance_score || 0;
-  const memberCount = metrics.member_count || 0;
+  const certificates = analyticsData?.certificatesIssued || 0;
+  const courses = analyticsData?.coursesCompleted || 0;
+  const complianceScore = analyticsData?.complianceScore || 0;
+  const trainingHours = analyticsData?.trainingHours || 0;
 
   return (
     <div className="space-y-6">
@@ -97,12 +97,12 @@ export function TeamAnalyticsDashboard({ teamId }: TeamAnalyticsDashboardProps) 
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Team Members
+              Training Hours
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{memberCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Active members</p>
+            <div className="text-2xl font-bold">{trainingHours}</div>
+            <p className="text-xs text-muted-foreground mt-1">Total delivered</p>
           </CardContent>
         </Card>
 
