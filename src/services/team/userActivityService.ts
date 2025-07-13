@@ -73,7 +73,7 @@ export class UserActivityService {
   }
 
   /**
-   * Log a new user activity
+   * Log a new user activity with real-time updates
    */
   static async logActivity(
     userId: string,
@@ -82,6 +82,8 @@ export class UserActivityService {
     metadata?: Record<string, any>
   ): Promise<void> {
     try {
+      const timestamp = new Date().toISOString();
+      
       const { error } = await supabase
         .from('user_activity_logs')
         .insert({
@@ -94,17 +96,72 @@ export class UserActivityService {
 
       if (error) {
         console.error('Failed to log activity:', error);
+        return;
       }
 
-      // Update last_activity on team_members table
+      // Update last_activity on team_members table for real-time updates
       await supabase
         .from('team_members')
-        .update({ last_activity: new Date().toISOString() })
+        .update({ last_activity: timestamp })
         .eq('user_id', userId);
+
+      // Update or create daily activity metrics
+      await this.updateActivityMetrics(userId, activityType);
         
     } catch (error) {
       console.error('Error logging user activity:', error);
     }
+  }
+
+  /**
+   * Update daily activity metrics
+   */
+  static async updateActivityMetrics(userId: string, activityType: string): Promise<void> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Insert activity metrics using correct schema fields
+      const { error } = await supabase
+        .from('user_activity_metrics')
+        .upsert({
+          user_id: userId,
+          activity_date: today,
+          activity_type: activityType,
+          activity_count: 1,
+          metadata: { [activityType]: 1 }
+        });
+
+      if (error) {
+        console.warn('Could not update activity metrics:', error);
+      }
+    } catch (error) {
+      console.error('Error updating activity metrics:', error);
+    }
+  }
+
+  /**
+   * Track page navigation activity
+   */
+  static async trackPageView(userId: string, pagePath: string, metadata?: Record<string, any>): Promise<void> {
+    await this.logActivity(userId, 'page_view', 'navigation', {
+      page_path: pagePath,
+      ...metadata
+    });
+  }
+
+  /**
+   * Track team management actions
+   */
+  static async trackTeamAction(
+    userId: string, 
+    action: string, 
+    teamId: string, 
+    metadata?: Record<string, any>
+  ): Promise<void> {
+    await this.logActivity(userId, action, 'team_management', {
+      team_id: teamId,
+      ...metadata
+    });
   }
 
   /**

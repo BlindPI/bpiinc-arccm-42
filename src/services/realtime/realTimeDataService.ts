@@ -130,6 +130,106 @@ export class RealTimeDataService {
     return data || 0;
   }
 
+  static async subscribeToUserActivityUpdates(
+    userId: string, 
+    callback: (payload: any) => void
+  ): Promise<RealTimeSubscription> {
+    const channelName = `user_activity_${userId}`;
+    
+    if (this.activeChannels.has(channelName)) {
+      await supabase.removeChannel(this.activeChannels.get(channelName)!);
+    }
+
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_activity_logs',
+          filter: `user_id=eq.${userId}`
+        },
+        callback
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_activity_metrics',
+          filter: `user_id=eq.${userId}`
+        },
+        callback
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'team_members',
+          filter: `user_id=eq.${userId}`
+        },
+        callback
+      )
+      .subscribe();
+
+    this.activeChannels.set(channelName, channel);
+
+    return {
+      channel,
+      unsubscribe: () => {
+        supabase.removeChannel(channel);
+        this.activeChannels.delete(channelName);
+      }
+    };
+  }
+
+  static async subscribeToTeamActivityUpdates(
+    teamId: string, 
+    callback: (payload: any) => void
+  ): Promise<RealTimeSubscription> {
+    const channelName = `team_activity_${teamId}`;
+    
+    if (this.activeChannels.has(channelName)) {
+      await supabase.removeChannel(this.activeChannels.get(channelName)!);
+    }
+
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_activity_logs',
+          filter: `metadata->>team_id=eq.${teamId}`
+        },
+        callback
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'team_members',
+          filter: `team_id=eq.${teamId}`
+        },
+        callback
+      )
+      .subscribe();
+
+    this.activeChannels.set(channelName, channel);
+
+    return {
+      channel,
+      unsubscribe: () => {
+        supabase.removeChannel(channel);
+        this.activeChannels.delete(channelName);
+      }
+    };
+  }
+
   static cleanup(): void {
     this.activeChannels.forEach((channel) => {
       supabase.removeChannel(channel);
