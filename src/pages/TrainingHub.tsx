@@ -138,7 +138,8 @@ export default function TrainingHub() {
       };
     },
     enabled: !!user && !!profile,
-    refetchInterval: 30000 // Refresh every 30 seconds
+    refetchInterval: 30000, // Refresh every 30 seconds for real-time updates
+    staleTime: 15000 // Consider data stale after 15 seconds
   });
 
   // Get course schedules for scheduling tab
