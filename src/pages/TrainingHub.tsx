@@ -19,6 +19,8 @@ import { ScheduleCalendarView } from '@/components/scheduling/ScheduleCalendarVi
 import { ConflictDetector } from '@/components/scheduling/ConflictDetector';
 import { SchedulingRecommendations } from '@/components/scheduling/SchedulingRecommendations';
 import { ResourceAvailability } from '@/components/scheduling/ResourceAvailability';
+import { ProfessionalMetricsGrid } from '@/components/training/dashboard/ProfessionalMetricsGrid';
+import { EnhancedTeamCard } from '@/components/teams/EnhancedTeamCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -700,40 +702,29 @@ export default function TrainingHub() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
-      <div className="container mx-auto p-4 md:p-6 space-y-6">
-        {/* Header with real data */}
-        <TrainingHubHeader
-          totalSessions={metrics?.totalSessions || 0}
-          activeInstructors={metrics?.activeInstructors || 0}
-          upcomingSchedules={metrics?.upcomingSchedules || 0}
-          complianceRate={metrics?.complianceRate || 0}
-          onCreateSession={handleCreateSession}
-          onExportData={handleExportData}
-        />
-
-
-        {/* Navigation Cards with real data */}
-        <TrainingHubNavigation
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          totalSessions={metrics?.totalSessions || 0}
-          activeInstructors={metrics?.activeInstructors || 0}
-          upcomingSchedules={metrics?.upcomingSchedules || 0}
-          activeLocations={metrics?.activeLocations || 0}
-          complianceRate={metrics?.complianceRate || 0}
-          totalTeamMembers={metrics?.totalMembers || 0}
-          bulkOperations={metrics?.activeBulkOps || 0}
-        />
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto p-6 space-y-8">
+        {/* Professional Enterprise Dashboard */}
+        <div className="space-y-8">
+          <ProfessionalMetricsGrid metrics={metrics} isLoading={metricsLoading} />
+          
+          <TrainingHubNavigation
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            totalSessions={metrics?.totalSessions || 0}
+            activeInstructors={metrics?.activeInstructors || 0}
+            upcomingSchedules={metrics?.upcomingSchedules || 0}
+            activeLocations={metrics?.activeLocations || 0}
+            complianceRate={metrics?.complianceRate || 0}
+            totalTeamMembers={metrics?.totalMembers || 0}
+            bulkOperations={metrics?.activeBulkOps || 0}
+          />
+        </div>
 
         {/* Content Area */}
-        <Card className="border-0 shadow-lg">
-          <CardContent className="p-6 md:p-8">
-            <div className="animate-fade-in">
-              {renderActiveContent()}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="animate-fade-in">
+          {renderActiveContent()}
+        </div>
       </div>
     </div>
   );

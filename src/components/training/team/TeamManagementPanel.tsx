@@ -33,6 +33,7 @@ import {
 import { AdminTeamInterface } from '@/components/team/unified/AdminTeamInterface';
 import { ProviderTeamInterface } from '@/components/team/unified/ProviderTeamInterface';
 import { MemberTeamInterface } from '@/components/team/unified/MemberTeamInterface';
+import { EnhancedTeamCard } from '@/components/teams/EnhancedTeamCard';
 
 // Legacy integration components for backward compatibility
 import { TeamAvailabilityDashboard } from '@/components/team/TeamAvailabilityDashboard';

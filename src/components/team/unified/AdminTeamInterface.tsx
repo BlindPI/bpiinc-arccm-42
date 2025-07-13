@@ -7,6 +7,7 @@ import { UnifiedTeamService } from '@/services/team/unifiedTeamService';
 import { TeamCreateForm } from './TeamCreateForm';
 import { TeamEditForm } from './TeamEditForm';
 import { TeamMemberManager } from './TeamMemberManager';
+import { EnhancedTeamCard } from '@/components/teams/EnhancedTeamCard';
 import { toast } from 'sonner';
 import {
   Users,
@@ -302,82 +303,15 @@ export function AdminTeamInterface({
         </Button>
       </div>
 
-      {/* Teams Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Professional Teams Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {teams.map((team) => (
-          <Card key={team.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">{team.name}</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Badge variant={team.status === 'active' ? 'default' : 'secondary'}>
-                    {team.status}
-                  </Badge>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setSelectedTeam(team)}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Manage
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => handleTeamAction('archive', team.id)}
-                        disabled={isLoading}
-                      >
-                        <Archive className="h-4 w-4 mr-2" />
-                        Archive
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => handleTeamAction('delete', team.id)}
-                        disabled={isLoading}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground line-clamp-2">
-                  {team.description || 'No description available'}
-                </p>
-                
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-1">
-                    <Users className="h-3 w-3" />
-                    {team.member_count || 0} members
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3" />
-                    {team.performance_score || 0}%
-                  </span>
-                </div>
-
-                {team.location && (
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    {team.location.name}
-                  </p>
-                )}
-
-                <Button 
-                  onClick={() => setSelectedTeam(team)}
-                  className="w-full"
-                  size="sm"
-                >
-                  Manage Team
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <EnhancedTeamCard
+            key={team.id}
+            team={team}
+            onViewDetails={() => setSelectedTeam(team)}
+            onManage={() => setSelectedTeam(team)}
+          />
         ))}
       </div>
     </div>
