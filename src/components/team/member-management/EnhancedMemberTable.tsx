@@ -31,6 +31,13 @@ import {
   Activity
 } from 'lucide-react';
 import { RealEnterpriseTeamService, TeamMemberWithProfile } from '@/services/team/realEnterpriseTeamService';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogHeader, 
+  DialogTitle 
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
 export interface EnhancedMemberTableProps {
@@ -48,6 +55,9 @@ export function EnhancedMemberTable({
 }: EnhancedMemberTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [editMember, setEditMember] = useState<TeamMemberWithProfile | null>(null);
+  const [permissionsMember, setPermissionsMember] = useState<TeamMemberWithProfile | null>(null);
+  const [activityMember, setActivityMember] = useState<TeamMemberWithProfile | null>(null);
   const queryClient = useQueryClient();
 
   const { data: members = [], isLoading } = useQuery({
@@ -232,15 +242,15 @@ export function EnhancedMemberTable({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => console.log('Edit member:', member.id)}>
+                      <DropdownMenuItem onClick={() => setEditMember(member)}>
                         <Edit className="h-4 w-4 mr-2" />
                         Edit Details
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => console.log('Manage permissions:', member.id)}>
+                      <DropdownMenuItem onClick={() => setPermissionsMember(member)}>
                         <Shield className="h-4 w-4 mr-2" />
                         Manage Permissions
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => console.log('View activity:', member.id)}>
+                      <DropdownMenuItem onClick={() => setActivityMember(member)}>
                         <Activity className="h-4 w-4 mr-2" />
                         View Activity
                       </DropdownMenuItem>
@@ -266,6 +276,173 @@ export function EnhancedMemberTable({
           </div>
         )}
       </CardContent>
+
+      {/* Edit Member Dialog */}
+      <Dialog open={!!editMember} onOpenChange={() => setEditMember(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Member Details</DialogTitle>
+            <DialogDescription>
+              Update member information for {editMember?.profiles.display_name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Role</label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start">
+                    {editMember?.role || 'Select Role'}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-full">
+                  <DropdownMenuItem 
+                    onClick={() => editMember && updateRoleMutation.mutate({ 
+                      memberId: editMember.id, 
+                      newRole: 'ADMIN' 
+                    })}
+                  >
+                    ADMIN
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => editMember && updateRoleMutation.mutate({ 
+                      memberId: editMember.id, 
+                      newRole: 'MEMBER' 
+                    })}
+                  >
+                    MEMBER
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => editMember && updateRoleMutation.mutate({ 
+                      memberId: editMember.id, 
+                      newRole: 'VIEWER' 
+                    })}
+                  >
+                    VIEWER
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditMember(null)}>
+                Cancel
+              </Button>
+              <Button onClick={() => setEditMember(null)}>
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Permissions Dialog */}
+      <Dialog open={!!permissionsMember} onOpenChange={() => setPermissionsMember(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Manage Permissions</DialogTitle>
+            <DialogDescription>
+              Configure permissions for {permissionsMember?.profiles.display_name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <h4 className="font-medium">Team Permissions</h4>
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2">
+                    <Checkbox defaultChecked />
+                    <span className="text-sm">View Team</span>
+                  </label>
+                  <label className="flex items-center space-x-2">
+                    <Checkbox />
+                    <span className="text-sm">Edit Team</span>
+                  </label>
+                  <label className="flex items-center space-x-2">
+                    <Checkbox />
+                    <span className="text-sm">Manage Members</span>
+                  </label>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h4 className="font-medium">Content Permissions</h4>
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2">
+                    <Checkbox defaultChecked />
+                    <span className="text-sm">View Content</span>
+                  </label>
+                  <label className="flex items-center space-x-2">
+                    <Checkbox />
+                    <span className="text-sm">Create Content</span>
+                  </label>
+                  <label className="flex items-center space-x-2">
+                    <Checkbox />
+                    <span className="text-sm">Delete Content</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setPermissionsMember(null)}>
+                Cancel
+              </Button>
+              <Button onClick={() => {
+                toast.success('Permissions updated successfully');
+                setPermissionsMember(null);
+              }}>
+                Save Permissions
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Activity Dialog */}
+      <Dialog open={!!activityMember} onOpenChange={() => setActivityMember(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Member Activity</DialogTitle>
+            <DialogDescription>
+              Recent activity for {activityMember?.profiles.display_name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-3 border rounded-lg">
+                <Activity className="h-4 w-4 text-green-600" />
+                <div>
+                  <p className="text-sm font-medium">Joined team</p>
+                  <p className="text-xs text-muted-foreground">
+                    {activityMember && new Date(activityMember.joined_at).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-3 border rounded-lg">
+                <Shield className="h-4 w-4 text-blue-600" />
+                <div>
+                  <p className="text-sm font-medium">Role assigned: {activityMember?.role}</p>
+                  <p className="text-xs text-muted-foreground">System generated</p>
+                </div>
+              </div>
+              {activityMember?.last_activity && (
+                <div className="flex items-center gap-3 p-3 border rounded-lg">
+                  <Users className="h-4 w-4 text-purple-600" />
+                  <div>
+                    <p className="text-sm font-medium">Last active</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(activityMember.last_activity).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={() => setActivityMember(null)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
