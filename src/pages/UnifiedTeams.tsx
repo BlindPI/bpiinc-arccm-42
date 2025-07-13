@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/contexts/AuthContext';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
+import { ActivityAnalyticsDashboard } from '@/components/analytics/ActivityAnalyticsDashboard';
+import { ActivityCacheManager } from '@/components/performance/ActivityCacheManager';
 import { UnifiedTeamService } from '@/services/team/unifiedTeamService';
 import { 
   Users, 
@@ -322,7 +324,30 @@ export default function UnifiedTeams() {
       )}
 
       {/* Role-Adaptive Interface */}
-      {renderRoleInterface()}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="overview">Teams Overview</TabsTrigger>
+          <TabsTrigger value="management">Team Management</TabsTrigger>
+          <TabsTrigger value="analytics">Activity Analytics</TabsTrigger>
+          <TabsTrigger value="performance">Performance Monitor</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          {renderRoleInterface()}
+        </TabsContent>
+
+        <TabsContent value="management" className="space-y-6">
+          {renderRoleInterface()}
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-6">
+          <ActivityAnalyticsDashboard />
+        </TabsContent>
+
+        <TabsContent value="performance" className="space-y-6">
+          <ActivityCacheManager />
+        </TabsContent>
+      </Tabs>
 
       {/* Empty state */}
       {filteredTeams.length === 0 && (
