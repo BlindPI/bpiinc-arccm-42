@@ -165,6 +165,14 @@ export class UnifiedTeamService {
         }));
 
         console.log(`🔍 UNIFIEDTEAMSERVICE: Found ${teams.length} teams for AP user (provider-filtered)`);
+        console.log('🔍 UNIFIEDTEAMSERVICE: AP Teams data structure:', teams.map(t => ({
+          name: t.name,
+          id: t.id,
+          membersCount: t.members?.length,
+          memberCountField: t.member_count,
+          hasMembersArray: !!t.members,
+          membersData: t.members
+        })));
         return teams as unknown as EnhancedTeam[];
       }
 
@@ -235,6 +243,14 @@ export class UnifiedTeamService {
       const teams = data;
 
       console.log(`🔍 UNIFIEDTEAMSERVICE: Found ${teams.length} teams with direct access`);
+      console.log('🔍 UNIFIEDTEAMSERVICE: SA/AD Teams data structure:', teams.map(t => ({
+        name: t.name,
+        id: t.id,
+        membersCount: t.members?.length,
+        memberCountField: t.member_count,
+        hasMembersArray: !!t.members,
+        membersData: t.members
+      })));
       return teams as unknown as EnhancedTeam[];
     } catch (error) {
       console.error('UnifiedTeamService.getTeams error:', error);

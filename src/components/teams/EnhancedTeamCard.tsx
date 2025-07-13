@@ -36,6 +36,7 @@ interface EnhancedTeamCardProps {
     performance_score?: number;
     location_id?: string;
     created_at: string;
+    member_count?: number;
     location?: {
       name: string;
       city?: string;
@@ -48,6 +49,16 @@ interface EnhancedTeamCardProps {
 }
 
 export function EnhancedTeamCard({ team, onViewDetails, onManage }: EnhancedTeamCardProps) {
+  // Debug logging for Step 1: Fix Member Count Display
+  console.log(`🔍 ENHANCEDTEAMCARD DEBUG: Team "${team.name}":`, {
+    teamId: team.id,
+    members: team.members,
+    membersLength: team.members?.length,
+    memberCount: team.member_count,
+    performanceScore: team.performance_score,
+    hasMembersArray: !!team.members
+  });
+  
   const memberCount = team.members?.length || 0;
   const activeMembers = team.members?.filter(m => m.status === 'active').length || 0;
   const performanceScore = team.performance_score || 85;
