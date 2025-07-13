@@ -156,12 +156,50 @@ export class UnifiedTeamService {
             } : undefined
           }));
 
-          return {
+          const team = {
             ...assignment.teams,
             location: assignment.teams.locations ? { name: assignment.teams.locations.name } : null,
             member_count: members.length,
             members: members
           };
+
+          // Add provider assignment data for AP teams
+          try {
+            const { data: providerAssignments, error: providerError } = await supabase
+              .from('provider_team_assignments')
+              .select(`
+                assignment_role,
+                status,
+                authorized_providers!inner (
+                  id,
+                  name,
+                  provider_type,
+                  status
+                )
+              `)
+              .eq('team_id', assignment.team_id)
+              .eq('status', 'active')
+              .order('created_at', { ascending: false })
+              .limit(1);
+
+            if (!providerError && providerAssignments && providerAssignments.length > 0) {
+              const providerAssignment = providerAssignments[0];
+              const provider = providerAssignment.authorized_providers;
+              
+              team.provider = {
+                id: provider.id,
+                name: provider.name,
+                provider_type: provider.provider_type,
+                status: provider.status,
+                assignment_role: providerAssignment.assignment_role,
+                assignment_status: providerAssignment.status
+              };
+            }
+          } catch (error) {
+            console.error(`Error fetching provider assignment for team ${assignment.team_id}:`, error);
+          }
+
+          return team;
         }));
 
         console.log(`🔍 UNIFIEDTEAMSERVICE: Found ${teams.length} teams for AP user (provider-filtered)`);
@@ -229,12 +267,50 @@ export class UnifiedTeamService {
           } : undefined
         }));
 
-        return {
+        const enhancedTeam = {
           ...team,
           location: team.locations ? { name: team.locations.name } : null,
           member_count: members.length,
           members: members
         };
+
+        // Add provider assignment data for SA/AD teams
+        try {
+          const { data: providerAssignments, error: providerError } = await supabase
+            .from('provider_team_assignments')
+            .select(`
+              assignment_role,
+              status,
+              authorized_providers!inner (
+                id,
+                name,
+                provider_type,
+                status
+              )
+            `)
+            .eq('team_id', team.id)
+            .eq('status', 'active')
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          if (!providerError && providerAssignments && providerAssignments.length > 0) {
+            const providerAssignment = providerAssignments[0];
+            const provider = providerAssignment.authorized_providers;
+            
+            enhancedTeam.provider = {
+              id: provider.id,
+              name: provider.name,
+              provider_type: provider.provider_type,
+              status: provider.status,
+              assignment_role: providerAssignment.assignment_role,
+              assignment_status: providerAssignment.status
+            };
+          }
+        } catch (error) {
+          console.error(`Error fetching provider assignment for team ${team.id}:`, error);
+        }
+
+        return enhancedTeam;
       }));
 
       const data = teamsWithMembers;
