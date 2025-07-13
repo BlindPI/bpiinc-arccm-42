@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/contexts/AuthContext';
 import { UnifiedTeamService } from '@/services/team/unifiedTeamService';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Users, 
   Building2, 
@@ -80,19 +81,113 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
     refetchInterval: 300000,
   });
 
-  // Legacy team metrics for backward compatibility
+  // Enhanced team metrics with real Phase 3 data
   const { data: teamMetrics } = useQuery({
-    queryKey: ['team-metrics'],
+    queryKey: ['team-metrics', user?.id],
     queryFn: async () => {
+      if (!teams || teams.length === 0) {
+        return {
+          totalMembers: 0,
+          activeBulkOps: 0,
+          upcomingBookings: 0,
+          teamMembers: [],
+          teamRoles: {},
+          instructorCounts: { IC: 0, IP: 0, IT: 0, AP: 0 }
+        };
+      }
+
+      // Get detailed team members with roles and availability
+      let allMembers: any[] = [];
+      let totalBookings = 0;
+      const roleBreakdown = { IC: 0, IP: 0, IT: 0, AP: 0 };
+
+      for (const team of teams) {
+        try {
+          // Get team members - simplified query to avoid join syntax issues
+          const { data: members, error } = await supabase
+            .from('team_members')
+            .select('id, user_id, role, status')
+            .eq('team_id', team.id)
+            .eq('status', 'active');
+
+          if (error) {
+            console.error('Error fetching team members:', error);
+            continue;
+          }
+
+          // Get profile data separately to avoid join issues
+          const memberProfiles = await Promise.all(
+            (members || []).map(async (member) => {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('id, display_name, email, role, status')
+                .eq('id', member.user_id)
+                .single();
+              
+              return {
+                ...member,
+                team_role: member.role,
+                profiles: profile
+              };
+            })
+          );
+
+          // Process members and count roles
+          const processedMembers = memberProfiles.map(member => {
+            // Handle the case where the query might fail due to syntax issues
+            const profile = Array.isArray(member.profiles) ? member.profiles[0] : member.profiles;
+            const userRole = profile?.role;
+            
+            if (userRole && ['IC', 'IP', 'IT', 'AP'].includes(userRole)) {
+              roleBreakdown[userRole as keyof typeof roleBreakdown]++;
+            }
+
+            return {
+              id: member.id,
+              user_id: member.user_id,
+              team_role: member.team_role,
+              status: member.status,
+              joined_at: new Date().toISOString(), // Use current date as fallback
+              profiles: profile,
+              teamName: team.name,
+              teamId: team.id,
+              availability: 'available' // Placeholder - could be enhanced with real availability data
+            };
+          });
+
+          allMembers = [...allMembers, ...processedMembers];
+
+          // Get upcoming bookings for this team
+          const { count: bookingCount } = await supabase
+            .from('availability_bookings')
+            .select('*', { count: 'exact', head: true })
+            .eq('team_id', team.id)
+            .gte('booking_date', new Date().toISOString().split('T')[0])
+            .eq('status', 'scheduled');
+
+          totalBookings += bookingCount || 0;
+        } catch (error) {
+          console.error(`Error processing team ${team.id}:`, error);
+        }
+      }
+
+      // Get active bulk operations
+      const { count: bulkOpsCount } = await supabase
+        .from('bulk_operation_queue')
+        .select('*', { count: 'exact', head: true })
+        .in('status', ['pending', 'processing']);
+
       return {
-        totalMembers: teams?.length || 0,
-        activeBulkOps: 0,
-        upcomingBookings: 0,
-        teamMembers: [],
-        teamRoles: {}
+        totalMembers: allMembers.length,
+        activeBulkOps: bulkOpsCount || 0,
+        upcomingBookings: totalBookings,
+        teamMembers: allMembers,
+        teamRoles: roleBreakdown,
+        instructorCounts: roleBreakdown
       };
     },
-    enabled: !!teams
+    enabled: !!teams && !!user?.id,
+    refetchInterval: 300000, // Refresh every 5 minutes
   });
 
   // Filter teams based on search and filters
@@ -110,9 +205,20 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
     });
   }, [teams, searchTerm, selectedFilters]);
 
-  // Get user's team ID (for now, using a default team concept)
-  const teamId = 'default-team';
-  const teamMembersFormatted = [];
+  // Get user's primary team and formatted members for BulkSchedulingPanel
+  const teamId = teams && teams.length > 0 ? teams[0].id : 'default-team';
+  const teamMembersFormatted = teamMetrics?.teamMembers?.map(member => ({
+    userId: member.user_id,
+    userName: member.profiles?.display_name || member.profiles?.email || 'Unknown',
+    userRole: member.profiles?.role || 'member',
+    // Additional fields for enhanced display
+    email: member.profiles?.email || '',
+    teamRole: member.team_role,
+    status: member.status,
+    availability: member.availability || 'available',
+    joinedAt: member.joined_at,
+    teamName: member.teamName
+  })) || [];
 
   const isManager = permissions.canManageTeams;
 
@@ -292,7 +398,7 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
         )}
       </div>
 
-      {/* Analytics Overview - for admin users only */}
+      {/* Analytics Overview - Enhanced with Phase 3 data */}
       {(permissions.isSystemAdmin || permissions.isAdmin) && analytics && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
@@ -302,15 +408,21 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
                 <span className="text-sm font-medium">Total Teams</span>
               </div>
               <p className="text-2xl font-bold mt-1">{analytics.totalTeams}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {filteredTeams.filter(t => t.status === 'active').length} active
+              </p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-green-600" />
-                <span className="text-sm font-medium">Total Members</span>
+                <span className="text-sm font-medium">Team Members</span>
               </div>
-              <p className="text-2xl font-bold mt-1">{analytics.totalMembers}</p>
+              <p className="text-2xl font-bold mt-1">{teamMetrics?.totalMembers || 0}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Across {teams.length} teams
+              </p>
             </CardContent>
           </Card>
           <Card>
@@ -321,6 +433,9 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
               </div>
               <p className="text-2xl font-bold mt-1">
                 {Math.round(analytics.averagePerformance)}%
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {teamMetrics?.activeBulkOps || 0} active operations
               </p>
             </CardContent>
           </Card>
@@ -333,9 +448,37 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
               <p className="text-2xl font-bold mt-1">
                 {Math.round(complianceMetrics?.overallCompliance || 0)}%
               </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {teamMetrics?.upcomingBookings || 0} scheduled events
+              </p>
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Instructor Role Breakdown - Enhanced Phase 3 feature */}
+      {teamMetrics?.instructorCounts && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserCheck className="h-5 w-5" />
+              Instructor Role Distribution
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {Object.entries(teamMetrics.instructorCounts).map(([role, count]) => (
+                <div key={role} className="text-center">
+                  <div className={`inline-flex px-3 py-2 rounded-full text-sm font-medium ${getRoleColor(role)}`}>
+                    {role}
+                  </div>
+                  <p className="text-2xl font-bold mt-2">{count}</p>
+                  <p className="text-xs text-muted-foreground">{getRoleLabel(role)}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Team Management Tabs */}
@@ -384,7 +527,25 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
             </CardHeader>
             <CardContent>
               {isManager ? (
-                <BulkSchedulingPanel teamId={teamId} teamMembers={teamMembersFormatted} />
+                <div className="space-y-4">
+                  {/* Team member summary */}
+                  <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                    <div>
+                      <h4 className="font-medium">Available Team Members</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {teamMembersFormatted.length} members across selected teams
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {Object.entries(teamMetrics?.instructorCounts || {}).map(([role, count]) => (
+                        <Badge key={role} variant="outline" className="text-xs">
+                          {role}: {count}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  <BulkSchedulingPanel teamId={teamId} teamMembers={teamMembersFormatted} />
+                </div>
               ) : (
                 <div className="text-center py-8">
                   <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
