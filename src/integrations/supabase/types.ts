@@ -2135,6 +2135,120 @@ export type Database = {
           },
         ]
       }
+      calendar_operations: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_log: Json | null
+          file_name: string | null
+          file_path: string | null
+          id: string
+          operation_type: string
+          processed_count: number | null
+          settings: Json | null
+          started_at: string | null
+          status: string | null
+          total_count: number | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_log?: Json | null
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          operation_type: string
+          processed_count?: number | null
+          settings?: Json | null
+          started_at?: string | null
+          status?: string | null
+          total_count?: number | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_log?: Json | null
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          operation_type?: string
+          processed_count?: number | null
+          settings?: Json | null
+          started_at?: string | null
+          status?: string | null
+          total_count?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      calendar_sync_events: {
+        Row: {
+          availability_booking_id: string | null
+          conflict_data: Json | null
+          created_at: string
+          event_end: string
+          event_start: string
+          event_title: string | null
+          external_calendar_id: string | null
+          external_event_id: string
+          id: string
+          integration_id: string
+          last_synced_at: string | null
+          sync_direction: string | null
+          sync_status: string | null
+          updated_at: string
+        }
+        Insert: {
+          availability_booking_id?: string | null
+          conflict_data?: Json | null
+          created_at?: string
+          event_end: string
+          event_start: string
+          event_title?: string | null
+          external_calendar_id?: string | null
+          external_event_id: string
+          id?: string
+          integration_id: string
+          last_synced_at?: string | null
+          sync_direction?: string | null
+          sync_status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          availability_booking_id?: string | null
+          conflict_data?: Json | null
+          created_at?: string
+          event_end?: string
+          event_start?: string
+          event_title?: string | null
+          external_calendar_id?: string | null
+          external_event_id?: string
+          id?: string
+          integration_id?: string
+          last_synced_at?: string | null
+          sync_direction?: string | null
+          sync_status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_sync_events_availability_booking_id_fkey"
+            columns: ["availability_booking_id"]
+            isOneToOne: false
+            referencedRelation: "availability_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_sync_events_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "external_calendar_integrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_metrics: {
         Row: {
           bounce_rate: number | null
@@ -9662,6 +9776,57 @@ export type Database = {
           },
         ]
       }
+      external_calendar_integrations: {
+        Row: {
+          access_token: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          last_sync_at: string | null
+          provider_email: string
+          provider_type: string
+          refresh_token: string | null
+          sync_enabled: boolean
+          sync_settings: Json | null
+          sync_status: string | null
+          token_expires_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          last_sync_at?: string | null
+          provider_email: string
+          provider_type: string
+          refresh_token?: string | null
+          sync_enabled?: boolean
+          sync_settings?: Json | null
+          sync_status?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          last_sync_at?: string | null
+          provider_email?: string
+          provider_type?: string
+          refresh_token?: string | null
+          sync_enabled?: boolean
+          sync_settings?: Json | null
+          sync_status?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       file_attachments: {
         Row: {
           download_count: number | null
@@ -10461,6 +10626,84 @@ export type Database = {
           search_vector?: unknown | null
           sender_id?: string | null
           tags?: string[] | null
+        }
+        Relationships: []
+      }
+      notification_delivery_log: {
+        Row: {
+          content_summary: string | null
+          created_at: string
+          delivered_at: string | null
+          delivery_address: string | null
+          delivery_method: string
+          error_message: string | null
+          id: string
+          message_id: string | null
+          notification_type: string
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          content_summary?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          delivery_address?: string | null
+          delivery_method: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          notification_type: string
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          content_summary?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          delivery_address?: string | null
+          delivery_method?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          notification_type?: string
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          delivery_address: string | null
+          delivery_method: string
+          enabled: boolean
+          id: string
+          notification_type: string
+          settings: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_address?: string | null
+          delivery_method: string
+          enabled?: boolean
+          id?: string
+          notification_type: string
+          settings?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delivery_address?: string | null
+          delivery_method?: string
+          enabled?: boolean
+          id?: string
+          notification_type?: string
+          settings?: Json | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -17439,6 +17682,62 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      webhook_configurations: {
+        Row: {
+          created_at: string
+          event_types: string[]
+          headers: Json | null
+          id: string
+          is_active: boolean
+          last_triggered_at: string | null
+          retry_config: Json | null
+          secret_key: string | null
+          team_id: string | null
+          updated_at: string
+          user_id: string | null
+          webhook_name: string
+          webhook_url: string
+        }
+        Insert: {
+          created_at?: string
+          event_types: string[]
+          headers?: Json | null
+          id?: string
+          is_active?: boolean
+          last_triggered_at?: string | null
+          retry_config?: Json | null
+          secret_key?: string | null
+          team_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+          webhook_name: string
+          webhook_url: string
+        }
+        Update: {
+          created_at?: string
+          event_types?: string[]
+          headers?: Json | null
+          id?: string
+          is_active?: boolean
+          last_triggered_at?: string | null
+          retry_config?: Json | null
+          secret_key?: string | null
+          team_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+          webhook_name?: string
+          webhook_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_configurations_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       webhook_events: {
         Row: {
