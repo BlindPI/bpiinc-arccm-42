@@ -15,7 +15,7 @@ import { LocationTable } from '@/components/LocationTable';
 import { LocationForm } from '@/components/LocationForm';
 import { RosterManagement } from '@/components/rosters/RosterManagement';
 import { CourseScheduler } from '@/components/courses/CourseScheduler';
-import { ScheduleCalendarView } from '@/components/scheduling/ScheduleCalendarView';
+import { CalendarSchedulingView } from '@/components/scheduling/CalendarSchedulingView';
 import { ConflictDetector } from '@/components/scheduling/ConflictDetector';
 import { SchedulingRecommendations } from '@/components/scheduling/SchedulingRecommendations';
 import { ResourceAvailability } from '@/components/scheduling/ResourceAvailability';
@@ -609,12 +609,7 @@ export default function TrainingHub() {
               </TabsList>
 
               <TabsContent value="calendar" className="space-y-4">
-                <ScheduleCalendarView
-                  schedules={schedules || []}
-                  selectedDate={selectedDate}
-                  onDateSelect={setSelectedDate}
-                  onScheduleClick={(schedule) => console.log('Schedule clicked:', schedule)}
-                />
+                <CalendarSchedulingView />
               </TabsContent>
 
               <TabsContent value="conflicts" className="space-y-4">

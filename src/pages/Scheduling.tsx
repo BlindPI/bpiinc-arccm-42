@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BulkSchedulingPanel } from '@/components/team/BulkSchedulingPanel';
-import { ScheduleCalendarView } from '@/components/scheduling/ScheduleCalendarView';
+import { CalendarSchedulingView } from '@/components/scheduling/CalendarSchedulingView';
 import { ConflictDetector } from '@/components/scheduling/ConflictDetector';
 import { ResourceAvailability } from '@/components/scheduling/ResourceAvailability';
+import { CalendarSyncSetup } from '@/components/integration/CalendarSyncSetup';
 import { 
   Calendar, 
   Clock, 
@@ -144,32 +145,30 @@ export default function Scheduling() {
         </Card>
       </div>
 
-      {/* Main Content Grid */}
+      {/* Unified Calendar View - Replaces separate calendar and resource sections */}
+      <CalendarSchedulingView />
+
+      {/* Secondary Features Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Calendar View */}
+        {/* Calendar Integration */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
-              Schedule Calendar
+              Calendar Integration
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ScheduleCalendarView 
-              schedules={[]}
-              selectedDate={selectedDate}
-              onDateSelect={setSelectedDate}
-              onScheduleClick={() => {}}
-            />
+            <CalendarSyncSetup />
           </CardContent>
         </Card>
 
-        {/* Resource Availability */}
+        {/* Resource Availability Summary */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Resource Availability
+              Resource Summary
             </CardTitle>
           </CardHeader>
           <CardContent>
