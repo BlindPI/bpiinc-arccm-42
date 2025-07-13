@@ -116,14 +116,14 @@ export class RealEnterpriseTeamService {
         )
       `)
       .eq('team_id', teamId)
-      .order('joined_at', { ascending: false });
+      .order('assignment_start_date', { ascending: false });
 
     if (error) throw error;
     
     // Map the data to ensure all required properties are present
     return (data || []).map((member: any) => ({
       ...member,
-      joined_at: member.joined_at || member.created_at || new Date().toISOString(),
+      joined_at: member.assignment_start_date || member.created_at || new Date().toISOString(),
       last_activity: member.last_activity || member.updated_at || new Date().toISOString(),
       permissions: Array.isArray(member.permissions) ? member.permissions : []
     })) as TeamMemberWithProfile[];
@@ -215,7 +215,7 @@ export class RealEnterpriseTeamService {
         user_id: userId,
         role,
         status: 'active',
-        joined_at: new Date().toISOString()
+        assignment_start_date: new Date().toISOString()
       });
 
     if (error) throw error;

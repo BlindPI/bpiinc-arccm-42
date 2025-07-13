@@ -31,6 +31,7 @@ import {
   Activity
 } from 'lucide-react';
 import { RealEnterpriseTeamService, TeamMemberWithProfile } from '@/services/team/realEnterpriseTeamService';
+import { UserActivityService } from '@/services/team/userActivityService';
 import { 
   Dialog, 
   DialogContent, 
@@ -63,6 +64,13 @@ export function EnhancedMemberTable({
   const { data: members = [], isLoading } = useQuery({
     queryKey: ['team-members', teamId],
     queryFn: () => RealEnterpriseTeamService.getTeamMembers(teamId)
+  });
+
+  // Get enhanced activity data for members
+  const { data: activityData = {} } = useQuery({
+    queryKey: ['member-activity', members.map(m => m.user_id)],
+    queryFn: () => UserActivityService.getBulkUserActivity(members.map(m => m.user_id)),
+    enabled: members.length > 0
   });
 
   const updateRoleMutation = useMutation({
@@ -229,9 +237,9 @@ export function EnhancedMemberTable({
                   {new Date(member.joined_at).toLocaleDateString()}
                 </TableCell>
                 <TableCell>
-                  {member.last_activity ? 
-                    new Date(member.last_activity).toLocaleDateString() : 
-                    'Never'
+                  {activityData[member.user_id]?.lastLogin ? 
+                    new Date(activityData[member.user_id].lastLogin).toLocaleDateString() : 
+                    (member.last_activity ? new Date(member.last_activity).toLocaleDateString() : 'Never')
                   }
                 </TableCell>
                 <TableCell>
@@ -423,16 +431,30 @@ export function EnhancedMemberTable({
                   <p className="text-xs text-muted-foreground">System generated</p>
                 </div>
               </div>
-              {activityMember?.last_activity && (
-                <div className="flex items-center gap-3 p-3 border rounded-lg">
-                  <Users className="h-4 w-4 text-purple-600" />
-                  <div>
-                    <p className="text-sm font-medium">Last active</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(activityMember.last_activity).toLocaleDateString()}
-                    </p>
+              {activityMember && activityData[activityMember.user_id] && (
+                <>
+                  <div className="flex items-center gap-3 p-3 border rounded-lg">
+                    <Users className="h-4 w-4 text-purple-600" />
+                    <div>
+                      <p className="text-sm font-medium">Last login</p>
+                      <p className="text-xs text-muted-foreground">
+                        {activityData[activityMember.user_id].lastLogin 
+                          ? new Date(activityData[activityMember.user_id].lastLogin!).toLocaleDateString()
+                          : 'Never'
+                        }
+                      </p>
+                    </div>
                   </div>
-                </div>
+                  <div className="flex items-center gap-3 p-3 border rounded-lg">
+                    <Activity className="h-4 w-4 text-orange-600" />
+                    <div>
+                      <p className="text-sm font-medium">Total sessions: {activityData[activityMember.user_id].loginCount}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Avg duration: {activityData[activityMember.user_id].activitySummary.averageSessionDuration}
+                      </p>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
             <div className="flex justify-end">
