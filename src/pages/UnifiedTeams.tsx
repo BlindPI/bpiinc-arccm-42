@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
 import { ActivityAnalyticsDashboard } from '@/components/analytics/ActivityAnalyticsDashboard';
 import { ActivityCacheManager } from '@/components/performance/ActivityCacheManager';
+import { SystemVerificationDashboard } from '@/components/verification/SystemVerificationDashboard';
 import { UnifiedTeamService } from '@/services/team/unifiedTeamService';
 import { 
   Users, 
@@ -325,11 +326,12 @@ export default function UnifiedTeams() {
 
       {/* Role-Adaptive Interface */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Teams Overview</TabsTrigger>
           <TabsTrigger value="management">Team Management</TabsTrigger>
           <TabsTrigger value="analytics">Activity Analytics</TabsTrigger>
           <TabsTrigger value="performance">Performance Monitor</TabsTrigger>
+          <TabsTrigger value="verification">System Verification</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -346,6 +348,10 @@ export default function UnifiedTeams() {
 
         <TabsContent value="performance" className="space-y-6">
           <ActivityCacheManager />
+        </TabsContent>
+
+        <TabsContent value="verification" className="space-y-6">
+          <SystemVerificationDashboard />
         </TabsContent>
       </Tabs>
 
