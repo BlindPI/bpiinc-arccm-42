@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/contexts/AuthContext';
+import { useActivityTracker } from '@/hooks/useActivityTracker';
 import { UnifiedTeamService } from '@/services/team/unifiedTeamService';
 import { 
   Users, 
@@ -32,6 +33,7 @@ import { MemberTeamInterface } from '@/components/team/unified/MemberTeamInterfa
 export default function UnifiedTeams() {
   const { user } = useAuth();
   const { role, permissions, isLoading: roleLoading } = useUserRole();
+  const { trackTeamAction, trackCustomActivity } = useActivityTracker();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedFilters, setSelectedFilters] = useState({
@@ -252,7 +254,15 @@ export default function UnifiedTeams() {
           <Input
             placeholder="Search teams..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              if (e.target.value) {
+                trackCustomActivity('team_search', 'navigation', { 
+                  search_term: e.target.value,
+                  results_count: filteredTeams.length 
+                });
+              }
+            }}
             className="pl-8"
           />
         </div>

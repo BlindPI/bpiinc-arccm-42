@@ -114,22 +114,18 @@ export class UserActivityService {
   }
 
   /**
-   * Update daily activity metrics
+   * Update daily activity metrics using database function
    */
   static async updateActivityMetrics(userId: string, activityType: string): Promise<void> {
     try {
       const today = new Date().toISOString().split('T')[0];
       
-      // Insert activity metrics using correct schema fields
-      const { error } = await supabase
-        .from('user_activity_metrics')
-        .upsert({
-          user_id: userId,
-          activity_date: today,
-          activity_type: activityType,
-          activity_count: 1,
-          metadata: { [activityType]: 1 }
-        });
+      // Use the database function to update activity metrics
+      const { error } = await supabase.rpc('update_user_activity_metrics', {
+        p_user_id: userId,
+        p_activity_date: today,
+        p_activity_type: activityType
+      });
 
       if (error) {
         console.warn('Could not update activity metrics:', error);

@@ -20427,6 +20427,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      update_user_activity_metrics: {
+        Args: {
+          p_user_id: string
+          p_activity_date: string
+          p_activity_type: string
+        }
+        Returns: undefined
+      }
       upload_compliance_document: {
         Args: {
           p_user_id: string
