@@ -235,7 +235,7 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
   const getRoleLabel = (role: string) => {
     const labels = {
       'IC': 'Certified Instructor',
-      'IP': 'Instructor Provisional',
+      'IP': 'Provisional Instructor',
       'IT': 'Instructor Trainer', 
       'AP': 'Authorized Provider'
     };
