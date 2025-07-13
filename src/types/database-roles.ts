@@ -22,8 +22,13 @@ export const ROLE_HIERARCHY: Record<DatabaseUserRole, number> = {
   IN: 1  // Lowest
 };
 
+export const TEAM_CREATION_ROLES: DatabaseUserRole[] = ['SA', 'AD'];
 export const TEAM_MANAGEMENT_ROLES: DatabaseUserRole[] = ['SA', 'AD', 'AP'];
 export const INSTRUCTOR_ROLES: DatabaseUserRole[] = ['IC', 'IP', 'IT', 'IN'];
+
+export function canCreateTeams(role: DatabaseUserRole): boolean {
+  return TEAM_CREATION_ROLES.includes(role);
+}
 
 export function canManageTeams(role: DatabaseUserRole): boolean {
   return TEAM_MANAGEMENT_ROLES.includes(role);

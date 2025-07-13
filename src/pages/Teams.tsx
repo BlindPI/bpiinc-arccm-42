@@ -280,7 +280,7 @@ export default function Teams() {
           />
         </div>
         
-        {permissions.canManageTeams && (
+        {permissions.canCreateTeams && (
           <Button className="gap-2" onClick={handleCreateTeam}>
             <Plus className="h-4 w-4" />
             Create Team
@@ -311,7 +311,7 @@ export default function Teams() {
                 : 'You are not currently assigned to any teams.'
               }
             </p>
-            {permissions.canManageTeams && (
+            {permissions.canCreateTeams && (
               <Button className="gap-2" onClick={handleCreateTeam}>
                 <Plus className="h-4 w-4" />
                 Create Your First Team

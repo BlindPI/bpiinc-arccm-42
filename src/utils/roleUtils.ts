@@ -78,6 +78,14 @@ export const canReviewRequest = (
 };
 
 /**
+ * Check if user can create teams (SA/AD only)
+ */
+export const canCreateTeams = (role: DatabaseUserRole | undefined): boolean => {
+  if (!role) return false;
+  return role === 'SA' || role === 'AD';
+};
+
+/**
  * Get team management permissions based on role
  */
 export const getTeamManagementPermissions = (role: DatabaseUserRole | undefined) => {
@@ -86,7 +94,7 @@ export const getTeamManagementPermissions = (role: DatabaseUserRole | undefined)
   const hierarchy = ROLE_HIERARCHY[role];
   
   return {
-    canCreate: hierarchy >= ROLE_HIERARCHY['AP'], // AP and above
+    canCreate: canCreateTeams(role), // Only SA and AD can create teams
     canEdit: hierarchy >= ROLE_HIERARCHY['AP'],
     canDelete: hierarchy >= ROLE_HIERARCHY['AD'], // AD and above
     canManageMembers: hierarchy >= ROLE_HIERARCHY['AP']

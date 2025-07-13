@@ -3,13 +3,14 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import type { DatabaseUserRole } from '@/types/database-roles';
-import { canManageTeams, canManageMembers, hasEnterpriseAccess } from '@/types/database-roles';
+import { canCreateTeams, canManageTeams, canManageMembers, hasEnterpriseAccess } from '@/types/database-roles';
 
 export function useUserRole() {
   const { user } = useAuth();
   const { data: profile, isLoading } = useProfile();
   
   const [permissions, setPermissions] = useState({
+    canCreateTeams: false,
     canManageTeams: false,
     canManageMembers: false,
     hasEnterpriseAccess: false,
@@ -22,6 +23,7 @@ export function useUserRole() {
       const role = profile.role as DatabaseUserRole;
       
       setPermissions({
+        canCreateTeams: canCreateTeams(role),
         canManageTeams: canManageTeams(role),
         canManageMembers: canManageMembers(role),
         hasEnterpriseAccess: hasEnterpriseAccess(role),
