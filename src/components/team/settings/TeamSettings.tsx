@@ -312,9 +312,9 @@ export function TeamSettings({ team, canEdit, onUpdate }: TeamSettingsProps) {
               <p className="text-sm">
                 {team.provider?.provider_name || team.provider?.name || 'No provider assigned'}
               </p>
-              {team.provider?.provider_type && (
+              {team.provider?.name && (
                 <Badge variant="outline" className="mt-1">
-                  {team.provider.provider_type}
+                  {team.provider.name}
                 </Badge>
               )}
             </div>
