@@ -91,8 +91,8 @@ export function useUserAvailability() {
         const { data, error } = await supabase
           .from('user_availability')
           .insert({
-            ...availabilityData,
-            user_id: user?.id
+            ...availabilityData as Omit<AvailabilityInsert, 'user_id'>,
+            user_id: user?.id!
           })
           .select()
           .single();

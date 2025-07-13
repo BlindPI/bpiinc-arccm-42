@@ -91,8 +91,17 @@ export function WeeklyAvailabilityGrid({ availability }: WeeklyAvailabilityGridP
   const handleSave = async () => {
     try {
       const data = editingSlot 
-        ? { ...formData, id: editingSlot.id }
-        : formData;
+        ? { 
+            ...formData, 
+            id: editingSlot.id,
+            day_of_week: formData.day_of_week as Database['public']['Enums']['day_of_week'],
+            availability_type: formData.availability_type as Database['public']['Enums']['availability_type']
+          }
+        : {
+            ...formData,
+            day_of_week: formData.day_of_week as Database['public']['Enums']['day_of_week'],
+            availability_type: formData.availability_type as Database['public']['Enums']['availability_type']
+          };
       
       await saveAvailability.mutateAsync(data);
       setIsDialogOpen(false);
