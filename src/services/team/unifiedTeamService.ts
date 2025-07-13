@@ -108,8 +108,7 @@ export class UnifiedTeamService {
             status,
             teams!inner (
               *,
-              locations (name, address),
-              team_members!team_id (id, status)
+              locations (name, address)
             )
           `)
           .eq('provider_id', providerData.id)
@@ -120,12 +119,50 @@ export class UnifiedTeamService {
           return [];
         }
 
-        const teams = (assignmentData || [])
-          .map((assignment: any) => ({
+        // For each team, get members with profiles
+        const teams = await Promise.all((assignmentData || []).map(async (assignment: any) => {
+          const { data: membersData, error: memberError } = await supabase
+            .from('team_members')
+            .select(`
+              id,
+              user_id,
+              role,
+              status,
+              joined_at,
+              profiles!inner (
+                id,
+                display_name,
+                email,
+                role
+              )
+            `)
+            .eq('team_id', assignment.team_id)
+            .eq('status', 'active');
+
+          if (memberError) {
+            console.error(`Error fetching members for team ${assignment.team_id}:`, memberError);
+          }
+
+          const members = (membersData || []).map((member: any) => ({
+            id: member.id,
+            user_id: member.user_id,
+            role: member.role,
+            status: member.status,
+            joined_at: member.joined_at,
+            user: member.profiles ? {
+              display_name: member.profiles.display_name,
+              email: member.profiles.email,
+              role: member.profiles.role
+            } : undefined
+          }));
+
+          return {
             ...assignment.teams,
             location: assignment.teams.locations ? { name: assignment.teams.locations.name } : null,
-            member_count: (assignment.teams.team_members || []).filter((m: any) => m.status === 'active').length
-          }));
+            member_count: members.length,
+            members: members
+          };
+        }));
 
         console.log(`🔍 UNIFIEDTEAMSERVICE: Found ${teams.length} teams for AP user (provider-filtered)`);
         return teams as unknown as EnhancedTeam[];
@@ -147,26 +184,52 @@ export class UnifiedTeamService {
         throw teamsError;
       }
 
-      // Then get member counts for each team
-      const teamsWithMemberCounts = await Promise.all((teamsData || []).map(async (team: any) => {
-        const { count, error: memberError } = await supabase
+      // Then get members and their profiles for each team
+      const teamsWithMembers = await Promise.all((teamsData || []).map(async (team: any) => {
+        const { data: membersData, error: memberError } = await supabase
           .from('team_members')
-          .select('*', { count: 'exact', head: true })
+          .select(`
+            id,
+            user_id,
+            role,
+            status,
+            joined_at,
+            profiles!inner (
+              id,
+              display_name,
+              email,
+              role
+            )
+          `)
           .eq('team_id', team.id)
           .eq('status', 'active');
 
         if (memberError) {
-          console.error(`Error fetching member count for team ${team.id}:`, memberError);
+          console.error(`Error fetching members for team ${team.id}:`, memberError);
         }
+
+        const members = (membersData || []).map((member: any) => ({
+          id: member.id,
+          user_id: member.user_id,
+          role: member.role,
+          status: member.status,
+          joined_at: member.joined_at,
+          user: member.profiles ? {
+            display_name: member.profiles.display_name,
+            email: member.profiles.email,
+            role: member.profiles.role
+          } : undefined
+        }));
 
         return {
           ...team,
           location: team.locations ? { name: team.locations.name } : null,
-          member_count: count || 0
+          member_count: members.length,
+          members: members
         };
       }));
 
-      const data = teamsWithMemberCounts;
+      const data = teamsWithMembers;
 
       // Teams already have member_count calculated
       const teams = data;
