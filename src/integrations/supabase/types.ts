@@ -1331,9 +1331,12 @@ export type Database = {
       }
       availability_bookings: {
         Row: {
+          approval_date: string | null
+          approved_by: string | null
           billable_hours: number | null
           booking_date: string
           booking_type: Database["public"]["Enums"]["booking_type"]
+          bulk_operation_id: string | null
           course_id: string | null
           course_offering_id: string | null
           created_at: string
@@ -1342,16 +1345,21 @@ export type Database = {
           end_time: string
           hours_credited: number | null
           id: string
+          requires_approval: boolean | null
           start_time: string
           status: string
+          team_id: string | null
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          approval_date?: string | null
+          approved_by?: string | null
           billable_hours?: number | null
           booking_date: string
           booking_type: Database["public"]["Enums"]["booking_type"]
+          bulk_operation_id?: string | null
           course_id?: string | null
           course_offering_id?: string | null
           created_at?: string
@@ -1360,16 +1368,21 @@ export type Database = {
           end_time: string
           hours_credited?: number | null
           id?: string
+          requires_approval?: boolean | null
           start_time: string
           status?: string
+          team_id?: string | null
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          approval_date?: string | null
+          approved_by?: string | null
           billable_hours?: number | null
           booking_date?: string
           booking_type?: Database["public"]["Enums"]["booking_type"]
+          bulk_operation_id?: string | null
           course_id?: string | null
           course_offering_id?: string | null
           created_at?: string
@@ -1378,13 +1391,22 @@ export type Database = {
           end_time?: string
           hours_credited?: number | null
           id?: string
+          requires_approval?: boolean | null
           start_time?: string
           status?: string
+          team_id?: string | null
           title?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "availability_bookings_bulk_operation_id_fkey"
+            columns: ["bulk_operation_id"]
+            isOneToOne: false
+            referencedRelation: "bulk_operation_queue"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "availability_bookings_course_id_fkey"
             columns: ["course_id"]
@@ -1442,6 +1464,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "availability_bookings_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "availability_bookings_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -1470,6 +1499,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      availability_change_approvals: {
+        Row: {
+          approval_reason: string | null
+          approval_status: string
+          approved_by: string | null
+          change_id: string
+          created_at: string
+          id: string
+          processed_at: string | null
+          requested_at: string
+          requested_changes: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approval_reason?: string | null
+          approval_status?: string
+          approved_by?: string | null
+          change_id: string
+          created_at?: string
+          id?: string
+          processed_at?: string | null
+          requested_at?: string
+          requested_changes: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approval_reason?: string | null
+          approval_status?: string
+          approved_by?: string | null
+          change_id?: string
+          created_at?: string
+          id?: string
+          processed_at?: string | null
+          requested_at?: string
+          requested_changes?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       availability_exceptions: {
         Row: {
@@ -1822,6 +1893,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      bulk_operation_queue: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          error_log: Json | null
+          id: string
+          operation_id: string
+          operation_type: string
+          processed_count: number | null
+          scheduled_data: Json
+          started_at: string | null
+          status: string
+          target_users: string[]
+          total_count: number
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_log?: Json | null
+          id?: string
+          operation_id: string
+          operation_type: string
+          processed_count?: number | null
+          scheduled_data?: Json
+          started_at?: string | null
+          status?: string
+          target_users: string[]
+          total_count: number
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_log?: Json | null
+          id?: string
+          operation_id?: string
+          operation_type?: string
+          processed_count?: number | null
+          scheduled_data?: Json
+          started_at?: string | null
+          status?: string
+          target_users?: string[]
+          total_count?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       bulk_operations: {
         Row: {
@@ -14552,6 +14674,47 @@ export type Database = {
           },
         ]
       }
+      team_availability_permissions: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          granted_by: string | null
+          id: string
+          manager_id: string
+          permission_level: string
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          granted_by?: string | null
+          id?: string
+          manager_id: string
+          permission_level?: string
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          granted_by?: string | null
+          id?: string
+          manager_id?: string
+          permission_level?: string
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_availability_permissions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_bulk_operations: {
         Row: {
           completed_at: string | null
@@ -15776,6 +15939,56 @@ export type Database = {
           },
           {
             foreignKeyName: "team_permission_delegations_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_utilization_metrics: {
+        Row: {
+          active_members: number | null
+          calculated_at: string
+          created_at: string
+          id: string
+          member_count: number | null
+          metric_date: string
+          peak_hours: Json | null
+          team_id: string
+          total_available_hours: number | null
+          total_scheduled_hours: number | null
+          utilization_rate: number | null
+        }
+        Insert: {
+          active_members?: number | null
+          calculated_at?: string
+          created_at?: string
+          id?: string
+          member_count?: number | null
+          metric_date: string
+          peak_hours?: Json | null
+          team_id: string
+          total_available_hours?: number | null
+          total_scheduled_hours?: number | null
+          utilization_rate?: number | null
+        }
+        Update: {
+          active_members?: number | null
+          calculated_at?: string
+          created_at?: string
+          id?: string
+          member_count?: number | null
+          metric_date?: string
+          peak_hours?: Json | null
+          team_id?: string
+          total_available_hours?: number | null
+          total_scheduled_hours?: number | null
+          utilization_rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_utilization_metrics_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
@@ -18700,6 +18913,10 @@ export type Database = {
       }
       calculate_team_performance_metrics: {
         Args: { p_team_id: string; p_start_date: string; p_end_date: string }
+        Returns: Json
+      }
+      calculate_team_utilization_metrics: {
+        Args: { p_team_id: string; p_date: string }
         Returns: Json
       }
       calculate_user_compliance_score: {

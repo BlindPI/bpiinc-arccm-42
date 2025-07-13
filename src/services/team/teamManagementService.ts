@@ -1,365 +1,405 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { RealTeamDataService } from './realTeamDataService';
-import { RealTeamAnalyticsService } from './realTeamAnalyticsService';
-import type { EnhancedTeam, CreateTeamRequest, TeamAnalytics, Team, TeamLocationAssignment } from '@/types/team-management';
+import { Database } from '@/integrations/supabase/types';
 
-export class TeamManagementService {
-  // Enhanced Teams - No Mock Data
-  async getEnhancedTeams(): Promise<EnhancedTeam[]> {
-    const realTeams = await RealTeamDataService.getEnhancedTeams();
-    return this.convertToEnhancedTeams(realTeams);
+type TeamAvailabilityPermission = Database['public']['Tables']['team_availability_permissions']['Row'];
+type BulkOperation = Database['public']['Tables']['bulk_operation_queue']['Row'];
+type AvailabilityChangeApproval = Database['public']['Tables']['availability_change_approvals']['Row'];
+type TeamUtilizationMetric = Database['public']['Tables']['team_utilization_metrics']['Row'];
+
+export interface TeamMemberAvailability {
+  userId: string;
+  userName: string;
+  userRole: string;
+  availabilitySlots: Array<{
+    id: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    bookingType: string;
+    status: string;
+    title: string;
+  }>;
+  totalHours: number;
+  scheduledHours: number;
+  availableHours: number;
+}
+
+export interface BulkSchedulingData {
+  operationType: 'bulk_schedule' | 'bulk_update' | 'bulk_delete';
+  targetUsers: string[];
+  scheduleData: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    bookingType: string;
+    title: string;
+    description?: string;
+    requiresApproval?: boolean;
+  };
+}
+
+class TeamManagementService {
+  // Get team-wide availability for a specific date range
+  async getTeamAvailability(teamId: string, startDate: string, endDate: string): Promise<TeamMemberAvailability[]> {
+    const { data, error } = await supabase
+      .from('team_members')
+      .select(`
+        user_id,
+        role,
+        profiles!inner(display_name, role),
+        availability_bookings!inner(
+          id,
+          booking_date,
+          start_time,
+          end_time,
+          booking_type,
+          status,
+          title,
+          description
+        )
+      `)
+      .eq('team_id', teamId)
+      .eq('status', 'active')
+      .gte('availability_bookings.booking_date', startDate)
+      .lte('availability_bookings.booking_date', endDate)
+      .order('availability_bookings.booking_date', { ascending: true });
+
+    if (error) throw error;
+
+    return data.map((member: any) => {
+      const availabilitySlots = member.availability_bookings.map((booking: any) => ({
+        id: booking.id,
+        date: booking.booking_date,
+        startTime: booking.start_time,
+        endTime: booking.end_time,
+        bookingType: booking.booking_type,
+        status: booking.status,
+        title: booking.title || 'Available'
+      }));
+
+      const totalHours = availabilitySlots.reduce((total, slot) => {
+        const start = new Date(`2000-01-01T${slot.startTime}`);
+        const end = new Date(`2000-01-01T${slot.endTime}`);
+        return total + (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+      }, 0);
+
+      const scheduledHours = availabilitySlots
+        .filter(slot => slot.bookingType !== 'available')
+        .reduce((total, slot) => {
+          const start = new Date(`2000-01-01T${slot.startTime}`);
+          const end = new Date(`2000-01-01T${slot.endTime}`);
+          return total + (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+        }, 0);
+
+      return {
+        userId: member.user_id,
+        userName: member.profiles.display_name,
+        userRole: member.profiles.role,
+        availabilitySlots,
+        totalHours,
+        scheduledHours,
+        availableHours: totalHours - scheduledHours
+      };
+    });
   }
 
-  async getAllEnhancedTeams(): Promise<EnhancedTeam[]> {
-    const realTeams = await RealTeamDataService.getEnhancedTeams();
-    return this.convertToEnhancedTeams(realTeams);
+  // Grant team availability permissions to AP users
+  async grantTeamPermission(teamId: string, managerId: string, permissionLevel: 'view' | 'edit' | 'full', expiresAt?: string) {
+    const { data, error } = await supabase
+      .from('team_availability_permissions')
+      .insert({
+        team_id: teamId,
+        manager_id: managerId,
+        permission_level: permissionLevel,
+        expires_at: expiresAt,
+        granted_by: (await supabase.auth.getUser()).data.user?.id
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 
-  async getEnhancedTeam(teamId: string): Promise<EnhancedTeam | null> {
-    try {
-      const { data, error } = await supabase.rpc('get_enhanced_teams_data');
-      
-      if (error) throw error;
-      
-      const teamData = (data || []).find((item: any) => {
-        const team = this.safeParseJsonResponse(item.team_data);
-        return team.id === teamId;
-      });
-      
-      if (!teamData) return null;
-      
-      const parsedTeam = this.safeParseJsonResponse(teamData.team_data);
-      return this.convertSingleTeamToEnhanced(parsedTeam);
-    } catch (error) {
-      console.error('Error fetching enhanced team:', error);
-      return null;
-    }
-  }
+  // Check if user has permission to manage team availability
+  async hasTeamPermission(teamId: string, userId: string): Promise<{ hasPermission: boolean; level: string }> {
+    const { data, error } = await supabase
+      .from('team_availability_permissions')
+      .select('permission_level, expires_at')
+      .eq('team_id', teamId)
+      .eq('manager_id', userId)
+      .single();
 
-  // Convert RealTeam to EnhancedTeam format
-  private convertToEnhancedTeams(realTeams: any[]): EnhancedTeam[] {
-    return realTeams.map(team => this.convertSingleTeamToEnhanced(team));
-  }
-
-  private convertSingleTeamToEnhanced(team: any): EnhancedTeam {
-    return {
-      ...team,
-      location: team.location ? {
-        ...team.location,
-        created_at: team.location.created_at || new Date().toISOString(),
-        updated_at: team.location.updated_at || new Date().toISOString()
-      } : undefined,
-      provider: team.provider ? {
-        ...team.provider,
-        id: team.provider.id?.toString() || team.provider.id
-      } : undefined,
-      metadata: team.metadata || {},
-      monthly_targets: team.monthly_targets || {},
-      current_metrics: team.current_metrics || {}
-    };
-  }
-
-  // System Analytics - Real Data
-  async getSystemWideAnalytics(): Promise<TeamAnalytics> {
-    return RealTeamAnalyticsService.getSystemWideAnalytics();
-  }
-
-  // Team Creation - Real Implementation
-  async createTeam(teamData: CreateTeamRequest): Promise<Team> {
-    try {
-      const { data, error } = await supabase
-        .from('teams')
-        .insert({
-          name: teamData.name,
-          description: teamData.description,
-          team_type: teamData.team_type,
-          location_id: teamData.location_id,
-          provider_id: teamData.provider_id,
-          created_by: teamData.created_by,
-          metadata: teamData.metadata || {},
-          status: 'active',
-          performance_score: 0
-        })
-        .select()
+    if (error) {
+      // Check if user is SA/AD/AP or team admin
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
         .single();
 
-      if (error) throw error;
-      
-      // Convert to Team type with proper type handling
-      return {
-        ...data,
-        provider_id: data.provider_id?.toString(),
-        status: data.status as 'active' | 'inactive' | 'suspended',
-        metadata: (data.metadata as Record<string, any>) || {},
-        monthly_targets: (data.monthly_targets as Record<string, any>) || {},
-        current_metrics: (data.current_metrics as Record<string, any>) || {}
-      };
-    } catch (error) {
-      console.error('Error creating team:', error);
-      throw error;
+      if (profile?.role && ['SA', 'AD', 'AP'].includes(profile.role)) {
+        return { hasPermission: true, level: 'full' };
+      }
+
+      // Check if user is team admin
+      const { data: teamMember } = await supabase
+        .from('team_members')
+        .select('role')
+        .eq('team_id', teamId)
+        .eq('user_id', userId)
+        .eq('role', 'ADMIN')
+        .single();
+
+      return { hasPermission: !!teamMember, level: teamMember ? 'full' : 'none' };
     }
-  }
 
-  async createTeamWithLocation(teamData: any): Promise<string> {
-    const team = await this.createTeam(teamData);
-    return team.id;
-  }
-
-  // Team Updates - Real Implementation
-  async updateTeam(teamId: string, updates: Partial<EnhancedTeam>): Promise<void> {
-    try {
-      // Clean the updates object to match database schema
-      const cleanUpdates: any = {
-        updated_at: new Date().toISOString()
-      };
-
-      // Only include fields that exist in the database schema
-      if (updates.name) cleanUpdates.name = updates.name;
-      if (updates.description) cleanUpdates.description = updates.description;
-      if (updates.team_type) cleanUpdates.team_type = updates.team_type;
-      if (updates.status) cleanUpdates.status = updates.status;
-      if (updates.location_id) cleanUpdates.location_id = updates.location_id;
-      if (updates.provider_id) cleanUpdates.provider_id = parseInt(updates.provider_id);
-      if (updates.metadata) cleanUpdates.metadata = updates.metadata;
-      if (updates.monthly_targets) cleanUpdates.monthly_targets = updates.monthly_targets;
-      if (updates.current_metrics) cleanUpdates.current_metrics = updates.current_metrics;
-      if (updates.performance_score !== undefined) cleanUpdates.performance_score = updates.performance_score;
-
-      const { error } = await supabase
-        .from('teams')
-        .update(cleanUpdates)
-        .eq('id', teamId);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error updating team:', error);
-      throw error;
+    // Check if permission is expired
+    if (data.expires_at && new Date(data.expires_at) < new Date()) {
+      return { hasPermission: false, level: 'none' };
     }
+
+    return { hasPermission: true, level: data.permission_level };
   }
 
-  // Team Deletion - Real Implementation
-  async deleteTeam(teamId: string): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('teams')
-        .delete()
-        .eq('id', teamId);
+  // Create bulk scheduling operation
+  async createBulkOperation(operationData: BulkSchedulingData): Promise<BulkOperation> {
+    const operationId = `bulk_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const { data, error } = await supabase
+      .from('bulk_operation_queue')
+      .insert({
+        operation_id: operationId,
+        operation_type: operationData.operationType,
+        target_users: operationData.targetUsers,
+        scheduled_data: operationData.scheduleData,
+        total_count: operationData.targetUsers.length,
+        created_by: (await supabase.auth.getUser()).data.user?.id
+      })
+      .select()
+      .single();
 
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error deleting team:', error);
-      throw error;
+    if (error) throw error;
+    return data;
+  }
+
+  // Process bulk scheduling operation
+  async processBulkOperation(operationId: string): Promise<void> {
+    const { data: operation, error: fetchError } = await supabase
+      .from('bulk_operation_queue')
+      .select('*')
+      .eq('id', operationId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Update operation status to processing
+    await supabase
+      .from('bulk_operation_queue')
+      .update({ 
+        status: 'processing', 
+        started_at: new Date().toISOString() 
+      })
+      .eq('id', operationId);
+
+    const errors: string[] = [];
+    let processedCount = 0;
+
+    for (const userId of operation.target_users) {
+      try {
+        const scheduleData = operation.scheduled_data as any;
+        
+        await supabase
+          .from('availability_bookings')
+          .insert({
+            user_id: userId,
+            booking_date: scheduleData.date,
+            start_time: scheduleData.startTime,
+            end_time: scheduleData.endTime,
+            booking_type: scheduleData.bookingType,
+            title: scheduleData.title,
+            description: scheduleData.description,
+            requires_approval: scheduleData.requiresApproval || false,
+            bulk_operation_id: operationId
+          });
+
+        processedCount++;
+      } catch (error) {
+        errors.push(`User ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     }
+
+    // Update operation with results
+    await supabase
+      .from('bulk_operation_queue')
+      .update({
+        status: errors.length === 0 ? 'completed' : 'failed',
+        processed_count: processedCount,
+        error_log: errors,
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', operationId);
   }
 
-  // Location Analytics - Real Data
-  async getLocationAnalytics(): Promise<Record<string, any>> {
-    return RealTeamAnalyticsService.getLocationAnalytics();
+  // Get bulk operations for current user
+  async getBulkOperations(limit = 20): Promise<BulkOperation[]> {
+    const { data, error } = await supabase
+      .from('bulk_operation_queue')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return data;
   }
 
-  // Provider Management - Real Implementation
-  async assignProviderToTeam(
-    providerId: string, 
-    teamId: string, 
-    assignmentRole: string = 'primary_provider'
-  ): Promise<void> {
-    try {
-      const { error } = await supabase.rpc('assign_provider_to_team', {
-        p_provider_id: parseInt(providerId),
-        p_team_id: teamId,
-        p_assignment_role: assignmentRole,
-        p_oversight_level: 'standard',
-        p_assigned_by: (await supabase.auth.getUser()).data.user?.id
-      });
+  // Request availability change approval
+  async requestApproval(changeData: {
+    changeId: string;
+    requestedChanges: any;
+  }): Promise<AvailabilityChangeApproval> {
+    const { data, error } = await supabase
+      .from('availability_change_approvals')
+      .insert({
+        change_id: changeData.changeId,
+        user_id: (await supabase.auth.getUser()).data.user?.id!,
+        requested_changes: changeData.requestedChanges
+      })
+      .select()
+      .single();
 
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error assigning provider to team:', error);
-      throw error;
-    }
+    if (error) throw error;
+    return data;
   }
 
-  // Real Team Statistics
-  async getTeamStatistics(): Promise<Record<string, number>> {
-    try {
-      const { data: teamStats, error } = await supabase
-        .from('teams')
-        .select('status, team_type');
+  // Process approval request
+  async processApproval(approvalId: string, status: 'approved' | 'rejected', reason?: string): Promise<void> {
+    const { error } = await supabase
+      .from('availability_change_approvals')
+      .update({
+        approval_status: status,
+        approved_by: (await supabase.auth.getUser()).data.user?.id,
+        approval_reason: reason,
+        processed_at: new Date().toISOString()
+      })
+      .eq('id', approvalId);
 
-      if (error) throw error;
-
-      const stats = {
-        total: teamStats?.length || 0,
-        active: teamStats?.filter(t => t.status === 'active').length || 0,
-        inactive: teamStats?.filter(t => t.status === 'inactive').length || 0,
-        suspended: teamStats?.filter(t => t.status === 'suspended').length || 0
-      };
-
-      // Group by team type
-      const typeGroups = teamStats?.reduce((acc, team) => {
-        acc[team.team_type] = (acc[team.team_type] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>) || {};
-
-      return { ...stats, ...typeGroups };
-    } catch (error) {
-      console.error('Error fetching team statistics:', error);
-      return { total: 0, active: 0, inactive: 0, suspended: 0 };
-    }
+    if (error) throw error;
   }
 
-  // Missing methods that components expect
-  async getAllTeams(): Promise<EnhancedTeam[]> {
+  // Get pending approvals for managers
+  async getPendingApprovals(): Promise<AvailabilityChangeApproval[]> {
+    const { data, error } = await supabase
+      .from('availability_change_approvals')
+      .select(`
+        *,
+        profiles!availability_change_approvals_user_id_fkey(display_name, role)
+      `)
+      .eq('approval_status', 'pending')
+      .order('requested_at', { ascending: true });
+
+    if (error) throw error;
+    return data;
+  }
+
+  // Get team utilization metrics
+  async getTeamUtilizationMetrics(teamId: string, startDate: string, endDate: string): Promise<TeamUtilizationMetric[]> {
+    const { data, error } = await supabase
+      .from('team_utilization_metrics')
+      .select('*')
+      .eq('team_id', teamId)
+      .gte('metric_date', startDate)
+      .lte('metric_date', endDate)
+      .order('metric_date', { ascending: true });
+
+    if (error) throw error;
+    return data;
+  }
+
+  // Calculate and update team utilization for a specific date
+  async calculateTeamUtilization(teamId: string, date: string): Promise<any> {
+    const { data, error } = await supabase.rpc('calculate_team_utilization_metrics', {
+      p_team_id: teamId,
+      p_date: date
+    });
+
+    if (error) throw error;
+    return data;
+  }
+
+  // Legacy methods to maintain compatibility with existing codebase
+  async getEnhancedTeams(): Promise<any[]> {
+    const { data, error } = await supabase.rpc('get_enhanced_teams_data');
+    if (error) throw error;
+    return data || [];
+  }
+
+  async getAllEnhancedTeams(): Promise<any[]> {
     return this.getEnhancedTeams();
   }
 
-  async getProviderTeams(providerId: string): Promise<EnhancedTeam[]> {
-    try {
-      const { data, error } = await supabase
-        .from('teams')
-        .select(`
-          *,
-          locations(*),
-          team_members(
-            *,
-            profiles(*)
-          )
-        `)
-        .eq('provider_id', providerId); // Keep as string
-
-      if (error) throw error;
-
-      return (data || []).map(team => this.convertSingleTeamToEnhanced({
-        ...team,
-        provider_id: team.provider_id?.toString(),
-        status: team.status as 'active' | 'inactive' | 'suspended',
-        metadata: (team.metadata as Record<string, any>) || {},
-        monthly_targets: (team.monthly_targets as Record<string, any>) || {},
-        current_metrics: (team.current_metrics as Record<string, any>) || {},
-        location: team.locations,
-        member_count: team.team_members?.length || 0,
-        members: team.team_members?.map((member: any) => ({
-          ...member,
-          role: member.role as 'MEMBER' | 'ADMIN',
-          status: member.status as 'active' | 'inactive' | 'suspended' | 'on_leave',
-          permissions: member.permissions || {},
-          display_name: member.profiles?.display_name || 'Unknown User',
-          last_activity: member.last_activity || member.updated_at,
-          profiles: member.profiles
-        })) || []
-      }));
-    } catch (error) {
-      console.error('Error fetching provider teams:', error);
-      return [];
-    }
+  async getSystemWideAnalytics(): Promise<any> {
+    const { data, error } = await supabase.rpc('get_admin_team_statistics');
+    if (error) throw error;
+    return data;
   }
 
-  async getTeamsByLocation(locationId: string): Promise<EnhancedTeam[]> {
-    try {
-      const { data, error } = await supabase
-        .from('teams')
-        .select(`
-          *,
-          locations(*),
-          team_members(
-            *,
-            profiles(*)
-          )
-        `)
-        .eq('location_id', locationId);
-
-      if (error) throw error;
-
-      return (data || []).map(team => this.convertSingleTeamToEnhanced({
-        ...team,
-        provider_id: team.provider_id?.toString(),
-        status: team.status as 'active' | 'inactive' | 'suspended',
-        metadata: (team.metadata as Record<string, any>) || {},
-        monthly_targets: (team.monthly_targets as Record<string, any>) || {},
-        current_metrics: (team.current_metrics as Record<string, any>) || {},
-        location: team.locations,
-        member_count: team.team_members?.length || 0,
-        members: team.team_members?.map((member: any) => ({
-          ...member,
-          role: member.role as 'MEMBER' | 'ADMIN',
-          status: member.status as 'active' | 'inactive' | 'suspended' | 'on_leave',
-          permissions: member.permissions || {},
-          display_name: member.profiles?.display_name || 'Unknown User',
-          last_activity: member.last_activity || member.updated_at,
-          profiles: member.profiles
-        })) || []
-      }));
-    } catch (error) {
-      console.error('Error fetching teams by location:', error);
-      return [];
-    }
+  async createTeamWithLocation(teamData: any): Promise<any> {
+    const { data, error } = await supabase.rpc('create_team_bypass_rls', {
+      p_name: teamData.name,
+      p_description: teamData.description,
+      p_team_type: teamData.team_type || 'operational',
+      p_location_id: teamData.location_id,
+      p_provider_id: teamData.provider_id
+    });
+    if (error) throw error;
+    return data;
   }
 
-  async getTeamLocationAssignments(teamId: string): Promise<TeamLocationAssignment[]> {
-    try {
-      const { data, error } = await supabase
-        .from('team_member_assignments')
-        .select(`
-          *,
-          locations(name)
-        `)
-        .eq('team_member_id', teamId);
-
-      if (error) throw error;
-
-      return (data || []).map(assignment => ({
-        id: assignment.id,
-        team_id: teamId, // Add the missing team_id
-        location_id: assignment.location_id,
-        assignment_type: assignment.assignment_type as 'primary' | 'secondary' | 'temporary',
-        start_date: assignment.start_date,
-        end_date: assignment.end_date,
-        created_at: assignment.created_at,
-        updated_at: assignment.updated_at,
-        location_name: assignment.locations?.name
-      }));
-    } catch (error) {
-      console.error('Error fetching team location assignments:', error);
-      return [];
-    }
+  async createTeam(teamData: any): Promise<any> {
+    return this.createTeamWithLocation(teamData);
   }
 
-  async assignTeamToLocation(
-    teamId: string, 
-    locationId: string, 
-    assignmentType: 'primary' | 'secondary' | 'temporary' = 'primary'
-  ): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('team_member_assignments')
-        .insert({
-          team_member_id: teamId,
-          location_id: locationId,
-          assignment_type: assignmentType,
-          start_date: new Date().toISOString()
-        });
+  async getTeamsByLocation(locationId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('teams')
+      .select('*')
+      .eq('location_id', locationId);
+    if (error) throw error;
+    return data || [];
+  }
 
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error assigning team to location:', error);
-      throw error;
-    }
+  async getTeamLocationAssignments(teamId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('teams')
+      .select('id, name, location_id, locations(name, address)')
+      .eq('id', teamId);
+    if (error) throw error;
+    return data || [];
+  }
+
+  async assignTeamToLocation(teamId: string, locationId: string, type: string): Promise<void> {
+    const { error } = await supabase
+      .from('teams')
+      .update({ location_id: locationId })
+      .eq('id', teamId);
+    if (error) throw error;
   }
 
   async getTeamPerformanceMetrics(teamId: string): Promise<any> {
-    return RealTeamAnalyticsService.getTeamPerformanceMetrics(teamId);
+    const { data, error } = await supabase.rpc('calculate_enhanced_team_performance_metrics', {
+      p_team_id: teamId,
+      p_start_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      p_end_date: new Date().toISOString().split('T')[0]
+    });
+    if (error) throw error;
+    return data;
   }
 
-  private safeParseJsonResponse(data: any): any {
-    if (typeof data === 'string') {
-      try {
-        return JSON.parse(data);
-      } catch {
-        return {};
-      }
-    }
-    return data || {};
+  async getAllTeams(): Promise<any[]> {
+    const { data, error } = await supabase.rpc('get_admin_teams_overview');
+    if (error) throw error;
+    return (data || []).map((item: any) => item.team_data);
   }
 }
 
