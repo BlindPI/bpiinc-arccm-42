@@ -65,6 +65,8 @@ export function AvailabilitySettings() {
         .upsert({
           user_id: user.user.id,
           settings: settingsData,
+        }, {
+          onConflict: 'user_id'
         });
       
       if (error) throw error;
