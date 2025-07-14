@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import { TrainingSessionBuilder } from '../course-sequence/TrainingSessionBuilder';
+import { ParticipantAssignment } from './ParticipantAssignment';
 import { 
   Calendar, 
   Clock, 
@@ -425,22 +426,14 @@ export const EventDetailsPopover: React.FC<EventDetailsPopoverProps> = ({
               </TabsContent>
 
               <TabsContent value="participants" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5" />
-                      Enrolled Participants
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-center py-8 text-muted-foreground">
-                      <div className="text-center">
-                        <Users className="h-8 w-8 mx-auto mb-2" />
-                        <p>Participant management integration coming soon</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <ParticipantAssignment
+                  eventId={event.id}
+                  eventTitle={event.title}
+                  onParticipantsChange={() => {
+                    // Refresh data when participants change
+                    console.log('Participants updated for event:', event.id);
+                  }}
+                />
               </TabsContent>
 
               <TabsContent value="progress" className="space-y-4">

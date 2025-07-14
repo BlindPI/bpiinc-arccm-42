@@ -18,6 +18,7 @@ export interface CalendarEvent {
     locationName?: string;
     courseId?: string;
     courseName?: string;
+    courseSequence?: any[];
     bookingType: string;
     status: string;
     description?: string;
@@ -126,7 +127,7 @@ export const useCalendarScheduling = (locationId?: string, teamId?: string) => {
         .from('availability_bookings')
         .select(`
           id, title, booking_date, start_time, end_time, 
-          booking_type, status, course_id, description,
+          booking_type, status, course_id, course_sequence, description,
           user_id,
           profiles:user_id (display_name, role),
           courses:course_id (name),
@@ -214,6 +215,7 @@ export const useCalendarScheduling = (locationId?: string, teamId?: string) => {
               instructorName: booking.profiles?.display_name || 'Unknown',
               courseId: booking.course_id,
               courseName: booking.courses?.name,
+              courseSequence: booking.course_sequence || [],
               bookingType: booking.booking_type,
               status: booking.status,
               locationId: '',
@@ -322,7 +324,7 @@ export const useCalendarScheduling = (locationId?: string, teamId?: string) => {
     }
   });
 
-  // Create new booking/schedule
+  // Create new booking/schedule with multi-course support
   const createBooking = useMutation({
     mutationFn: async (bookingData: {
       instructorId: string;
@@ -331,7 +333,9 @@ export const useCalendarScheduling = (locationId?: string, teamId?: string) => {
       title: string;
       bookingType: 'course_instruction' | 'training_session' | 'meeting' | 'administrative' | 'personal';
       courseId?: string;
+      courseSequence?: any[];
       description?: string;
+      rosterId?: string;
     }) => {
       const startDate = new Date(bookingData.startDateTime);
       const endDate = new Date(bookingData.endDateTime);
@@ -343,7 +347,8 @@ export const useCalendarScheduling = (locationId?: string, teamId?: string) => {
         end_time: endDate.toTimeString().split(' ')[0],
         title: bookingData.title,
         booking_type: bookingData.bookingType,
-        course_id: bookingData.courseId,
+        course_id: bookingData.courseSequence?.length ? null : bookingData.courseId, // null for multi-course
+        course_sequence: bookingData.courseSequence?.length ? bookingData.courseSequence : null,
         description: bookingData.description,
         status: 'scheduled'
       };

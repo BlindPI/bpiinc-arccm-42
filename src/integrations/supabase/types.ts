@@ -1339,6 +1339,7 @@ export type Database = {
           bulk_operation_id: string | null
           course_id: string | null
           course_offering_id: string | null
+          course_sequence: Json | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -1362,6 +1363,7 @@ export type Database = {
           bulk_operation_id?: string | null
           course_id?: string | null
           course_offering_id?: string | null
+          course_sequence?: Json | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -1385,6 +1387,7 @@ export type Database = {
           bulk_operation_id?: string | null
           course_id?: string | null
           course_offering_id?: string | null
+          course_sequence?: Json | null
           created_at?: string
           created_by?: string | null
           description?: string | null

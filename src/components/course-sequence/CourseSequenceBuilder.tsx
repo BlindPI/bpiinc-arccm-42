@@ -17,7 +17,26 @@ import {
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { SortableSequenceItem } from './SortableSequenceItem';
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 export interface CourseSequenceItem {
   id: string;
@@ -146,17 +165,33 @@ export function CourseSequenceBuilder({
     });
   };
 
-  const onDragEnd = (result: any) => {
-    if (!result.destination) return;
+  const [activeId, setActiveId] = useState<string | null>(null);
 
-    const items = Array.from(sequence.items);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
-    onSequenceChange({
-      ...sequence,
-      items
-    });
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      const oldIndex = sequence.items.findIndex((item) => item.id === active.id);
+      const newIndex = sequence.items.findIndex((item) => item.id === over?.id);
+
+      onSequenceChange({
+        ...sequence,
+        items: arrayMove(sequence.items, oldIndex, newIndex),
+      });
+    }
+
+    setActiveId(null);
   };
 
   const formatDuration = (minutes: number) => {
@@ -278,62 +313,40 @@ export function CourseSequenceBuilder({
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <DragDropContext onDragEnd={onDragEnd}>
-              <Droppable droppableId="course-sequence">
-                {(provided) => (
-                  <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
-                    {sequence.items.map((item, index) => (
-                      <Draggable key={item.id} draggableId={item.id} index={index}>
-                        {(provided) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            className="flex items-center gap-3 p-3 border rounded-lg bg-card hover:bg-muted/50 transition-colors"
-                          >
-                            <div {...provided.dragHandleProps} className="text-muted-foreground hover:text-foreground">
-                              <GripVertical className="h-4 w-4" />
-                            </div>
-                            
-                            <div className="flex items-center gap-2 flex-1">
-                              {getItemIcon(item)}
-                              <span className="font-medium">{item.courseName}</span>
-                              <Badge variant={getItemBadgeVariant(item)} className="text-xs">
-                                {item.type === 'course' ? 'Course' : 'Break'}
-                              </Badge>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                <Clock className="h-3 w-3" />
-                                <Input
-                                  type="number"
-                                  value={item.duration}
-                                  onChange={(e) => updateItemDuration(item.id, parseInt(e.target.value) || 0)}
-                                  className="w-16 h-7 text-xs"
-                                  min="5"
-                                  max="480"
-                                />
-                                <span className="text-xs">min</span>
-                              </div>
-                              
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeItem(item.id)}
-                                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext items={sequence.items.map(item => item.id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-2">
+                  {sequence.items.map((item) => (
+                    <SortableSequenceItem
+                      key={item.id}
+                      item={item}
+                      updateItemDuration={updateItemDuration}
+                      removeItem={removeItem}
+                      getItemIcon={getItemIcon}
+                      getItemBadgeVariant={getItemBadgeVariant}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+              <DragOverlay>
+                {activeId ? (
+                  <div className="flex items-center gap-3 p-3 border rounded-lg bg-card shadow-lg">
+                    <GripVertical className="h-4 w-4 text-muted-foreground" />
+                    {sequence.items.find(item => item.id === activeId) && (
+                      <>
+                        {getItemIcon(sequence.items.find(item => item.id === activeId)!)}
+                        <span className="font-medium">{sequence.items.find(item => item.id === activeId)!.courseName}</span>
+                      </>
+                    )}
                   </div>
-                )}
-              </Droppable>
-            </DragDropContext>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
 
             {/* Timeline Summary */}
             <Separator className="my-4" />
