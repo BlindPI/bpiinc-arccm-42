@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -135,10 +136,14 @@ export const EventDetailsPopover: React.FC<EventDetailsPopoverProps> = ({
     
     setIsDeleting(true);
     try {
+      console.log('Deleting event with ID:', event.id);
       await onDelete(event.id);
+      console.log('Event deleted successfully');
+      toast.success('Training session deleted successfully');
       onClose();
     } catch (error) {
       console.error('Failed to delete event:', error);
+      toast.error(`Failed to delete session: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsDeleting(false);
     }
@@ -521,6 +526,56 @@ export const EventDetailsPopover: React.FC<EventDetailsPopoverProps> = ({
               <Button
                 variant="outline"
                 className="flex items-center gap-2"
+                onClick={() => {
+                  // Generate training session report
+                  const reportData = {
+                    sessionTitle: event.title,
+                    date: new Date(event.start).toLocaleDateString(),
+                    instructor: event.extendedProps.instructorName,
+                    duration: `${Math.round((new Date(event.end).getTime() - new Date(event.start).getTime()) / (1000 * 60))} minutes`,
+                    courseSequence,
+                    totalCourses,
+                    completedCourses,
+                    progress: Math.round(progress)
+                  };
+                  
+                  // Create downloadable report
+                  const reportContent = `
+TRAINING SESSION REPORT
+=======================
+
+Session: ${reportData.sessionTitle}
+Date: ${reportData.date}
+Instructor: ${reportData.instructor}
+Duration: ${reportData.duration}
+
+Course Summary:
+- Total Courses: ${reportData.totalCourses}
+- Completed: ${reportData.completedCourses}
+- Remaining: ${reportData.totalCourses - reportData.completedCourses}
+- Progress: ${reportData.progress}%
+
+Course Sequence:
+${courseSequence.map((item: any, index: number) => 
+  `${index + 1}. ${item.courseName || item.label} (${item.duration}min) ${item.completed ? '✓' : '○'}`
+).join('\n')}
+
+Generated on: ${new Date().toLocaleString()}
+                  `.trim();
+                  
+                  // Download as text file
+                  const blob = new Blob([reportContent], { type: 'text/plain' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `training-session-report-${event.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.txt`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                  
+                  toast.success('Training report exported successfully');
+                }}
               >
                 <FileText className="h-4 w-4" />
                 Export Report
