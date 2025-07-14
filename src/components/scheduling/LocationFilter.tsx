@@ -87,15 +87,43 @@ export const LocationFilter: React.FC<LocationFilterProps> = ({
           return [];
         }
 
-        // Step 3: Get instructor counts for each location
+        // Step 3: Get instructor counts for each location using proper joins
         const locationsWithCounts = await Promise.all(
           baseLocations.map(async (location) => {
+            // First get teams for this location
+            const { data: teams, error: teamsError } = await supabase
+              .from('teams')
+              .select('id')
+              .eq('location_id', location.id);
+
+            if (teamsError) {
+              console.error('Error getting teams for location:', location.id, teamsError);
+              return {
+                id: location.id,
+                name: location.name,
+                address: location.address,
+                instructorCount: 0
+              };
+            }
+
+            if (!teams || teams.length === 0) {
+              return {
+                id: location.id,
+                name: location.name,
+                address: location.address,
+                instructorCount: 0
+              };
+            }
+
+            const teamIds = teams.map(t => t.id);
+
+            // Then get instructor count for these teams
             const { data: instructorData, error: instructorError } = await supabase
               .from('team_members')
               .select(`
                 profiles!inner(role)
               `)
-              .eq('teams.location_id', location.id)
+              .in('team_id', teamIds)
               .eq('status', 'active')
               .in('profiles.role', ['IC', 'IP', 'IT']);
 
