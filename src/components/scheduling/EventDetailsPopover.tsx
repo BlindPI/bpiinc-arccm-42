@@ -108,6 +108,8 @@ export const EventDetailsPopover: React.FC<EventDetailsPopoverProps> = ({
     
     setIsSaving(true);
     try {
+      console.log('Saving event with course sequence:', editData.courseSequence);
+      
       await onEdit({
         id: event.id,
         title: editData.title,
@@ -115,7 +117,9 @@ export const EventDetailsPopover: React.FC<EventDetailsPopoverProps> = ({
         booking_type: editData.bookingType,
         booking_date: editData.date,
         start_time: editData.startTime,
-        end_time: editData.endTime
+        end_time: editData.endTime,
+        course_sequence: editData.courseSequence,
+        course_id: editData.courseSequence.length > 0 ? null : event.extendedProps?.courseId || null
       });
       
       setIsEditing(false);
