@@ -24,11 +24,11 @@ export const PROTECTED_PAGES = [
   "/certificates",
   "/certificate-analytics",
   "/rosters",
-  "/courses",
+  "/courses", // RESTORED: Dedicated Course Management Page
   "/enrollments",
   "/enrollment-management",
   "/training-hub",
-  "/locations",
+  "/locations", // RESTORED: Dedicated Location Management Page
   "/analytics",
   "/executive-dashboard",
   "/report-scheduler",
