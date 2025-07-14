@@ -109,7 +109,10 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['email-templates', locationId] });
       toast.success(currentTemplate?.id ? "Template updated" : "Template created");
-      resetForm();
+      // Close dialogs and reset form after successful save
+      setIsAddDialogOpen(false);
+      setIsEditDialogOpen(false);
+      setTimeout(() => resetForm(), 100); // Delay reset to prevent race conditions
     },
     onError: (error) => {
       console.error('Error saving template:', error);
@@ -172,6 +175,7 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
   });
 
   const resetForm = () => {
+    console.log('Reset form called');
     setCurrentTemplate(null);
     setTemplateName('');
     setSubjectTemplate('Your {{course_name}} Certificate from {{location_name}}');
@@ -212,7 +216,10 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
     setIsAddDialogOpen(true);
   };
 
-  const handleEditTemplate = (template: LocationEmailTemplate) => {
+  const handleEditTemplate = (e: React.MouseEvent, template: LocationEmailTemplate) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Edit template clicked:', template.name);
     setCurrentTemplate(template);
     setTemplateName(template.name);
     setSubjectTemplate(template.subject_template);
@@ -294,7 +301,7 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
                     <Button 
                       variant="outline" 
                       size="icon"
-                      onClick={() => handleEditTemplate(template)}
+                      onClick={(e) => handleEditTemplate(e, template)}
                       title="Edit Template"
                     >
                       <Edit className="h-4 w-4" />
