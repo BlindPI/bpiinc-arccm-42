@@ -80,12 +80,12 @@ const generateAvailabilityBackgroundEvents = async (
 
             availabilityEvents.push({
               id: `avail-${instructor.id}-${d.toISOString().split('T')[0]}-${avail.start_time}`,
-              title: `Available: ${instructor.display_name}`,
+              title: '', // Empty title to hide instructor names
               start: startDateTime.toISOString(),
               end: endDateTime.toISOString(),
               backgroundColor: 'rgba(34, 197, 94, 0.1)', // light green
               borderColor: '#22c55e',
-              textColor: '#16a34a',
+              textColor: 'transparent', // Hide any text
               display: 'background', // Makes it a background event
               extendedProps: {
                 instructorId: instructor.id,
