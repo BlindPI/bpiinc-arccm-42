@@ -16,21 +16,28 @@ export function WaitlistManager() {
   const queryClient = useQueryClient();
 
   const { data: courseOfferings = [] } = useQuery({
-    queryKey: ['availability-bookings-for-waitlist'],
+    queryKey: ['course-offerings-for-waitlist'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('availability_bookings')
+        .from('course_offerings')
         .select(`
           id,
-          title,
-          booking_date,
-          start_time,
-          end_time,
-          booking_type,
-          description
+          start_date,
+          end_date,
+          max_participants,
+          status,
+          courses (
+            id,
+            name,
+            description
+          ),
+          locations (
+            id,
+            name
+          )
         `)
-        .in('booking_type', ['training_session', 'course_instruction'])
-        .order('booking_date', { ascending: true });
+        .eq('status', 'SCHEDULED')
+        .order('start_date', { ascending: true });
 
       if (error) throw error;
       return data;
@@ -119,9 +126,10 @@ export function WaitlistManager() {
                   {courseOfferings.map((offering) => (
                     <SelectItem key={offering.id} value={offering.id}>
                       <div className="flex flex-col">
-                        <span>{offering.title}</span>
+                        <span>{offering.courses?.name || 'Unknown Course'}</span>
                         <span className="text-sm text-muted-foreground">
-                          {offering.booking_type} - {new Date(offering.booking_date).toLocaleDateString()} at {offering.start_time}
+                          {offering.locations?.name || 'No Location'} - {new Date(offering.start_date).toLocaleDateString()} 
+                          {offering.end_date && ` to ${new Date(offering.end_date).toLocaleDateString()}`}
                         </span>
                       </div>
                     </SelectItem>
