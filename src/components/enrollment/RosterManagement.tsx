@@ -39,8 +39,9 @@ interface StudentRoster {
   max_capacity: number;
   current_enrollment: number;
   roster_status: 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED';
-  scheduled_start_date: string;
-  scheduled_end_date: string;
+  roster_type: 'TRAINING' | 'CERTIFICATE';
+  scheduled_start_date?: string;
+  scheduled_end_date?: string;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -58,24 +59,29 @@ export function RosterManagement() {
   const [activeView, setActiveView] = useState<'list' | 'create'>('list');
   const [selectedRoster, setSelectedRoster] = useState<StudentRoster | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [typeFilter, setTypeFilter] = useState<string>('TRAINING');
   const [showExportDialog, setShowExportDialog] = useState(false);
   const queryClient = useQueryClient();
 
-  // Fetch all rosters
+  // Fetch all rosters with type filtering
   const { data: rosters = [], isLoading } = useQuery({
-    queryKey: ['student-rosters', statusFilter],
+    queryKey: ['student-rosters', statusFilter, typeFilter],
     queryFn: async () => {
       let query = supabase
         .from('student_rosters')
         .select(`
           *,
-          locations!inner(name, city, state),
+          locations(name, city, state),
           profiles!student_rosters_instructor_id_fkey(display_name)
         `)
         .order('created_at', { ascending: false });
 
-      if (statusFilter) {
+      if (statusFilter && statusFilter !== 'all') {
         query = query.eq('roster_status', statusFilter);
+      }
+
+      if (typeFilter && typeFilter !== 'all') {
+        query = query.eq('roster_type', typeFilter);
       }
 
       const { data, error } = await query;
@@ -138,10 +144,10 @@ export function RosterManagement() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold">Create New Roster</h2>
-            <p className="text-muted-foreground">Build a roster from enrolled students</p>
-          </div>
+        <div>
+          <h2 className="text-2xl font-bold">Create New Training Roster</h2>
+          <p className="text-muted-foreground">Create a student roster that can be assigned to scheduled courses</p>
+        </div>
           <Button variant="outline" onClick={() => setActiveView('list')}>
             Back to Rosters
           </Button>
@@ -156,7 +162,7 @@ export function RosterManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Roster Management</h2>
-          <p className="text-muted-foreground">Manage course rosters and enrollments</p>
+          <p className="text-muted-foreground">Create training rosters that can be assigned to scheduled courses</p>
         </div>
         <Button onClick={() => setActiveView('create')}>
           <Plus className="h-4 w-4 mr-2" />
@@ -168,6 +174,19 @@ export function RosterManagement() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <Label htmlFor="type-filter">Roster Type</Label>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TRAINING">Training Rosters</SelectItem>
+                  <SelectItem value="CERTIFICATE">Certificate Rosters</SelectItem>
+                  <SelectItem value="all">All Types</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex-1">
               <Label htmlFor="status-filter">Filter by Status</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -249,10 +268,12 @@ export function RosterManagement() {
                       {roster.profiles.display_name}
                     </div>
                   )}
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    {new Date(roster.scheduled_start_date).toLocaleDateString()}
-                  </div>
+                  {roster.scheduled_start_date && (
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      {new Date(roster.scheduled_start_date).toLocaleDateString()}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">

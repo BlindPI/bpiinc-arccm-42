@@ -28,7 +28,8 @@ interface StudentRoster {
   course_name: string;
   current_enrollment: number;
   roster_status: string;
-  scheduled_start_date: string;
+  roster_type?: string;
+  scheduled_start_date?: string;
 }
 
 interface RosterExportDialogProps {

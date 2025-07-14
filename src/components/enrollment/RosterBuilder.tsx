@@ -12,20 +12,15 @@ import {
   Users, 
   Search, 
   Filter,
-  Plus,
-  Minus,
-  Calendar,
   MapPin,
   User,
   FileText,
   CheckCircle,
-  AlertTriangle,
-  BookOpen
+  AlertTriangle
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { CourseSequenceBuilder, CourseSequence } from '@/components/course-sequence/CourseSequenceBuilder';
 
 interface StudentProfile {
   id: string;
@@ -47,13 +42,10 @@ interface StudentProfile {
 
 interface RosterFormData {
   roster_name: string;
-  course_sequence: CourseSequence;
+  description: string;
   location_id: string;
   instructor_id: string;
   max_capacity: number;
-  scheduled_start_date: string;
-  scheduled_end_date: string;
-  notes: string;
 }
 
 interface RosterBuilderProps {
@@ -63,23 +55,21 @@ interface RosterBuilderProps {
 export function RosterBuilder({ onComplete }: RosterBuilderProps) {
   const [formData, setFormData] = useState<RosterFormData>({
     roster_name: '',
-    course_sequence: { items: [], totalDuration: 0 },
+    description: '',
     location_id: '',
     instructor_id: '',
-    max_capacity: 20,
-    scheduled_start_date: '',
-    scheduled_end_date: '',
-    notes: ''
+    max_capacity: 20
   });
   
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
   const queryClient = useQueryClient();
 
-  // Fetch student profiles
+  // Fetch student profiles with improved filtering
   const { data: students = [], isLoading: studentsLoading } = useQuery({
-    queryKey: ['student-enrollment-profiles', searchTerm, statusFilter],
+    queryKey: ['student-enrollment-profiles', searchTerm, statusFilter, locationFilter],
     queryFn: async () => {
       let query = supabase
         .from('student_enrollment_profiles')
@@ -93,8 +83,13 @@ export function RosterBuilder({ onComplete }: RosterBuilderProps) {
         );
       }
 
-      if (statusFilter) {
+      if (statusFilter && statusFilter !== 'all') {
         query = query.eq('completion_status', statusFilter);
+      }
+
+      // Filter by location if selected and students have location data
+      if (locationFilter && locationFilter !== 'all') {
+        query = query.eq('location_id', locationFilter);
       }
 
       const { data, error } = await query;
@@ -102,8 +97,6 @@ export function RosterBuilder({ onComplete }: RosterBuilderProps) {
       return data as StudentProfile[];
     }
   });
-
-  // Note: Courses are now handled by CourseSequenceBuilder component
 
   // Fetch locations
   const { data: locations = [] } = useQuery({
@@ -119,50 +112,51 @@ export function RosterBuilder({ onComplete }: RosterBuilderProps) {
     }
   });
 
-  // Fetch instructors (users with instructor roles)
+  // Fetch instructors filtered by location if selected
   const { data: instructors = [] } = useQuery({
-    queryKey: ['instructors'],
+    queryKey: ['instructors', formData.location_id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('profiles')
-        .select('id, display_name, role')
+        .select('id, display_name, role, location_id')
         .in('role', ['IC', 'IP', 'IT'])
         .order('display_name');
 
+      // Filter instructors by location if location is selected
+      if (formData.location_id) {
+        query = query.eq('location_id', formData.location_id);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     }
   });
 
-  // Create roster mutation
+  // Create roster mutation - simplified for TRAINING rosters
   const createRosterMutation = useMutation({
     mutationFn: async () => {
+      if (!formData.roster_name.trim()) {
+        throw new Error('Roster name is required');
+      }
+
       if (selectedStudents.length === 0) {
         throw new Error('Please select at least one student');
       }
 
-      // Create the roster with course sequence
-      const finalCourseName = formData.course_sequence.items.length > 0 
-        ? formData.course_sequence.items
-            .filter(item => item.type === 'course')
-            .map(item => item.courseName)
-            .join(' + ')
-        : 'Multi-Course Training';
-
+      // Create the TRAINING roster - ready to be assigned to scheduled courses
       const { data: roster, error: rosterError } = await supabase
         .from('student_rosters')
         .insert([{
           roster_name: formData.roster_name,
-          course_name: finalCourseName,
+          course_name: 'Training Roster', // Generic name - will be updated when assigned to course
           location_id: formData.location_id || null,
           instructor_id: formData.instructor_id || null,
           max_capacity: formData.max_capacity,
           current_enrollment: selectedStudents.length,
-          roster_status: 'ACTIVE',
-          scheduled_start_date: formData.scheduled_start_date,
-          scheduled_end_date: formData.scheduled_end_date,
-          created_by: (await supabase.auth.getUser()).data.user?.id,
-          course_sequence: formData.course_sequence
+          roster_status: 'DRAFT', // Start as DRAFT until assigned to a course
+          roster_type: 'TRAINING',
+          created_by: (await supabase.auth.getUser()).data.user?.id
         }])
         .select('id')
         .single();
@@ -188,7 +182,7 @@ export function RosterBuilder({ onComplete }: RosterBuilderProps) {
       return roster;
     },
     onSuccess: (roster) => {
-      toast.success(`Roster "${formData.roster_name}" created successfully with ${selectedStudents.length} students`);
+      toast.success(`Training roster "${formData.roster_name}" created successfully with ${selectedStudents.length} students. It can now be assigned to scheduled courses.`);
       queryClient.invalidateQueries({ queryKey: ['student-rosters'] });
       onComplete();
     },
@@ -229,21 +223,20 @@ export function RosterBuilder({ onComplete }: RosterBuilderProps) {
     setSelectedStudents([]);
   };
 
-  const updateFormData = (field: keyof RosterFormData, value: string | number | CourseSequence) => {
+  const updateFormData = (field: keyof RosterFormData, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  // Auto-set location filter when location is selected for better student filtering
+  React.useEffect(() => {
+    if (formData.location_id && formData.location_id !== locationFilter) {
+      setLocationFilter(formData.location_id);
+    }
+  }, [formData.location_id, locationFilter]);
 
   const validateForm = (): boolean => {
     if (!formData.roster_name.trim()) {
       toast.error('Roster name is required');
-      return false;
-    }
-    if (formData.course_sequence.items.length === 0) {
-      toast.error('At least one course must be selected');
-      return false;
-    }
-    if (!formData.scheduled_start_date) {
-      toast.error('Start date is required');
       return false;
     }
     if (selectedStudents.length === 0) {
@@ -287,13 +280,14 @@ export function RosterBuilder({ onComplete }: RosterBuilderProps) {
                   required
                 />
               </div>
-              <div className="md:col-span-2 space-y-2">
-                <CourseSequenceBuilder
-                  sequence={formData.course_sequence}
-                  onSequenceChange={(sequence) => updateFormData('course_sequence', sequence)}
-                  label="Training Day Courses"
-                  placeholder="Add courses and breaks to build your training day"
-                  required
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => updateFormData('description', e.target.value)}
+                  placeholder="Brief description of this training roster"
+                  rows={2}
                 />
               </div>
               <div className="space-y-2">
@@ -345,35 +339,14 @@ export function RosterBuilder({ onComplete }: RosterBuilderProps) {
                   max="100"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="scheduled_start_date">Start Date *</Label>
-                <Input
-                  id="scheduled_start_date"
-                  type="date"
-                  value={formData.scheduled_start_date}
-                  onChange={(e) => updateFormData('scheduled_start_date', e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="scheduled_end_date">End Date</Label>
-                <Input
-                  id="scheduled_end_date"
-                  type="date"
-                  value={formData.scheduled_end_date}
-                  onChange={(e) => updateFormData('scheduled_end_date', e.target.value)}
-                />
-              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => updateFormData('notes', e.target.value)}
-                placeholder="Additional notes about this roster"
-                rows={3}
-              />
+            <div className="md:col-span-2">
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Training rosters can be assigned to scheduled courses after creation</span>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

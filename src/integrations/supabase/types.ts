@@ -13586,6 +13586,7 @@ export type Database = {
           location_id: string | null
           metadata: Json | null
           name: string
+          roster_type: string | null
           status: string
           updated_at: string
         }
@@ -13601,6 +13602,7 @@ export type Database = {
           location_id?: string | null
           metadata?: Json | null
           name: string
+          roster_type?: string | null
           status?: string
           updated_at?: string
         }
@@ -13616,6 +13618,7 @@ export type Database = {
           location_id?: string | null
           metadata?: Json | null
           name?: string
+          roster_type?: string | null
           status?: string
           updated_at?: string
         }
@@ -14045,6 +14048,7 @@ export type Database = {
       student_rosters: {
         Row: {
           course_name: string
+          course_sequence: Json | null
           created_at: string | null
           created_by: string | null
           current_enrollment: number | null
@@ -14054,12 +14058,14 @@ export type Database = {
           max_capacity: number | null
           roster_name: string
           roster_status: string | null
+          roster_type: string | null
           scheduled_end_date: string | null
           scheduled_start_date: string | null
           updated_at: string | null
         }
         Insert: {
           course_name: string
+          course_sequence?: Json | null
           created_at?: string | null
           created_by?: string | null
           current_enrollment?: number | null
@@ -14069,12 +14075,14 @@ export type Database = {
           max_capacity?: number | null
           roster_name: string
           roster_status?: string | null
+          roster_type?: string | null
           scheduled_end_date?: string | null
           scheduled_start_date?: string | null
           updated_at?: string | null
         }
         Update: {
           course_name?: string
+          course_sequence?: Json | null
           created_at?: string | null
           created_by?: string | null
           current_enrollment?: number | null
@@ -14084,6 +14092,7 @@ export type Database = {
           max_capacity?: number | null
           roster_name?: string
           roster_status?: string | null
+          roster_type?: string | null
           scheduled_end_date?: string | null
           scheduled_start_date?: string | null
           updated_at?: string | null
