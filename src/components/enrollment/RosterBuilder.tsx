@@ -19,11 +19,13 @@ import {
   User,
   FileText,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  BookOpen
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { CourseSequenceBuilder, CourseSequence } from '@/components/course-sequence/CourseSequenceBuilder';
 
 interface StudentProfile {
   id: string;
@@ -45,7 +47,7 @@ interface StudentProfile {
 
 interface RosterFormData {
   roster_name: string;
-  course_name: string;
+  course_sequence: CourseSequence;
   location_id: string;
   instructor_id: string;
   max_capacity: number;
@@ -61,7 +63,7 @@ interface RosterBuilderProps {
 export function RosterBuilder({ onComplete }: RosterBuilderProps) {
   const [formData, setFormData] = useState<RosterFormData>({
     roster_name: '',
-    course_name: '',
+    course_sequence: { items: [], totalDuration: 0 },
     location_id: '',
     instructor_id: '',
     max_capacity: 20,
@@ -101,20 +103,7 @@ export function RosterBuilder({ onComplete }: RosterBuilderProps) {
     }
   });
 
-  // Fetch courses for course name suggestions
-  const { data: courses = [] } = useQuery({
-    queryKey: ['courses-active'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('courses')
-        .select('id, name')
-        .eq('status', 'ACTIVE')
-        .order('name');
-
-      if (error) throw error;
-      return data;
-    }
-  });
+  // Note: Courses are now handled by CourseSequenceBuilder component
 
   // Fetch locations
   const { data: locations = [] } = useQuery({
@@ -152,12 +141,19 @@ export function RosterBuilder({ onComplete }: RosterBuilderProps) {
         throw new Error('Please select at least one student');
       }
 
-      // Create the roster
+      // Create the roster with course sequence
+      const finalCourseName = formData.course_sequence.items.length > 0 
+        ? formData.course_sequence.items
+            .filter(item => item.type === 'course')
+            .map(item => item.courseName)
+            .join(' + ')
+        : 'Multi-Course Training';
+
       const { data: roster, error: rosterError } = await supabase
         .from('student_rosters')
         .insert([{
           roster_name: formData.roster_name,
-          course_name: formData.course_name,
+          course_name: finalCourseName,
           location_id: formData.location_id || null,
           instructor_id: formData.instructor_id || null,
           max_capacity: formData.max_capacity,
@@ -165,7 +161,8 @@ export function RosterBuilder({ onComplete }: RosterBuilderProps) {
           roster_status: 'ACTIVE',
           scheduled_start_date: formData.scheduled_start_date,
           scheduled_end_date: formData.scheduled_end_date,
-          created_by: (await supabase.auth.getUser()).data.user?.id
+          created_by: (await supabase.auth.getUser()).data.user?.id,
+          course_sequence: formData.course_sequence
         }])
         .select('id')
         .single();
@@ -232,7 +229,7 @@ export function RosterBuilder({ onComplete }: RosterBuilderProps) {
     setSelectedStudents([]);
   };
 
-  const updateFormData = (field: keyof RosterFormData, value: string | number) => {
+  const updateFormData = (field: keyof RosterFormData, value: string | number | CourseSequence) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -241,8 +238,8 @@ export function RosterBuilder({ onComplete }: RosterBuilderProps) {
       toast.error('Roster name is required');
       return false;
     }
-    if (!formData.course_name.trim()) {
-      toast.error('Course name is required');
+    if (formData.course_sequence.items.length === 0) {
+      toast.error('At least one course must be selected');
       return false;
     }
     if (!formData.scheduled_start_date) {
@@ -290,20 +287,14 @@ export function RosterBuilder({ onComplete }: RosterBuilderProps) {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="course_name">Course Name *</Label>
-                <Select value={formData.course_name} onValueChange={(value) => updateFormData('course_name', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select or enter course name" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {courses.map((course) => (
-                      <SelectItem key={course.id} value={course.name}>
-                        {course.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="md:col-span-2 space-y-2">
+                <CourseSequenceBuilder
+                  sequence={formData.course_sequence}
+                  onSequenceChange={(sequence) => updateFormData('course_sequence', sequence)}
+                  label="Training Day Courses"
+                  placeholder="Add courses and breaks to build your training day"
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="location_id">Location</Label>

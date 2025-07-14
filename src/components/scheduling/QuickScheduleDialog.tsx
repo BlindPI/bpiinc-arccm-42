@@ -6,12 +6,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Calendar, Clock, User, Book, Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, Clock, User, Book, Plus, ChevronDown, ChevronUp, BookOpen } from 'lucide-react';
 import { format } from 'date-fns';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { InstructorAvailability } from '@/hooks/useCalendarScheduling';
+import { TrainingSessionBuilder, TrainingSession } from '@/components/course-sequence/TrainingSessionBuilder';
 
 interface QuickScheduleDialogProps {
   open: boolean;
@@ -41,6 +42,14 @@ export const QuickScheduleDialog: React.FC<QuickScheduleDialogProps> = ({
     endTime: '10:00',
     date: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
     bookingType: 'course_instruction'
+  });
+
+  const [trainingSession, setTrainingSession] = useState<TrainingSession>({
+    title: '',
+    description: '',
+    date: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+    startTime: '09:00',
+    courseSequence: { items: [], totalDuration: 0 }
   });
 
   // Course creation state
@@ -77,6 +86,10 @@ export const QuickScheduleDialog: React.FC<QuickScheduleDialogProps> = ({
         ...prev,
         date: format(selectedDate, 'yyyy-MM-dd')
       }));
+      setTrainingSession(prev => ({
+        ...prev,
+        date: format(selectedDate, 'yyyy-MM-dd')
+      }));
     }
   }, [selectedDate]);
 
@@ -85,40 +98,84 @@ export const QuickScheduleDialog: React.FC<QuickScheduleDialogProps> = ({
   };
 
   const handleSchedule = async () => {
-    if (!formData.instructorId || !formData.title || !formData.startTime || !formData.endTime) {
-      toast.error('Please fill in all required fields');
-      return;
+    // Use training session for multi-course, otherwise use simple form
+    if (formData.bookingType === 'course_instruction' && trainingSession.courseSequence.items.length > 0) {
+      if (!formData.instructorId || !trainingSession.title || !trainingSession.startTime) {
+        toast.error('Please fill in all required fields');
+        return;
+      }
+
+      try {
+        // Calculate end time from course sequence
+        const [hours, minutes] = trainingSession.startTime.split(':').map(Number);
+        const startMinutes = hours * 60 + minutes;
+        const endMinutes = startMinutes + trainingSession.courseSequence.totalDuration;
+        
+        const endHours = Math.floor(endMinutes / 60);
+        const endMins = endMinutes % 60;
+        const endTime = `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
+
+        const startDateTime = new Date(`${trainingSession.date}T${trainingSession.startTime}`);
+        const endDateTime = new Date(`${trainingSession.date}T${endTime}`);
+
+        await onSchedule({
+          instructorId: formData.instructorId,
+          startDateTime: startDateTime.toISOString(),
+          endDateTime: endDateTime.toISOString(),
+          title: trainingSession.title,
+          description: trainingSession.description,
+          bookingType: formData.bookingType,
+          courseSequence: trainingSession.courseSequence
+        });
+      } catch (error: any) {
+        toast.error(`Failed to schedule: ${error.message}`);
+        return;
+      }
+    } else {
+      // Original simple scheduling
+      if (!formData.instructorId || !formData.title || !formData.startTime || !formData.endTime) {
+        toast.error('Please fill in all required fields');
+        return;
+      }
+
+      try {
+        const startDateTime = new Date(`${formData.date}T${formData.startTime}`);
+        const endDateTime = new Date(`${formData.date}T${formData.endTime}`);
+
+        await onSchedule({
+          instructorId: formData.instructorId,
+          startDateTime: startDateTime.toISOString(),
+          endDateTime: endDateTime.toISOString(),
+          title: formData.title,
+          description: formData.description,
+          bookingType: formData.bookingType,
+          courseId: formData.courseId || undefined
+        });
+      } catch (error: any) {
+        toast.error(`Failed to schedule: ${error.message}`);
+        return;
+      }
     }
 
-    try {
-      const startDateTime = new Date(`${formData.date}T${formData.startTime}`);
-      const endDateTime = new Date(`${formData.date}T${formData.endTime}`);
-
-      await onSchedule({
-        instructorId: formData.instructorId,
-        startDateTime: startDateTime.toISOString(),
-        endDateTime: endDateTime.toISOString(),
-        title: formData.title,
-        description: formData.description,
-        bookingType: formData.bookingType,
-        courseId: formData.courseId || undefined
-      });
-
-      // Reset form and close dialog
-      setFormData({
-        instructorId: '',
-        courseId: '',
-        title: '',
-        description: '',
-        startTime: '09:00',
-        endTime: '10:00',
-        date: format(new Date(), 'yyyy-MM-dd'),
-        bookingType: 'course_instruction'
-      });
-      onOpenChange(false);
-    } catch (error: any) {
-      toast.error(`Failed to schedule: ${error.message}`);
-    }
+    // Reset forms and close dialog
+    setFormData({
+      instructorId: '',
+      courseId: '',
+      title: '',
+      description: '',
+      startTime: '09:00',
+      endTime: '10:00',
+      date: format(new Date(), 'yyyy-MM-dd'),
+      bookingType: 'course_instruction'
+    });
+    setTrainingSession({
+      title: '',
+      description: '',
+      date: format(new Date(), 'yyyy-MM-dd'),
+      startTime: '09:00',
+      courseSequence: { items: [], totalDuration: 0 }
+    });
+    onOpenChange(false);
   };
 
   const handleCreateCourse = async () => {
@@ -264,11 +321,30 @@ export const QuickScheduleDialog: React.FC<QuickScheduleDialogProps> = ({
           </Select>
           </div>
 
-          {/* Course Selection (if course instruction) */}
+          {/* Multi-Course Training Session (if course instruction) */}
           {formData.bookingType === 'course_instruction' && (
+            <div className="space-y-4">
+              <Separator />
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4" />
+                <Label className="text-base font-medium">Multi-Course Training Session</Label>
+              </div>
+              <TrainingSessionBuilder
+                session={trainingSession}
+                onSessionChange={setTrainingSession}
+                instructorAvailability={instructorAvailability}
+                locationId={locationId}
+                teamId={teamId}
+              />
+              <Separator />
+            </div>
+          )}
+
+          {/* Single Course Selection (for non-course instruction or fallback) */}
+          {formData.bookingType === 'course_instruction' && trainingSession.courseSequence.items.length === 0 && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Course</Label>
+                <Label>Single Course (Legacy)</Label>
                 <Button
                   type="button"
                   variant="outline"
@@ -381,28 +457,32 @@ export const QuickScheduleDialog: React.FC<QuickScheduleDialogProps> = ({
             </div>
           )}
 
-          {/* Title */}
-          <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
-            <Input
-              id="title"
-              placeholder="Enter session title"
-              value={formData.title}
-              onChange={(e) => handleInputChange('title', e.target.value)}
-            />
-          </div>
+          {/* Title - only show if not using multi-course session */}
+          {!(formData.bookingType === 'course_instruction' && trainingSession.courseSequence.items.length > 0) && (
+            <div className="space-y-2">
+              <Label htmlFor="title">Title *</Label>
+              <Input
+                id="title"
+                placeholder="Enter session title"
+                value={formData.title}
+                onChange={(e) => handleInputChange('title', e.target.value)}
+              />
+            </div>
+          )}
 
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              placeholder="Optional description"
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              rows={3}
-            />
-          </div>
+          {/* Description - only show if not using multi-course session */}
+          {!(formData.bookingType === 'course_instruction' && trainingSession.courseSequence.items.length > 0) && (
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Optional description"
+                value={formData.description}
+                onChange={(e) => handleInputChange('description', e.target.value)}
+                rows={3}
+              />
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-2 pt-4">
