@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useProfile } from '@/hooks/useProfile';
 import { useLocationData } from '@/hooks/useLocationData';
 import { LocationTable } from '@/components/LocationTable';
-import { LocationForm } from '@/components/LocationForm';
+import { EnhancedLocationForm } from '@/components/locations/EnhancedLocationForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 export default function LocationManagement() {
@@ -51,11 +51,8 @@ export default function LocationManagement() {
                   Add Location
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                  <DialogTitle>Create New Location</DialogTitle>
-                </DialogHeader>
-                <LocationForm onComplete={() => setShowLocationForm(false)} />
+              <DialogContent>
+                <EnhancedLocationForm onComplete={() => setShowLocationForm(false)} />
               </DialogContent>
             </Dialog>
           </div>
@@ -82,7 +79,7 @@ export default function LocationManagement() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-2xl font-bold text-emerald-600">
               {locations?.filter(l => l.status === 'ACTIVE').length || 0}
             </div>
           </CardContent>
@@ -95,7 +92,7 @@ export default function LocationManagement() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
+            <div className="text-2xl font-bold text-orange-600">
               {locations?.filter(l => l.status === 'INACTIVE').length || 0}
             </div>
           </CardContent>

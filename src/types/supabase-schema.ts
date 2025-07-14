@@ -50,12 +50,13 @@ export interface Location {
   name: string;
   address?: string;
   city?: string;
-  province?: string;
   state?: string;
-  postal_code?: string;
+  zip?: string;
   country?: string;
   phone?: string;
   email?: string;
+  website?: string;
+  logo_url?: string;
   status: 'ACTIVE' | 'INACTIVE';
   created_at: string;
   updated_at: string;

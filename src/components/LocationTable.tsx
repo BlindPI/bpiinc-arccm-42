@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Edit, ExternalLink, Search } from 'lucide-react';
 import { useLocationData } from '@/hooks/useLocationData';
 import { useProfile } from '@/hooks/useProfile';
-import { LocationForm } from './LocationForm';
+import { EnhancedLocationForm } from './locations/EnhancedLocationForm';
 import { LocationSearch } from './LocationSearch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { Location } from '@/types/supabase-schema';
@@ -134,11 +134,8 @@ export function LocationTable({ filters, showSearch }: LocationTableProps) {
         open={!!selectedLocation} 
         onOpenChange={(open) => !open && setSelectedLocation(null)}
       >
-        <DialogContent className="sm:max-w-[550px]">
-          <DialogHeader>
-            <DialogTitle>Edit Location</DialogTitle>
-          </DialogHeader>
-          <LocationForm
+        <DialogContent>
+          <EnhancedLocationForm
             location={selectedLocation}
             onComplete={() => setSelectedLocation(null)}
           />
