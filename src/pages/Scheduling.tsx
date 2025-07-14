@@ -5,70 +5,58 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BulkSchedulingPanel } from '@/components/team/BulkSchedulingPanel';
 import { CalendarSchedulingView } from '@/components/scheduling/CalendarSchedulingView';
-import { ConflictDetector } from '@/components/scheduling/ConflictDetector';
-import { ResourceAvailability } from '@/components/scheduling/ResourceAvailability';
-import { CalendarSyncSetup } from '@/components/integration/CalendarSyncSetup';
 import { 
   Calendar, 
   Clock, 
   Users, 
   AlertTriangle,
-  TrendingUp,
-  MapPin,
-  Loader2
+  Loader2,
+  Settings,
+  ChevronDown
 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 export default function Scheduling() {
   const { user } = useAuth();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // Fetch scheduling metrics
+  // Simplified metrics - only essential data
   const { data: metrics, isLoading } = useQuery({
     queryKey: ['scheduling-metrics'],
     queryFn: async () => {
-      // Get upcoming bookings
-      const { data: bookings, error: bookingsError } = await supabase
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Get today's bookings
+      const { data: todayBookings } = await supabase
         .from('availability_bookings')
         .select('*')
-        .gte('booking_date', new Date().toISOString().split('T')[0])
+        .eq('booking_date', today)
         .eq('status', 'scheduled');
 
-      if (bookingsError) throw bookingsError;
-
-      // Get active locations
-      const { data: locations, error: locationsError } = await supabase
-        .from('locations')
+      // Get upcoming bookings (next 7 days)
+      const nextWeek = new Date();
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      
+      const { data: upcomingBookings } = await supabase
+        .from('availability_bookings')
         .select('*')
-        .eq('status', 'ACTIVE');
+        .gte('booking_date', today)
+        .lte('booking_date', nextWeek.toISOString().split('T')[0])
+        .eq('status', 'scheduled');
 
-      if (locationsError) throw locationsError;
-
-      // Get conflicts
-      const { data: conflicts, error: conflictsError } = await supabase
-        .from('assignment_conflicts')
-        .select('*')
-        .is('resolved_at', null);
-
-      if (conflictsError) throw conflictsError;
-
-      // Get bulk operations
-      const { data: bulkOps, error: bulkError } = await supabase
-        .from('bulk_operation_queue')
-        .select('*')
-        .in('status', ['pending', 'processing']);
-
-      if (bulkError) throw bulkError;
+      // Get active instructors
+      const { data: instructors } = await supabase
+        .from('profiles')
+        .select('id, display_name, user_availability!inner(*)')
+        .in('role', ['IC', 'IP', 'IT']);
 
       return {
-        upcomingBookings: bookings?.length || 0,
-        activeLocations: locations?.length || 0,
-        conflicts: conflicts?.length || 0,
-        activeBulkOps: bulkOps?.length || 0,
-        todayBookings: bookings?.filter(b => 
-          b.booking_date === new Date().toISOString().split('T')[0]
-        ).length || 0
+        todayBookings: todayBookings?.length || 0,
+        upcomingBookings: upcomingBookings?.length || 0,
+        activeInstructors: instructors?.length || 0,
+        availableSlots: instructors?.reduce((total, instructor) => 
+          total + (instructor.user_availability?.length || 0), 0) || 0
       };
     },
     enabled: !!user,
@@ -84,133 +72,88 @@ export default function Scheduling() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Calendar className="h-6 w-6 text-primary" />
-          Scheduling & Availability
-        </h1>
-        <p className="text-muted-foreground">
-          Manage team schedules, bookings, and resource availability
-        </p>
+    <div className="space-y-6 p-6 max-w-7xl mx-auto">
+      {/* Clean Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-3">
+            <Calendar className="h-8 w-8 text-primary" />
+            Instructor Scheduling
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            View instructor availability and schedule training sessions
+          </p>
+        </div>
+        
+        {/* Essential Metrics */}
+        <div className="flex items-center gap-6">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-primary">{metrics?.todayBookings || 0}</div>
+            <div className="text-sm text-muted-foreground">Today</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-green-600">{metrics?.upcomingBookings || 0}</div>
+            <div className="text-sm text-muted-foreground">This Week</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-blue-600">{metrics?.activeInstructors || 0}</div>
+            <div className="text-sm text-muted-foreground">Instructors</div>
+          </div>
+        </div>
       </div>
 
-      {/* Quick Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium">Today's Bookings</span>
-            </div>
-            <p className="text-2xl font-bold mt-1">{metrics?.todayBookings || 0}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-green-600" />
-              <span className="text-sm font-medium">Upcoming</span>
-            </div>
-            <p className="text-2xl font-bold mt-1">{metrics?.upcomingBookings || 0}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-purple-600" />
-              <span className="text-sm font-medium">Locations</span>
-            </div>
-            <p className="text-2xl font-bold mt-1">{metrics?.activeLocations || 0}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-orange-600" />
-              <span className="text-sm font-medium">Conflicts</span>
-            </div>
-            <p className="text-2xl font-bold mt-1">{metrics?.conflicts || 0}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-indigo-600" />
-              <span className="text-sm font-medium">Bulk Ops</span>
-            </div>
-            <p className="text-2xl font-bold mt-1">{metrics?.activeBulkOps || 0}</p>
-          </CardContent>
-        </Card>
+      {/* Main Calendar - Prominent Display */}
+      <div className="bg-card rounded-lg border shadow-sm">
+        <CalendarSchedulingView />
       </div>
 
-      {/* Unified Calendar View - Replaces separate calendar and resource sections */}
-      <CalendarSchedulingView />
-
-      {/* Secondary Features Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Calendar Integration */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Calendar Integration
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CalendarSyncSetup />
-          </CardContent>
-        </Card>
-
-        {/* Resource Availability Summary */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Resource Summary
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResourceAvailability 
-              schedules={[]}
-              selectedDate={selectedDate}
-            />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Conflict Detection */}
-      {metrics?.conflicts && metrics.conflicts > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-orange-600" />
-              Scheduling Conflicts
-              <Badge variant="destructive">{metrics.conflicts}</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ConflictDetector schedules={[]} />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Bulk Scheduling */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Bulk Operations
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <BulkSchedulingPanel 
-            teamId="default-team"
-            teamMembers={[]}
-          />
-        </CardContent>
-      </Card>
+      {/* Advanced Features - Collapsible */}
+      <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
+        <CollapsibleTrigger asChild>
+          <Button variant="outline" className="w-full flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Advanced Scheduling Features
+            <ChevronDown className={`h-4 w-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-4 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Bulk Operations
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Schedule multiple sessions at once
+                </p>
+                <Button variant="outline" size="sm">
+                  Open Bulk Scheduler
+                </Button>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  Conflict Detection
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Automatically detect scheduling conflicts
+                </p>
+                <Button variant="outline" size="sm">
+                  View Conflicts
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }
