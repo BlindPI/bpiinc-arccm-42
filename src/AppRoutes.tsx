@@ -150,7 +150,7 @@ export function AppRoutes() {
 
       <Route path="/enrollments" element={
         <ProtectedRoute>
-          <TrainingOverview />
+          <Enrollments />
         </ProtectedRoute>
       } />
 
