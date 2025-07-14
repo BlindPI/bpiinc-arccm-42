@@ -256,19 +256,9 @@ export class EnrollmentAnalyticsService {
 
       if (error) throw error;
 
-      // Check if enrolled in a roster
-      const { data: rosterEntry } = await supabase
-        .from('student_roster_entries')
-        .select('student_roster_id')
-        .eq('student_profile_id', enrollment.user_id)
-        .single();
-
-      // Check for certificate request
-      const { data: certRequest } = await supabase
-        .from('certificate_requests')
-        .select('id, status')
-        .eq('student_id', enrollment.user_id)
-        .single();
+      // Mock roster and certificate data since these tables don't exist yet
+      const rosterEntry = null;
+      const certRequest = null;
 
       const stages = [
         {
