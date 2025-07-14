@@ -103,12 +103,12 @@ export default function CourseManagement() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Categories
+              With Certification Levels
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {new Set(courses?.map(c => c.course_type_id).filter(Boolean)).size || 0}
+            <div className="text-2xl font-bold text-blue-600">
+              {courses?.filter(c => c.first_aid_level || c.cpr_level).length || 0}
             </div>
           </CardContent>
         </Card>

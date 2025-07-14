@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Calendar, Users, Search, Clock } from 'lucide-react';
+import { Edit, Search, Clock } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { useCourseData } from '@/hooks/useCourseData';
 import { EnhancedCourseForm } from './EnhancedCourseForm';
@@ -81,6 +81,8 @@ export function CourseTable({ courses: propCourses, isLoading: propIsLoading, sh
           <TableRow className="bg-muted/50">
             <TableHead className="font-semibold">Course Name</TableHead>
             <TableHead className="font-semibold">Description</TableHead>
+            <TableHead className="font-semibold">First Aid Level</TableHead>
+            <TableHead className="font-semibold">CPR Level</TableHead>
             <TableHead className="font-semibold">Duration</TableHead>
             <TableHead className="font-semibold">Expiration</TableHead>
             <TableHead className="font-semibold">Status</TableHead>
@@ -94,6 +96,24 @@ export function CourseTable({ courses: propCourses, isLoading: propIsLoading, sh
               <TableCell className="font-medium">{course.name}</TableCell>
               <TableCell className="max-w-xs truncate">
                 {course.description || '-'}
+              </TableCell>
+              <TableCell>
+                {course.first_aid_level ? (
+                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                    {course.first_aid_level}
+                  </Badge>
+                ) : (
+                  <span className="text-muted-foreground">-</span>
+                )}
+              </TableCell>
+              <TableCell>
+                {course.cpr_level ? (
+                  <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
+                    {course.cpr_level}
+                  </Badge>
+                ) : (
+                  <span className="text-muted-foreground">-</span>
+                )}
               </TableCell>
               <TableCell>
                 {course.length ? (
@@ -132,20 +152,6 @@ export function CourseTable({ courses: propCourses, isLoading: propIsLoading, sh
                         <Edit className="h-4 w-4" />
                       </Button>
                     )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="hover:bg-primary/10"
-                    >
-                      <Calendar className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="hover:bg-primary/10"
-                    >
-                      <Users className="h-4 w-4" />
-                    </Button>
                   </div>
                 </TableCell>
               )}
@@ -163,6 +169,7 @@ export function CourseTable({ courses: propCourses, isLoading: propIsLoading, sh
             <DialogTitle>Edit Course</DialogTitle>
           </DialogHeader>
           <EnhancedCourseForm
+            course={selectedCourse || undefined}
             onSuccess={() => setSelectedCourse(null)}
           />
         </DialogContent>

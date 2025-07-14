@@ -9,13 +9,15 @@ import { useCourseForm } from '@/hooks/useCourseForm';
 import { DurationFields } from './form-sections/DurationFields';
 import { CourseTypesSection } from './form-sections/CourseTypesSection';
 import { CertificationLevelSection } from './form-sections/CertificationLevelSection';
+import type { Course } from '@/types/courses';
 
 interface EnhancedCourseFormProps {
   onSuccess?: () => void;
+  course?: Course;
 }
 
-export function EnhancedCourseForm({ onSuccess }: EnhancedCourseFormProps) {
-  const { formState, updateField, handleSubmit, isSubmitting } = useCourseForm({ onSuccess });
+export function EnhancedCourseForm({ onSuccess, course }: EnhancedCourseFormProps) {
+  const { formState, updateField, handleSubmit, isSubmitting, isEditMode } = useCourseForm({ onSuccess, course });
 
   return (
     <CardContent>
@@ -76,11 +78,11 @@ export function EnhancedCourseForm({ onSuccess }: EnhancedCourseFormProps) {
           disabled={isSubmitting}
         >
           {isSubmitting ? (
-            <>Creating...</>
+            <>{isEditMode ? 'Updating...' : 'Creating...'}</>
           ) : (
             <>
               <Plus className="h-4 w-4 mr-2" />
-              Create Course
+              {isEditMode ? 'Update Course' : 'Create Course'}
             </>
           )}
         </Button>
