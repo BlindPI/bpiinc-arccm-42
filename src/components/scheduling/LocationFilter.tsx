@@ -14,17 +14,63 @@ export const LocationFilter: React.FC<LocationFilterProps> = ({
   onLocationChange
 }) => {
   const { data: locations } = useQuery({
-    queryKey: ['locations-for-filtering-with-instructors'],
+    queryKey: ['locations-for-filtering-simple'],
     queryFn: async () => {
-      const { data: userProfile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', (await supabase.auth.getUser()).data.user?.id)
-        .single();
+      try {
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', (await supabase.auth.getUser()).data.user?.id)
+          .single();
 
-      // Get locations with instructor availability
-      const getLocationsWithInstructors = async (locationIds?: string[]) => {
-        let locQuery = supabase
+        console.log('User profile:', userProfile);
+
+        // Step 1: Get allowed location IDs based on user role
+        let allowedLocationIds: string[] = [];
+
+        if (userProfile?.role === 'SA' || userProfile?.role === 'AD') {
+          // SA/AD can see all active locations
+          const { data: allLocations, error } = await supabase
+            .from('locations')
+            .select('id')
+            .eq('status', 'ACTIVE');
+          
+          if (error) throw error;
+          allowedLocationIds = allLocations?.map(loc => loc.id) || [];
+        } else if (userProfile?.role === 'AP') {
+          // AP can only see assigned locations
+          const { data: assignments, error } = await supabase
+            .from('ap_user_location_assignments')
+            .select('location_id')
+            .eq('ap_user_id', (await supabase.auth.getUser()).data.user?.id)
+            .eq('status', 'active');
+          
+          if (error) throw error;
+          allowedLocationIds = assignments?.map(a => a.location_id) || [];
+        } else {
+          // Other users can see locations where they are team members
+          const { data: teamMembers, error } = await supabase
+            .from('team_members')
+            .select(`
+              teams!team_members_team_id_fkey(location_id)
+            `)
+            .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+            .eq('status', 'active');
+          
+          if (error) throw error;
+          allowedLocationIds = teamMembers
+            ?.map(member => member.teams?.location_id)
+            .filter(Boolean) || [];
+        }
+
+        console.log('Allowed location IDs:', allowedLocationIds);
+
+        if (allowedLocationIds.length === 0) {
+          return [];
+        }
+
+        // Step 2: Get locations with their instructor counts
+        const { data: locationsWithTeams, error: locationError } = await supabase
           .from('locations')
           .select(`
             id, name, address,
@@ -32,85 +78,40 @@ export const LocationFilter: React.FC<LocationFilterProps> = ({
               id,
               team_members!team_members_team_id_fkey(
                 user_id,
-                status,
-                profiles!team_members_user_id_fkey(
-                  id, role, display_name,
-                  user_availability(day_of_week, start_time, end_time)
-                )
+                profiles!team_members_user_id_fkey(role)
               )
             )
           `)
-          .eq('status', 'ACTIVE')
-          .eq('teams.team_members.status', 'active')
-          .in('teams.team_members.profiles.role', ['IC', 'IP', 'IT']);
+          .in('id', allowedLocationIds)
+          .eq('status', 'ACTIVE');
 
-        if (locationIds) {
-          locQuery = locQuery.in('id', locationIds);
-        }
+        if (locationError) throw locationError;
 
-        const { data: locationsData, error } = await locQuery;
-        if (error) throw error;
+        console.log('Locations with teams:', locationsWithTeams);
 
-        // Filter locations that have at least one instructor with availability
-        return locationsData?.filter(location => {
-          const hasInstructors = location.teams?.some((team: any) => 
-            team.team_members?.some((member: any) => 
-              member.profiles?.role && ['IC', 'IP', 'IT'].includes(member.profiles.role) &&
-              member.profiles.user_availability?.length > 0
-            )
-          );
-          return hasInstructors;
-        }).map(location => ({
-          id: location.id,
-          name: location.name,
-          address: location.address,
-          instructorCount: location.teams?.reduce((count: number, team: any) => 
-            count + (team.team_members?.filter((member: any) => 
-              member.profiles?.role && ['IC', 'IP', 'IT'].includes(member.profiles.role) &&
-              member.profiles.user_availability?.length > 0
-            ).length || 0), 0
-          ) || 0
-        })) || [];
-      };
+        // Step 3: Calculate instructor counts and filter locations with instructors
+        const locationsWithInstructors = locationsWithTeams?.map(location => {
+          const instructorCount = location.teams?.reduce((count, team) => {
+            return count + (team.team_members?.filter((member: any) => 
+              member.profiles?.role && ['IC', 'IP', 'IT'].includes(member.profiles.role)
+            ).length || 0);
+          }, 0) || 0;
 
-      // If user is SA/AD, show all locations with instructors
-      if (userProfile?.role === 'SA' || userProfile?.role === 'AD') {
-        return await getLocationsWithInstructors();
+          return {
+            id: location.id,
+            name: location.name,
+            address: location.address,
+            instructorCount
+          };
+        }).filter(location => location.instructorCount > 0) || [];
+
+        console.log('Final filtered locations:', locationsWithInstructors);
+        return locationsWithInstructors;
+
+      } catch (error) {
+        console.error('Error in location filter query:', error);
+        throw error;
       }
-
-      // If user is AP, show only assigned locations with instructors
-      if (userProfile?.role === 'AP') {
-        const { data: assignments, error } = await supabase
-          .from('ap_user_location_assignments')
-          .select('location_id')
-          .eq('ap_user_id', (await supabase.auth.getUser()).data.user?.id)
-          .eq('status', 'active');
-        
-        if (error) throw error;
-        const assignedLocationIds = assignments?.map(a => a.location_id) || [];
-        
-        if (assignedLocationIds.length === 0) return [];
-        return await getLocationsWithInstructors(assignedLocationIds);
-      }
-
-      // For other roles, show locations where they have teams with instructors
-      const { data: teamMembers, error } = await supabase
-        .from('team_members')
-        .select(`
-          team_id,
-          teams!team_members_team_id_fkey(location_id)
-        `)
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
-        .eq('status', 'active');
-      
-      if (error) throw error;
-      
-      const locationIds = teamMembers
-        ?.map(member => member.teams?.location_id)
-        .filter(Boolean) || [];
-      
-      if (locationIds.length === 0) return [];
-      return await getLocationsWithInstructors(locationIds);
     }
   });
 
