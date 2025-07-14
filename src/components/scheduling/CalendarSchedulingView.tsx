@@ -103,6 +103,7 @@ export const CalendarSchedulingView: React.FC<CalendarSchedulingViewProps> = ({
           <InstructorAvailabilityDropdown
             instructorAvailability={instructorAvailability || []}
             selectedDate={selectedDate || new Date()}
+            selectedLocationId={selectedLocationId}
             onInstructorSelect={(instructorId) => {
               console.log('Selected instructor:', instructorId);
             }}

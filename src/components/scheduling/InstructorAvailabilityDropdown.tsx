@@ -17,6 +17,7 @@ import { InstructorAvailability } from '@/hooks/useCalendarScheduling';
 interface InstructorAvailabilityDropdownProps {
   instructorAvailability: InstructorAvailability[];
   selectedDate: Date;
+  selectedLocationId?: string;
   onInstructorSelect?: (instructorId: string) => void;
 }
 
@@ -25,14 +26,17 @@ const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 export const InstructorAvailabilityDropdown: React.FC<InstructorAvailabilityDropdownProps> = ({
   instructorAvailability,
   selectedDate,
+  selectedLocationId,
   onInstructorSelect
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
 
-  const filteredInstructors = instructorAvailability.filter(instructor =>
-    instructor.instructorName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+const filteredInstructors = instructorAvailability.filter(instructor => {
+    const matchesSearch = instructor.instructorName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesLocation = !selectedLocationId || instructor.locationId === selectedLocationId;
+    return matchesSearch && matchesLocation;
+  });
 
   const getAvailabilityForDay = (instructor: InstructorAvailability, dayOfWeek: number) => {
     return instructor.availability.filter(avail => avail.dayOfWeek === dayOfWeek);
@@ -81,6 +85,11 @@ export const InstructorAvailabilityDropdown: React.FC<InstructorAvailabilityDrop
         <DropdownMenuLabel className="flex items-center gap-2">
           <Users className="h-4 w-4" />
           Available Today - {format(selectedDate, 'MMM d')}
+          {selectedLocationId && (
+            <span className="text-xs text-muted-foreground">
+              (Location filtered)
+            </span>
+          )}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         
@@ -181,9 +190,21 @@ export const InstructorAvailabilityDropdown: React.FC<InstructorAvailabilityDrop
             {filteredInstructors.length === 0 && (
               <div className="text-center py-4 text-muted-foreground">
                 <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No instructors found</p>
-                {searchTerm && (
-                  <p className="text-xs mt-1">Try adjusting your search terms</p>
+                {selectedLocationId ? (
+                  <>
+                    <p className="text-sm">No instructors available at this location</p>
+                    <p className="text-xs mt-1">Try selecting a different location</p>
+                  </>
+                ) : searchTerm ? (
+                  <>
+                    <p className="text-sm">No instructors found</p>
+                    <p className="text-xs mt-1">Try adjusting your search terms</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm">No instructors available</p>
+                    <p className="text-xs mt-1">Select a location to see available instructors</p>
+                  </>
                 )}
               </div>
             )}
