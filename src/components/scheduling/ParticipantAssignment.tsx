@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Users, UserPlus, UserMinus, GraduationCap } from 'lucide-react';
+import { Users, UserPlus, UserMinus, GraduationCap, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ParticipantAssignmentProps {
@@ -24,18 +24,19 @@ export function ParticipantAssignment({
   const [selectedRosterId, setSelectedRosterId] = useState('');
   const queryClient = useQueryClient();
 
-  // Get available rosters
+  // Get available training rosters
   const { data: rosters = [] } = useQuery({
-    queryKey: ['rosters-active'],
+    queryKey: ['student-rosters-training'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('rosters')
+        .from('student_rosters')
         .select(`
-          id, name, description, certificate_count,
-          course:course_id (name),
-          location:location_id (name)
+          id, roster_name, course_name, roster_type,
+          current_enrollment, max_capacity, roster_status,
+          locations:location_id (name, city)
         `)
-        .eq('status', 'ACTIVE')
+        .eq('roster_type', 'TRAINING')
+        .eq('roster_status', 'ACTIVE')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -47,20 +48,43 @@ export function ParticipantAssignment({
   const { data: participants = [] } = useQuery({
     queryKey: ['event-participants', eventId],
     queryFn: async () => {
-      // For now, we'll simulate participants since we need to create the relationship
-      // In a real implementation, you'd have a junction table like event_participants
-      return [];
+      // Get the roster assigned to this booking
+      const { data: booking, error: bookingError } = await supabase
+        .from('availability_bookings')
+        .select('roster_id')
+        .eq('id', eventId)
+        .single();
+
+      if (bookingError || !booking?.roster_id) return [];
+
+      // Get students from the assigned roster
+      const { data: students, error: studentsError } = await supabase
+        .from('student_roster_members')
+        .select(`
+          student_enrollment_profiles(
+            id, display_name, email, first_name, last_name
+          )
+        `)
+        .eq('roster_id', booking.roster_id)
+        .eq('enrollment_status', 'enrolled');
+
+      if (studentsError) throw studentsError;
+
+      return students?.map((member: any) => ({
+        id: member.student_enrollment_profiles.id,
+        name: member.student_enrollment_profiles.display_name || 
+              `${member.student_enrollment_profiles.first_name || ''} ${member.student_enrollment_profiles.last_name || ''}`.trim(),
+        email: member.student_enrollment_profiles.email,
+      })) || [];
     }
   });
 
   // Assign roster to event
   const assignRoster = useMutation({
     mutationFn: async (rosterId: string) => {
-      // This would create entries in an event_participants table
-      // For now, we'll update the availability_booking with roster reference
       const { data, error } = await supabase
         .from('availability_bookings')
-        .update({ description: `Roster: ${rosterId}` })
+        .update({ roster_id: rosterId })
         .eq('id', eventId)
         .select()
         .single();
@@ -69,7 +93,7 @@ export function ParticipantAssignment({
       return data;
     },
     onSuccess: () => {
-      toast.success('Roster assigned to training session');
+      toast.success('Training roster assigned to session');
       queryClient.invalidateQueries({ queryKey: ['event-participants', eventId] });
       queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
       onParticipantsChange?.();
@@ -108,14 +132,20 @@ export function ParticipantAssignment({
                 {rosters.map((roster) => (
                   <SelectItem key={roster.id} value={roster.id}>
                     <div className="flex items-center justify-between w-full">
-                      <span>{roster.name}</span>
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="h-4 w-4" />
+                        <span>{roster.roster_name}</span>
+                      </div>
                       <div className="flex items-center gap-2 ml-2">
                         <Badge variant="outline" className="text-xs">
-                          {roster.certificate_count} participants
+                          {roster.current_enrollment}/{roster.max_capacity} students
                         </Badge>
-                        {roster.course && (
-                          <Badge variant="secondary" className="text-xs">
-                            {roster.course.name}
+                        <Badge variant="secondary" className="text-xs">
+                          {roster.course_name}
+                        </Badge>
+                        {roster.locations && (
+                          <Badge variant="outline" className="text-xs">
+                            {roster.locations.name}
                           </Badge>
                         )}
                       </div>

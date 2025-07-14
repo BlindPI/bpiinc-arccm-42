@@ -29,6 +29,7 @@ import { toast } from 'sonner';
 import { RosterBuilder } from './RosterBuilder';
 import { RosterTable } from './RosterTable';
 import { RosterExportDialog } from './RosterExportDialog';
+import { RosterStudentManager } from './RosterStudentManager';
 
 interface StudentRoster {
   id: string;
@@ -56,7 +57,7 @@ interface StudentRoster {
 }
 
 export function RosterManagement() {
-  const [activeView, setActiveView] = useState<'list' | 'create'>('list');
+  const [activeView, setActiveView] = useState<'list' | 'create' | 'manage'>('list');
   const [selectedRoster, setSelectedRoster] = useState<StudentRoster | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('TRAINING');
@@ -153,6 +154,28 @@ export function RosterManagement() {
           </Button>
         </div>
         <RosterBuilder onComplete={() => setActiveView('list')} />
+      </div>
+    );
+  }
+
+  if (activeView === 'manage' && selectedRoster) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">Manage Roster: {selectedRoster.roster_name}</h2>
+            <p className="text-muted-foreground">Add, remove, and manage students in this roster</p>
+          </div>
+          <Button variant="outline" onClick={() => setActiveView('list')}>
+            Back to Rosters
+          </Button>
+        </div>
+        <RosterStudentManager
+          rosterId={selectedRoster.id}
+          rosterName={selectedRoster.roster_name}
+          maxCapacity={selectedRoster.max_capacity}
+          currentEnrollment={selectedRoster.current_enrollment}
+        />
       </div>
     );
   }
@@ -290,39 +313,52 @@ export function RosterManagement() {
                 <Separator />
 
                 <div className="flex justify-between gap-2">
-                  <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedRoster(roster);
-                          setShowExportDialog(true);
-                        }}
-                      >
-                        <Settings className="h-4 w-4 mr-1" />
-                        Export
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
-                      {selectedRoster && (
-                        <RosterExportDialog 
-                          roster={selectedRoster} 
-                          onClose={() => setShowExportDialog(false)}
-                        />
-                      )}
-                    </DialogContent>
-                  </Dialog>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => deleteRosterMutation.mutate(roster.id)}
-                    disabled={deleteRosterMutation.isPending}
-                    className="text-destructive hover:text-destructive"
+                    onClick={() => {
+                      setSelectedRoster(roster);
+                      setActiveView('manage');
+                    }}
                   >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Delete
+                    <Edit className="h-4 w-4 mr-1" />
+                    Manage Students
                   </Button>
+                  <div className="flex gap-2">
+                    <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedRoster(roster);
+                            setShowExportDialog(true);
+                          }}
+                        >
+                          <Settings className="h-4 w-4 mr-1" />
+                          Export
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        {selectedRoster && (
+                          <RosterExportDialog 
+                            roster={selectedRoster} 
+                            onClose={() => setShowExportDialog(false)}
+                          />
+                        )}
+                      </DialogContent>
+                    </Dialog>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => deleteRosterMutation.mutate(roster.id)}
+                      disabled={deleteRosterMutation.isPending}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

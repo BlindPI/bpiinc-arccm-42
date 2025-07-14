@@ -1347,6 +1347,7 @@ export type Database = {
           hours_credited: number | null
           id: string
           requires_approval: boolean | null
+          roster_id: string | null
           start_time: string
           status: string
           team_id: string | null
@@ -1371,6 +1372,7 @@ export type Database = {
           hours_credited?: number | null
           id?: string
           requires_approval?: boolean | null
+          roster_id?: string | null
           start_time: string
           status?: string
           team_id?: string | null
@@ -1395,6 +1397,7 @@ export type Database = {
           hours_credited?: number | null
           id?: string
           requires_approval?: boolean | null
+          roster_id?: string | null
           start_time?: string
           status?: string
           team_id?: string | null
@@ -1464,6 +1467,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_roster_id_fkey"
+            columns: ["roster_id"]
+            isOneToOne: false
+            referencedRelation: "student_rosters"
             referencedColumns: ["id"]
           },
           {
@@ -6452,6 +6462,95 @@ export type Database = {
             columns: ["prerequisite_course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_roster_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          availability_booking_id: string | null
+          course_offering_id: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          roster_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          availability_booking_id?: string | null
+          course_offering_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          roster_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          availability_booking_id?: string | null
+          course_offering_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          roster_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_roster_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "course_roster_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "course_roster_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "course_roster_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_roster_assignments_availability_booking_id_fkey"
+            columns: ["availability_booking_id"]
+            isOneToOne: false
+            referencedRelation: "availability_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_roster_assignments_course_offering_id_fkey"
+            columns: ["course_offering_id"]
+            isOneToOne: false
+            referencedRelation: "course_offerings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_roster_assignments_roster_id_fkey"
+            columns: ["roster_id"]
+            isOneToOne: false
+            referencedRelation: "student_rosters"
             referencedColumns: ["id"]
           },
         ]
@@ -14041,6 +14140,85 @@ export type Database = {
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_roster_members: {
+        Row: {
+          created_at: string
+          enrolled_at: string
+          enrolled_by: string | null
+          enrollment_status: string
+          id: string
+          notes: string | null
+          roster_id: string
+          student_profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enrolled_at?: string
+          enrolled_by?: string | null
+          enrollment_status?: string
+          id?: string
+          notes?: string | null
+          roster_id: string
+          student_profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enrolled_at?: string
+          enrolled_by?: string | null
+          enrollment_status?: string
+          id?: string
+          notes?: string | null
+          roster_id?: string
+          student_profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_roster_members_enrolled_by_fkey"
+            columns: ["enrolled_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "student_roster_members_enrolled_by_fkey"
+            columns: ["enrolled_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "student_roster_members_enrolled_by_fkey"
+            columns: ["enrolled_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "student_roster_members_enrolled_by_fkey"
+            columns: ["enrolled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_roster_members_roster_id_fkey"
+            columns: ["roster_id"]
+            isOneToOne: false
+            referencedRelation: "student_rosters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_roster_members_student_profile_id_fkey"
+            columns: ["student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "student_enrollment_profiles"
             referencedColumns: ["id"]
           },
         ]
