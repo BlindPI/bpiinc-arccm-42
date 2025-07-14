@@ -31,6 +31,7 @@ import { WaitlistManager } from './WaitlistManager';
 import { BulkEnrollmentForm } from './BulkEnrollmentForm';
 import { EnrollmentStats } from './EnrollmentStats';
 import { ManualEnrollmentForm } from './ManualEnrollmentForm';
+import { EnhancedManualEnrollmentForm } from './EnhancedManualEnrollmentForm';
 import { EnrollmentService, type EnrollmentWithDetails } from '@/services/enrollment/enrollmentService';
 import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -237,7 +238,7 @@ export function EnrollmentManagementDashboard() {
         </TabsContent>
 
         <TabsContent value="manual" className="space-y-4">
-          <ManualEnrollmentForm />
+          <EnhancedManualEnrollmentForm />
         </TabsContent>
 
         <TabsContent value="enrollments" className="space-y-4">

@@ -13358,6 +13358,141 @@ export type Database = {
           },
         ]
       }
+      roster_enrollments: {
+        Row: {
+          attendance_status: string | null
+          created_at: string | null
+          enrollment_date: string | null
+          id: string
+          notes: string | null
+          online_completion_date: string | null
+          online_completion_status: string | null
+          practical_completion_date: string | null
+          practical_completion_status: string | null
+          roster_id: string
+          student_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          attendance_status?: string | null
+          created_at?: string | null
+          enrollment_date?: string | null
+          id?: string
+          notes?: string | null
+          online_completion_date?: string | null
+          online_completion_status?: string | null
+          practical_completion_date?: string | null
+          practical_completion_status?: string | null
+          roster_id: string
+          student_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          attendance_status?: string | null
+          created_at?: string | null
+          enrollment_date?: string | null
+          id?: string
+          notes?: string | null
+          online_completion_date?: string | null
+          online_completion_status?: string | null
+          practical_completion_date?: string | null
+          practical_completion_status?: string | null
+          roster_id?: string
+          student_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roster_enrollments_roster_id_fkey"
+            columns: ["roster_id"]
+            isOneToOne: false
+            referencedRelation: "student_rosters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roster_enrollments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_enrollment_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roster_export_logs: {
+        Row: {
+          batch_upload_id: string | null
+          export_data: Json | null
+          export_format: string | null
+          export_status: string | null
+          exported_at: string | null
+          exported_by: string | null
+          file_name: string | null
+          id: string
+          notes: string | null
+          roster_id: string
+        }
+        Insert: {
+          batch_upload_id?: string | null
+          export_data?: Json | null
+          export_format?: string | null
+          export_status?: string | null
+          exported_at?: string | null
+          exported_by?: string | null
+          file_name?: string | null
+          id?: string
+          notes?: string | null
+          roster_id: string
+        }
+        Update: {
+          batch_upload_id?: string | null
+          export_data?: Json | null
+          export_format?: string | null
+          export_status?: string | null
+          exported_at?: string | null
+          exported_by?: string | null
+          file_name?: string | null
+          id?: string
+          notes?: string | null
+          roster_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roster_export_logs_exported_by_fkey"
+            columns: ["exported_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "roster_export_logs_exported_by_fkey"
+            columns: ["exported_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "roster_export_logs_exported_by_fkey"
+            columns: ["exported_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "roster_export_logs_exported_by_fkey"
+            columns: ["exported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roster_export_logs_roster_id_fkey"
+            columns: ["roster_id"]
+            isOneToOne: false
+            referencedRelation: "student_rosters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       roster_uploads: {
         Row: {
           course_name: string
@@ -13796,60 +13931,225 @@ export type Database = {
       }
       student_enrollment_profiles: {
         Row: {
+          assessment_status: string | null
+          city: string | null
+          company: string | null
+          completion_status: string | null
+          course_length: number | null
+          cpr_level: string | null
           created_at: string | null
           display_name: string | null
           email: string
           enrollment_status: string | null
           external_student_id: string | null
+          first_aid_level: string | null
           first_name: string | null
           id: string
           import_date: string | null
           imported_from: string | null
+          instructor_name: string | null
           is_active: boolean | null
           last_name: string | null
           last_sync_date: string | null
+          location_id: string | null
+          notes: string | null
+          online_completed_at: string | null
+          phone: string | null
+          postal_code: string | null
+          practical_completed_at: string | null
+          province: string | null
           student_metadata: Json | null
           sync_status: string | null
           thinkific_user_id: string | null
           updated_at: string | null
         }
         Insert: {
+          assessment_status?: string | null
+          city?: string | null
+          company?: string | null
+          completion_status?: string | null
+          course_length?: number | null
+          cpr_level?: string | null
           created_at?: string | null
           display_name?: string | null
           email: string
           enrollment_status?: string | null
           external_student_id?: string | null
+          first_aid_level?: string | null
           first_name?: string | null
           id?: string
           import_date?: string | null
           imported_from?: string | null
+          instructor_name?: string | null
           is_active?: boolean | null
           last_name?: string | null
           last_sync_date?: string | null
+          location_id?: string | null
+          notes?: string | null
+          online_completed_at?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          practical_completed_at?: string | null
+          province?: string | null
           student_metadata?: Json | null
           sync_status?: string | null
           thinkific_user_id?: string | null
           updated_at?: string | null
         }
         Update: {
+          assessment_status?: string | null
+          city?: string | null
+          company?: string | null
+          completion_status?: string | null
+          course_length?: number | null
+          cpr_level?: string | null
           created_at?: string | null
           display_name?: string | null
           email?: string
           enrollment_status?: string | null
           external_student_id?: string | null
+          first_aid_level?: string | null
           first_name?: string | null
           id?: string
           import_date?: string | null
           imported_from?: string | null
+          instructor_name?: string | null
           is_active?: boolean | null
           last_name?: string | null
           last_sync_date?: string | null
+          location_id?: string | null
+          notes?: string | null
+          online_completed_at?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          practical_completed_at?: string | null
+          province?: string | null
           student_metadata?: Json | null
           sync_status?: string | null
           thinkific_user_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "student_enrollment_profiles_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_rosters: {
+        Row: {
+          course_name: string
+          created_at: string | null
+          created_by: string | null
+          current_enrollment: number | null
+          id: string
+          instructor_id: string | null
+          location_id: string | null
+          max_capacity: number | null
+          roster_name: string
+          roster_status: string | null
+          scheduled_end_date: string | null
+          scheduled_start_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          course_name: string
+          created_at?: string | null
+          created_by?: string | null
+          current_enrollment?: number | null
+          id?: string
+          instructor_id?: string | null
+          location_id?: string | null
+          max_capacity?: number | null
+          roster_name: string
+          roster_status?: string | null
+          scheduled_end_date?: string | null
+          scheduled_start_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          course_name?: string
+          created_at?: string | null
+          created_by?: string | null
+          current_enrollment?: number | null
+          id?: string
+          instructor_id?: string | null
+          location_id?: string | null
+          max_capacity?: number | null
+          roster_name?: string
+          roster_status?: string | null
+          scheduled_end_date?: string | null
+          scheduled_start_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_rosters_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "student_rosters_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "student_rosters_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "student_rosters_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_rosters_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "student_rosters_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "student_rosters_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "student_rosters_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_rosters_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       supervision_relationships: {
         Row: {
