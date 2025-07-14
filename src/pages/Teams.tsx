@@ -272,7 +272,7 @@ export default function Teams() {
           </TabsContent>
 
           <TabsContent value="members">
-            <ComprehensiveMemberManagement teamId={selectedTeam.id} />
+            <ComprehensiveMemberManagement teamId={selectedTeam.id} userRole={role} />
           </TabsContent>
 
           <TabsContent value="invitations">
