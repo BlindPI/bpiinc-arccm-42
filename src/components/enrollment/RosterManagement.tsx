@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { 
   Users, 
   Plus, 
@@ -19,13 +20,15 @@ import {
   FileText,
   CheckCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Settings
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { RosterBuilder } from './RosterBuilder';
 import { RosterTable } from './RosterTable';
+import { RosterExportDialog } from './RosterExportDialog';
 
 interface StudentRoster {
   id: string;
@@ -55,6 +58,7 @@ export function RosterManagement() {
   const [activeView, setActiveView] = useState<'list' | 'create'>('list');
   const [selectedRoster, setSelectedRoster] = useState<StudentRoster | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [showExportDialog, setShowExportDialog] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch all rosters
@@ -99,84 +103,14 @@ export function RosterManagement() {
     }
   });
 
-  // Export roster mutation
+  // Enhanced export roster mutation
   const exportRosterMutation = useMutation({
     mutationFn: async (rosterId: string) => {
-      // Get roster enrollments
-      const { data: enrollments, error } = await supabase
-        .from('roster_enrollments')
-        .select(`
-          *,
-          student_enrollment_profiles!inner(
-            first_name,
-            last_name,
-            email,
-            phone,
-            company,
-            city,
-            province,
-            postal_code
-          )
-        `)
-        .eq('roster_id', rosterId);
-
-      if (error) throw error;
-
-      // Create CSV content
-      const headers = [
-        'First Name', 'Last Name', 'Email', 'Phone', 'Company', 
-        'City', 'Province', 'Postal Code', 'Enrollment Date', 
-        'Attendance Status', 'Online Status', 'Practical Status'
-      ];
-
-      const csvContent = [
-        headers.join(','),
-        ...enrollments.map(enrollment => [
-          enrollment.student_enrollment_profiles.first_name || '',
-          enrollment.student_enrollment_profiles.last_name || '',
-          enrollment.student_enrollment_profiles.email || '',
-          enrollment.student_enrollment_profiles.phone || '',
-          enrollment.student_enrollment_profiles.company || '',
-          enrollment.student_enrollment_profiles.city || '',
-          enrollment.student_enrollment_profiles.province || '',
-          enrollment.student_enrollment_profiles.postal_code || '',
-          enrollment.enrollment_date || '',
-          enrollment.attendance_status || '',
-          enrollment.online_completion_status || '',
-          enrollment.practical_completion_status || ''
-        ].map(field => `"${field}"`).join(','))
-      ].join('\n');
-
-      // Log the export
-      const { error: logError } = await supabase
-        .from('roster_export_logs')
-        .insert([{
-          roster_id: rosterId,
-          export_format: 'CSV',
-          exported_by: (await supabase.auth.getUser()).data.user?.id,
-          export_status: 'COMPLETED',
-          file_name: `roster-${rosterId}-${new Date().toISOString().split('T')[0]}.csv`,
-          export_data: { row_count: enrollments.length }
-        }]);
-
-      return { csvContent, enrollments };
-    },
-    onSuccess: ({ csvContent }) => {
-      // Download file
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `roster-${selectedRoster?.roster_name || 'export'}-${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      toast.success('Roster exported successfully');
+      setSelectedRoster(rosters.find(r => r.id === rosterId) || null);
+      setShowExportDialog(true);
     },
     onError: (error: Error) => {
-      toast.error(`Failed to export roster: ${error.message}`);
+      toast.error(`Failed to open export dialog: ${error.message}`);
     }
   });
 
@@ -335,18 +269,29 @@ export function RosterManagement() {
                 <Separator />
 
                 <div className="flex justify-between gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedRoster(roster);
-                      exportRosterMutation.mutate(roster.id);
-                    }}
-                    disabled={exportRosterMutation.isPending}
-                  >
-                    <Download className="h-4 w-4 mr-1" />
-                    Export
-                  </Button>
+                  <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedRoster(roster);
+                          setShowExportDialog(true);
+                        }}
+                      >
+                        <Settings className="h-4 w-4 mr-1" />
+                        Export
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                      {selectedRoster && (
+                        <RosterExportDialog 
+                          roster={selectedRoster} 
+                          onClose={() => setShowExportDialog(false)}
+                        />
+                      )}
+                    </DialogContent>
+                  </Dialog>
                   <Button
                     variant="outline"
                     size="sm"
