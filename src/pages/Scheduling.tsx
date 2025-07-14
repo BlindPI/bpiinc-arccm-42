@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CalendarSchedulingView } from '@/components/scheduling/CalendarSchedulingView';
+import { BulkScheduler } from '@/components/scheduling/BulkScheduler';
+import { ConflictDetector } from '@/components/scheduling/ConflictDetector';
 import { 
   Calendar, 
   Clock, 
@@ -20,6 +22,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 export default function Scheduling() {
   const { user } = useAuth();
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showBulkScheduler, setShowBulkScheduler] = useState(false);
+  const [showConflictDetector, setShowConflictDetector] = useState(false);
 
   // Simplified metrics - only essential data
   const { data: metrics, isLoading } = useQuery({
@@ -129,7 +133,11 @@ export default function Scheduling() {
                 <p className="text-sm text-muted-foreground mb-4">
                   Schedule multiple sessions at once
                 </p>
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowBulkScheduler(true)}
+                >
                   Open Bulk Scheduler
                 </Button>
               </CardContent>
@@ -146,7 +154,11 @@ export default function Scheduling() {
                 <p className="text-sm text-muted-foreground mb-4">
                   Automatically detect scheduling conflicts
                 </p>
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowConflictDetector(true)}
+                >
                   View Conflicts
                 </Button>
               </CardContent>
@@ -154,6 +166,16 @@ export default function Scheduling() {
           </div>
         </CollapsibleContent>
       </Collapsible>
+
+      {/* Modals */}
+      <BulkScheduler 
+        open={showBulkScheduler} 
+        onOpenChange={setShowBulkScheduler} 
+      />
+      <ConflictDetector 
+        open={showConflictDetector} 
+        onOpenChange={setShowConflictDetector} 
+      />
     </div>
   );
 }
