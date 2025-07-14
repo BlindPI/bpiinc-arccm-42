@@ -70,6 +70,8 @@ const navigation: NavigationItem[] = [
   
   // Training Management Group - UNIFIED HUB
   { name: 'Training Hub', href: '/training-hub', icon: BookOpen, group: 'Training Management' },
+  { name: 'Courses', href: '/courses', icon: BookOpen, group: 'Training Management' },
+  { name: 'Locations', href: '/locations', icon: MapPin, group: 'Training Management' },
   { name: 'Enrollments', href: '/enrollments', icon: ClipboardList, group: 'Training Management' },
   
   // Certificates Group
