@@ -7,31 +7,45 @@ export function useLocationData(filters?: { search?: string; city?: string; stat
   const { data, isLoading, error } = useQuery({
     queryKey: ['locations', filters],
     queryFn: async () => {
-      let query = supabase
-        .from('locations')
-        .select('*');
+      console.log('Fetching locations with filters:', filters);
       
-      // Apply filters if provided
-      if (filters?.status) {
-        query = query.eq('status', filters.status);
+      try {
+        let query = supabase
+          .from('locations')
+          .select('*');
+        
+        // Apply filters if provided
+        if (filters?.status) {
+          query = query.eq('status', filters.status);
+        }
+        
+        if (filters?.city) {
+          query = query.eq('city', filters.city);
+        }
+        
+        if (filters?.search) {
+          query = query.or(`name.ilike.%${filters.search}%,address.ilike.%${filters.search}%`);
+        }
+        
+        // Always sort by name
+        query = query.order('name');
+        
+        const { data: locations, error } = await query;
+        
+        if (error) {
+          console.error('Error fetching locations:', error);
+          throw error;
+        }
+
+        console.log(`Successfully fetched ${locations?.length || 0} locations`);
+        return locations as Location[];
+      } catch (error) {
+        console.error('Unexpected error in location data fetch:', error);
+        throw error;
       }
-      
-      if (filters?.city) {
-        query = query.eq('city', filters.city);
-      }
-      
-      if (filters?.search) {
-        query = query.or(`name.ilike.%${filters.search}%,address.ilike.%${filters.search}%`);
-      }
-      
-      // Always sort by name
-      query = query.order('name');
-      
-      const { data: locations, error } = await query;
-      
-      if (error) throw error;
-      return locations as Location[];
     },
+    retry: 2,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Get unique cities from locations data

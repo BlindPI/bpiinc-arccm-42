@@ -84,6 +84,7 @@ function MetricCard({ title, value, subtitle, icon: Icon, trend, status, isLoadi
 
 interface ProfessionalMetricsGridProps {
   metrics?: {
+    activeCourses: number;
     totalSessions: number;
     activeInstructors: number;
     upcomingSchedules: number;
@@ -106,10 +107,18 @@ export function ProfessionalMetricsGrid({ metrics, isLoading }: ProfessionalMetr
 
   const metricCards = [
     {
+      title: 'Active Courses',
+      value: metrics?.activeCourses || 0,
+      subtitle: 'available training courses',
+      icon: BookOpen,
+      status: 'good' as const,
+      trend: { value: 12, isPositive: true }
+    },
+    {
       title: 'Active Sessions',
       value: metrics?.totalSessions || 0,
       subtitle: 'training sessions this month',
-      icon: BookOpen,
+      icon: Calendar,
       status: 'good' as const,
       trend: { value: 12, isPositive: true }
     },

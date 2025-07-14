@@ -55,6 +55,17 @@ export default function TrainingHub() {
     queryFn: async () => {
       console.log('Fetching training metrics...');
 
+      // Get active courses count
+      const { data: courses, error: coursesError } = await supabase
+        .from('courses')
+        .select('id')
+        .eq('status', 'ACTIVE');
+
+      if (coursesError) {
+        console.error('Error fetching courses:', coursesError);
+        throw coursesError;
+      }
+
       // Get teaching sessions count
       const { data: sessions, error: sessionsError } = await supabase
         .from('teaching_sessions')
@@ -116,6 +127,7 @@ export default function TrainingHub() {
         : 0;
 
       console.log('Training metrics calculated:', {
+        activeCourses: courses?.length || 0,
         sessions: sessions?.length || 0,
         instructors: instructors?.length || 0,
         schedules: schedules?.length || 0,
@@ -129,6 +141,7 @@ export default function TrainingHub() {
       const systemAnalytics = await realTeamDataService.getSystemAnalytics();
       
       return {
+        activeCourses: courses?.length || 0,
         totalSessions: sessions?.length || 0,
         activeInstructors: instructors?.length || 0,
         upcomingSchedules: schedules?.length || 0,

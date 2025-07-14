@@ -29,47 +29,73 @@ export default function TrainingOverview() {
   const { data: metrics, isLoading } = useQuery({
     queryKey: ['training-overview-metrics'],
     queryFn: async () => {
-      // Get sessions
-      const { data: sessions } = await supabase
-        .from('teaching_sessions')
-        .select('*')
-        .gte('session_date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString());
+      console.log('Fetching training overview metrics...');
+      
+      try {
+        // Get courses
+        const { data: courses, error: coursesError } = await supabase
+          .from('courses')
+          .select('*')
+          .eq('status', 'ACTIVE');
 
-      // Get instructors
-      const { data: instructors } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('role', ['IC', 'IP', 'IT', 'AP']);
+        if (coursesError) {
+          console.error('Error fetching courses:', coursesError);
+        }
 
-      // Get schedules
-      const { data: schedules } = await supabase
-        .from('course_schedules')
-        .select('*')
-        .gte('start_date', new Date().toISOString())
-        .eq('status', 'scheduled');
+        // Get sessions
+        const { data: sessions } = await supabase
+          .from('teaching_sessions')
+          .select('*')
+          .gte('session_date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString());
 
-      // Get locations
-      const { data: locations } = await supabase
-        .from('locations')
-        .select('*')
-        .eq('status', 'ACTIVE');
+        // Get instructors
+        const { data: instructors } = await supabase
+          .from('profiles')
+          .select('*')
+          .in('role', ['IC', 'IP', 'IT', 'AP']);
 
-      // Get system analytics
-      const systemAnalytics = await realTeamDataService.getSystemAnalytics();
+        // Get schedules
+        const { data: schedules } = await supabase
+          .from('course_schedules')
+          .select('*')
+          .gte('start_date', new Date().toISOString())
+          .eq('status', 'scheduled');
 
-      const complianceRate = sessions && sessions.length > 0 
-        ? Math.round((sessions.filter(s => s.compliance_status === 'compliant').length / sessions.length) * 100)
-        : 0;
+        // Get locations
+        const { data: locations } = await supabase
+          .from('locations')
+          .select('*')
+          .eq('status', 'ACTIVE');
 
-      return {
-        totalSessions: sessions?.length || 0,
-        activeInstructors: instructors?.length || 0,
-        upcomingSchedules: schedules?.length || 0,
-        activeLocations: locations?.length || 0,
-        complianceRate: systemAnalytics.averageCompliance,
-        totalMembers: systemAnalytics.totalMembers,
-        averagePerformance: systemAnalytics.averagePerformance
-      };
+        // Get system analytics
+        const systemAnalytics = await realTeamDataService.getSystemAnalytics();
+
+        const complianceRate = sessions && sessions.length > 0 
+          ? Math.round((sessions.filter(s => s.compliance_status === 'compliant').length / sessions.length) * 100)
+          : 0;
+
+        console.log('Training metrics fetched:', {
+          activeCourses: courses?.length || 0,
+          totalSessions: sessions?.length || 0,
+          activeInstructors: instructors?.length || 0,
+          upcomingSchedules: schedules?.length || 0,
+          activeLocations: locations?.length || 0
+        });
+
+        return {
+          activeCourses: courses?.length || 0,
+          totalSessions: sessions?.length || 0,
+          activeInstructors: instructors?.length || 0,
+          upcomingSchedules: schedules?.length || 0,
+          activeLocations: locations?.length || 0,
+          complianceRate: systemAnalytics.averageCompliance,
+          totalMembers: systemAnalytics.totalMembers,
+          averagePerformance: systemAnalytics.averagePerformance
+        };
+      } catch (error) {
+        console.error('Error fetching training metrics:', error);
+        throw error;
+      }
     },
     enabled: !!user && !!profile,
     refetchInterval: 30000
