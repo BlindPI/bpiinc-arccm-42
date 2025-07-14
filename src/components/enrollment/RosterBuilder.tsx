@@ -163,12 +163,12 @@ export function RosterBuilder({ onComplete }: RosterBuilderProps) {
 
       if (rosterError) throw rosterError;
 
-      // Add students to roster - FIXED: Insert into correct table
+      // Add students to roster - FIXED: Insert into correct table with proper schema
       const enrollmentData = selectedStudents.map(studentId => ({
         roster_id: roster.id,
-        student_id: studentId,
-        enrollment_date: new Date().toISOString(),
-        status: 'ENROLLED'
+        student_profile_id: studentId,
+        enrolled_at: new Date().toISOString(),
+        enrollment_status: 'ENROLLED'
       }));
 
       const { error: enrollmentError } = await supabase
