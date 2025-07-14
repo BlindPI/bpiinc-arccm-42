@@ -16,28 +16,28 @@ export function WaitlistManager() {
   const queryClient = useQueryClient();
 
   const { data: courseOfferings = [] } = useQuery({
-    queryKey: ['course-offerings-for-waitlist'],
+    queryKey: ['availability-bookings-for-waitlist'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('course_offerings')
+        .from('availability_bookings')
         .select(`
           id,
-          start_date,
-          end_date,
-          max_participants,
-          status,
-          courses (
+          title,
+          booking_date,
+          start_time,
+          end_time,
+          booking_type,
+          description,
+          roster_id,
+          student_rosters (
             id,
-            name,
-            description
-          ),
-          locations (
-            id,
-            name
+            roster_name,
+            max_capacity
           )
         `)
-        .eq('status', 'SCHEDULED')
-        .order('start_date', { ascending: true });
+        .in('booking_type', ['training_session', 'course_instruction'])
+        .not('roster_id', 'is', null)
+        .order('booking_date', { ascending: true });
 
       if (error) throw error;
       return data;
@@ -48,25 +48,38 @@ export function WaitlistManager() {
   const createEnrollment = useCreateEnrollment();
 
   const addToWaitlist = useMutation({
-    mutationFn: async ({ studentId, courseOfferingId }: { studentId: string; courseOfferingId: string }) => {
-      // Get next waitlist position
-      const { count, error: countError } = await supabase
-        .from('enrollments')
-        .select('*', { count: 'exact', head: true })
-        .eq('course_offering_id', courseOfferingId)
-        .eq('status', 'WAITLISTED');
+    mutationFn: async ({ studentId, bookingId }: { studentId: string; bookingId: string }) => {
+      // First get the roster_id from the availability_booking
+      const { data: booking, error: bookingError } = await supabase
+        .from('availability_bookings')
+        .select('roster_id')
+        .eq('id', bookingId)
+        .single();
 
-      if (countError) throw countError;
+      if (bookingError || !booking?.roster_id) {
+        throw new Error('No roster found for this booking');
+      }
 
-      const waitlistPosition = (count || 0) + 1;
+      // Check if student is already in the roster
+      const { data: existing, error: existingError } = await supabase
+        .from('student_roster_members')
+        .select('id')
+        .eq('roster_id', booking.roster_id)
+        .eq('student_profile_id', studentId)
+        .single();
 
+      if (!existingError && existing) {
+        throw new Error('Student is already in this roster');
+      }
+
+      // Add student to roster with waitlisted status
       const { data, error } = await supabase
-        .from('enrollments')
+        .from('student_roster_members')
         .insert([{
-          user_id: studentId,
-          course_offering_id: courseOfferingId,
-          status: 'WAITLISTED',
-          waitlist_position: waitlistPosition
+          roster_id: booking.roster_id,
+          student_profile_id: studentId,
+          enrollment_status: 'waitlisted',
+          enrolled_at: new Date().toISOString()
         }])
         .select()
         .single();
@@ -76,7 +89,9 @@ export function WaitlistManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['waitlist', selectedOffering] });
+      queryClient.invalidateQueries({ queryKey: ['roster-members'] });
       toast.success('Student added to waitlist successfully');
+      setShowStudentSelector(false);
     },
     onError: (error: any) => {
       toast.error(`Failed to add student to waitlist: ${error.message}`);
@@ -87,22 +102,42 @@ export function WaitlistManager() {
     if (!selectedOffering) return;
     addToWaitlist.mutate({ 
       studentId: student.id, 
-      courseOfferingId: selectedOffering 
+      bookingId: selectedOffering 
     });
   };
 
-  const promoteFromWaitlist = async (studentId: string) => {
+  const promoteFromWaitlist = async (studentProfileId: string) => {
     if (!selectedOffering) return;
     
     try {
-      await createEnrollment.mutateAsync({
-        user_id: studentId,
-        course_offering_id: selectedOffering,
-        status: 'ENROLLED',
-        attendance: null // Set to null initially, will be updated when session occurs
-      });
+      // First get the roster_id from the availability_booking
+      const { data: booking, error: bookingError } = await supabase
+        .from('availability_bookings')
+        .select('roster_id')
+        .eq('id', selectedOffering)
+        .single();
+
+      if (bookingError || !booking?.roster_id) {
+        throw new Error('No roster found for this booking');
+      }
+
+      // Update the student's status from waitlisted to enrolled
+      const { error } = await supabase
+        .from('student_roster_members')
+        .update({ enrollment_status: 'enrolled' })
+        .eq('roster_id', booking.roster_id)
+        .eq('student_profile_id', studentProfileId)
+        .eq('enrollment_status', 'waitlisted');
+
+      if (error) throw error;
+
+      // Refresh the waitlist
+      queryClient.invalidateQueries({ queryKey: ['waitlist', selectedOffering] });
+      queryClient.invalidateQueries({ queryKey: ['roster-members'] });
+      toast.success('Student promoted to enrolled successfully');
     } catch (error) {
       console.error('Failed to promote from waitlist:', error);
+      toast.error('Failed to promote student from waitlist');
     }
   };
 
@@ -126,10 +161,10 @@ export function WaitlistManager() {
                   {courseOfferings.map((offering) => (
                     <SelectItem key={offering.id} value={offering.id}>
                       <div className="flex flex-col">
-                        <span>{offering.courses?.name || 'Unknown Course'}</span>
+                        <span>{offering.title}</span>
                         <span className="text-sm text-muted-foreground">
-                          {offering.locations?.name || 'No Location'} - {new Date(offering.start_date).toLocaleDateString()} 
-                          {offering.end_date && ` to ${new Date(offering.end_date).toLocaleDateString()}`}
+                          {offering.booking_type} - {new Date(offering.booking_date).toLocaleDateString()} at {offering.start_time}
+                          {offering.student_rosters?.roster_name && ` (${offering.student_rosters.roster_name})`}
                         </span>
                       </div>
                     </SelectItem>
@@ -179,17 +214,17 @@ export function WaitlistManager() {
                           {index + 1}
                         </Badge>
                         <div>
-                          <p className="font-medium">{student.profiles?.display_name}</p>
-                          <p className="text-sm text-muted-foreground">{student.profiles?.email}</p>
+                          <p className="font-medium">{student.student_enrollment_profiles?.display_name}</p>
+                          <p className="text-sm text-muted-foreground">{student.student_enrollment_profiles?.email}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary">
-                          Position #{student.waitlist_position}
+                          Position #{index + 1}
                         </Badge>
                         <Button
                           size="sm"
-                          onClick={() => promoteFromWaitlist(student.user_id)}
+                          onClick={() => promoteFromWaitlist(student.student_profile_id)}
                           disabled={createEnrollment.isPending}
                         >
                           <UserPlus className="h-4 w-4 mr-2" />

@@ -257,29 +257,49 @@ export const useCancelEnrollment = () => {
   });
 };
 
-export const useWaitlist = (courseOfferingId: string) => {
+export const useWaitlist = (bookingId: string) => {
   const { user } = useAuth();
   
   return useQuery({
-    queryKey: ['waitlist', courseOfferingId],
+    queryKey: ['waitlist', bookingId],
     queryFn: async () => {
+      if (!bookingId) return [];
+
+      // First get the roster_id from the availability_booking
+      const { data: booking, error: bookingError } = await supabase
+        .from('availability_bookings')
+        .select('roster_id')
+        .eq('id', bookingId)
+        .single();
+
+      if (bookingError || !booking?.roster_id) {
+        return [];
+      }
+
+      // Get waitlisted students from the roster
       const { data, error } = await supabase
-        .from('enrollments')
+        .from('student_roster_members')
         .select(`
-          *,
-          profiles:user_id(display_name, email)
+          id,
+          enrollment_status,
+          enrolled_at,
+          student_profile_id,
+          student_enrollment_profiles (
+            id,
+            display_name,
+            email,
+            first_name,
+            last_name
+          )
         `)
-        .eq('course_offering_id', courseOfferingId)
-        .eq('status', 'WAITLISTED')
-        .order('waitlist_position', { ascending: true });
+        .eq('roster_id', booking.roster_id)
+        .eq('enrollment_status', 'waitlisted')
+        .order('enrolled_at', { ascending: true });
       
       if (error) throw error;
       
-      // Use as unknown first to handle the type mismatch
-      return (data as unknown) as Array<Enrollment & {
-        profiles: { display_name: string; email: string | null };
-      }>;
+      return data || [];
     },
-    enabled: !!courseOfferingId && !!user,
+    enabled: !!bookingId && !!user,
   });
 };
