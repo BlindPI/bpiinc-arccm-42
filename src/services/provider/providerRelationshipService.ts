@@ -478,6 +478,21 @@ export class ProviderRelationshipService {
       });
 
       if (error) throw error;
+
+      // CRITICAL FIX: Update team location_id to match provider's primary_location_id
+      const { data: provider } = await supabase
+        .from('authorized_providers')
+        .select('primary_location_id')
+        .eq('id', request.provider_id)
+        .single();
+
+      if (provider?.primary_location_id) {
+        await supabase
+          .from('teams')
+          .update({ location_id: provider.primary_location_id })
+          .eq('id', request.team_id);
+      }
+
       return assignmentId;
     } catch (error) {
       console.error('Error assigning provider to team:', error);
