@@ -32,6 +32,7 @@ import { BulkEnrollmentForm } from './BulkEnrollmentForm';
 import { EnrollmentStats } from './EnrollmentStats';
 import { ManualEnrollmentForm } from './ManualEnrollmentForm';
 import { EnhancedManualEnrollmentForm } from './EnhancedManualEnrollmentForm';
+import { RosterManagement } from './RosterManagement';
 import { EnrollmentService, type EnrollmentWithDetails } from '@/services/enrollment/enrollmentService';
 import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -150,6 +151,7 @@ export function EnrollmentManagementDashboard() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="manual">Manual Entry</TabsTrigger>
           <TabsTrigger value="enrollments">All Enrollments</TabsTrigger>
+          <TabsTrigger value="rosters">Roster Management</TabsTrigger>
           <TabsTrigger value="waitlist">Waitlist Management</TabsTrigger>
           <TabsTrigger value="bulk">Bulk Operations</TabsTrigger>
         </TabsList>
@@ -282,10 +284,13 @@ export function EnrollmentManagementDashboard() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="rosters" className="space-y-4">
+          <RosterManagement />
+        </TabsContent>
+
         <TabsContent value="waitlist" className="space-y-4">
           <WaitlistManager />
         </TabsContent>
-
 
         <TabsContent value="bulk" className="space-y-4">
           <BulkEnrollmentForm />
