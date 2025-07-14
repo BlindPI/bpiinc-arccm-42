@@ -3,13 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, Clock, AlertCircle } from "lucide-react";
-import { useQuery } from '@tanstack/react-query';
+import { UserPlus, Clock, AlertCircle, Plus } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useWaitlist, useCreateEnrollment } from '@/hooks/useEnrollment';
+import { StudentSelector } from './StudentSelector';
+import { toast } from 'sonner';
 
 export function WaitlistManager() {
   const [selectedOffering, setSelectedOffering] = useState<string>('');
+  const [showStudentSelector, setShowStudentSelector] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: courseOfferings = [] } = useQuery({
     queryKey: ['availability-bookings-for-waitlist'],
@@ -35,6 +39,50 @@ export function WaitlistManager() {
 
   const { data: waitlistedStudents = [], isLoading } = useWaitlist(selectedOffering);
   const createEnrollment = useCreateEnrollment();
+
+  const addToWaitlist = useMutation({
+    mutationFn: async ({ studentId, courseOfferingId }: { studentId: string; courseOfferingId: string }) => {
+      // Get next waitlist position
+      const { count, error: countError } = await supabase
+        .from('enrollments')
+        .select('*', { count: 'exact', head: true })
+        .eq('course_offering_id', courseOfferingId)
+        .eq('status', 'WAITLISTED');
+
+      if (countError) throw countError;
+
+      const waitlistPosition = (count || 0) + 1;
+
+      const { data, error } = await supabase
+        .from('enrollments')
+        .insert([{
+          user_id: studentId,
+          course_offering_id: courseOfferingId,
+          status: 'WAITLISTED',
+          waitlist_position: waitlistPosition
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['waitlist', selectedOffering] });
+      toast.success('Student added to waitlist successfully');
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to add student to waitlist: ${error.message}`);
+    }
+  });
+
+  const handleAddToWaitlist = (student: any) => {
+    if (!selectedOffering) return;
+    addToWaitlist.mutate({ 
+      studentId: student.id, 
+      courseOfferingId: selectedOffering 
+    });
+  };
 
   const promoteFromWaitlist = async (studentId: string) => {
     if (!selectedOffering) return;
@@ -87,9 +135,19 @@ export function WaitlistManager() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">Waitlisted Students</h3>
-                <Badge variant="secondary">
-                  {waitlistedStudents.length} students waiting
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">
+                    {waitlistedStudents.length} students waiting
+                  </Badge>
+                  <Button
+                    size="sm"
+                    onClick={() => setShowStudentSelector(true)}
+                    disabled={addToWaitlist.isPending}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add to Waitlist
+                  </Button>
+                </div>
               </div>
 
               {isLoading ? (
@@ -138,6 +196,13 @@ export function WaitlistManager() {
           )}
         </CardContent>
       </Card>
+
+      <StudentSelector
+        open={showStudentSelector}
+        onClose={() => setShowStudentSelector(false)}
+        onSelectStudent={handleAddToWaitlist}
+        title="Add Student to Waitlist"
+      />
     </div>
   );
 }
