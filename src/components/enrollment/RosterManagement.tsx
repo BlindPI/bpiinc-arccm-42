@@ -57,7 +57,7 @@ interface StudentRoster {
 }
 
 export function RosterManagement() {
-  const [activeView, setActiveView] = useState<'list' | 'create' | 'manage'>('list');
+  const [activeView, setActiveView] = useState<'list' | 'create' | 'manage' | 'edit'>('list');
   const [selectedRoster, setSelectedRoster] = useState<StudentRoster | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('TRAINING');
@@ -88,6 +88,26 @@ export function RosterManagement() {
       const { data, error } = await query;
       if (error) throw error;
       return data as StudentRoster[];
+    }
+  });
+
+  // Update roster status mutation
+  const updateRosterStatusMutation = useMutation({
+    mutationFn: async ({ rosterId, status }: { rosterId: string; status: string }) => {
+      const { error } = await supabase
+        .from('student_rosters')
+        .update({ roster_status: status })
+        .eq('id', rosterId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Roster status updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['student-rosters'] });
+      setActiveView('list');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to update roster: ${error.message}`);
     }
   });
 
@@ -176,6 +196,65 @@ export function RosterManagement() {
           maxCapacity={selectedRoster.max_capacity}
           currentEnrollment={selectedRoster.current_enrollment}
         />
+      </div>
+    );
+  }
+
+  if (activeView === 'edit' && selectedRoster) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">Edit Roster: {selectedRoster.roster_name}</h2>
+            <p className="text-muted-foreground">Update roster status and properties</p>
+          </div>
+          <Button variant="outline" onClick={() => setActiveView('list')}>
+            Back to Rosters
+          </Button>
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Roster Status</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4">
+              <div>
+                <Label>Current Status: <Badge variant={getStatusBadgeVariant(selectedRoster.roster_status)}>{selectedRoster.roster_status}</Badge></Label>
+              </div>
+              <div className="flex gap-2">
+                {selectedRoster.roster_status === 'DRAFT' && (
+                  <Button 
+                    onClick={() => updateRosterStatusMutation.mutate({ rosterId: selectedRoster.id, status: 'ACTIVE' })}
+                    disabled={updateRosterStatusMutation.isPending}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Activate Roster
+                  </Button>
+                )}
+                {selectedRoster.roster_status === 'ACTIVE' && (
+                  <>
+                    <Button 
+                      variant="outline"
+                      onClick={() => updateRosterStatusMutation.mutate({ rosterId: selectedRoster.id, status: 'COMPLETED' })}
+                      disabled={updateRosterStatusMutation.isPending}
+                    >
+                      <Clock className="h-4 w-4 mr-2" />
+                      Mark Completed
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => updateRosterStatusMutation.mutate({ rosterId: selectedRoster.id, status: 'ARCHIVED' })}
+                      disabled={updateRosterStatusMutation.isPending}
+                    >
+                      <Clock className="h-4 w-4 mr-2" />
+                      Archive
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -323,6 +402,17 @@ export function RosterManagement() {
                   >
                     <Edit className="h-4 w-4 mr-1" />
                     Manage Students
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedRoster(roster);
+                      setActiveView('edit');
+                    }}
+                  >
+                    <Settings className="h-4 w-4 mr-1" />
+                    Edit Status
                   </Button>
                   <div className="flex gap-2">
                     <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>

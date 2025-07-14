@@ -12,20 +12,21 @@ export function WaitlistManager() {
   const [selectedOffering, setSelectedOffering] = useState<string>('');
 
   const { data: courseOfferings = [] } = useQuery({
-    queryKey: ['course-offerings-for-waitlist'],
+    queryKey: ['availability-bookings-for-waitlist'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('course_offerings')
+        .from('availability_bookings')
         .select(`
           id,
-          start_date,
-          end_date,
-          max_participants,
-          courses:course_id(name),
-          locations:location_id(name)
+          title,
+          booking_date,
+          start_time,
+          end_time,
+          booking_type,
+          description
         `)
-        .eq('status', 'SCHEDULED')
-        .order('start_date', { ascending: true });
+        .in('booking_type', ['training_session', 'course_instruction'])
+        .order('booking_date', { ascending: true });
 
       if (error) throw error;
       return data;
@@ -70,9 +71,9 @@ export function WaitlistManager() {
                   {courseOfferings.map((offering) => (
                     <SelectItem key={offering.id} value={offering.id}>
                       <div className="flex flex-col">
-                        <span>{offering.courses?.name}</span>
+                        <span>{offering.title}</span>
                         <span className="text-sm text-muted-foreground">
-                          {offering.locations?.name} - {new Date(offering.start_date).toLocaleDateString()}
+                          {offering.booking_type} - {new Date(offering.booking_date).toLocaleDateString()} at {offering.start_time}
                         </span>
                       </div>
                     </SelectItem>

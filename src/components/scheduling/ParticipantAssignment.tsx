@@ -79,9 +79,10 @@ export function ParticipantAssignment({
     }
   });
 
-  // Assign roster to event
+  // Assign roster to event and create enrollment records
   const assignRoster = useMutation({
     mutationFn: async (rosterId: string) => {
+      // First update the booking with the roster
       const { data, error } = await supabase
         .from('availability_bookings')
         .update({ roster_id: rosterId })
@@ -90,12 +91,41 @@ export function ParticipantAssignment({
         .single();
 
       if (error) throw error;
+
+      // Get students from the roster to create enrollment records
+      const { data: rosterMembers, error: membersError } = await supabase
+        .from('student_roster_members')
+        .select('student_profile_id')
+        .eq('roster_id', rosterId)
+        .eq('enrollment_status', 'enrolled');
+
+      if (membersError) throw membersError;
+
+      // Create enrollment records for each student
+      if (rosterMembers && rosterMembers.length > 0) {
+        const enrollments = rosterMembers.map(member => ({
+          user_id: member.student_profile_id,
+          course_offering_id: eventId, // Using eventId as course offering reference
+          status: 'ENROLLED',
+          enrollment_date: new Date().toISOString()
+        }));
+
+        const { error: enrollmentError } = await supabase
+          .from('enrollments')
+          .upsert(enrollments, { onConflict: 'user_id,course_offering_id' });
+
+        if (enrollmentError) {
+          console.warn('Failed to create enrollment records:', enrollmentError);
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
-      toast.success('Training roster assigned to session');
+      toast.success('Training roster assigned to session and enrollments created');
       queryClient.invalidateQueries({ queryKey: ['event-participants', eventId] });
       queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
+      queryClient.invalidateQueries({ queryKey: ['enrollments-filtered'] });
       onParticipantsChange?.();
       setSelectedRosterId('');
     },
