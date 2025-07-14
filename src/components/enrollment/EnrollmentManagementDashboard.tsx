@@ -33,6 +33,7 @@ import { EnrollmentStats } from './EnrollmentStats';
 import { ManualEnrollmentForm } from './ManualEnrollmentForm';
 import { EnhancedManualEnrollmentForm } from './EnhancedManualEnrollmentForm';
 import { RosterManagement } from './RosterManagement';
+import { EnrollmentAnalyticsDashboard } from './analytics/EnrollmentAnalyticsDashboard';
 import { EnrollmentService, type EnrollmentWithDetails } from '@/services/enrollment/enrollmentService';
 import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -149,6 +150,7 @@ export function EnrollmentManagementDashboard() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="manual">Manual Entry</TabsTrigger>
           <TabsTrigger value="enrollments">All Enrollments</TabsTrigger>
           <TabsTrigger value="rosters">Roster Management</TabsTrigger>
@@ -237,6 +239,10 @@ export function EnrollmentManagementDashboard() {
               />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-4">
+          <EnrollmentAnalyticsDashboard />
         </TabsContent>
 
         <TabsContent value="manual" className="space-y-4">
