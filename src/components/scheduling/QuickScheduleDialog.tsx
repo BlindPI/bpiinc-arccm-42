@@ -230,6 +230,11 @@ export const QuickScheduleDialog: React.FC<QuickScheduleDialogProps> = ({
     const selectedDay = new Date(formData.date).getDay();
     
     return instructorAvailability.filter(instructor => {
+      // Filter by location first - only show instructors from the selected location
+      if (locationId && instructor.locationId !== locationId) {
+        return false;
+      }
+      
       // Check if instructor has availability for this day
       return instructor.availability.some(avail => avail.dayOfWeek === selectedDay);
     });
