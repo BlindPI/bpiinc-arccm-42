@@ -153,7 +153,7 @@ export function RosterBuilder({ onComplete }: RosterBuilderProps) {
           location_id: formData.location_id || null,
           instructor_id: formData.instructor_id || null,
           max_capacity: formData.max_capacity,
-          current_enrollment: selectedStudents.length,
+          // Remove manual current_enrollment - let trigger handle it
           roster_status: 'DRAFT', // Start as DRAFT until assigned to a course
           roster_type: 'TRAINING',
           created_by: (await supabase.auth.getUser()).data.user?.id
@@ -163,18 +163,16 @@ export function RosterBuilder({ onComplete }: RosterBuilderProps) {
 
       if (rosterError) throw rosterError;
 
-      // Add students to roster
+      // Add students to roster - FIXED: Insert into correct table
       const enrollmentData = selectedStudents.map(studentId => ({
         roster_id: roster.id,
         student_id: studentId,
         enrollment_date: new Date().toISOString(),
-        attendance_status: 'PENDING',
-        online_completion_status: 'NOT_STARTED',
-        practical_completion_status: 'NOT_STARTED'
+        status: 'ENROLLED'
       }));
 
       const { error: enrollmentError } = await supabase
-        .from('roster_enrollments')
+        .from('student_roster_members')
         .insert(enrollmentData);
 
       if (enrollmentError) throw enrollmentError;
