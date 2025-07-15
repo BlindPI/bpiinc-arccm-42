@@ -58,13 +58,14 @@ export function useCreateRosterForBooking() {
       const user = await supabase.auth.getUser();
       if (!user.data.user?.id) throw new Error('Not authenticated');
       
-      // Create the roster linked to the booking
+      // Create the roster linked to the booking with required fields
       const { data: roster, error: rosterError } = await supabase
         .from('student_rosters')
         .insert({
           roster_name: rosterName,
           course_name: courseTitle,
           availability_booking_id: bookingId,
+          location_id: '06752dc0-3e19-4ece-98f8-c0b94c2eb818', // BPI INC location
           instructor_id: user.data.user.id,
           roster_status: 'active',
           roster_type: 'course',

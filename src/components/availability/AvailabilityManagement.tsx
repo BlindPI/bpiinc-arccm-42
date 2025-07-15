@@ -13,6 +13,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useCreateRosterForBooking } from '@/hooks/useInstructorCourses';
 
 interface AvailabilityBooking {
   id: string;
@@ -70,6 +71,7 @@ interface AvailabilityManagementProps {
 
 export function AvailabilityManagement({ userId, showTeamBookings = false, teamId }: AvailabilityManagementProps) {
   const { user } = useAuth();
+  const createRosterMutation = useCreateRosterForBooking();
   const [bookings, setBookings] = useState<AvailabilityBooking[]>([]);
   const [selectedBooking, setSelectedBooking] = useState<AvailabilityBooking | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -264,6 +266,24 @@ export function AvailabilityManagement({ userId, showTeamBookings = false, teamI
     }
   };
 
+  const createRosterForBooking = async (booking: AvailabilityBooking) => {
+    if (!booking.id || !booking.title) return;
+    
+    try {
+      await createRosterMutation.mutateAsync({
+        bookingId: booking.id,
+        rosterName: `${booking.title} - Roster`,
+        courseTitle: booking.title
+      });
+      
+      // Reload bookings to show the new roster
+      await loadBookings();
+    } catch (error) {
+      console.error('Error creating roster:', error);
+      // Error is already handled by the mutation
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
@@ -450,18 +470,46 @@ export function AvailabilityManagement({ userId, showTeamBookings = false, teamI
                             )}
                           </div>
                         </div>
-                        {booking.booking_type === 'course_instruction' && (
+                        {(booking.booking_type === 'course_instruction' || booking.booking_type === 'training_session') && (
                           <div className="flex gap-1">
-                            <Button
-                              size="sm"
-                              variant={booking.status === 'in_progress' ? 'default' : 'outline'}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                updateBookingStatus(booking.id, booking.status === 'in_progress' ? 'scheduled' : 'in_progress');
-                              }}
-                            >
-                              {booking.status === 'in_progress' ? 'End Session' : 'Start Session'}
-                            </Button>
+                            {booking.student_rosters?.[0] ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    // Navigate to roster management
+                                    setSelectedBooking(booking);
+                                  }}
+                                >
+                                  <Users className="h-3 w-3 mr-1" />
+                                  Manage Roster
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant={booking.status === 'in_progress' ? 'default' : 'outline'}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateBookingStatus(booking.id, booking.status === 'in_progress' ? 'scheduled' : 'in_progress');
+                                  }}
+                                >
+                                  {booking.status === 'in_progress' ? 'End Session' : 'Start Session'}
+                                </Button>
+                              </>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="default"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  createRosterForBooking(booking);
+                                }}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Create Roster
+                              </Button>
+                            )}
                             <Button
                               size="sm"
                               variant={booking.status === 'completed' ? 'default' : 'outline'}
@@ -492,13 +540,13 @@ export function AvailabilityManagement({ userId, showTeamBookings = false, teamI
       </Card>
 
       {/* Selected Booking Details */}
-      {selectedBooking && selectedBooking.booking_type === 'course_instruction' && (
+      {selectedBooking && (selectedBooking.booking_type === 'course_instruction' || selectedBooking.booking_type === 'training_session') && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <BookOpen className="h-5 w-5" />
-                Course Session Details
+                {selectedBooking.booking_type === 'course_instruction' ? 'Course Session Details' : 'Training Session Details'}
               </span>
               <Button variant="outline" onClick={() => setSelectedBooking(null)}>
                 Close
@@ -521,7 +569,7 @@ export function AvailabilityManagement({ userId, showTeamBookings = false, teamI
                   </div>
                 </div>
                 
-                {selectedBooking.student_rosters?.[0] && (
+                {selectedBooking.student_rosters?.[0] ? (
                   <div>
                     <h4 className="font-semibold mb-2">Students ({selectedBooking.student_rosters[0].student_roster_members?.length || 0})</h4>
                     <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -564,6 +612,22 @@ export function AvailabilityManagement({ userId, showTeamBookings = false, teamI
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <h4 className="font-semibold mb-2">No Roster Created</h4>
+                    <div className="text-center p-4 border-2 border-dashed border-gray-300 rounded-lg">
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Create a student roster to begin enrolling students and tracking attendance.
+                      </p>
+                      <Button 
+                        onClick={() => createRosterForBooking(selectedBooking)}
+                        disabled={createRosterMutation.isPending}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        {createRosterMutation.isPending ? 'Creating...' : 'Create Student Roster'}
+                      </Button>
                     </div>
                   </div>
                 )}
