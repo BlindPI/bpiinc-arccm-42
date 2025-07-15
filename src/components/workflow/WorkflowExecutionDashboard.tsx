@@ -93,7 +93,7 @@ export function WorkflowExecutionDashboard() {
               <Clock className="h-4 w-4 text-yellow-600" />
               <span className="text-sm font-medium">Pending</span>
             </div>
-            <div className="text-2xl font-bold">{workflowStats.pending || 0}</div>
+            <div className="text-2xl font-bold">{(workflowStats as any)?.pending || 0}</div>
           </CardContent>
         </Card>
 
@@ -103,7 +103,7 @@ export function WorkflowExecutionDashboard() {
               <CheckCircle className="h-4 w-4 text-green-600" />
               <span className="text-sm font-medium">Approved</span>
             </div>
-            <div className="text-2xl font-bold">{workflowStats.approved || 0}</div>
+            <div className="text-2xl font-bold">{(workflowStats as any)?.approved || 0}</div>
           </CardContent>
         </Card>
 
@@ -113,7 +113,7 @@ export function WorkflowExecutionDashboard() {
               <XCircle className="h-4 w-4 text-red-600" />
               <span className="text-sm font-medium">Rejected</span>
             </div>
-            <div className="text-2xl font-bold">{workflowStats.rejected || 0}</div>
+            <div className="text-2xl font-bold">{(workflowStats as any)?.rejected || 0}</div>
           </CardContent>
         </Card>
 
@@ -123,7 +123,7 @@ export function WorkflowExecutionDashboard() {
               <BarChart3 className="h-4 w-4 text-blue-600" />
               <span className="text-sm font-medium">Avg Processing</span>
             </div>
-            <div className="text-2xl font-bold">{workflowStats.avgProcessingTime || '0 days'}</div>
+            <div className="text-2xl font-bold">{(workflowStats as any)?.avgProcessingTime || '0 days'}</div>
           </CardContent>
         </Card>
       </div>

@@ -19716,6 +19716,10 @@ export type Database = {
         Args: { p_lead_id: string }
         Returns: number
       }
+      calculate_real_team_performance: {
+        Args: { p_team_id: string; p_start_date: string; p_end_date: string }
+        Returns: Json
+      }
       calculate_system_health_score: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -19848,6 +19852,14 @@ export type Database = {
       create_default_instructor_availability: {
         Args: { instructor_id: string }
         Returns: undefined
+      }
+      create_enrollment_workflow: {
+        Args: {
+          p_roster_id: string
+          p_student_id: string
+          p_action_type: string
+        }
+        Returns: string
       }
       create_new_user: {
         Args: {
@@ -20747,6 +20759,10 @@ export type Database = {
         Returns: undefined
       }
       refresh_crm_analytics: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      refresh_team_performance_metrics: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
