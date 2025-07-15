@@ -39,17 +39,23 @@ interface AvailabilityBooking {
   course_offering_id?: string;
   course_sequence?: any;
   created_by?: string;
-  student_rosters?: {
+  student_rosters?: Array<{
     id: string;
     roster_name: string;
+    status?: string;
     student_roster_members: Array<{
       id: string;
+      enrollment_status?: string;
+      completion_status?: string;
+      attendance_status?: string;
       student_enrollment_profiles: {
         display_name: string;
         email: string;
+        first_name?: string;
+        last_name?: string;
       };
     }>;
-  };
+  }>;
   courses?: {
     name: string;
     description?: string;
@@ -88,14 +94,20 @@ export function AvailabilityManagement({ userId, showTeamBookings = false, teamI
         .from('availability_bookings')
         .select(`
           *,
-          student_rosters (
+          student_rosters!student_rosters_availability_booking_id_fkey (
             id,
             roster_name,
+            status,
             student_roster_members (
               id,
+              enrollment_status,
+              completion_status,
+              attendance_status,
               student_enrollment_profiles (
                 display_name,
-                email
+                email,
+                first_name,
+                last_name
               )
             )
           ),
@@ -126,7 +138,7 @@ export function AvailabilityManagement({ userId, showTeamBookings = false, teamI
       const { data, error } = await query;
 
       if (error) throw error;
-      setBookings(data || []);
+      setBookings((data as any) || []);
     } catch (error) {
       console.error('Error loading availability bookings:', error);
       toast.error('Failed to load availability data');
@@ -183,6 +195,71 @@ export function AvailabilityManagement({ userId, showTeamBookings = false, teamI
     } catch (error) {
       console.error('Error updating booking status:', error);
       toast.error('Failed to update booking status');
+    }
+  };
+
+  const updateStudentAttendance = async (memberId: string, status: 'present' | 'absent' | 'late' | 'excused') => {
+    try {
+      const { error } = await supabase
+        .from('student_roster_members')
+        .update({
+          attendance_status: status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', memberId);
+
+      if (error) throw error;
+      
+      toast.success(`Attendance marked as ${status}`);
+      await loadBookings();
+    } catch (error) {
+      console.error('Error updating attendance:', error);
+      toast.error('Failed to update attendance');
+    }
+  };
+
+  const markStudentCompleted = async (memberId: string) => {
+    try {
+      const { error } = await supabase
+        .from('student_roster_members')
+        .update({
+          completion_status: 'completed',
+          enrollment_status: 'completed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', memberId);
+
+      if (error) throw error;
+      
+      toast.success('Student marked as completed');
+      await loadBookings();
+    } catch (error) {
+      console.error('Error updating completion status:', error);
+      toast.error('Failed to update completion status');
+    }
+  };
+
+  const submitForCertificates = async (bookingId: string) => {
+    const booking = bookings.find(b => b.id === bookingId);
+    if (!booking?.student_rosters?.[0]) return;
+
+    try {
+      // Update roster status to completed for certificate processing
+      const { error } = await supabase
+        .from('student_rosters')
+        .update({ 
+          status: 'COMPLETED',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', booking.student_rosters[0].id);
+
+      if (error) throw error;
+
+      toast.success('Session submitted for certificate processing');
+      await loadBookings();
+    } catch (error) {
+      console.error('Error submitting for certificates:', error);
+      toast.error('Failed to submit for certificates');
     }
   };
 
@@ -364,10 +441,10 @@ export function AvailabilityManagement({ userId, showTeamBookings = false, teamI
                               {booking.start_time} - {booking.end_time}
                             </p>
                             {booking.description && <p className="mt-1">{booking.description}</p>}
-                            {booking.student_rosters && (
+                            {booking.student_rosters?.[0] && (
                               <p className="flex items-center gap-1 mt-1">
                                 <Users className="h-3 w-3" />
-                                {booking.student_rosters.roster_name} ({booking.student_rosters.student_roster_members?.length || 0} students)
+                                {booking.student_rosters[0].roster_name} ({booking.student_rosters[0].student_roster_members?.length || 0} students)
                               </p>
                             )}
                           </div>
@@ -443,15 +520,46 @@ export function AvailabilityManagement({ userId, showTeamBookings = false, teamI
                   </div>
                 </div>
                 
-                {selectedBooking.student_rosters && (
+                {selectedBooking.student_rosters?.[0] && (
                   <div>
-                    <h4 className="font-semibold mb-2">Students ({selectedBooking.student_rosters.student_roster_members?.length || 0})</h4>
+                    <h4 className="font-semibold mb-2">Students ({selectedBooking.student_rosters[0].student_roster_members?.length || 0})</h4>
                     <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {selectedBooking.student_rosters.student_roster_members?.map((member) => (
+                      {selectedBooking.student_rosters[0].student_roster_members?.map((member) => (
                         <div key={member.id} className="flex items-center justify-between p-2 border rounded">
-                          <div>
-                            <p className="font-medium text-sm">{member.student_enrollment_profiles.display_name}</p>
-                            <p className="text-xs text-muted-foreground">{member.student_enrollment_profiles.email}</p>
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">
+                              {member.student_enrollment_profiles?.display_name || 
+                               `${member.student_enrollment_profiles?.first_name} ${member.student_enrollment_profiles?.last_name}`.trim() ||
+                               'Unknown Student'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">{member.student_enrollment_profiles?.email}</p>
+                            <div className="flex gap-1 mt-1">
+                              <Badge variant={member.completion_status === 'completed' ? 'default' : 'outline'} className="text-xs">
+                                {member.completion_status === 'completed' ? 'Completed' : 
+                                 member.completion_status === 'in_progress' ? 'In Progress' : 'Not Started'}
+                              </Badge>
+                              {member.attendance_status && (
+                                <Badge variant={member.attendance_status === 'present' ? 'default' : 'destructive'} className="text-xs">
+                                  {member.attendance_status}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button 
+                              size="sm" 
+                              variant={member.attendance_status === 'present' ? 'default' : 'outline'}
+                              onClick={() => updateStudentAttendance(member.id, 'present')}
+                            >
+                              Present
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant={member.attendance_status === 'absent' ? 'destructive' : 'outline'}
+                              onClick={() => updateStudentAttendance(member.id, 'absent')}
+                            >
+                              Absent
+                            </Button>
                           </div>
                         </div>
                       ))}
@@ -475,6 +583,15 @@ export function AvailabilityManagement({ userId, showTeamBookings = false, teamI
                 >
                   Mark Complete
                 </Button>
+                {selectedBooking.status === 'completed' && selectedBooking.student_rosters?.[0] && (
+                  <Button
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => submitForCertificates(selectedBooking.id)}
+                    disabled={selectedBooking.student_rosters[0].status === 'COMPLETED'}
+                  >
+                    Submit for Certificates
+                  </Button>
+                )}
                 <Button
                   variant="destructive"
                   onClick={() => updateBookingStatus(selectedBooking.id, 'cancelled')}

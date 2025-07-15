@@ -117,7 +117,20 @@ export function RosterManagement({ instructorId, teamId, showTeamRostersOnly = f
         }
       } else {
         // Get rosters assigned to specific instructor via availability bookings
-        query = query.not('availability_booking_id', 'is', null);
+        const { data: instructorBookings } = await supabase
+          .from('availability_bookings')
+          .select('id')
+          .eq('user_id', instructorId);
+        
+        if (instructorBookings?.length) {
+          const bookingIds = instructorBookings.map(b => b.id);
+          query = query.in('availability_booking_id', bookingIds);
+        } else {
+          // No bookings found, return empty
+          setRosters([]);
+          setIsLoading(false);
+          return;
+        }
       }
 
       const { data, error } = await query;
