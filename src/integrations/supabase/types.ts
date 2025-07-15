@@ -1472,7 +1472,7 @@ export type Database = {
           {
             foreignKeyName: "availability_bookings_roster_id_fkey"
             columns: ["roster_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "student_rosters"
             referencedColumns: ["id"]
           },

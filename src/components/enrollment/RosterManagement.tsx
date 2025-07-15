@@ -66,7 +66,7 @@ export function RosterManagement() {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const queryClient = useQueryClient();
 
-  // Fetch all rosters with type filtering
+  // Fetch all rosters with type filtering and booking information
   const { data: rosters = [], isLoading } = useQuery({
     queryKey: ['student-rosters', statusFilter, typeFilter],
     queryFn: async () => {
@@ -75,7 +75,16 @@ export function RosterManagement() {
         .select(`
           *,
           locations(name, city, state),
-          profiles!student_rosters_instructor_id_fkey(display_name)
+          profiles!student_rosters_instructor_id_fkey(display_name),
+          availability_bookings!student_rosters_availability_booking_id_fkey(
+            id,
+            title,
+            booking_date,
+            start_time,
+            end_time,
+            user_id,
+            profiles!availability_bookings_user_id_fkey(display_name)
+          )
         `)
         .order('created_at', { ascending: false });
 
@@ -89,7 +98,17 @@ export function RosterManagement() {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as StudentRoster[];
+      return data as (StudentRoster & {
+        availability_bookings?: {
+          id: string;
+          title: string;
+          booking_date: string;
+          start_time: string;
+          end_time: string;
+          user_id: string;
+          profiles?: { display_name: string };
+        };
+      })[];
     }
   });
 
@@ -418,6 +437,29 @@ export function RosterManagement() {
                       {new Date(roster.scheduled_start_date).toLocaleDateString()}
                     </div>
                   )}
+                  
+                  {/* Booking Assignment Status */}
+                  {roster.availability_bookings ? (
+                    <div className="flex items-start text-sm text-green-700 bg-green-50 p-2 rounded">
+                      <CheckCircle className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
+                      <div className="space-y-1">
+                        <div className="font-medium">Assigned to: {roster.availability_bookings.title}</div>
+                        <div className="text-xs text-green-600">
+                          {new Date(roster.availability_bookings.booking_date).toLocaleDateString()} at {roster.availability_bookings.start_time} - {roster.availability_bookings.end_time}
+                        </div>
+                        {roster.availability_bookings.profiles && (
+                          <div className="text-xs text-green-600">
+                            Instructor: {roster.availability_bookings.profiles.display_name}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center text-sm text-amber-700 bg-amber-50 p-2 rounded">
+                      <AlertCircle className="h-4 w-4 mr-2" />
+                      <span>Not assigned to any booking</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -460,7 +502,7 @@ export function RosterManagement() {
                   </div>
                   <div className="flex gap-2">
                     <Button
-                      variant="outline"
+                      variant={roster.availability_bookings ? "secondary" : "default"}
                       size="sm"
                       onClick={() => {
                         setSelectedRoster(roster);
@@ -468,7 +510,7 @@ export function RosterManagement() {
                       }}
                     >
                       <Calendar className="h-4 w-4 mr-1" />
-                      Assign to Booking
+                      {roster.availability_bookings ? 'Reassign Booking' : 'Assign to Booking'}
                     </Button>
                     <Button
                       variant="outline"
