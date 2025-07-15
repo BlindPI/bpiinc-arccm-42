@@ -20155,6 +20155,15 @@ export type Database = {
           permissions: Json
           created_at: string
           updated_at: string
+          team_name: string
+          team_description: string
+          team_type: string
+          team_status: string
+          location_id: string
+          location_name: string
+          location_address: string
+          location_city: string
+          location_state: string
         }[]
       }
       find_or_create_student_profile: {
