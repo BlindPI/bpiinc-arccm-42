@@ -76,7 +76,7 @@ export function BatchReviewSection() {
             
             <div className="border rounded-lg overflow-hidden">
               <RosterReview 
-                data={data}
+                data={data || []}
                 enableCourseMatching={enableCourseMatching}
                 selectedCourseId={selectedCourseId}
                 extractedCourse={extractedCourse}

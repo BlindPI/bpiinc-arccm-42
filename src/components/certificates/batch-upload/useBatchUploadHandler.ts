@@ -79,7 +79,8 @@ export function useBatchUploadHandler() {
       const processedData: ProcessedData = { 
         data: [], 
         totalCount: data.length,
-        errorCount: 0
+        errorCount: 0,
+        courseMismatches: 0
       };
       
       let successCount = 0;

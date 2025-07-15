@@ -59,11 +59,11 @@ export function RosterReview({
   const [expandedScores, setExpandedScores] = useState<Set<string>>(new Set());
   
   // Count course mismatches and score statistics
-  const courseMismatchCount = data.filter(row => row.hasCourseMismatch).length;
+  const courseMismatchCount = data?.filter(row => row.hasCourseMismatch)?.length || 0;
   const hasCourseMismatches = courseMismatchCount > 0;
   
   // Score-based statistics
-  const scoreStats = data.reduce((acc, row) => {
+  const scoreStats = (data || []).reduce((acc, row) => {
     const hasScores = (row.practical_score !== null && row.practical_score !== undefined) ||
                      (row.written_score !== null && row.written_score !== undefined);
     const passFailStatus = determinePassFailStatus(
@@ -84,9 +84,10 @@ export function RosterReview({
   
   // Filter data based on selected filter
   const getFilteredData = () => {
+    if (!data || !Array.isArray(data)) return [];
     switch (filterType) {
       case 'errors':
-        return data.filter(row => row.validationErrors.length > 0);
+        return data.filter(row => row.validationErrors?.length > 0);
       case 'score_pending':
         return data.filter(row => determinePassFailStatus(
           row.practical_score || undefined,
@@ -255,7 +256,7 @@ export function RosterReview({
           </CardHeader>
           <CardContent>
             <div className="space-y-3 max-h-96 overflow-y-auto">
-              {displayData.map((row, index) => {
+              {(displayData || []).map((row, index) => {
                 const rowId = row.id || `row-${index}`;
                 const isExpanded = expandedScores.has(rowId);
                 const passFailStatus = determinePassFailStatus(
@@ -269,7 +270,7 @@ export function RosterReview({
 
                 return (
                   <div key={index} className={`p-4 border rounded-lg ${
-                    row.validationErrors.length > 0 ? 'border-red-200 bg-red-50' : 'border-gray-200'
+                    (row.validationErrors?.length || 0) > 0 ? 'border-red-200 bg-red-50' : 'border-gray-200'
                   }`}>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -303,7 +304,7 @@ export function RosterReview({
                         )}
                         
                         {/* Validation Status */}
-                        {row.validationErrors.length === 0 ? (
+                        {(row.validationErrors?.length || 0) === 0 ? (
                           <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded-md text-xs">
                             <CheckCircle className="h-3 w-3" />
                             Valid
@@ -311,7 +312,7 @@ export function RosterReview({
                         ) : (
                           <div className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-800 rounded-md text-xs">
                             <XCircle className="h-3 w-3" />
-                            {row.validationErrors.length} Error{row.validationErrors.length !== 1 ? 's' : ''}
+                            {row.validationErrors?.length || 0} Error{(row.validationErrors?.length || 0) !== 1 ? 's' : ''}
                           </div>
                         )}
                       </div>
@@ -409,7 +410,7 @@ export function RosterReview({
                     )}
                   
                   {/* Error Details */}
-                  {row.validationErrors.length > 0 && (
+                  {(row.validationErrors?.length || 0) > 0 && (
                     <Collapsible className="mt-2">
                       <CollapsibleTrigger asChild>
                         <Button variant="ghost" size="sm" className="text-xs text-red-600 p-0 h-auto">
@@ -418,7 +419,7 @@ export function RosterReview({
                       </CollapsibleTrigger>
                       <CollapsibleContent className="mt-2">
                         <div className="space-y-1">
-                          {row.validationErrors.map((error: any, errorIndex: number) => (
+                          {(row.validationErrors || []).map((error: any, errorIndex: number) => (
                             <div key={errorIndex} className="text-xs text-red-600 bg-red-100 p-2 rounded">
                               <div className="font-medium">{error.message}</div>
                               {error.type === 'course_mismatch' && error.details && (

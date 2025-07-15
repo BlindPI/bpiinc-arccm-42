@@ -137,6 +137,7 @@ export async function processRosterFile(
         const validation = validateCourseMatch(courseMatch);
         if (!validation.isValid) {
           row.hasError = true;
+          row.hasCourseMismatch = true;
           row.errors = row.errors || [];
           row.errors.push(`Row ${i + 2}: ${validation.error}`);
         }
@@ -144,6 +145,7 @@ export async function processRosterFile(
       } catch (error) {
         console.error('Course matching error for row', i + 2, ':', error);
         row.hasError = true;
+        row.hasCourseMismatch = true;
         row.errors = row.errors || [];
         row.errors.push(`Row ${i + 2}: Course matching failed - ${error instanceof Error ? error.message : 'Unknown error'}`);
       }

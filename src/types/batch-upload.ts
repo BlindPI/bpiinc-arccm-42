@@ -3,6 +3,7 @@ export interface ProcessedData {
   data: any[];
   totalCount: number;
   errorCount: number;
+  courseMismatches: number;
 }
 
 export interface ProcessingStatus {
@@ -25,7 +26,8 @@ export const createDefaultProcessingStatus = (): ProcessingStatus => ({
 export const createDefaultProcessedData = (): ProcessedData => ({
   data: [],
   totalCount: 0,
-  errorCount: 0
+  errorCount: 0,
+  courseMismatches: 0
 });
 
 // Add batch information interface for clearer typing
