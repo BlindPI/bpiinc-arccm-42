@@ -18,7 +18,8 @@ export function WaitlistManager() {
   const { data: courseOfferings = [] } = useQuery({
     queryKey: ['availability-bookings-for-waitlist'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Get bookings
+      const { data: bookings, error: bookingsError } = await supabase
         .from('availability_bookings')
         .select(`
           id,
@@ -27,20 +28,40 @@ export function WaitlistManager() {
           start_time,
           end_time,
           booking_type,
-          description,
-          roster_id,
-          student_rosters (
-            id,
-            roster_name,
-            max_capacity
-          )
+          description
         `)
         .in('booking_type', ['training_session', 'course_instruction'])
-        .not('roster_id', 'is', null)
         .order('booking_date', { ascending: true });
 
-      if (error) throw error;
-      return data;
+      if (bookingsError) throw bookingsError;
+
+      // Get rosters that have bookings assigned
+      const { data: rosters, error: rostersError } = await supabase
+        .from('student_rosters')
+        .select(`
+          id,
+          roster_name,
+          max_capacity,
+          availability_booking_id
+        `)
+        .not('availability_booking_id', 'is', null);
+
+      if (rostersError) throw rostersError;
+
+      // Create roster map
+      const rosterMap = new Map();
+      rosters?.forEach(roster => {
+        if (roster.availability_booking_id) {
+          rosterMap.set(roster.availability_booking_id, roster);
+        }
+      });
+
+      // Filter bookings that have rosters and add roster info
+      return bookings?.filter(booking => rosterMap.has(booking.id))
+        .map(booking => ({
+          ...booking,
+          student_rosters: rosterMap.get(booking.id)
+        })) || [];
     }
   });
 
@@ -49,14 +70,14 @@ export function WaitlistManager() {
 
   const addToWaitlist = useMutation({
     mutationFn: async ({ studentId, bookingId }: { studentId: string; bookingId: string }) => {
-      // First get the roster_id from the availability_booking
-      const { data: booking, error: bookingError } = await supabase
-        .from('availability_bookings')
-        .select('roster_id')
-        .eq('id', bookingId)
+      // First get the roster assigned to this booking
+      const { data: roster, error: rosterError } = await supabase
+        .from('student_rosters')
+        .select('id')
+        .eq('availability_booking_id', bookingId)
         .single();
 
-      if (bookingError || !booking?.roster_id) {
+      if (rosterError || !roster?.id) {
         throw new Error('No roster found for this booking');
       }
 
@@ -64,7 +85,7 @@ export function WaitlistManager() {
       const { data: existing, error: existingError } = await supabase
         .from('student_roster_members')
         .select('id')
-        .eq('roster_id', booking.roster_id)
+        .eq('roster_id', roster.id)
         .eq('student_profile_id', studentId)
         .single();
 
@@ -76,7 +97,7 @@ export function WaitlistManager() {
       const { data, error } = await supabase
         .from('student_roster_members')
         .insert([{
-          roster_id: booking.roster_id,
+          roster_id: roster.id,
           student_profile_id: studentId,
           enrollment_status: 'waitlisted',
           enrolled_at: new Date().toISOString()
@@ -110,14 +131,14 @@ export function WaitlistManager() {
     if (!selectedOffering) return;
     
     try {
-      // First get the roster_id from the availability_booking
-      const { data: booking, error: bookingError } = await supabase
-        .from('availability_bookings')
-        .select('roster_id')
-        .eq('id', selectedOffering)
+      // First get the roster assigned to this booking
+      const { data: roster, error: rosterError } = await supabase
+        .from('student_rosters')
+        .select('id')
+        .eq('availability_booking_id', selectedOffering)
         .single();
 
-      if (bookingError || !booking?.roster_id) {
+      if (rosterError || !roster?.id) {
         throw new Error('No roster found for this booking');
       }
 
@@ -125,7 +146,7 @@ export function WaitlistManager() {
       const { error } = await supabase
         .from('student_roster_members')
         .update({ enrollment_status: 'enrolled' })
-        .eq('roster_id', booking.roster_id)
+        .eq('roster_id', roster.id)
         .eq('student_profile_id', studentProfileId)
         .eq('enrollment_status', 'waitlisted');
 

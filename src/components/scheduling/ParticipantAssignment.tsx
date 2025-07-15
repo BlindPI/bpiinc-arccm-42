@@ -49,13 +49,13 @@ export function ParticipantAssignment({
     queryKey: ['event-participants', eventId],
     queryFn: async () => {
       // Get the roster assigned to this booking
-      const { data: booking, error: bookingError } = await supabase
-        .from('availability_bookings')
-        .select('roster_id')
-        .eq('id', eventId)
+      const { data: roster, error: rosterError } = await supabase
+        .from('student_rosters')
+        .select('id')
+        .eq('availability_booking_id', eventId)
         .single();
 
-      if (bookingError || !booking?.roster_id) return [];
+      if (rosterError || !roster?.id) return [];
 
       // Get students from the assigned roster
       const { data: students, error: studentsError } = await supabase
@@ -65,7 +65,7 @@ export function ParticipantAssignment({
             id, display_name, email, first_name, last_name
           )
         `)
-        .eq('roster_id', booking.roster_id)
+        .eq('roster_id', roster.id)
         .eq('enrollment_status', 'enrolled');
 
       if (studentsError) throw studentsError;
@@ -82,11 +82,11 @@ export function ParticipantAssignment({
   // Assign roster to event and create enrollment records
   const assignRoster = useMutation({
     mutationFn: async (rosterId: string) => {
-      // First update the booking with the roster
+      // First update the roster with the booking assignment
       const { data, error } = await supabase
-        .from('availability_bookings')
-        .update({ roster_id: rosterId })
-        .eq('id', eventId)
+        .from('student_rosters')
+        .update({ availability_booking_id: eventId })
+        .eq('id', rosterId)
         .select()
         .single();
 

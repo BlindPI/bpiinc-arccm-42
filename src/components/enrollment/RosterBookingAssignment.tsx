@@ -58,7 +58,8 @@ export function RosterBookingAssignment({ rosterId, currentBookingId, onUpdate }
   const { data: bookings, isLoading: bookingsLoading } = useQuery({
     queryKey: ['availability-bookings-for-assignment'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get all bookings
+      const { data: bookingsData, error: bookingsError } = await supabase
         .from('availability_bookings')
         .select(`
           id,
@@ -67,26 +68,44 @@ export function RosterBookingAssignment({ rosterId, currentBookingId, onUpdate }
           start_time,
           end_time,
           user_id,
-          roster_id,
-          student_rosters!availability_bookings_roster_id_fkey(
-            id,
-            roster_name
-          ),
           profiles!availability_bookings_user_id_fkey(display_name)
         `)
         .eq('booking_type', 'course_instruction')
         .order('booking_date', { ascending: true });
 
-      if (error) throw error;
+      if (bookingsError) throw bookingsError;
 
-      return data?.map(booking => ({
-        ...booking,
-        instructor_name: booking.profiles?.display_name || 'Unknown',
-        isAssigned: !!booking.roster_id,
-        assignedRosterName: booking.student_rosters?.roster_name || null,
-        isCurrentAssignment: booking.roster_id === rosterId,
-        hasConflict: booking.roster_id && booking.roster_id !== rosterId
-      }));
+      // Then get all roster assignments
+      const { data: rostersData, error: rostersError } = await supabase
+        .from('student_rosters')
+        .select(`
+          id,
+          roster_name,
+          availability_booking_id
+        `)
+        .not('availability_booking_id', 'is', null);
+
+      if (rostersError) throw rostersError;
+
+      // Create assignment map
+      const assignmentMap = new Map();
+      rostersData?.forEach(roster => {
+        if (roster.availability_booking_id) {
+          assignmentMap.set(roster.availability_booking_id, roster);
+        }
+      });
+
+      return bookingsData?.map(booking => {
+        const assignedRoster = assignmentMap.get(booking.id);
+        return {
+          ...booking,
+          instructor_name: booking.profiles?.display_name || 'Unknown',
+          isAssigned: !!assignedRoster,
+          assignedRosterName: assignedRoster?.roster_name || null,
+          isCurrentAssignment: assignedRoster?.id === rosterId,
+          hasConflict: assignedRoster && assignedRoster.id !== rosterId
+        };
+      });
     }
   });
 

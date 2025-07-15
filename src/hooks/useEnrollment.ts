@@ -267,12 +267,12 @@ export const useWaitlist = (bookingId: string) => {
 
       // First get the roster_id from the availability_booking
       const { data: booking, error: bookingError } = await supabase
-        .from('availability_bookings')
-        .select('roster_id')
-        .eq('id', bookingId)
+        .from('student_rosters')
+        .select('id')
+        .eq('availability_booking_id', bookingId)
         .single();
 
-      if (bookingError || !booking?.roster_id) {
+      if (bookingError || !booking?.id) {
         return [];
       }
 
@@ -292,7 +292,7 @@ export const useWaitlist = (bookingId: string) => {
             last_name
           )
         `)
-        .eq('roster_id', booking.roster_id)
+        .eq('roster_id', booking.id)
         .eq('enrollment_status', 'waitlisted')
         .order('enrolled_at', { ascending: true });
       
