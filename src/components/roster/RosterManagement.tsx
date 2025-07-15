@@ -54,7 +54,7 @@ interface RosterWithStudents {
   locations?: {
     name: string;
     city?: string;
-    state_province?: string;
+    state?: string;
   };
 }
 
@@ -95,7 +95,7 @@ export function RosterManagement({ instructorId, teamId, showTeamRostersOnly = f
           locations (
             name,
             city,
-            state_province
+            state
           )
         `);
 

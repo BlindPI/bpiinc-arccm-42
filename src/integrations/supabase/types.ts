@@ -14286,6 +14286,7 @@ export type Database = {
       student_rosters: {
         Row: {
           availability_booking_id: string | null
+          course_id: string | null
           course_name: string
           course_sequence: Json | null
           created_at: string | null
@@ -14305,6 +14306,7 @@ export type Database = {
         }
         Insert: {
           availability_booking_id?: string | null
+          course_id?: string | null
           course_name: string
           course_sequence?: Json | null
           created_at?: string | null
@@ -14324,6 +14326,7 @@ export type Database = {
         }
         Update: {
           availability_booking_id?: string | null
+          course_id?: string | null
           course_name?: string
           course_sequence?: Json | null
           created_at?: string | null
@@ -14347,6 +14350,27 @@ export type Database = {
             columns: ["availability_booking_id"]
             isOneToOne: true
             referencedRelation: "availability_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_student_rosters_course_id"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "certification_requirements"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "fk_student_rosters_course_id"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "course_completion_summary"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "fk_student_rosters_course_id"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
             referencedColumns: ["id"]
           },
           {

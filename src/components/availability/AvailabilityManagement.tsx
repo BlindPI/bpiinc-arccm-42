@@ -111,6 +111,10 @@ export function AvailabilityManagement({ userId, showTeamBookings = false, teamI
                 last_name
               )
             )
+          ),
+          courses (
+            name,
+            description
           )
         `)
         .order('booking_date', { ascending: true })
