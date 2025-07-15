@@ -67,7 +67,7 @@ export function extractDataFromFile(processedRows: ProcessedRow[]): ExtractedDat
   
   processedRows.forEach((row, index) => {
     // Basic validation - check if required fields exist
-    const requiredFields = ['Student Name', 'Email'];
+    const requiredFields = ['Student Name'];
     const missingFields = requiredFields.filter(field => !row[field] || row[field].toString().trim() === '');
     
     if (missingFields.length === 0 && !row.hasError) {
@@ -110,12 +110,17 @@ export async function processRosterFile(
 ): Promise<ProcessedData> {
   const processedRows = await processExcelFile(file);
   
-  // Apply course matching if enabled
+  // Apply course matching if enabled and courses available
   if (enableCourseMatching && courses.length > 0) {
     console.log('Applying course matching to', processedRows.length, 'rows');
     
     for (let i = 0; i < processedRows.length; i++) {
       const row = processedRows[i];
+      
+      // Skip empty rows
+      if (!row['Student Name'] || row['Student Name'].toString().trim() === '') {
+        continue;
+      }
       
       // Extract course information from row
       const courseInfo = {
@@ -133,36 +138,32 @@ export async function processRosterFile(
         
         row.courseMatch = courseMatch;
         
-        // Validate course match
-        const validation = validateCourseMatch(courseMatch);
-        if (!validation.isValid) {
-          row.hasError = true;
+        // Only mark as error if course matching explicitly fails
+        if (courseMatch?.matchType === 'mismatch') {
           row.hasCourseMismatch = true;
-          row.errors = row.errors || [];
-          row.errors.push(`Row ${i + 2}: ${validation.error}`);
         }
         
       } catch (error) {
         console.error('Course matching error for row', i + 2, ':', error);
-        row.hasError = true;
-        row.hasCourseMismatch = true;
-        row.errors = row.errors || [];
-        row.errors.push(`Row ${i + 2}: Course matching failed - ${error instanceof Error ? error.message : 'Unknown error'}`);
+        // Don't mark as error for course matching failures - just log
       }
     }
-  } else if (selectedCourseId) {
-    // Use selected course as default for all rows
+  } else if (selectedCourseId && selectedCourseId !== 'none') {
+    // Use selected course as default for all valid rows
     const defaultCourse = courses.find(c => c.id === selectedCourseId);
     if (defaultCourse) {
       console.log('Using default course for all rows:', defaultCourse.name);
       processedRows.forEach(row => {
-        row.courseMatch = {
-          id: defaultCourse.id,
-          name: defaultCourse.name,
-          matchType: 'default',
-          expiration_months: defaultCourse.expiration_months,
-          certifications: []
-        };
+        // Only apply to rows with student names
+        if (row['Student Name'] && row['Student Name'].toString().trim() !== '') {
+          row.courseMatch = {
+            id: defaultCourse.id,
+            name: defaultCourse.name,
+            matchType: 'default',
+            expiration_months: defaultCourse.expiration_months,
+            certifications: []
+          };
+        }
       });
     }
   }
