@@ -12,6 +12,19 @@ export interface Roster {
   created_at: string;
   updated_at: string;
   certificate_count: number;
+  availability_booking_id?: string;
+}
+
+// Student roster member with course assignment
+export interface StudentRosterMember {
+  id: string;
+  roster_id: string;
+  student_id: string;
+  course_id?: string;
+  enrollment_status: 'enrolled' | 'completed' | 'dropped' | 'pending';
+  completion_status: 'not_started' | 'in_progress' | 'completed';
+  created_at: string;
+  updated_at: string;
 }
 
 // Roster with related data from joins

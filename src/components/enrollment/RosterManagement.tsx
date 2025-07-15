@@ -30,6 +30,8 @@ import { RosterBuilder } from './RosterBuilder';
 import { RosterTable } from './RosterTable';
 import { RosterExportDialog } from './RosterExportDialog';
 import { RosterStudentManager } from './RosterStudentManager';
+import { RosterBookingAssignment } from './RosterBookingAssignment';
+import { StudentCourseAssignment } from './StudentCourseAssignment';
 
 interface StudentRoster {
   id: string;
@@ -57,7 +59,7 @@ interface StudentRoster {
 }
 
 export function RosterManagement() {
-  const [activeView, setActiveView] = useState<'list' | 'create' | 'manage' | 'edit'>('list');
+  const [activeView, setActiveView] = useState<'list' | 'create' | 'manage' | 'edit' | 'assign-courses' | 'assign-booking'>('list');
   const [selectedRoster, setSelectedRoster] = useState<StudentRoster | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('TRAINING');
@@ -195,6 +197,46 @@ export function RosterManagement() {
           rosterName={selectedRoster.roster_name}
           maxCapacity={selectedRoster.max_capacity}
           currentEnrollment={selectedRoster.current_enrollment}
+        />
+      </div>
+    );
+  }
+
+  if (activeView === 'assign-courses' && selectedRoster) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">Assign Courses: {selectedRoster.roster_name}</h2>
+            <p className="text-muted-foreground">Assign individual courses to students in this roster</p>
+          </div>
+          <Button variant="outline" onClick={() => setActiveView('list')}>
+            Back to Rosters
+          </Button>
+        </div>
+        <StudentCourseAssignment rosterId={selectedRoster.id} />
+      </div>
+    );
+  }
+
+  if (activeView === 'assign-booking' && selectedRoster) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">Assign to Booking: {selectedRoster.roster_name}</h2>
+            <p className="text-muted-foreground">Assign this roster to an availability booking for scheduling</p>
+          </div>
+          <Button variant="outline" onClick={() => setActiveView('list')}>
+            Back to Rosters
+          </Button>
+        </div>
+        <RosterBookingAssignment 
+          rosterId={selectedRoster.id} 
+          onUpdate={() => {
+            queryClient.invalidateQueries({ queryKey: ['student-rosters'] });
+            setActiveView('list');
+          }}
         />
       </div>
     );
@@ -391,29 +433,55 @@ export function RosterManagement() {
 
                 <Separator />
 
-                <div className="flex justify-between gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedRoster(roster);
-                      setActiveView('manage');
-                    }}
-                  >
-                    <Edit className="h-4 w-4 mr-1" />
-                    Manage Students
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedRoster(roster);
-                      setActiveView('edit');
-                    }}
-                  >
-                    <Settings className="h-4 w-4 mr-1" />
-                    Edit Status
-                  </Button>
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedRoster(roster);
+                        setActiveView('manage');
+                      }}
+                    >
+                      <Edit className="h-4 w-4 mr-1" />
+                      Manage Students
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedRoster(roster);
+                        setActiveView('assign-courses');
+                      }}
+                    >
+                      <FileText className="h-4 w-4 mr-1" />
+                      Assign Courses
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedRoster(roster);
+                        setActiveView('assign-booking');
+                      }}
+                    >
+                      <Calendar className="h-4 w-4 mr-1" />
+                      Assign to Booking
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedRoster(roster);
+                        setActiveView('edit');
+                      }}
+                    >
+                      <Settings className="h-4 w-4 mr-1" />
+                      Edit Status
+                    </Button>
+                  </div>
                   <div className="flex gap-2">
                     <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
                       <DialogTrigger asChild>
