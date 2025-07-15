@@ -49,7 +49,25 @@ export function ICDashboard() {
       // Fetch user's compliance records
       const records = await ComplianceService.getUserComplianceRecords(userId);
       // Filter records relevant to the user's current role and tier, and exclude 'not_applicable'
-      const filteredRecords = records.filter(record => record.compliance_metrics?.required_for_roles.includes(role) && record.compliance_metrics?.applicable_tiers?.includes(info?.tier || 'basic') && record.compliance_status !== 'not_applicable');
+      // Fix: Handle array fields properly with safe includes checks
+      const filteredRecords = records.filter(record => {
+        const metric = record.compliance_metrics;
+        if (!metric) return false;
+        
+        // Safe array includes check for required_for_roles
+        const isRequiredForRole = Array.isArray(metric.required_for_roles) 
+          ? metric.required_for_roles.includes(role)
+          : false;
+          
+        // Safe string/array includes check for applicable_tiers
+        const isApplicableForTier = metric.applicable_tiers
+          ? (Array.isArray(metric.applicable_tiers) 
+              ? metric.applicable_tiers.includes(info?.tier || 'basic')
+              : metric.applicable_tiers.includes(info?.tier || 'basic'))
+          : true;
+          
+        return isRequiredForRole && isApplicableForTier && record.compliance_status !== 'not_applicable';
+      });
       setUserRecords(filteredRecords);
     } catch (error) {
       console.error('Error loading IC dashboard data:', error);

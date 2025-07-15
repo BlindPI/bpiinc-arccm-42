@@ -27,7 +27,7 @@ import EnhancedProviderDashboard from './role-dashboards/EnhancedProviderDashboa
 import { EnhancedTeamProviderDashboard } from './team/EnhancedTeamProviderDashboard';
 import { ITDashboard } from './role-dashboards/ITDashboard'; // Import IT Dashboard
 import { IPDashboard } from './role-dashboards/IPDashboard'; // Import IP Dashboard
-import { ICDashboard } from './role-dashboards/ICDashboard'; // Import IC Dashboard
+import { EnterpriseICDashboard } from './EnterpriseICDashboard'; // Import Enterprise IC Dashboard
 
 export function SimpleRoleRouter() {
   const {
@@ -121,10 +121,10 @@ export function SimpleRoleRouter() {
     return <IPDashboard />;
   }
 
-  // IC Instructor Dashboard - Now specific handler
+  // IC Instructor Dashboard - Now Enterprise handler
   if (userRole === 'IC') {
-    console.log('🎯 ROUTING: IC user to ICDashboard');
-    return <ICDashboard />;
+    console.log('🎯 ROUTING: IC user to EnterpriseICDashboard');
+    return <EnterpriseICDashboard />;
   }
 
   // Default dashboard for other roles
