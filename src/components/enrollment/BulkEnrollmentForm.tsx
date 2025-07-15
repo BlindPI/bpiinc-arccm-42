@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,9 +8,10 @@ import { Upload, Users, AlertCircle, CheckCircle } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { findOrCreateStudentProfile } from '@/services/studentProfileService';
 
 export function BulkEnrollmentForm() {
-  const [selectedOffering, setSelectedOffering] = useState<string>('');
+  const [selectedBooking, setSelectedBooking] = useState<string>('');
   const [emailList, setEmailList] = useState('');
   const [enrollmentResults, setEnrollmentResults] = useState<{
     successful: string[];
@@ -20,21 +20,24 @@ export function BulkEnrollmentForm() {
 
   const queryClient = useQueryClient();
 
-  const { data: courseOfferings = [] } = useQuery({
-    queryKey: ['course-offerings-bulk'],
+  const { data: availabilityBookings = [] } = useQuery({
+    queryKey: ['availability-bookings-bulk'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('course_offerings')
+        .from('availability_bookings')
         .select(`
           id,
-          start_date,
-          end_date,
-          max_participants,
+          title,
+          booking_date,
+          start_time,
+          end_time,
+          course_id,
           courses:course_id(name),
-          locations:location_id(name)
+          user_id
         `)
-        .eq('status', 'SCHEDULED')
-        .order('start_date', { ascending: true });
+        .eq('booking_type', 'course_instruction')
+        .gte('booking_date', new Date().toISOString().split('T')[0])
+        .order('booking_date', { ascending: true });
 
       if (error) throw error;
       return data;
@@ -42,50 +45,75 @@ export function BulkEnrollmentForm() {
   });
 
   const bulkEnrollMutation = useMutation({
-    mutationFn: async ({ offeringId, emails }: { offeringId: string; emails: string[] }) => {
+    mutationFn: async ({ bookingId, emails }: { bookingId: string; emails: string[] }) => {
       const results = {
         successful: [] as string[],
         failed: [] as Array<{ email: string; reason: string }>
       };
 
+      // Get the booking details
+      const { data: booking } = await supabase
+        .from('availability_bookings')
+        .select('*')
+        .eq('id', bookingId)
+        .single();
+
+      if (!booking) {
+        throw new Error('Booking not found');
+      }
+
+      // Create a roster for this booking
+      const rosterName = `${booking.title} - ${new Date(booking.booking_date).toLocaleDateString()}`;
+      const { data: roster, error: rosterError } = await supabase
+        .from('student_rosters')
+        .insert({
+          course_name: booking.title,
+          roster_name: rosterName,
+          availability_booking_id: bookingId,
+          max_capacity: emails.length
+        })
+        .select()
+        .single();
+
+      if (rosterError || !roster) {
+        throw new Error('Failed to create roster: ' + rosterError?.message);
+      }
+
       for (const email of emails) {
         try {
-          // First, find the user by email
-          const { data: profiles, error: profileError } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('email', email.trim())
-            .single();
-
-          if (profileError || !profiles) {
-            results.failed.push({ email, reason: 'User not found' });
+          // Find or create student profile
+          const studentId = await findOrCreateStudentProfile(email.trim());
+          
+          if (!studentId) {
+            results.failed.push({ email, reason: 'Failed to create student profile' });
             continue;
           }
 
-          // Check if already enrolled
-          const { data: existingEnrollment } = await supabase
-            .from('enrollments')
+          // Check if already in this roster
+          const { data: existingMember } = await supabase
+            .from('student_roster_members')
             .select('id')
-            .eq('user_id', profiles.id)
-            .eq('course_offering_id', offeringId)
+            .eq('student_profile_id', studentId)
+            .eq('roster_id', roster.id)
             .single();
 
-          if (existingEnrollment) {
-            results.failed.push({ email, reason: 'Already enrolled' });
+          if (existingMember) {
+            results.failed.push({ email, reason: 'Already in roster' });
             continue;
           }
 
-          // Create enrollment
-          const { error: enrollmentError } = await supabase
-            .from('enrollments')
+          // Add to roster with course assignment
+          const { error: memberError } = await supabase
+            .from('student_roster_members')
             .insert({
-              user_id: profiles.id,
-              course_offering_id: offeringId,
-              status: 'ENROLLED'
+              roster_id: roster.id,
+              student_profile_id: studentId,
+              course_id: booking.course_id,
+              enrollment_status: 'enrolled'
             });
 
-          if (enrollmentError) {
-            results.failed.push({ email, reason: enrollmentError.message });
+          if (memberError) {
+            results.failed.push({ email, reason: memberError.message });
           } else {
             results.successful.push(email);
           }
@@ -98,7 +126,8 @@ export function BulkEnrollmentForm() {
     },
     onSuccess: (results) => {
       setEnrollmentResults(results);
-      queryClient.invalidateQueries({ queryKey: ['enrollments'] });
+      queryClient.invalidateQueries({ queryKey: ['student-rosters'] });
+      queryClient.invalidateQueries({ queryKey: ['availability-bookings'] });
       toast.success(`Bulk enrollment completed: ${results.successful.length} successful, ${results.failed.length} failed`);
     },
     onError: (error) => {
@@ -108,8 +137,8 @@ export function BulkEnrollmentForm() {
   });
 
   const handleBulkEnroll = () => {
-    if (!selectedOffering || !emailList.trim()) {
-      toast.error('Please select a course offering and provide email addresses');
+    if (!selectedBooking || !emailList.trim()) {
+      toast.error('Please select an availability booking and provide email addresses');
       return;
     }
 
@@ -123,11 +152,11 @@ export function BulkEnrollmentForm() {
       return;
     }
 
-    bulkEnrollMutation.mutate({ offeringId: selectedOffering, emails });
+    bulkEnrollMutation.mutate({ bookingId: selectedBooking, emails });
   };
 
   const resetForm = () => {
-    setSelectedOffering('');
+    setSelectedBooking('');
     setEmailList('');
     setEnrollmentResults(null);
   };
@@ -143,18 +172,18 @@ export function BulkEnrollmentForm() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="offering">Course Offering</Label>
-            <Select value={selectedOffering} onValueChange={setSelectedOffering}>
+            <Label htmlFor="booking">Availability Booking</Label>
+            <Select value={selectedBooking} onValueChange={setSelectedBooking}>
               <SelectTrigger>
-                <SelectValue placeholder="Select a course offering" />
+                <SelectValue placeholder="Select an availability booking" />
               </SelectTrigger>
               <SelectContent>
-                {courseOfferings.map((offering) => (
-                  <SelectItem key={offering.id} value={offering.id}>
+                {availabilityBookings.map((booking) => (
+                  <SelectItem key={booking.id} value={booking.id}>
                     <div className="flex flex-col">
-                      <span>{offering.courses?.name}</span>
+                      <span>{booking.title}</span>
                       <span className="text-sm text-muted-foreground">
-                        {offering.locations?.name} - {new Date(offering.start_date).toLocaleDateString()}
+                        {booking.courses?.name} - {new Date(booking.booking_date).toLocaleDateString()}
                       </span>
                     </div>
                   </SelectItem>
@@ -174,14 +203,14 @@ export function BulkEnrollmentForm() {
               className="font-mono text-sm"
             />
             <p className="text-sm text-muted-foreground">
-              Enter one email address per line. Users must already exist in the system.
+              Enter one email address per line. Student profiles will be created automatically if they don't exist.
             </p>
           </div>
 
           <div className="flex gap-2">
             <Button
               onClick={handleBulkEnroll}
-              disabled={bulkEnrollMutation.isPending || !selectedOffering || !emailList.trim()}
+              disabled={bulkEnrollMutation.isPending || !selectedBooking || !emailList.trim()}
             >
               <Upload className="h-4 w-4 mr-2" />
               {bulkEnrollMutation.isPending ? 'Processing...' : 'Enroll Students'}
