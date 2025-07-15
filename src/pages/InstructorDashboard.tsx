@@ -1,9 +1,12 @@
-import React from 'react';
-import { useInstructorCourses } from '@/hooks/useInstructorCourses';
+import React, { useState } from 'react';
+import { useInstructorCourses, useCreateRosterForBooking } from '@/hooks/useInstructorCourses';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, Users, BookOpen } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Calendar, Clock, Users, BookOpen, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 
@@ -24,6 +27,30 @@ const statusLabels = {
 export default function InstructorDashboard() {
   const { data: courses, isLoading } = useInstructorCourses();
   const navigate = useNavigate();
+  const createRoster = useCreateRosterForBooking();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<any>(null);
+  const [rosterName, setRosterName] = useState('');
+
+  const handleCreateRoster = async () => {
+    if (!selectedCourse || !rosterName.trim()) return;
+    
+    await createRoster.mutateAsync({
+      bookingId: selectedCourse.booking_id,
+      rosterName: rosterName.trim(),
+      courseTitle: selectedCourse.title
+    });
+    
+    setDialogOpen(false);
+    setRosterName('');
+    setSelectedCourse(null);
+  };
+
+  const openCreateRosterDialog = (course: any) => {
+    setSelectedCourse(course);
+    setRosterName(`${course.title} - ${format(new Date(course.booking_date), 'MMM dd')}`);
+    setDialogOpen(true);
+  };
 
   if (isLoading) {
     return (
@@ -93,21 +120,69 @@ export default function InstructorDashboard() {
                   )}
                 </div>
                 
-                <Button 
-                  className="w-full"
-                  onClick={() => navigate(`/instructor/roster/${course.roster_id}`, {
-                    state: { course }
-                  })}
-                  disabled={!course.roster_id || course.student_count === 0}
-                >
-                  {!course.roster_id ? 'No Roster' : 
-                   course.student_count === 0 ? 'No Students' : 'Manage Roster'}
-                </Button>
+                {!course.roster_id ? (
+                  <Button 
+                    className="w-full"
+                    onClick={() => openCreateRosterDialog(course)}
+                    disabled={createRoster.isPending}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Roster
+                  </Button>
+                ) : (
+                  <Button 
+                    className="w-full"
+                    onClick={() => navigate(`/instructor/roster/${course.roster_id}`, {
+                      state: { course }
+                    })}
+                  >
+                    Manage Roster ({course.student_count})
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Roster for Course</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="course-title">Course</Label>
+              <Input
+                id="course-title"
+                value={selectedCourse?.title || ''}
+                disabled
+                className="bg-muted"
+              />
+            </div>
+            <div>
+              <Label htmlFor="roster-name">Roster Name</Label>
+              <Input
+                id="roster-name"
+                value={rosterName}
+                onChange={(e) => setRosterName(e.target.value)}
+                placeholder="Enter roster name..."
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleCreateRoster}
+                disabled={!rosterName.trim() || createRoster.isPending}
+              >
+                {createRoster.isPending ? 'Creating...' : 'Create Roster'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

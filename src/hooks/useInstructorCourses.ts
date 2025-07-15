@@ -42,6 +42,51 @@ export function useInstructorCourses() {
   };
 }
 
+export function useCreateRosterForBooking() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ 
+      bookingId, 
+      rosterName,
+      courseTitle 
+    }: { 
+      bookingId: string; 
+      rosterName: string;
+      courseTitle: string;
+    }) => {
+      const user = await supabase.auth.getUser();
+      if (!user.data.user?.id) throw new Error('Not authenticated');
+      
+      // Create the roster linked to the booking
+      const { data: roster, error: rosterError } = await supabase
+        .from('student_rosters')
+        .insert({
+          roster_name: rosterName,
+          course_name: courseTitle,
+          availability_booking_id: bookingId,
+          instructor_id: user.data.user.id,
+          roster_status: 'active',
+          roster_type: 'course',
+          created_by: user.data.user.id
+        })
+        .select()
+        .single();
+      
+      if (rosterError) throw rosterError;
+      
+      return roster;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['instructor-courses'] });
+      toast.success('Roster created and assigned to course');
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to create roster: ${error.message}`);
+    }
+  });
+}
+
 export function useRosterStudents(rosterId: string | null) {
   return useQuery({
     queryKey: ['roster-students', rosterId],
