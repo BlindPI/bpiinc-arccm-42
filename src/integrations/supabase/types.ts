@@ -1347,7 +1347,6 @@ export type Database = {
           hours_credited: number | null
           id: string
           requires_approval: boolean | null
-          roster_id: string | null
           start_time: string
           status: string
           team_id: string | null
@@ -1372,7 +1371,6 @@ export type Database = {
           hours_credited?: number | null
           id?: string
           requires_approval?: boolean | null
-          roster_id?: string | null
           start_time: string
           status?: string
           team_id?: string | null
@@ -1397,7 +1395,6 @@ export type Database = {
           hours_credited?: number | null
           id?: string
           requires_approval?: boolean | null
-          roster_id?: string | null
           start_time?: string
           status?: string
           team_id?: string | null
@@ -1467,13 +1464,6 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "availability_bookings_roster_id_fkey"
-            columns: ["roster_id"]
-            isOneToOne: true
-            referencedRelation: "student_rosters"
             referencedColumns: ["id"]
           },
           {
@@ -6545,6 +6535,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "course_offerings"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_roster_assignments_roster_id_fkey"
+            columns: ["roster_id"]
+            isOneToOne: false
+            referencedRelation: "roster_booking_assignments"
+            referencedColumns: ["roster_id"]
           },
           {
             foreignKeyName: "course_roster_assignments_roster_id_fkey"
@@ -13508,6 +13505,13 @@ export type Database = {
             foreignKeyName: "roster_enrollments_roster_id_fkey"
             columns: ["roster_id"]
             isOneToOne: false
+            referencedRelation: "roster_booking_assignments"
+            referencedColumns: ["roster_id"]
+          },
+          {
+            foreignKeyName: "roster_enrollments_roster_id_fkey"
+            columns: ["roster_id"]
+            isOneToOne: false
             referencedRelation: "student_rosters"
             referencedColumns: ["id"]
           },
@@ -13585,6 +13589,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roster_export_logs_roster_id_fkey"
+            columns: ["roster_id"]
+            isOneToOne: false
+            referencedRelation: "roster_booking_assignments"
+            referencedColumns: ["roster_id"]
           },
           {
             foreignKeyName: "roster_export_logs_roster_id_fkey"
@@ -14253,6 +14264,13 @@ export type Database = {
             foreignKeyName: "student_roster_members_roster_id_fkey"
             columns: ["roster_id"]
             isOneToOne: false
+            referencedRelation: "roster_booking_assignments"
+            referencedColumns: ["roster_id"]
+          },
+          {
+            foreignKeyName: "student_roster_members_roster_id_fkey"
+            columns: ["roster_id"]
+            isOneToOne: false
             referencedRelation: "student_rosters"
             referencedColumns: ["id"]
           },
@@ -14322,9 +14340,16 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_student_rosters_availability_booking"
+            columns: ["availability_booking_id"]
+            isOneToOne: true
+            referencedRelation: "availability_bookings"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "student_rosters_availability_booking_id_fkey"
             columns: ["availability_booking_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "availability_bookings"
             referencedColumns: ["id"]
           },
@@ -19548,6 +19573,64 @@ export type Database = {
           total_requests: number | null
         }
         Relationships: []
+      }
+      roster_booking_assignments: {
+        Row: {
+          availability_booking_id: string | null
+          booking_date: string | null
+          booking_title: string | null
+          current_enrollment: number | null
+          end_time: string | null
+          instructor_id: string | null
+          max_capacity: number | null
+          roster_id: string | null
+          roster_name: string | null
+          start_time: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_bookings_user_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_user_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_user_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_user_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_student_rosters_availability_booking"
+            columns: ["availability_booking_id"]
+            isOneToOne: true
+            referencedRelation: "availability_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_rosters_availability_booking_id_fkey"
+            columns: ["availability_booking_id"]
+            isOneToOne: true
+            referencedRelation: "availability_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       supervision_progress: {
         Row: {
