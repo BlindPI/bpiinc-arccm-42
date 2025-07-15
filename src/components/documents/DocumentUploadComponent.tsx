@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 interface DocumentUploadComponentProps {
-  metricId: string;
+  metricName: string;
   userId: string;
   onUploadComplete?: () => void;
 }
@@ -34,7 +34,13 @@ interface ComplianceDocument {
   updated_at: string;
 }
 
-export function DocumentUploadComponent({ metricId, userId, onUploadComplete }: DocumentUploadComponentProps) {
+interface ComplianceMetric {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export function DocumentUploadComponent({ metricName, userId, onUploadComplete }: DocumentUploadComponentProps) {
   const { user } = useAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadNotes, setUploadNotes] = useState('');
@@ -42,18 +48,35 @@ export function DocumentUploadComponent({ metricId, userId, onUploadComplete }: 
   const [uploadProgress, setUploadProgress] = useState(0);
   const [documents, setDocuments] = useState<ComplianceDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [metricId, setMetricId] = useState<string | null>(null);
 
   React.useEffect(() => {
-    loadDocuments();
-  }, [metricId, userId]);
+    loadMetricAndDocuments();
+  }, [metricName, userId]);
 
-  const loadDocuments = async () => {
+  const loadMetricAndDocuments = async () => {
     try {
+      // First get the metric ID by name
+      const { data: metrics, error: metricError } = await supabase
+        .from('compliance_metrics')
+        .select('id, name, description')
+        .eq('name', metricName)
+        .single();
+
+      if (metricError || !metrics) {
+        console.error('Error loading metric:', metricError);
+        toast.error('Failed to load compliance metric');
+        return;
+      }
+
+      setMetricId(metrics.id);
+
+      // Then load documents for this metric
       const { data, error } = await supabase
         .from('compliance_documents')
         .select('*')
         .eq('user_id', userId)
-        .eq('metric_id', metricId)
+        .eq('metric_id', metrics.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -95,7 +118,7 @@ export function DocumentUploadComponent({ metricId, userId, onUploadComplete }: 
   };
 
   const handleUpload = async () => {
-    if (!selectedFile || !user) return;
+    if (!selectedFile || !user || !metricId) return;
 
     setIsUploading(true);
     setUploadProgress(0);
@@ -140,7 +163,7 @@ export function DocumentUploadComponent({ metricId, userId, onUploadComplete }: 
       setUploadNotes('');
       
       // Reload documents
-      await loadDocuments();
+      await loadMetricAndDocuments();
       
       // Trigger callback
       onUploadComplete?.();
@@ -201,6 +224,17 @@ export function DocumentUploadComponent({ metricId, userId, onUploadComplete }: 
     );
   }
 
+  if (!metricId) {
+    return (
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          Compliance metric "{metricName}" not found. Please contact your administrator.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Upload Section */}
@@ -208,7 +242,7 @@ export function DocumentUploadComponent({ metricId, userId, onUploadComplete }: 
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm">
             <Upload className="h-4 w-4" />
-            Upload Compliance Document
+            Upload {metricName}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">

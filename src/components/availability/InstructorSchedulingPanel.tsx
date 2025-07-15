@@ -66,7 +66,7 @@ export const InstructorSchedulingPanel: React.FC = () => {
             </CardHeader>
             <CardContent>
               <DocumentUploadComponent 
-                metricId="instructor-training-docs" 
+                metricName="Instructor Training Documents"
                 userId={user.id}
               />
             </CardContent>

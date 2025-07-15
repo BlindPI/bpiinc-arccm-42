@@ -92,10 +92,6 @@ export function RosterManagement({ instructorId, teamId, showTeamRostersOnly = f
               last_name
             )
           ),
-          courses (
-            name,
-            description
-          ),
           locations (
             name,
             city,

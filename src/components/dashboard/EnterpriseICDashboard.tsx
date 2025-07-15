@@ -308,7 +308,7 @@ export function EnterpriseICDashboard() {
                   {/* Document Upload Section */}
                   {record.compliance_metrics?.category === 'documentation' && (
                     <DocumentUploadComponent
-                      metricId={record.metric_id}
+                      metricName={record.compliance_metrics?.name || 'Document Upload'}
                       userId={user?.id || ''}
                       onUploadComplete={() => handleDocumentUpload(record.metric_id)}
                     />
