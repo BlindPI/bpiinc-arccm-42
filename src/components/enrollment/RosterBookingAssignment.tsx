@@ -27,10 +27,10 @@ export function RosterBookingAssignment({ rosterId, currentBookingId, onUpdate }
           booking_date,
           start_time,
           end_time,
-          user_id
+          user_id,
+          roster_id
         `)
         .eq('booking_type', 'course_instruction')
-        .is('roster_id', null)
         .order('booking_date', { ascending: true });
 
       if (error) throw error;
@@ -44,7 +44,8 @@ export function RosterBookingAssignment({ rosterId, currentBookingId, onUpdate }
 
       return data?.map(booking => ({
         ...booking,
-        instructor_name: instructors?.find(i => i.id === booking.user_id)?.display_name || 'Unknown'
+        instructor_name: instructors?.find(i => i.id === booking.user_id)?.display_name || 'Unknown',
+        isAssigned: !!booking.roster_id
       }));
     }
   });
@@ -97,7 +98,14 @@ export function RosterBookingAssignment({ rosterId, currentBookingId, onUpdate }
             {bookings?.map((booking) => (
               <SelectItem key={booking.id} value={booking.id}>
                 <div className="flex flex-col">
-                  <span className="font-medium">{booking.title}</span>
+                  <span className="font-medium flex items-center gap-2">
+                    {booking.title}
+                    {booking.isAssigned && (
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                        Assigned
+                      </span>
+                    )}
+                  </span>
                   <span className="text-sm text-muted-foreground">
                     {booking.booking_date} | {booking.start_time} - {booking.end_time}
                   </span>

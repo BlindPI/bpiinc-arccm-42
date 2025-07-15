@@ -36,7 +36,7 @@ export function BulkEnrollmentForm() {
           user_id
         `)
         .eq('booking_type', 'course_instruction')
-        .gte('booking_date', new Date().toISOString().split('T')[0])
+        .gte('booking_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
         .order('booking_date', { ascending: true });
 
       if (error) throw error;
