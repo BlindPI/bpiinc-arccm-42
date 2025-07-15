@@ -41,10 +41,10 @@ export interface EnrollmentWithDetails extends Enrollment {
 export class EnrollmentService {
   static async getEnrollmentMetrics(): Promise<EnrollmentMetrics> {
     try {
-      // Get total enrollments by status
+      // Get total enrollments from student_roster_members
       const { data: enrollments, error } = await supabase
-        .from('enrollments')
-        .select('status, enrollment_date');
+        .from('student_roster_members')
+        .select('enrollment_status, enrolled_at');
 
       if (error) throw error;
 
@@ -53,17 +53,17 @@ export class EnrollmentService {
       const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
       const totalEnrollments = enrollments?.length || 0;
-      const activeEnrollments = enrollments?.filter(e => e.status === 'ENROLLED').length || 0;
-      const waitlistCount = enrollments?.filter(e => e.status === 'WAITLISTED').length || 0;
-      const completedCount = enrollments?.filter(e => e.status === 'COMPLETED').length || 0;
-      const cancelledCount = enrollments?.filter(e => e.status === 'CANCELLED').length || 0;
+      const activeEnrollments = enrollments?.filter(e => e.enrollment_status === 'enrolled').length || 0;
+      const waitlistCount = enrollments?.filter(e => e.enrollment_status === 'waitlisted').length || 0;
+      const completedCount = enrollments?.filter(e => e.enrollment_status === 'completed').length || 0;
+      const cancelledCount = enrollments?.filter(e => e.enrollment_status === 'cancelled').length || 0;
 
       const thisMonthEnrollments = enrollments?.filter(e => 
-        new Date(e.enrollment_date) >= thisMonth
+        new Date(e.enrolled_at) >= thisMonth
       ).length || 0;
 
       const lastMonthEnrollments = enrollments?.filter(e => {
-        const enrollDate = new Date(e.enrollment_date);
+        const enrollDate = new Date(e.enrolled_at);
         return enrollDate >= lastMonth && enrollDate < thisMonth;
       }).length || 0;
 
@@ -92,100 +92,98 @@ export class EnrollmentService {
 
   static async getFilteredEnrollments(filters: EnrollmentFilters = {}): Promise<EnrollmentWithDetails[]> {
     try {
-      // First, let's get the basic enrollment data
+      // Get enrollments from student_roster_members with student profiles and roster info
       let enrollmentQuery = supabase
-        .from('enrollments')
-        .select('*')
-        .order('enrollment_date', { ascending: false });
+        .from('student_roster_members')
+        .select(`
+          id,
+          enrollment_status,
+          enrolled_at,
+          notes,
+          student_enrollment_profiles!inner (
+            id,
+            display_name,
+            email,
+            first_name,
+            last_name
+          ),
+          student_rosters!inner (
+            id,
+            roster_name,
+            course_name,
+            scheduled_start_date,
+            scheduled_end_date
+          )
+        `)
+        .order('enrolled_at', { ascending: false });
 
       if (filters.status) {
-        enrollmentQuery = enrollmentQuery.eq('status', filters.status);
-      }
-
-      if (filters.courseOfferingId) {
-        enrollmentQuery = enrollmentQuery.eq('course_offering_id', filters.courseOfferingId);
-      }
-
-      if (filters.userId) {
-        enrollmentQuery = enrollmentQuery.eq('user_id', filters.userId);
+        // Map enrollment statuses
+        const statusMap: { [key: string]: string } = {
+          'ENROLLED': 'enrolled',
+          'WAITLISTED': 'waitlisted', 
+          'COMPLETED': 'completed',
+          'CANCELLED': 'cancelled'
+        };
+        const mappedStatus = statusMap[filters.status] || filters.status.toLowerCase();
+        enrollmentQuery = enrollmentQuery.eq('enrollment_status', mappedStatus);
       }
 
       if (filters.dateRange) {
         enrollmentQuery = enrollmentQuery
-          .gte('enrollment_date', filters.dateRange.start.toISOString())
-          .lte('enrollment_date', filters.dateRange.end.toISOString());
+          .gte('enrolled_at', filters.dateRange.start.toISOString())
+          .lte('enrolled_at', filters.dateRange.end.toISOString());
       }
 
-      const { data: enrollments, error: enrollmentError } = await enrollmentQuery;
+      const { data: rosterMembers, error: enrollmentError } = await enrollmentQuery;
       
       if (enrollmentError) {
-        console.error('Error fetching enrollments:', enrollmentError);
+        console.error('Error fetching roster members:', enrollmentError);
         throw enrollmentError;
       }
 
-      if (!enrollments || enrollments.length === 0) {
+      if (!rosterMembers || rosterMembers.length === 0) {
         return [];
       }
 
-      // Get user profiles separately
-      const userIds = enrollments.map(e => e.user_id);
-      const { data: profiles, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, display_name, email')
-        .in('id', userIds);
+      // Transform roster members into enrollment format
+      const enrichedEnrollments: EnrollmentWithDetails[] = rosterMembers.map(member => {
+        const statusMap: { [key: string]: 'ENROLLED' | 'WAITLISTED' | 'COMPLETED' | 'CANCELLED' } = {
+          'enrolled': 'ENROLLED',
+          'waitlisted': 'WAITLISTED',
+          'completed': 'COMPLETED',
+          'cancelled': 'CANCELLED'
+        };
 
-      if (profileError) {
-        console.error('Error fetching profiles:', profileError);
-        throw profileError;
-      }
-
-      // Get course offerings separately
-      const courseOfferingIds = enrollments.map(e => e.course_offering_id);
-      const { data: courseOfferings, error: courseError } = await supabase
-        .from('course_offerings')
-        .select(`
-          id,
-          start_date,
-          end_date,
-          courses!inner(name),
-          locations(name, city, address)
-        `)
-        .in('id', courseOfferingIds);
-
-      if (courseError) {
-        console.error('Error fetching course offerings:', courseError);
-        throw courseError;
-      }
-
-      // Combine the data manually with proper type casting
-      const enrichedEnrollments: EnrollmentWithDetails[] = enrollments.map(enrollment => {
-        const profile = profiles?.find(p => p.id === enrollment.user_id);
-        const courseOffering = courseOfferings?.find(co => co.id === enrollment.course_offering_id);
-
-        // Type cast the enrollment to ensure proper types
         const typedEnrollment: Enrollment = {
-          ...enrollment,
-          status: enrollment.status as 'ENROLLED' | 'WAITLISTED' | 'COMPLETED' | 'CANCELLED',
-          attendance: enrollment.attendance as 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED' | null
+          id: member.id,
+          user_id: member.student_enrollment_profiles.id,
+          course_offering_id: member.student_rosters.id, // Using roster ID as course offering for now
+          status: statusMap[member.enrollment_status] || 'ENROLLED',
+          enrollment_date: member.enrolled_at,
+          attendance: null,
+          attendance_notes: member.notes,
+          waitlist_position: null,
+          created_at: member.enrolled_at,
+          updated_at: member.enrolled_at
         };
 
         return {
           ...typedEnrollment,
-          profiles: profile ? {
-            display_name: profile.display_name || 'Unknown',
-            email: profile.email
-          } : undefined,
-          course_offerings: courseOffering ? {
-            start_date: courseOffering.start_date,
-            end_date: courseOffering.end_date,
-            courses: courseOffering.courses,
-            locations: courseOffering.locations
-          } : undefined
+          profiles: {
+            display_name: member.student_enrollment_profiles.display_name || 'Unknown',
+            email: member.student_enrollment_profiles.email
+          },
+          course_offerings: {
+            start_date: member.student_rosters.scheduled_start_date || '',
+            end_date: member.student_rosters.scheduled_end_date || '',
+            courses: { name: member.student_rosters.course_name || member.student_rosters.roster_name },
+            locations: null
+          }
         };
       });
 
-      // Filter out enrollments without valid profile data
-      return enrichedEnrollments.filter(enrollment => enrollment.profiles);
+      return enrichedEnrollments;
       
     } catch (error) {
       console.error('Error fetching filtered enrollments:', error);
@@ -196,9 +194,9 @@ export class EnrollmentService {
   static async approveEnrollment(enrollmentId: string, approvedBy: string): Promise<void> {
     try {
       const { error } = await supabase
-        .from('enrollments')
+        .from('student_roster_members')
         .update({
-          status: 'ENROLLED',
+          enrollment_status: 'enrolled',
           updated_at: new Date().toISOString()
         })
         .eq('id', enrollmentId);
@@ -207,11 +205,12 @@ export class EnrollmentService {
 
       // Get enrollment details for notification
       const { data: enrollment } = await supabase
-        .from('enrollments')
+        .from('student_roster_members')
         .select(`
-          user_id,
-          course_offerings(
-            courses(name)
+          student_profile_id,
+          student_rosters(
+            course_name,
+            roster_name
           )
         `)
         .eq('id', enrollmentId)
@@ -219,9 +218,9 @@ export class EnrollmentService {
 
       if (enrollment) {
         await supabase.from('notifications').insert([{
-          user_id: enrollment.user_id,
+          user_id: enrollment.student_profile_id,
           title: 'Enrollment Approved',
-          message: `Your enrollment has been approved for ${enrollment.course_offerings?.courses?.name}`,
+          message: `Your enrollment has been approved for ${enrollment.student_rosters?.course_name || enrollment.student_rosters?.roster_name}`,
           type: 'SUCCESS',
           category: 'COURSE',
           priority: 'HIGH'
@@ -236,10 +235,10 @@ export class EnrollmentService {
   static async rejectEnrollment(enrollmentId: string, reason: string): Promise<void> {
     try {
       const { error } = await supabase
-        .from('enrollments')
+        .from('student_roster_members')
         .update({
-          status: 'CANCELLED',
-          attendance_notes: reason,
+          enrollment_status: 'cancelled',
+          notes: reason,
           updated_at: new Date().toISOString()
         })
         .eq('id', enrollmentId);
@@ -248,11 +247,12 @@ export class EnrollmentService {
 
       // Get enrollment details for notification
       const { data: enrollment } = await supabase
-        .from('enrollments')
+        .from('student_roster_members')
         .select(`
-          user_id,
-          course_offerings(
-            courses(name)
+          student_profile_id,
+          student_rosters(
+            course_name,
+            roster_name
           )
         `)
         .eq('id', enrollmentId)
@@ -260,9 +260,9 @@ export class EnrollmentService {
 
       if (enrollment) {
         await supabase.from('notifications').insert([{
-          user_id: enrollment.user_id,
+          user_id: enrollment.student_profile_id,
           title: 'Enrollment Update',
-          message: `Your enrollment for ${enrollment.course_offerings?.courses?.name} has been updated. Reason: ${reason}`,
+          message: `Your enrollment for ${enrollment.student_rosters?.course_name || enrollment.student_rosters?.roster_name} has been updated. Reason: ${reason}`,
           type: 'INFO',
           category: 'COURSE',
           priority: 'NORMAL'
@@ -274,34 +274,34 @@ export class EnrollmentService {
     }
   }
 
-  static async promoteFromWaitlist(courseOfferingId: string): Promise<void> {
+  static async promoteFromWaitlist(rosterId: string): Promise<void> {
     try {
-      // Find the first waitlisted student
+      // Find the first waitlisted student in the roster
       const { data: waitlistedStudent, error: waitlistError } = await supabase
-        .from('enrollments')
+        .from('student_roster_members')
         .select('*')
-        .eq('course_offering_id', courseOfferingId)
-        .eq('status', 'WAITLISTED')
-        .order('waitlist_position', { ascending: true })
+        .eq('roster_id', rosterId)
+        .eq('enrollment_status', 'waitlisted')
+        .order('enrolled_at', { ascending: true })
         .limit(1)
         .single();
 
       if (waitlistError || !waitlistedStudent) return;
 
-      // Check if there's space available
-      const { data: offering } = await supabase
-        .from('course_offerings')
-        .select('max_participants')
-        .eq('id', courseOfferingId)
+      // Check if there's space available in the roster
+      const { data: roster } = await supabase
+        .from('student_rosters')
+        .select('max_capacity')
+        .eq('id', rosterId)
         .single();
 
       const { count: enrolledCount } = await supabase
-        .from('enrollments')
+        .from('student_roster_members')
         .select('*', { count: 'exact', head: true })
-        .eq('course_offering_id', courseOfferingId)
-        .eq('status', 'ENROLLED');
+        .eq('roster_id', rosterId)
+        .eq('enrollment_status', 'enrolled');
 
-      if (enrolledCount && offering && enrolledCount < offering.max_participants) {
+      if (enrolledCount && roster && enrolledCount < roster.max_capacity) {
         await this.approveEnrollment(waitlistedStudent.id, 'system');
       }
     } catch (error) {

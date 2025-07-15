@@ -21,6 +21,7 @@ export const useFilteredEnrollments = (filters = {}) => {
     queryKey: ['enrollments-filtered', filters],
     queryFn: () => EnrollmentService.getFilteredEnrollments(filters),
     enabled: !!user,
+    refetchInterval: 30000, // Refresh every 30 seconds for real-time updates
   });
 };
 
