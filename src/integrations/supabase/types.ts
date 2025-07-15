@@ -14300,6 +14300,7 @@ export type Database = {
           roster_type: string | null
           scheduled_end_date: string | null
           scheduled_start_date: string | null
+          status: string | null
           updated_at: string | null
         }
         Insert: {
@@ -14318,6 +14319,7 @@ export type Database = {
           roster_type?: string | null
           scheduled_end_date?: string | null
           scheduled_start_date?: string | null
+          status?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -14336,6 +14338,7 @@ export type Database = {
           roster_type?: string | null
           scheduled_end_date?: string | null
           scheduled_start_date?: string | null
+          status?: string | null
           updated_at?: string | null
         }
         Relationships: [
