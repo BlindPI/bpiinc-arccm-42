@@ -34,6 +34,7 @@ import { ManualEnrollmentForm } from './ManualEnrollmentForm';
 import { EnhancedManualEnrollmentForm } from './EnhancedManualEnrollmentForm';
 import { RosterManagement } from './RosterManagement';
 import { EnrollmentAnalyticsDashboard } from './analytics/EnrollmentAnalyticsDashboard';
+import { SystemStatus } from './SystemStatus';
 import { EnrollmentService, type EnrollmentWithDetails } from '@/services/enrollment/enrollmentService';
 import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -242,6 +243,7 @@ export function EnrollmentManagementDashboard() {
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-4">
+          <SystemStatus />
           <EnrollmentAnalyticsDashboard />
         </TabsContent>
 
