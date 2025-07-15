@@ -21,6 +21,9 @@ import { useAPUserLocationTeams } from '@/hooks/useAPUserLocationTeams';
 import { toast } from 'sonner';
 import { ComplianceStatusWidget } from './widgets/ComplianceStatusWidget';
 import WorkingDashboardActionButton from './ui/WorkingDashboardActionButton';
+import { DocumentUploadComponent } from '@/components/documents/DocumentUploadComponent';
+import { RosterManagement } from '@/components/roster/RosterManagement';
+import { AvailabilityManagement } from '@/components/availability/AvailabilityManagement';
 
 export function EnterpriseICDashboard() {
   const { user } = useAuth();
@@ -77,20 +80,8 @@ export function EnterpriseICDashboard() {
   };
 
   const handleDocumentUpload = async (metricId: string) => {
-    if (!selectedDocument || !user) return;
-    
-    try {
-      // Simulate document upload (replace with actual implementation)
-      toast.success('Document uploaded successfully!');
-      setSelectedDocument(null);
-      setUploadNotes('');
-      
-      // Refresh dashboard data
-      await loadDashboardData(user.id, userProfile?.role || 'IC');
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error('Failed to upload document.');
-    }
+    // This is now handled by the DocumentUploadComponent
+    await loadDashboardData(user.id, userProfile?.role || 'IC');
   };
 
   const getStatusBadge = (status: UserComplianceRecord['compliance_status']) => {
@@ -316,39 +307,11 @@ export function EnterpriseICDashboard() {
 
                   {/* Document Upload Section */}
                   {record.compliance_metrics?.category === 'documentation' && (
-                    <div className="bg-gray-50 rounded-md p-3 space-y-3">
-                      <h4 className="font-medium text-sm">Document Upload</h4>
-                      <div className="space-y-2">
-                        <Input
-                          type="file"
-                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                          onChange={(e) => setSelectedDocument(e.target.files?.[0] || null)}
-                          className="text-sm"
-                        />
-                        <Textarea
-                          placeholder="Add notes about this document..."
-                          value={uploadNotes}
-                          onChange={(e) => setUploadNotes(e.target.value)}
-                          rows={2}
-                          className="text-sm"
-                        />
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => handleDocumentUpload(record.metric_id)}
-                            disabled={!selectedDocument}
-                            className="flex items-center gap-1"
-                          >
-                            <Upload className="h-3 w-3" />
-                            Upload
-                          </Button>
-                          <Button variant="outline" size="sm" className="flex items-center gap-1">
-                            <Eye className="h-3 w-3" />
-                            View Docs
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+                    <DocumentUploadComponent
+                      metricId={record.metric_id}
+                      userId={user?.id || ''}
+                      onUploadComplete={() => handleDocumentUpload(record.metric_id)}
+                    />
                   )}
 
                   {/* Progress tracking for measurable requirements */}
@@ -375,63 +338,17 @@ export function EnterpriseICDashboard() {
         </CardContent>
       </Card>
 
-      {/* Roster Management Preview */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Assigned Student Rosters
-          </CardTitle>
-          <CardDescription>
-            Classes and students you're currently teaching
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-medium mb-2">Roster Management</h3>
-            <p className="text-muted-foreground mb-4">
-              Your assigned student rosters will appear here
-            </p>
-            <Button className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              View All Rosters
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Roster Management */}
+      <RosterManagement 
+        instructorId={user?.id || ''} 
+        showTeamRostersOnly={false}
+      />
 
-      {/* Availability Schedule */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Availability & Schedule
-          </CardTitle>
-          <CardDescription>
-            Manage your teaching availability and view upcoming sessions
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-medium mb-2">Schedule Management</h3>
-            <p className="text-muted-foreground mb-4">
-              Set your availability and view scheduled teaching sessions
-            </p>
-            <div className="flex gap-2 justify-center">
-              <Button className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Set Availability
-              </Button>
-              <Button variant="outline" className="flex items-center gap-2">
-                <Eye className="h-4 w-4" />
-                View Schedule
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Availability & Schedule Management */}
+      <AvailabilityManagement 
+        userId={user?.id || ''} 
+        showTeamBookings={false}
+      />
     </div>
   );
 }
