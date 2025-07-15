@@ -14146,37 +14146,55 @@ export type Database = {
       }
       student_roster_members: {
         Row: {
+          assessed_by: string | null
+          attendance_status: string | null
+          completion_date: string | null
+          completion_status: string | null
           created_at: string
           enrolled_at: string
           enrolled_by: string | null
           enrollment_status: string
           id: string
           notes: string | null
+          practical_score: number | null
           roster_id: string
           student_profile_id: string
           updated_at: string
+          written_score: number | null
         }
         Insert: {
+          assessed_by?: string | null
+          attendance_status?: string | null
+          completion_date?: string | null
+          completion_status?: string | null
           created_at?: string
           enrolled_at?: string
           enrolled_by?: string | null
           enrollment_status?: string
           id?: string
           notes?: string | null
+          practical_score?: number | null
           roster_id: string
           student_profile_id: string
           updated_at?: string
+          written_score?: number | null
         }
         Update: {
+          assessed_by?: string | null
+          attendance_status?: string | null
+          completion_date?: string | null
+          completion_status?: string | null
           created_at?: string
           enrolled_at?: string
           enrolled_by?: string | null
           enrollment_status?: string
           id?: string
           notes?: string | null
+          practical_score?: number | null
           roster_id?: string
           student_profile_id?: string
           updated_at?: string
+          written_score?: number | null
         }
         Relationships: [
           {
@@ -20249,6 +20267,20 @@ export type Database = {
       get_executive_dashboard_metrics: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      get_instructor_assigned_courses: {
+        Args: { p_instructor_id: string }
+        Returns: {
+          booking_id: string
+          title: string
+          booking_date: string
+          start_time: string
+          end_time: string
+          roster_id: string
+          roster_name: string
+          student_count: number
+          completion_status: string
+        }[]
       }
       get_instructor_performance_metrics: {
         Args: { p_instructor_id: string }

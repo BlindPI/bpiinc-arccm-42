@@ -43,6 +43,8 @@ import EmailWorkflowsPage from '@/app/crm/email-workflows/page';
 import { AvailabilityManager } from '@/components/availability/AvailabilityManager';
 import CourseManagement from '@/pages/CourseManagement';
 import LocationManagement from '@/pages/LocationManagement';
+import InstructorDashboard from '@/pages/InstructorDashboard';
+import InstructorRosterDetail from '@/pages/InstructorRosterDetail';
 
 export function AppRoutes() {
   const { user } = useAuth();
@@ -304,6 +306,19 @@ export function AppRoutes() {
       <Route path="/authorized-providers" element={
         <ProtectedRoute>
           <AuthorizedProviders />
+        </ProtectedRoute>
+      } />
+
+      {/* Instructor Routes */}
+      <Route path="/instructor/dashboard" element={
+        <ProtectedRoute>
+          <InstructorDashboard />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/instructor/roster/:rosterId" element={
+        <ProtectedRoute>
+          <InstructorRosterDetail />
         </ProtectedRoute>
       } />
 
