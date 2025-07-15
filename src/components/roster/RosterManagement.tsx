@@ -112,7 +112,7 @@ export function RosterManagement({ instructorId, teamId, showTeamRostersOnly = f
           query = query.eq('location_id', teamData.location_id);
         }
       } else {
-        // Get rosters assigned to specific instructor via availability bookings
+        // Get rosters assigned to specific instructor via availability bookings OR instructor_id
         const { data: instructorBookings } = await supabase
           .from('availability_bookings')
           .select('id')
@@ -120,12 +120,11 @@ export function RosterManagement({ instructorId, teamId, showTeamRostersOnly = f
         
         if (instructorBookings?.length) {
           const bookingIds = instructorBookings.map(b => b.id);
-          query = query.in('availability_booking_id', bookingIds);
+          // Query by availability_booking_id OR instructor_id to catch all assigned rosters
+          query = query.or(`availability_booking_id.in.(${bookingIds.join(',')}),instructor_id.eq.${instructorId}`);
         } else {
-          // No bookings found, return empty
-          setRosters([]);
-          setIsLoading(false);
-          return;
+          // Fallback to instructor_id only
+          query = query.eq('instructor_id', instructorId);
         }
       }
 
