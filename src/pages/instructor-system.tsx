@@ -30,7 +30,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
   restrictToTeam = false
 }) => {
   const { user } = useAuth();
-  const { profile } = useProfile();
+  const { data: profile } = useProfile();
   
   // State management
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -86,10 +86,10 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
     dateRange: 'week'
   });
 
-  // Permission checks
-  const canManageInstructors = profile?.role === 'SA' || profile?.role === 'AD' || profile?.role === 'MG' || hasEnterpriseAccess(profile?.role as DatabaseUserRole);
-  const canManageSessions = profile?.role === 'SA' || profile?.role === 'AD' || profile?.role === 'MG' || profile?.role === 'IN' || hasEnterpriseAccess(profile?.role as DatabaseUserRole);
-  const canViewAll = profile?.role === 'SA' || profile?.role === 'AD' || hasEnterpriseAccess(profile?.role as DatabaseUserRole);
+  // Permission checks - FIXED: Remove invalid 'MG' role and add null checks
+  const canManageInstructors = profile?.role === 'SA' || profile?.role === 'AD' || (profile?.role && hasEnterpriseAccess(profile.role as DatabaseUserRole));
+  const canManageSessions = profile?.role === 'SA' || profile?.role === 'AD' || profile?.role === 'IN' || (profile?.role && hasEnterpriseAccess(profile.role as DatabaseUserRole));
+  const canViewAll = profile?.role === 'SA' || profile?.role === 'AD' || (profile?.role && hasEnterpriseAccess(profile.role as DatabaseUserRole));
 
   // Load data on component mount
   useEffect(() => {
@@ -98,7 +98,8 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
 
   useEffect(() => {
     if (selectedDay) {
-      loadSessionsForDate(selectedDay);
+      // Sessions are already loaded in loadTrainingSessions
+      // This effect is just for tracking selected day changes
     }
   }, [selectedDay]);
 
