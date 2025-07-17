@@ -87,9 +87,9 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
   });
 
   // Permission checks
-  const canManageInstructors = profile?.role === 'AD' || profile?.role === 'MG' || hasEnterpriseAccess(profile?.role as DatabaseUserRole);
-  const canManageSessions = profile?.role === 'AD' || profile?.role === 'MG' || profile?.role === 'IN' || hasEnterpriseAccess(profile?.role as DatabaseUserRole);
-  const canViewAll = profile?.role === 'AD' || hasEnterpriseAccess(profile?.role as DatabaseUserRole);
+  const canManageInstructors = profile?.role === 'SA' || profile?.role === 'AD' || profile?.role === 'MG' || hasEnterpriseAccess(profile?.role as DatabaseUserRole);
+  const canManageSessions = profile?.role === 'SA' || profile?.role === 'AD' || profile?.role === 'MG' || profile?.role === 'IN' || hasEnterpriseAccess(profile?.role as DatabaseUserRole);
+  const canViewAll = profile?.role === 'SA' || profile?.role === 'AD' || hasEnterpriseAccess(profile?.role as DatabaseUserRole);
 
   // Load data on component mount
   useEffect(() => {
@@ -122,24 +122,10 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
 
   const loadInstructors = async () => {
     try {
-      let query = supabase
-        .from('instructor_profiles')
-        .select(`
-          *,
-          locations(name),
-          team_members(team_id, teams(name))
-        `)
-        .eq('is_active', true);
-
-      if (restrictToTeam && teamId) {
-        query = query.eq('team_members.team_id', teamId);
-      }
-
-      if (locationId) {
-        query = query.eq('location_id', locationId);
-      }
-
-      const { data, error } = await query.order('display_name');
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, display_name, email, role')
+        .in('role', ['IT', 'IP', 'IC']);
       
       if (error) throw error;
       setInstructors(data || []);
@@ -151,16 +137,10 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
 
   const loadStudents = async () => {
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('student_enrollment_profiles')
-        .select('*')
+        .select('id, display_name, email, phone, company, first_aid_level, cpr_level, course_length, enrollment_status, completion_status')
         .eq('is_active', true);
-
-      if (locationId) {
-        query = query.eq('location_id', locationId);
-      }
-
-      const { data, error } = await query.order('display_name');
       
       if (error) throw error;
       setStudents(data || []);
@@ -191,29 +171,12 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
       const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
       const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
       
-      let query = supabase
-        .from('training_sessions')
-        .select(`
-          *,
-          instructor_profiles(display_name, email),
-          locations(name),
-          session_enrollments(
-            id,
-            student_id,
-            attendance_status,
-            completion_status,
-            student_enrollment_profiles(display_name, email, phone)
-          )
-        `)
-        .gte('session_date', startDate.toISOString().split('T')[0])
-        .lte('session_date', endDate.toISOString().split('T')[0]);
-
-      if (locationId) {
-        query = query.eq('location_id', locationId);
-      }
-
-      const { data, error } = await query
-        .order('session_date')
+      const { data, error } = await supabase
+        .from('availability_bookings')
+        .select('*')
+        .gte('booking_date', startDate.toISOString().split('T')[0])
+        .lte('booking_date', endDate.toISOString().split('T')[0])
+        .order('booking_date')
         .order('start_time');
       
       if (error) throw error;
@@ -227,11 +190,18 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
   const createTrainingSession = async (sessionData: any) => {
     try {
       const { data, error } = await supabase
-        .from('training_sessions')
+        .from('availability_bookings')
         .insert([{
-          ...sessionData,
+          title: sessionData.title,
+          booking_date: sessionData.session_date,
+          start_time: sessionData.start_time,
+          end_time: sessionData.end_time,
+          user_id: sessionData.instructor_id,
+          booking_type: 'training',
+          status: 'confirmed',
           created_by: user?.id,
-          location_id: sessionData.location_id || locationId
+          location_id: sessionData.location_id || locationId,
+          description: sessionData.description
         }])
         .select()
         .single();
@@ -251,8 +221,15 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
   const updateTrainingSession = async (sessionId: string, updates: any) => {
     try {
       const { data, error } = await supabase
-        .from('training_sessions')
-        .update(updates)
+        .from('availability_bookings')
+        .update({
+          title: updates.title,
+          booking_date: updates.session_date,
+          start_time: updates.start_time,
+          end_time: updates.end_time,
+          user_id: updates.instructor_id,
+          description: updates.description
+        })
         .eq('id', sessionId)
         .select()
         .single();
@@ -272,7 +249,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
   const deleteTrainingSession = async (sessionId: string) => {
     try {
       const { error } = await supabase
-        .from('training_sessions')
+        .from('availability_bookings')
         .delete()
         .eq('id', sessionId);
       
@@ -288,12 +265,42 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
 
   const enrollStudentInSession = async (sessionId: string, studentId: string) => {
     try {
-      // Check if already enrolled
-      const { data: existing } = await supabase
-        .from('session_enrollments')
+      // First create or get a roster for this session
+      let rosterId;
+      const { data: existingRoster } = await supabase
+        .from('student_rosters')
         .select('id')
-        .eq('session_id', sessionId)
-        .eq('student_id', studentId)
+        .eq('availability_booking_id', sessionId)
+        .single();
+      
+      if (existingRoster) {
+        rosterId = existingRoster.id;
+      } else {
+        // Create a new roster for this session
+        const { data: newRoster, error: rosterError } = await supabase
+          .from('student_rosters')
+          .insert([{
+            roster_name: 'Training Session Roster',
+            availability_booking_id: sessionId,
+            instructor_id: user?.id,
+            location_id: locationId,
+            roster_status: 'active',
+            roster_type: 'course',
+            created_by: user?.id
+          }])
+          .select()
+          .single();
+        
+        if (rosterError) throw rosterError;
+        rosterId = newRoster.id;
+      }
+
+      // Check if student is already enrolled
+      const { data: existing } = await supabase
+        .from('student_roster_members')
+        .select('id')
+        .eq('roster_id', rosterId)
+        .eq('student_profile_id', studentId)
         .single();
       
       if (existing) {
@@ -301,12 +308,13 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
         return;
       }
 
+      // Enroll the student
       const { data, error } = await supabase
-        .from('session_enrollments')
+        .from('student_roster_members')
         .insert([{
-          session_id: sessionId,
-          student_id: studentId,
-          enrollment_date: new Date().toISOString()
+          roster_id: rosterId,
+          student_profile_id: studentId,
+          enrollment_status: 'enrolled'
         }])
         .select()
         .single();
@@ -325,7 +333,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
   const updateStudentAttendance = async (enrollmentId: string, status: string) => {
     try {
       const { error } = await supabase
-        .from('session_enrollments')
+        .from('student_roster_members')
         .update({ attendance_status: status })
         .eq('id', enrollmentId);
       
@@ -475,7 +483,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
   };
 
   const getSessionsForDate = (date: string) => {
-    return trainingSessions.filter(session => session.session_date === date);
+    return trainingSessions.filter(session => session.booking_date === date);
   };
 
   const getStatusColor = (status: string) => {
