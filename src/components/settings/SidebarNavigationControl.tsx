@@ -14,12 +14,12 @@ import { Loader2, Save, RotateCcw, Eye, EyeOff, AlertTriangle, CheckCircle, XCir
 import { toast } from 'sonner';
 import { ROLE_LABELS } from '@/lib/roles';
 
-// Navigation structure matching AppSidebar - UPDATED to include all implemented CRM components and Provider Management
+// Navigation structure matching AppSidebar - FIXED: Consolidated Training Management to resolve fragmentation
 const NAVIGATION_GROUPS = {
   'Dashboard': ['Dashboard', 'Profile'],
   'User Management': ['Users', 'Teams', 'Students', 'Role Management', 'Supervision'],
   'Provider Management': ['Provider Management'],
-  'Training Management': ['Training Hub', 'Courses', 'Enrollments', 'Enrollment Management', 'Locations'],
+  'Training Management': ['Training Management'],
   'Certificates': ['Certificates', 'Certificate Analytics', 'Rosters'],
   'CRM': [
     'Phase 4 CRM Dashboard',
@@ -109,13 +109,13 @@ export function SidebarNavigationControl() {
           newLocalConfigs[role] = allRolesConfig[role];
         } else {
           console.warn('❌ No master config found for role:', role);
-          // Set emergency default for missing configs - UPDATED with all CRM components
+          // Set emergency default for missing configs - FIXED: Consolidated Training Management
           const emergencyConfig = role === 'SA' ? {
             'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } },
             'System Administration': { enabled: true, items: { 'Settings': true, 'System Monitoring': true, 'Integrations': true, 'Notifications': true } },
             'User Management': { enabled: true, items: { 'Users': true, 'Teams': true, 'Role Management': true, 'Supervision': true } },
             'Provider Management': { enabled: true, items: { 'Provider Management': true } },
-            'Training Management': { enabled: true, items: { 'Training Hub': true, 'Courses': true, 'Enrollments': true, 'Enrollment Management': true, 'Locations': true } },
+            'Training Management': { enabled: true, items: { 'Training Management': true } },
             'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
             'CRM': { enabled: true, items: { 'Phase 4 CRM Dashboard': true, 'Email Workflows': true, 'Campaign Management': true, 'Revenue Analytics': true } },
             'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Executive Dashboard': true, 'Report Scheduler': true, 'Reports': true } },
@@ -124,14 +124,14 @@ export function SidebarNavigationControl() {
             'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } },
             'User Management': { enabled: true, items: { 'Users': true, 'Teams': true, 'Role Management': true, 'Supervision': true } },
             'Provider Management': { enabled: true, items: { 'Provider Management': true } },
-            'Training Management': { enabled: true, items: { 'Training Hub': true, 'Courses': true, 'Enrollments': true, 'Enrollment Management': true, 'Locations': true } },
+            'Training Management': { enabled: true, items: { 'Training Management': true } },
             'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
             'CRM': { enabled: true, items: { 'Phase 4 CRM Dashboard': true, 'Email Workflows': true, 'Campaign Management': true, 'Revenue Analytics': true } },
             'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Executive Dashboard': true, 'Report Scheduler': true, 'Reports': true } }
           } : role === 'TM' ? {
             'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } },
             'User Management': { enabled: true, items: { 'Teams': true, 'Supervision': true } },
-            'Training Management': { enabled: true, items: { 'Training Hub': true, 'Courses': true, 'Enrollments': true, 'Enrollment Management': true, 'Locations': true } },
+            'Training Management': { enabled: true, items: { 'Training Management': true } },
             'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
             'CRM': { enabled: true, items: { 'Phase 4 CRM Dashboard': true, 'Email Workflows': true, 'Campaign Management': true } },
             'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Reports': true } }
