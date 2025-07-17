@@ -14,7 +14,10 @@ import {
   TrendingUp,
   Clock,
   ArrowRight,
-  UserCheck
+  UserCheck,
+  Layers,
+  Target,
+  Workflow
 } from 'lucide-react';
 
 interface NavigationCard {
@@ -46,6 +49,8 @@ interface TrainingHubNavigationProps {
   complianceRate: number;
   totalTeamMembers?: number;
   bulkOperations?: number;
+  multiCourseTemplates?: number;
+  activeComponentTracking?: number;
 }
 
 export const TrainingHubNavigation: React.FC<TrainingHubNavigationProps> = ({
@@ -57,13 +62,15 @@ export const TrainingHubNavigation: React.FC<TrainingHubNavigationProps> = ({
   activeLocations = 0,
   complianceRate,
   totalTeamMembers = 0,
-  bulkOperations = 0
+  bulkOperations = 0,
+  multiCourseTemplates = 0,
+  activeComponentTracking = 0
 }) => {
   const navigationCards: NavigationCard[] = [
     {
       id: 'sessions',
       title: 'Session Management',
-      description: 'Create, track, and manage teaching sessions with attendance and compliance monitoring',
+      description: 'Create, track, and manage single or multi-course training sessions with component-level progress tracking',
       icon: BookOpen,
       gradient: 'from-blue-500 to-blue-600',
       stats: {
@@ -75,6 +82,34 @@ export const TrainingHubNavigation: React.FC<TrainingHubNavigationProps> = ({
         ? { text: 'Active Sessions', variant: 'default' as const }
         : { text: 'No Sessions', variant: 'secondary' as const },
       action: () => onTabChange('sessions')
+    },
+    {
+      id: 'multi-course-templates',
+      title: 'Multi-Course Templates',
+      description: 'Build reusable templates for complex training itineraries with multiple courses, breaks, and assessments',
+      icon: Layers,
+      gradient: 'from-emerald-500 to-green-600',
+      stats: {
+        primary: multiCourseTemplates || 'NEW',
+        label: 'Templates available',
+        trend: 'up'
+      },
+      badge: { text: 'Enhanced', variant: 'default' as const },
+      action: () => onTabChange('multi-course-templates')
+    },
+    {
+      id: 'component-progress',
+      title: 'Component Progress',
+      description: 'Track detailed progress through individual session components with real-time updates and analytics',
+      icon: Target,
+      gradient: 'from-violet-500 to-purple-600',
+      stats: {
+        primary: activeComponentTracking || activeInstructors,
+        label: 'Active tracking',
+        trend: 'up'
+      },
+      badge: { text: 'Real-time', variant: 'default' as const },
+      action: () => onTabChange('component-progress')
     },
     {
       id: 'instructors',
@@ -185,16 +220,40 @@ export const TrainingHubNavigation: React.FC<TrainingHubNavigationProps> = ({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          Training Management Dashboard
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">
+              Training Management Dashboard
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Enhanced with multi-course session support and component-level progress tracking
+            </p>
+          </div>
+          
+          {/* Quick Stats */}
+          <div className="flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-1">
+              <Workflow className="h-4 w-4 text-emerald-600" />
+              <span className="font-medium text-emerald-600">Multi-Course Ready</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Target className="h-4 w-4 text-violet-600" />
+              <span className="font-medium text-violet-600">Component Tracking</span>
+            </div>
+          </div>
+        </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-9 gap-4">
           {navigationCards.map((card) => (
             <Card 
               key={card.id}
               className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 border-0 overflow-hidden ${
                 activeTab === card.id ? 'ring-2 ring-primary shadow-lg scale-105' : ''
+              } ${
+                // Highlight new multi-course features
+                ['multi-course-templates', 'component-progress'].includes(card.id) 
+                  ? 'ring-1 ring-emerald-200 bg-emerald-50/30' 
+                  : ''
               }`}
               onClick={card.action}
             >
@@ -205,11 +264,19 @@ export const TrainingHubNavigation: React.FC<TrainingHubNavigationProps> = ({
                   <div className={`p-3 rounded-lg bg-gradient-to-r ${card.gradient} bg-opacity-10`}>
                     <card.icon className="h-6 w-6 text-white" />
                   </div>
-                  {card.badge && (
-                    <Badge variant={card.badge.variant} className="text-xs">
-                      {card.badge.text}
-                    </Badge>
-                  )}
+                  <div className="flex flex-col gap-1">
+                    {card.badge && (
+                      <Badge variant={card.badge.variant} className="text-xs">
+                        {card.badge.text}
+                      </Badge>
+                    )}
+                    {/* NEW badge for multi-course features */}
+                    {['multi-course-templates', 'component-progress'].includes(card.id) && (
+                      <Badge variant="default" className="text-xs bg-emerald-600">
+                        NEW
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 
                 <CardTitle className="text-lg font-semibold text-gray-900">
