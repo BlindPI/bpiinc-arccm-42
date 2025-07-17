@@ -267,7 +267,7 @@ export function useNavigationVisibility() {
     
     if (isLoading || !targetRole) {
       // EMERGENCY: SA gets emergency access even while loading
-      if (targetRole === 'SA' && (groupName === 'Dashboard' || groupName === 'System Administration')) {
+      if (targetRole === 'SA' && (groupName === 'Dashboard' || groupName === 'System Administration' || groupName === 'Training Management')) {
         debugWarn('EMERGENCY: Granting SA emergency access to', groupName);
         return true;
       }
@@ -279,9 +279,9 @@ export function useNavigationVisibility() {
       return true;
     }
     
-    // EMERGENCY: SA always has System Administration access
-    if (targetRole === 'SA' && groupName === 'System Administration') {
-      debugLog('EMERGENCY: SA always has System Administration access');
+    // EMERGENCY: SA always has System Administration and Training Management access
+    if (targetRole === 'SA' && (groupName === 'System Administration' || groupName === 'Training Management')) {
+      debugLog('EMERGENCY: SA always has access to', groupName);
       return true;
     }
     
@@ -309,7 +309,7 @@ export function useNavigationVisibility() {
     
     if (isLoading || !targetRole) {
       // EMERGENCY: SA gets emergency access to critical items
-      if (targetRole === 'SA' && (itemName === 'Dashboard' || itemName === 'Profile' || itemName === 'Settings')) {
+      if (targetRole === 'SA' && (itemName === 'Dashboard' || itemName === 'Profile' || itemName === 'Settings' || itemName === 'Training Management')) {
         debugWarn('EMERGENCY: Granting SA emergency access to', itemName);
         return true;
       }
@@ -321,9 +321,9 @@ export function useNavigationVisibility() {
       return true;
     }
     
-    // EMERGENCY: SA always has Settings access
-    if (targetRole === 'SA' && itemName === 'Settings') {
-      debugLog('EMERGENCY: SA always has Settings access');
+    // EMERGENCY: SA always has Settings and Training Management access
+    if (targetRole === 'SA' && (itemName === 'Settings' || itemName === 'Training Management')) {
+      debugLog('EMERGENCY: SA always has access to', itemName);
       return true;
     }
     
