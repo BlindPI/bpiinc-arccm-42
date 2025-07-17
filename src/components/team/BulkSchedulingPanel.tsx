@@ -30,7 +30,7 @@ export function BulkSchedulingPanel({ teamId, teamMembers }: BulkSchedulingPanel
     date: format(new Date(), 'yyyy-MM-dd'),
     startTime: '09:00',
     endTime: '17:00',
-    bookingType: 'training',
+    bookingType: 'training_session',
     title: '',
     description: '',
     requiresApproval: false
@@ -197,11 +197,11 @@ export function BulkSchedulingPanel({ teamId, teamMembers }: BulkSchedulingPanel
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="training">Training</SelectItem>
-                      <SelectItem value="course">Course</SelectItem>
+                      <SelectItem value="training_session">Training Session</SelectItem>
+                      <SelectItem value="course_instruction">Course Instruction</SelectItem>
                       <SelectItem value="meeting">Meeting</SelectItem>
-                      <SelectItem value="available">Available</SelectItem>
-                      <SelectItem value="break">Break</SelectItem>
+                      <SelectItem value="administrative">Administrative</SelectItem>
+                      <SelectItem value="personal">Personal</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

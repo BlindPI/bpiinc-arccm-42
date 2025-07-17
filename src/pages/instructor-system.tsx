@@ -198,7 +198,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
           start_time: sessionData.start_time,
           end_time: sessionData.end_time,
           user_id: sessionData.instructor_id,
-          booking_type: 'training',
+          booking_type: 'training_session',
           status: 'confirmed',
           created_by: user?.id,
           location_id: sessionData.location_id || locationId,
@@ -781,7 +781,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
               <div className="grid grid-cols-7 gap-1 mb-6">
                 {days.map((day, index) => {
                   if (!day) {
-                    return <div key={index} className="p-2 h-20"></div>;
+                    return <div key={`empty-${year}-${month}-${index}`} className="p-2 h-20"></div>;
                   }
 
                   const dateStr = formatDate(year, month, day);
@@ -808,7 +808,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                       {daySessions.length > 0 && (
                         <div className="mt-1 text-xs">
                           {daySessions.slice(0, 2).map((session, idx) => (
-                            <div key={idx} className="truncate text-blue-700">
+                            <div key={`${dateStr}-session-${idx}-${session.id || session.title}`} className="truncate text-blue-700">
                               {session.title}
                             </div>
                           ))}
@@ -1155,7 +1155,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                           <div className="text-right">
                             <div className="flex flex-wrap gap-1 mb-2">
                               {instructor.specialties?.map((specialty: string, idx: number) => (
-                                <Badge key={idx} variant="secondary">
+                                <Badge key={`${instructor.id}-specialty-${idx}-${specialty}`} variant="secondary">
                                   {specialty}
                                 </Badge>
                               ))}
