@@ -68,11 +68,8 @@ const navigation: NavigationItem[] = [
   // Provider Management Group
   { name: 'Provider Management', href: '/authorized-providers', icon: Building2, group: 'Provider Management', enterpriseOnly: true },
   
-  // Training Management Group - UNIFIED HUB
-  { name: 'Training Hub', href: '/training-hub', icon: BookOpen, group: 'Training Management' },
-  { name: 'Courses', href: '/courses', icon: BookOpen, group: 'Training Management' },
-  { name: 'Locations', href: '/locations', icon: MapPin, group: 'Training Management' },
-  { name: 'Enrollments', href: '/enrollments', icon: ClipboardList, group: 'Training Management' },
+  // Training Management Group - UNIFIED SYSTEM
+  { name: 'Training Management', href: '/training-management', icon: GraduationCap, group: 'Training Management' },
   
   // Certificates Group
   { name: 'Certificates', href: '/certificates', icon: FileText, group: 'Certificates' },

@@ -45,6 +45,7 @@ import CourseManagement from '@/pages/CourseManagement';
 import LocationManagement from '@/pages/LocationManagement';
 import InstructorDashboard from '@/pages/InstructorDashboard';
 import InstructorRosterDetail from '@/pages/InstructorRosterDetail';
+import InstructorManagementSystem from '@/pages/instructor-system';
 
 export function AppRoutes() {
   const { user } = useAuth();
@@ -109,7 +110,7 @@ export function AppRoutes() {
       {/* DIRECT CLEAN PAGES - No More Nested Interfaces */}
       <Route path="/teams" element={
         <ProtectedRoute>
-          <Teams />
+          <InstructorManagementSystem />
         </ProtectedRoute>
       } />
 
@@ -121,32 +122,39 @@ export function AppRoutes() {
 
       <Route path="/training-overview" element={
         <ProtectedRoute>
-          <TrainingOverview />
+          <InstructorManagementSystem />
         </ProtectedRoute>
       } />
 
       {/* Legacy redirects */}
       <Route path="/enhanced-teams" element={
         <ProtectedRoute>
-          <Teams />
+          <InstructorManagementSystem />
         </ProtectedRoute>
       } />
 
       <Route path="/modern-teams" element={
         <ProtectedRoute>
-          <Teams />
+          <InstructorManagementSystem />
         </ProtectedRoute>
       } />
 
       <Route path="/training-hub" element={
         <ProtectedRoute>
-          <TrainingOverview />
+          <InstructorManagementSystem />
+        </ProtectedRoute>
+      } />
+
+      {/* NEW: Unified Training Management System */}
+      <Route path="/training-management" element={
+        <ProtectedRoute>
+          <InstructorManagementSystem />
         </ProtectedRoute>
       } />
 
       <Route path="/courses" element={
         <ProtectedRoute>
-          <CourseManagement />
+          <InstructorManagementSystem />
         </ProtectedRoute>
       } />
 
@@ -158,7 +166,7 @@ export function AppRoutes() {
 
       <Route path="/locations" element={
         <ProtectedRoute>
-          <LocationManagement />
+          <InstructorManagementSystem />
         </ProtectedRoute>
       } />
 
