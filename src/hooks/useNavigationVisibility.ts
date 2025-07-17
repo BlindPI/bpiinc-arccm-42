@@ -49,6 +49,7 @@ const getEmergencyDefaultConfig = (role: string): NavigationVisibilityConfig => 
       'Training Management': {
         enabled: true,
         items: {
+          'Training Management': true,
           'Courses': true,
           'Course Scheduling': true,
           'Course Offerings': true,

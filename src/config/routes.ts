@@ -28,6 +28,7 @@ export const PROTECTED_PAGES = [
   "/enrollments",
   "/enrollment-management",
   "/training-hub",
+  "/training-management", // NEW: Unified Training Management System
   "/locations", // RESTORED: Dedicated Location Management Page
   "/analytics",
   "/executive-dashboard",
