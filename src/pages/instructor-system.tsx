@@ -168,11 +168,10 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
 
   const loadCourseTemplates = async () => {
     try {
-      // For now, use courses as templates - later we can create a proper template system
       const { data, error } = await supabase
-        .from('courses')
-        .select('id, name, description, length, status')
-        .eq('status', 'ACTIVE')
+        .from('course_templates')
+        .select('*')
+        .eq('is_active', true)
         .order('name');
       
       if (error) throw error;
@@ -187,7 +186,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
     try {
       const { data, error } = await supabase
         .from('courses')
-        .select('id, name, description, length, status')
+        .select('id, name, description, expiration_months, length, status')
         .eq('status', 'ACTIVE')
         .order('name');
       
@@ -782,7 +781,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                           <SelectContent>
                             {courseTemplates.map(template => (
                               <SelectItem key={template.id} value={template.id}>
-                                {template.name} ({template.length}h)
+                                {template.name} ({template.duration_hours}h)
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -1340,7 +1339,12 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                 <SelectContent>
                   {courses.map(course => (
                     <SelectItem key={course.id} value={course.id}>
-                      {course.name}
+                      <div className="flex flex-col">
+                        <span className="font-medium">{course.name}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {course.description} • Expires: {course.expiration_months} months
+                        </span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
