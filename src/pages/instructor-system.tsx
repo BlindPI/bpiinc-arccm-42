@@ -44,6 +44,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
   const [students, setStudents] = useState<any[]>([]);
   const [instructors, setInstructors] = useState<any[]>([]);
   const [courseTemplates, setCourseTemplates] = useState<any[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
   
   // Modal states
   const [showSessionModal, setShowSessionModal] = useState(false);
@@ -111,7 +112,8 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
         loadInstructors(),
         loadStudents(),
         loadCourseTemplates(),
-        loadTrainingSessions()
+        loadTrainingSessions(),
+        loadLocations()
       ]);
     } catch (err: any) {
       setError(err.message);
@@ -164,6 +166,22 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
     } catch (error: any) {
       console.error('Error loading course templates:', error);
       toast.error('Failed to load course templates');
+    }
+  };
+
+  const loadLocations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('id, name, address, city, state')
+        .eq('is_active', true)
+        .order('name');
+      
+      if (error) throw error;
+      setLocations(data || []);
+    } catch (error: any) {
+      console.error('Error loading locations:', error);
+      toast.error('Failed to load locations');
     }
   };
 
@@ -413,8 +431,8 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
   };
 
   const handleSessionSubmit = async () => {
-    if (!sessionForm.title || !sessionForm.instructor_id || !sessionForm.session_date) {
-      toast.error('Please fill in all required fields');
+    if (!sessionForm.title || !sessionForm.instructor_id || !sessionForm.session_date || !sessionForm.location_id) {
+      toast.error('Please fill in all required fields including location');
       return;
     }
 
@@ -645,7 +663,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                     
                     <div className="space-y-4">
                       <div>
-                        <Label htmlFor="title">Session Title</Label>
+                        <Label htmlFor="title">Session Title *</Label>
                         <Input
                           id="title"
                           value={sessionForm.title}
@@ -655,7 +673,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                       </div>
                       
                       <div>
-                        <Label htmlFor="instructor">Instructor</Label>
+                        <Label htmlFor="instructor">Instructor *</Label>
                         <Select 
                           value={sessionForm.instructor_id} 
                           onValueChange={(value) => setSessionForm({...sessionForm, instructor_id: value})}
@@ -674,7 +692,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                       </div>
                       
                       <div>
-                        <Label htmlFor="template">Course Template</Label>
+                        <Label htmlFor="template">Course Template *</Label>
                         <Select 
                           value={sessionForm.course_template} 
                           onValueChange={(value) => setSessionForm({...sessionForm, course_template: value})}
@@ -693,7 +711,31 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                       </div>
                       
                       <div>
-                        <Label htmlFor="date">Date</Label>
+                        <Label htmlFor="location">Location *</Label>
+                        <Select
+                          value={sessionForm.location_id}
+                          onValueChange={(value) => setSessionForm({...sessionForm, location_id: value})}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select location..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {locations.map(location => (
+                              <SelectItem key={location.id} value={location.id}>
+                                <div className="flex items-center justify-between w-full">
+                                  <span>{location.name}</span>
+                                  <span className="text-sm text-muted-foreground ml-2">
+                                    {location.city}, {location.state}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="date">Date *</Label>
                         <Input
                           id="date"
                           type="date"
@@ -704,7 +746,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                       
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="start-time">Start Time</Label>
+                          <Label htmlFor="start-time">Start Time *</Label>
                           <Input
                             id="start-time"
                             type="time"
@@ -713,7 +755,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                           />
                         </div>
                         <div>
-                          <Label htmlFor="end-time">End Time</Label>
+                          <Label htmlFor="end-time">End Time *</Label>
                           <Input
                             id="end-time"
                             type="time"
