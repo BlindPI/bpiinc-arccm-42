@@ -79,14 +79,9 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
   const [hasCustomTitle, setHasCustomTitle] = useState(false);
   const [previousTemplateName, setPreviousTemplateName] = useState<string>('');
 
-  // Calendar hover state management
+  // Calendar hover state management for layered overlay
   const [hoveredDay, setHoveredDay] = useState<string | null>(null);
-  const [tooltipPosition, setTooltipPosition] = useState<{
-    x: number;
-    y: number;
-    placement: 'top' | 'bottom' | 'left' | 'right';
-    maxWidth: number;
-  } | null>(null);
+  const [hoveredDayIndex, setHoveredDayIndex] = useState<number | null>(null);
 
   const [studentForm, setStudentForm] = useState({
     email: '',
@@ -798,108 +793,33 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  // Simple consistent positioning for tooltip
-  const calculateTooltipPosition = (element: HTMLElement) => {
-    const rect = element.getBoundingClientRect();
-    const viewport = {
-      width: window.innerWidth,
-      height: window.innerHeight
-    };
+  // Helper function to calculate target square for session description overlay
+  const getTargetSquareIndex = (hoveredIndex: number, totalDays: number) => {
+    const daysPerRow = 7;
+    const hoveredRow = Math.floor(hoveredIndex / daysPerRow);
+    const hoveredCol = hoveredIndex % daysPerRow;
     
-    // Fixed tooltip size - same as calendar cell
-    const tooltipWidth = rect.width;
-    const tooltipHeight = 120; // Fixed compact height
-    
-    // Simple positioning logic - always above, adjust if off-screen
-    let x = rect.left;
-    let y = rect.top - tooltipHeight - 10;
-    let placement: 'top' | 'bottom' = 'top';
-    
-    // If tooltip would go off top of screen, show below
-    if (y < 20) {
-      placement = 'bottom';
-      y = rect.bottom + 10;
+    // Try to show description in the square below
+    const belowIndex = hoveredIndex + daysPerRow;
+    if (belowIndex < totalDays && days[belowIndex] !== null) {
+      return belowIndex;
     }
     
-    // If tooltip would go off bottom of screen, force above
-    if (y + tooltipHeight > viewport.height - 20) {
-      placement = 'top';
-      y = rect.top - tooltipHeight - 10;
+    // If below is not available, try above
+    const aboveIndex = hoveredIndex - daysPerRow;
+    if (aboveIndex >= 0 && days[aboveIndex] !== null) {
+      return aboveIndex;
     }
     
-    // Ensure tooltip doesn't go off horizontal edges
-    if (x + tooltipWidth > viewport.width - 20) {
-      x = viewport.width - tooltipWidth - 20;
+    // If both above and below are unavailable, try adjacent squares
+    if (hoveredCol < 6 && hoveredIndex + 1 < totalDays && days[hoveredIndex + 1] !== null) {
+      return hoveredIndex + 1; // Right
     }
-    if (x < 20) {
-      x = 20;
+    if (hoveredCol > 0 && days[hoveredIndex - 1] !== null) {
+      return hoveredIndex - 1; // Left
     }
     
-    return {
-      x,
-      y,
-      placement,
-      maxWidth: tooltipWidth
-    };
-  };
-
-  // Session details tooltip component
-  const SessionTooltip = ({ sessions, dateStr }: { sessions: any[], dateStr: string }) => {
-    if (!sessions.length || hoveredDay !== dateStr || !tooltipPosition) return null;
-
-    return (
-      <div
-        className="fixed z-[9999] bg-white border border-gray-300 rounded-lg shadow-lg"
-        style={{
-          left: tooltipPosition.x,
-          top: tooltipPosition.y,
-          width: tooltipPosition.maxWidth,
-          height: '120px'
-        }}
-      >
-        {/* Simple arrow */}
-        {tooltipPosition.placement === 'top' && (
-          <div className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-r border-b border-gray-300 transform rotate-45" />
-        )}
-        {tooltipPosition.placement === 'bottom' && (
-          <div className="absolute top-[-6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-l border-t border-gray-300 transform rotate-45" />
-        )}
-        
-        {/* Compact content */}
-        <div className="p-3 h-full overflow-hidden">
-          {sessions.slice(0, 1).map((session, idx) => (
-            <div key={`tooltip-${session.id}-${idx}`} className="h-full flex flex-col justify-between">
-              {/* Session title */}
-              <div className="text-sm font-semibold text-gray-900 truncate mb-1">
-                {session.title}
-              </div>
-              
-              {/* Description or time */}
-              <div className="text-xs text-gray-600 flex-1 overflow-hidden">
-                {session.description ? (
-                  <p className="leading-tight line-clamp-3">{session.description}</p>
-                ) : (
-                  <p className="leading-tight">{session.start_time} - {session.end_time}</p>
-                )}
-              </div>
-              
-              {/* Student count */}
-              <div className="flex items-center gap-1 text-xs text-gray-700 mt-2">
-                <Users className="h-3 w-3" />
-                <span className="font-medium">{session.session_enrollments?.length || 0} students</span>
-              </div>
-            </div>
-          ))}
-          
-          {/* Multiple sessions indicator */}
-          {sessions.length > 1 && (
-            <div className="absolute bottom-1 right-2 text-xs text-gray-500">
-              +{sessions.length - 1} more
-            </div>
-          )}
-        </div>
-      </div>
-    );
+    return null; // No suitable target found
   };
 
   // Permission check
@@ -1250,58 +1170,109 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                   const dateStr = formatDate(year, month, day);
                   const daySessions = getSessionsForDate(dateStr);
                   const isSelected = selectedDay === dateStr;
+                  const isHovered = hoveredDay === dateStr;
+                  
+                  // Calculate target square for overlay description
+                  const targetSquareIndex = isHovered ? getTargetSquareIndex(index, days.length) : null;
+                  const isTargetSquare = targetSquareIndex === index;
 
                   return (
                     <div
                       key={day}
                       onClick={() => handleDayClick(day)}
-                      onMouseEnter={(e) => {
+                      onMouseEnter={() => {
                         if (daySessions.length > 0) {
-                          const position = calculateTooltipPosition(e.currentTarget);
-                          setTooltipPosition(position);
                           setHoveredDay(dateStr);
+                          setHoveredDayIndex(index);
                         }
                       }}
                       onMouseLeave={() => {
                         setHoveredDay(null);
-                        setTooltipPosition(null);
+                        setHoveredDayIndex(null);
                       }}
-                      className={`p-2 h-20 border rounded-md cursor-pointer transition-colors hover:bg-muted ${
+                      className={`p-2 h-20 border rounded-md cursor-pointer transition-colors hover:bg-muted relative ${
                         isSelected ? 'ring-2 ring-primary' : ''
-                      } ${daySessions.length > 0 ? 'bg-blue-50 hover:bg-blue-100' : ''}`}
+                      } ${daySessions.length > 0 ? 'bg-blue-50 hover:bg-blue-100' : ''} ${
+                        isTargetSquare ? 'z-10' : ''
+                      }`}
                     >
-                      <div className="flex justify-between items-start">
-                        <span className="font-medium">{day}</span>
-                        {daySessions.length > 0 && (
-                          <Badge variant="secondary" className="text-xs">
-                            {daySessions.length}
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      {daySessions.length > 0 && (
-                        <div className="mt-1 text-xs">
-                          {daySessions.slice(0, 2).map((session, idx) => (
-                            <div key={`${dateStr}-session-${idx}-${session.id || session.title}`} className="truncate text-blue-700">
-                              {session.title}
+                      {/* Normal calendar day content */}
+                      {!isTargetSquare && (
+                        <>
+                          <div className="flex justify-between items-start">
+                            <span className="font-medium">{day}</span>
+                            {daySessions.length > 0 && (
+                              <Badge variant="secondary" className="text-xs">
+                                {daySessions.length}
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          {daySessions.length > 0 && (
+                            <div className="mt-1 text-xs">
+                              {daySessions.slice(0, 2).map((session, idx) => (
+                                <div key={`${dateStr}-session-${idx}-${session.id || session.title}`} className="truncate text-blue-700">
+                                  {session.title}
+                                </div>
+                              ))}
+                              {daySessions.length > 2 && (
+                                <div className="text-muted-foreground">+{daySessions.length - 2} more</div>
+                              )}
                             </div>
-                          ))}
-                          {daySessions.length > 2 && (
-                            <div className="text-muted-foreground">+{daySessions.length - 2} more</div>
                           )}
+                        </>
+                      )}
+                      
+                      {/* Session description overlay when this square is the target */}
+                      {isTargetSquare && hoveredDay && (
+                        <div className="absolute inset-0 bg-white border-2 border-blue-500 rounded-md shadow-lg p-2 z-20">
+                          <div className="h-full overflow-hidden">
+                            {(() => {
+                              const hoveredDaySessions = getSessionsForDate(hoveredDay);
+                              const session = hoveredDaySessions[0]; // Show first session
+                              
+                              if (!session) return null;
+                              
+                              return (
+                                <div className="h-full flex flex-col">
+                                  {/* Session title */}
+                                  <div className="text-xs font-semibold text-gray-900 truncate mb-1">
+                                    {session.title}
+                                  </div>
+                                  
+                                  {/* Time */}
+                                  <div className="text-xs text-gray-600 mb-1">
+                                    {session.start_time} - {session.end_time}
+                                  </div>
+                                  
+                                  {/* Description or instructor */}
+                                  <div className="text-xs text-gray-600 flex-1 overflow-hidden">
+                                    {session.description ? (
+                                      <p className="leading-tight line-clamp-2">{session.description}</p>
+                                    ) : (
+                                      <p className="leading-tight">{session.instructor_profiles?.display_name || 'No instructor'}</p>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Bottom info */}
+                                  <div className="flex items-center justify-between text-xs text-gray-700 mt-1">
+                                    <div className="flex items-center gap-1">
+                                      <Users className="h-3 w-3" />
+                                      <span>{session.session_enrollments?.length || 0}</span>
+                                    </div>
+                                    {hoveredDaySessions.length > 1 && (
+                                      <span className="text-gray-500">+{hoveredDaySessions.length - 1}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </div>
                         </div>
                       )}
                     </div>
                   );
                 })}
-                
-                {/* Render tooltip for hovered day */}
-                {hoveredDay && (
-                  <SessionTooltip
-                    sessions={getSessionsForDate(hoveredDay)}
-                    dateStr={hoveredDay}
-                  />
-                )}
               </div>
 
               {/* Selected Day Sessions */}
