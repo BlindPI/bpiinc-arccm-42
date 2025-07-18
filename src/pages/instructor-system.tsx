@@ -1387,7 +1387,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
 
       {/* Enrollment Modal */}
       <Dialog open={showEnrollmentModal} onOpenChange={setShowEnrollmentModal}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Enroll Student in Session</DialogTitle>
           </DialogHeader>

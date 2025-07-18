@@ -158,7 +158,7 @@ export function SearchableStudentSelect({
 
       {/* Dropdown content */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover border rounded-md shadow-lg">
+        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border rounded-md shadow-xl">
           {/* Search input */}
           <div className="p-3 border-b">
             <div className="relative">
@@ -200,7 +200,7 @@ export function SearchableStudentSelect({
           </div>
 
           {/* Results list */}
-          <ScrollArea className="max-h-60">
+          <ScrollArea className="max-h-96">
             {hasResults ? (
               <div className="p-1">
                 {filteredStudents.map((student, index) => (
