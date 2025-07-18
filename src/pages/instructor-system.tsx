@@ -171,9 +171,9 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
       // For now, use courses as templates - later we can create a proper template system
       const { data, error } = await supabase
         .from('courses')
-        .select('id, title, description, course_code, duration, is_active')
-        .eq('is_active', true)
-        .order('title');
+        .select('id, name, description, length, status')
+        .eq('status', 'ACTIVE')
+        .order('name');
       
       if (error) throw error;
       setCourseTemplates(data || []);
@@ -187,9 +187,9 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
     try {
       const { data, error } = await supabase
         .from('courses')
-        .select('id, title, description, course_code, duration, is_active')
-        .eq('is_active', true)
-        .order('title');
+        .select('id, name, description, length, status')
+        .eq('status', 'ACTIVE')
+        .order('name');
       
       if (error) throw error;
       setCourses(data || []);
@@ -782,7 +782,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                           <SelectContent>
                             {courseTemplates.map(template => (
                               <SelectItem key={template.id} value={template.id}>
-                                {template.title} ({template.duration}h)
+                                {template.name} ({template.length}h)
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -1340,7 +1340,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                 <SelectContent>
                   {courses.map(course => (
                     <SelectItem key={course.id} value={course.id}>
-                      {course.title} ({course.course_code})
+                      {course.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
