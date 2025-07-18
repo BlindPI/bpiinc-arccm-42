@@ -1195,19 +1195,20 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                       key={day}
                       onClick={() => handleDayClick(day)}
                       onMouseEnter={() => {
+                        console.log('🔍 OVERLAY DEBUG - Mouse Enter:', {
+                          dateStr,
+                          hoveredDay: dateStr,
+                          sessionsCount: daySessions.length,
+                          firstSession: daySessions[0] ? {
+                            id: daySessions[0].id,
+                            title: daySessions[0].title,
+                            description: daySessions[0].description,
+                            instructor_profiles: daySessions[0].instructor_profiles,
+                            booking_date: daySessions[0].booking_date
+                          } : null
+                        });
+                        
                         if (daySessions.length > 0) {
-                          console.log('🔍 OVERLAY DEBUG - Mouse Enter:', {
-                            dateStr,
-                            hoveredDay: dateStr,
-                            sessionsCount: daySessions.length,
-                            firstSession: daySessions[0] ? {
-                              id: daySessions[0].id,
-                              title: daySessions[0].title,
-                              description: daySessions[0].description,
-                              instructor_profiles: daySessions[0].instructor_profiles,
-                              booking_date: daySessions[0].booking_date
-                            } : null
-                          });
                           setHoveredDay(dateStr);
                           setHoveredDayIndex(index);
                         }
