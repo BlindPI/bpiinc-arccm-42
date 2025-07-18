@@ -764,7 +764,21 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
   };
 
   const getSessionsForDate = (date: string) => {
-    return trainingSessions.filter(session => session.booking_date === date);
+    const filteredSessions = trainingSessions.filter(session => session.booking_date === date);
+    console.log('🔍 OVERLAY DEBUG - getSessionsForDate:', {
+      requestedDate: date,
+      totalSessions: trainingSessions.length,
+      matchingSessions: filteredSessions.length,
+      sessionDates: trainingSessions.map(s => s.booking_date),
+      matchingSessionsData: filteredSessions.map(s => ({
+        id: s.id,
+        title: s.title,
+        booking_date: s.booking_date,
+        hasInstructor: !!s.instructor_profiles,
+        hasDescription: !!s.description
+      }))
+    });
+    return filteredSessions;
   };
 
   const getStatusColor = (status: string) => {
@@ -1182,6 +1196,18 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                       onClick={() => handleDayClick(day)}
                       onMouseEnter={() => {
                         if (daySessions.length > 0) {
+                          console.log('🔍 OVERLAY DEBUG - Mouse Enter:', {
+                            dateStr,
+                            hoveredDay: dateStr,
+                            sessionsCount: daySessions.length,
+                            firstSession: daySessions[0] ? {
+                              id: daySessions[0].id,
+                              title: daySessions[0].title,
+                              description: daySessions[0].description,
+                              instructor_profiles: daySessions[0].instructor_profiles,
+                              booking_date: daySessions[0].booking_date
+                            } : null
+                          });
                           setHoveredDay(dateStr);
                           setHoveredDayIndex(index);
                         }
@@ -1231,7 +1257,25 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                               const hoveredDaySessions = getSessionsForDate(hoveredDay);
                               const session = hoveredDaySessions[0]; // Show first session
                               
-                              if (!session) return null;
+                              console.log('🔍 OVERLAY DEBUG - Rendering overlay:', {
+                                hoveredDay,
+                                hoveredDaySessions: hoveredDaySessions.length,
+                                hasSession: !!session,
+                                sessionData: session ? {
+                                  id: session.id,
+                                  title: session.title,
+                                  description: session.description,
+                                  start_time: session.start_time,
+                                  end_time: session.end_time,
+                                  instructor_profiles: session.instructor_profiles,
+                                  session_enrollments: session.session_enrollments?.length
+                                } : null
+                              });
+                              
+                              if (!session) {
+                                console.log('🚨 OVERLAY DEBUG - No session found for overlay!');
+                                return null;
+                              }
                               
                               return (
                                 <div className="h-full flex flex-col">
