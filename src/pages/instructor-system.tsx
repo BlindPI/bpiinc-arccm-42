@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { DatabaseUserRole } from '@/types/database-roles';
 import { hasEnterpriseAccess } from '@/types/database-roles';
+import { SearchableStudentSelect } from '@/components/enrollment/SearchableStudentSelect';
 
 interface InstructorSystemProps {
   teamId?: string;
@@ -66,7 +67,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
     session_date: '',
     start_time: '09:00',
     end_time: '17:00',
-    max_capacity: 12,
+    max_capacity: 18,
     location_id: locationId || '',
     description: ''
   });
@@ -1394,21 +1395,12 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
           <div className="space-y-4">
             <div>
               <Label>Select Student *</Label>
-              <Select
+              <SearchableStudentSelect
                 value={enrollmentForm.student_id}
                 onValueChange={(value) => setEnrollmentForm({...enrollmentForm, student_id: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a student..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredStudents.map(student => (
-                    <SelectItem key={student.id} value={student.id}>
-                      {student.display_name} - {student.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                students={students}
+                placeholder="Search for a student to enroll..."
+              />
             </div>
             
             <div>
