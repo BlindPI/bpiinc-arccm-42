@@ -201,14 +201,14 @@ export function SearchableStudentSelect({
           </div>
 
           {/* Results list */}
-          <ScrollArea className="max-h-[60vh]">
+          <ScrollArea className="h-[70vh]">
             {hasResults ? (
               <div className="p-1">
                 {filteredStudents.map((student, index) => (
                   <div
                     key={student.id}
                     className={cn(
-                      "flex items-center gap-3 p-3 rounded cursor-pointer transition-colors",
+                      "flex items-center gap-2 p-2 rounded cursor-pointer transition-colors",
                       "hover:bg-accent hover:text-accent-foreground",
                       focusedIndex === index && "bg-accent text-accent-foreground",
                       value === student.id && "bg-primary/10 text-primary"
@@ -217,14 +217,14 @@ export function SearchableStudentSelect({
                     onMouseEnter={() => setFocusedIndex(index)}
                   >
                     {/* Student avatar */}
-                    <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary shrink-0">
-                      <User className="h-4 w-4" />
+                    <div className="flex items-center justify-center h-6 w-6 rounded-full bg-primary/10 text-primary shrink-0">
+                      <User className="h-3 w-3" />
                     </div>
                     
                     {/* Student info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium truncate">{student.display_name}</span>
+                        <span className="font-medium truncate text-sm">{student.display_name}</span>
                         {searchQuery && student.score >= 75 && (
                           <Badge variant="outline" className="text-xs">
                             {student.score}%
@@ -232,21 +232,21 @@ export function SearchableStudentSelect({
                         )}
                       </div>
                       
-                      <div className="space-y-1 mt-1">
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                        <div className="flex items-center gap-1">
                           <Mail className="h-3 w-3" />
                           <span className="truncate">{student.email}</span>
                         </div>
                         
                         {student.company && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1">
                             <Building2 className="h-3 w-3" />
                             <span className="truncate">{student.company}</span>
                           </div>
                         )}
                         
                         {student.phone && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1">
                             <Phone className="h-3 w-3" />
                             <span className="truncate">{student.phone}</span>
                           </div>
@@ -254,18 +254,20 @@ export function SearchableStudentSelect({
                       </div>
                       
                       {/* Certification badges */}
-                      <div className="flex gap-1 mt-2">
-                        {student.first_aid_level && (
-                          <Badge variant="secondary" className="text-xs">
-                            {student.first_aid_level} FA
-                          </Badge>
-                        )}
-                        {student.cpr_level && (
-                          <Badge variant="secondary" className="text-xs">
-                            CPR {student.cpr_level}
-                          </Badge>
-                        )}
-                      </div>
+                      {(student.first_aid_level || student.cpr_level) && (
+                        <div className="flex gap-1 mt-1">
+                          {student.first_aid_level && (
+                            <Badge variant="secondary" className="text-xs">
+                              {student.first_aid_level} FA
+                            </Badge>
+                          )}
+                          {student.cpr_level && (
+                            <Badge variant="secondary" className="text-xs">
+                              CPR {student.cpr_level}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
                     </div>
                     
                     {/* Selection indicator */}

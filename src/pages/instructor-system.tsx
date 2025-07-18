@@ -439,6 +439,23 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
     }
   };
 
+  const removeStudentFromSession = async (enrollmentId: string) => {
+    try {
+      const { error } = await supabase
+        .from('student_roster_members')
+        .delete()
+        .eq('id', enrollmentId);
+      
+      if (error) throw error;
+      
+      await loadTrainingSessions();
+      toast.success('Student removed from session successfully');
+    } catch (error: any) {
+      console.error('Error removing student from session:', error);
+      toast.error('Failed to remove student from session');
+    }
+  };
+
   const createStudent = async (studentData: any) => {
     try {
       const { data, error } = await supabase
@@ -1115,13 +1132,23 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                             {session.session_enrollments?.length > 0 && (
                               <div className="space-y-2">
                                 {session.session_enrollments.map((enrollment: any) => (
-                                  <div key={enrollment.id} className="flex items-center justify-between p-2 bg-muted rounded">
-                                    <span className="text-sm">
-                                      {enrollment.student_enrollment_profiles?.display_name}
-                                    </span>
+                                  <div key={enrollment.id} className="flex items-center justify-between p-3 bg-muted rounded border">
+                                    <div className="flex items-center gap-3">
+                                      <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary">
+                                        <Users className="h-4 w-4" />
+                                      </div>
+                                      <div>
+                                        <div className="font-medium text-sm">
+                                          {enrollment.student_enrollment_profiles?.display_name}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">
+                                          {enrollment.student_enrollment_profiles?.email}
+                                        </div>
+                                      </div>
+                                    </div>
                                     <div className="flex items-center gap-2">
                                       <Select
-                                        value={enrollment.attendance_status}
+                                        value={enrollment.attendance_status || "REGISTERED"}
                                         onValueChange={(value) => updateStudentAttendance(enrollment.id, value)}
                                       >
                                         <SelectTrigger className="w-32">
@@ -1134,6 +1161,14 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                                           <SelectItem value="LATE">Late</SelectItem>
                                         </SelectContent>
                                       </Select>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => removeStudentFromSession(enrollment.id)}
+                                        className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </Button>
                                     </div>
                                   </div>
                                 ))}
@@ -1387,7 +1422,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
 
       {/* Enrollment Modal */}
       <Dialog open={showEnrollmentModal} onOpenChange={setShowEnrollmentModal}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden">
+        <DialogContent className="max-w-6xl w-[95vw] max-h-[95vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Enroll Student in Session</DialogTitle>
           </DialogHeader>
