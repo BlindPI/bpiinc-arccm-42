@@ -930,15 +930,17 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                           value={sessionForm.course_template}
                           onValueChange={handleTemplateSelection}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className="h-auto min-h-[2.5rem] py-2">
                             <SelectValue placeholder="Select course template..." />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="max-w-[500px]">
                             {courseTemplates.map(template => (
                               <SelectItem key={template.id} value={template.id}>
-                                <div className="flex flex-col">
-                                  <span className="font-medium">{template.name}</span>
-                                  <span className="text-sm text-muted-foreground">
+                                <div className="flex flex-col py-2 max-w-[460px]">
+                                  <span className="font-medium leading-tight text-wrap" title={template.name}>
+                                    {template.name}
+                                  </span>
+                                  <span className="text-sm text-muted-foreground leading-tight">
                                     {template.duration_hours}h • Max {template.max_students} students
                                   </span>
                                 </div>
@@ -1283,14 +1285,16 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                                           value={enrollment.course_id || ""}
                                           onValueChange={(value) => updateStudentCourseAssignment(enrollment.id, value)}
                                         >
-                                          <SelectTrigger className="w-full h-8 text-xs">
+                                          <SelectTrigger className="w-full h-auto min-h-[2.5rem] text-sm py-2">
                                             <SelectValue placeholder="Select course..." />
                                           </SelectTrigger>
-                                          <SelectContent>
+                                          <SelectContent className="max-w-[400px]">
                                             {courses.map(course => (
                                               <SelectItem key={course.id} value={course.id}>
-                                                <div className="flex flex-col">
-                                                  <span className="font-medium text-xs">{course.name}</span>
+                                                <div className="flex flex-col py-1 max-w-[360px]">
+                                                  <span className="font-medium text-sm leading-tight" title={course.name}>
+                                                    {course.name}
+                                                  </span>
                                                   <span className="text-xs text-muted-foreground">
                                                     {course.length}h • Expires: {course.expiration_months}mo
                                                   </span>
@@ -1726,15 +1730,17 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                 value={enrollmentForm.course_id}
                 onValueChange={(value) => setEnrollmentForm({...enrollmentForm, course_id: value})}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-auto min-h-[2.5rem] py-2">
                   <SelectValue placeholder="Choose a course..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-w-[500px]">
                   {courses.map(course => (
                     <SelectItem key={course.id} value={course.id}>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{course.name}</span>
-                        <span className="text-sm text-muted-foreground">
+                      <div className="flex flex-col py-2 max-w-[460px]">
+                        <span className="font-medium leading-tight text-wrap" title={course.name}>
+                          {course.name}
+                        </span>
+                        <span className="text-sm text-muted-foreground leading-tight">
                           {course.description} • Expires: {course.expiration_months} months
                         </span>
                       </div>
