@@ -102,6 +102,13 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
     loadInitialData();
   }, [teamId, locationId]);
 
+  // Reload sessions when current date changes
+  useEffect(() => {
+    if (trainingSessions.length > 0 || currentDate) {
+      loadTrainingSessions();
+    }
+  }, [currentDate]);
+
   useEffect(() => {
     if (selectedDay) {
       // Sessions are already loaded in loadTrainingSessions
@@ -116,6 +123,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
       await Promise.all([
         loadInstructors(),
         loadStudents(),
+        loadCourseTemplates(),
         loadCourses(),
         loadTrainingSessions(),
         loadLocations()
@@ -155,6 +163,23 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
     } catch (error: any) {
       console.error('Error loading students:', error);
       toast.error('Failed to load students');
+    }
+  };
+
+  const loadCourseTemplates = async () => {
+    try {
+      // For now, use courses as templates - later we can create a proper template system
+      const { data, error } = await supabase
+        .from('courses')
+        .select('id, title, description, course_code, duration, is_active')
+        .eq('is_active', true)
+        .order('title');
+      
+      if (error) throw error;
+      setCourseTemplates(data || []);
+    } catch (error: any) {
+      console.error('Error loading course templates:', error);
+      toast.error('Failed to load course templates');
     }
   };
 
@@ -200,31 +225,43 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
         .select(`
           *,
           instructor_profiles:profiles!user_id(id, display_name, email),
-          location_details:locations!location_id(id, name, address, city, state),
-          student_rosters!availability_booking_id(
-            id,
-            roster_name,
-            student_roster_members(
-              id,
-              enrollment_status,
-              attendance_status,
-              student_enrollment_profiles:student_enrollment_profiles!student_profile_id(id, display_name, email)
-            )
-          )
+          location_details:locations!location_id(id, name, address, city, state)
         `)
         .gte('booking_date', startDate.toISOString().split('T')[0])
         .lte('booking_date', endDate.toISOString().split('T')[0])
-        .eq('booking_type', 'training_session')
         .order('booking_date')
         .order('start_time');
       
       if (error) throw error;
       
-      // Flatten the student enrollment data for easier access
-      const sessionsWithEnrollments = data?.map(session => ({
-        ...session,
-        session_enrollments: session.student_rosters?.[0]?.student_roster_members || []
-      })) || [];
+      // Load roster data separately for sessions that have them
+      const sessionsWithEnrollments = await Promise.all((data || []).map(async (session) => {
+        try {
+          const { data: rosterData } = await supabase
+            .from('student_rosters')
+            .select(`
+              id,
+              student_roster_members(
+                id,
+                enrollment_status,
+                attendance_status,
+                student_enrollment_profiles:student_enrollment_profiles!student_profile_id(id, display_name, email)
+              )
+            `)
+            .eq('availability_booking_id', session.id);
+          
+          return {
+            ...session,
+            session_enrollments: rosterData?.[0]?.student_roster_members || []
+          };
+        } catch (rosterError) {
+          console.warn('Failed to load roster for session:', session.id, rosterError);
+          return {
+            ...session,
+            session_enrollments: []
+          };
+        }
+      }));
       
       setTrainingSessions(sessionsWithEnrollments);
     } catch (error: any) {
@@ -744,8 +781,8 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                           </SelectTrigger>
                           <SelectContent>
                             {courseTemplates.map(template => (
-                              <SelectItem key={template.id} value={template.code}>
-                                {template.name} ({template.duration_hours}h)
+                              <SelectItem key={template.id} value={template.id}>
+                                {template.title} ({template.duration}h)
                               </SelectItem>
                             ))}
                           </SelectContent>
