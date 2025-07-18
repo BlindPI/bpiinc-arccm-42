@@ -1451,7 +1451,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
 
       {/* Enrollment Modal */}
       <Dialog open={showEnrollmentModal} onOpenChange={setShowEnrollmentModal}>
-        <DialogContent className="max-w-7xl w-[90vw] max-h-[90vh] overflow-hidden">
+        <DialogContent className="!max-w-[85vw] !w-[85vw] !max-h-[85vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="text-xl">Enroll Student in Session</DialogTitle>
             {selectedSession && (
