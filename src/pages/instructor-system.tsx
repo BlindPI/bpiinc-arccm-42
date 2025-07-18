@@ -44,6 +44,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
   const [students, setStudents] = useState<any[]>([]);
   const [instructors, setInstructors] = useState<any[]>([]);
   const [courseTemplates, setCourseTemplates] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
   
   // Modal states
@@ -52,6 +53,10 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
   const [showEnrollmentModal, setShowEnrollmentModal] = useState(false);
   const [editingSession, setEditingSession] = useState<any>(null);
   const [selectedSession, setSelectedSession] = useState<any>(null);
+  const [enrollmentForm, setEnrollmentForm] = useState({
+    student_id: '',
+    course_id: ''
+  });
   
   // Form states
   const [sessionForm, setSessionForm] = useState({
@@ -111,7 +116,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
       await Promise.all([
         loadInstructors(),
         loadStudents(),
-        loadCourseTemplates(),
+        loadCourses(),
         loadTrainingSessions(),
         loadLocations()
       ]);
@@ -153,19 +158,19 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
     }
   };
 
-  const loadCourseTemplates = async () => {
+  const loadCourses = async () => {
     try {
       const { data, error } = await supabase
-        .from('course_templates')
-        .select('*')
+        .from('courses')
+        .select('id, title, description, course_code, duration, is_active')
         .eq('is_active', true)
-        .order('name');
+        .order('title');
       
       if (error) throw error;
-      setCourseTemplates(data || []);
+      setCourses(data || []);
     } catch (error: any) {
-      console.error('Error loading course templates:', error);
-      toast.error('Failed to load course templates');
+      console.error('Error loading courses:', error);
+      toast.error('Failed to load courses');
     }
   };
 
@@ -192,14 +197,36 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
       
       const { data, error } = await supabase
         .from('availability_bookings')
-        .select('*')
+        .select(`
+          *,
+          instructor_profiles:profiles!user_id(id, display_name, email),
+          location_details:locations!location_id(id, name, address, city, state),
+          student_rosters!availability_booking_id(
+            id,
+            roster_name,
+            student_roster_members(
+              id,
+              enrollment_status,
+              attendance_status,
+              student_enrollment_profiles:student_enrollment_profiles!student_profile_id(id, display_name, email)
+            )
+          )
+        `)
         .gte('booking_date', startDate.toISOString().split('T')[0])
         .lte('booking_date', endDate.toISOString().split('T')[0])
+        .eq('booking_type', 'training_session')
         .order('booking_date')
         .order('start_time');
       
       if (error) throw error;
-      setTrainingSessions(data || []);
+      
+      // Flatten the student enrollment data for easier access
+      const sessionsWithEnrollments = data?.map(session => ({
+        ...session,
+        session_enrollments: session.student_rosters?.[0]?.student_roster_members || []
+      })) || [];
+      
+      setTrainingSessions(sessionsWithEnrollments);
     } catch (error: any) {
       console.error('Error loading training sessions:', error);
       toast.error('Failed to load training sessions');
@@ -216,8 +243,10 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
           start_time: sessionData.start_time,
           end_time: sessionData.end_time,
           user_id: sessionData.instructor_id,
+          course_id: sessionData.course_template || null,
+          course_sequence: sessionData.course_template ? null : sessionData.course_sequence,
           booking_type: 'training_session',
-          status: 'confirmed',
+          status: 'scheduled',
           created_by: user?.id,
           location_id: sessionData.location_id,
           description: sessionData.description
@@ -247,6 +276,9 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
           start_time: updates.start_time,
           end_time: updates.end_time,
           user_id: updates.instructor_id,
+          course_id: updates.course_template || null,
+          course_sequence: updates.course_template ? null : updates.course_sequence,
+          location_id: updates.location_id,
           description: updates.description
         })
         .eq('id', sessionId)
@@ -282,7 +314,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
     }
   };
 
-  const enrollStudentInSession = async (sessionId: string, studentId: string) => {
+  const enrollStudentInSession = async (sessionId: string, studentId: string, courseId?: string) => {
     try {
       // First create or get a roster for this session
       let rosterId;
@@ -300,11 +332,13 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
           .from('student_rosters')
           .insert([{
             roster_name: 'Training Session Roster',
+            course_name: 'Training Session',
             availability_booking_id: sessionId,
             instructor_id: user?.id,
             location_id: locationId,
             roster_status: 'active',
             roster_type: 'course',
+            course_id: courseId || null,
             created_by: user?.id
           }])
           .select()
@@ -333,6 +367,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
         .insert([{
           roster_id: rosterId,
           student_profile_id: studentId,
+          course_id: courseId || null,
           enrollment_status: 'enrolled'
         }])
         .select()
@@ -482,6 +517,13 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
       max_capacity: 12,
       location_id: locationId || '',
       description: ''
+    });
+  };
+
+  const resetEnrollmentForm = () => {
+    setEnrollmentForm({
+      student_id: '',
+      course_id: ''
     });
   };
 
@@ -886,9 +928,14 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                               <div>
                                 <h4 className="font-semibold">{session.title}</h4>
                                 <p className="text-sm text-muted-foreground">
-                                  {session.instructor_profiles?.display_name} | 
+                                  {session.instructor_profiles?.display_name || 'No instructor assigned'} |
                                   {session.start_time} - {session.end_time}
                                 </p>
+                                {session.location_details && (
+                                  <p className="text-xs text-muted-foreground">
+                                    📍 {session.location_details.name}, {session.location_details.city}
+                                  </p>
+                                )}
                               </div>
                               
                               <div className="flex items-center gap-2">
@@ -902,13 +949,13 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                                     setEditingSession(session);
                                     setSessionForm({
                                       title: session.title,
-                                      instructor_id: session.instructor_id,
-                                      course_template: session.course_template,
-                                      session_date: session.session_date,
+                                      instructor_id: session.user_id,
+                                      course_template: session.course_id || session.course_sequence || '',
+                                      session_date: session.booking_date,
                                       start_time: session.start_time,
                                       end_time: session.end_time,
-                                      max_capacity: session.max_capacity,
-                                      location_id: session.location_id,
+                                      max_capacity: 12, // Default capacity since this field doesn't exist in availability_bookings
+                                      location_id: session.location_id || '',
                                       description: session.description || ''
                                     });
                                     setShowSessionModal(true);
@@ -1226,13 +1273,11 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
           
           <div className="space-y-4">
             <div>
-              <Label>Select Student</Label>
-              <Select onValueChange={(studentId) => {
-                if (selectedSession) {
-                  enrollStudentInSession(selectedSession.id, studentId);
-                  setShowEnrollmentModal(false);
-                }
-              }}>
+              <Label>Select Student *</Label>
+              <Select
+                value={enrollmentForm.student_id}
+                onValueChange={(value) => setEnrollmentForm({...enrollmentForm, student_id: value})}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Choose a student..." />
                 </SelectTrigger>
@@ -1245,14 +1290,52 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                 </SelectContent>
               </Select>
             </div>
+            
+            <div>
+              <Label>Select Course (Optional)</Label>
+              <Select
+                value={enrollmentForm.course_id}
+                onValueChange={(value) => setEnrollmentForm({...enrollmentForm, course_id: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a course..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {courses.map(course => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {course.title} ({course.course_code})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           
           <div className="flex gap-2 mt-4">
             <Button
               variant="outline"
-              onClick={() => setShowEnrollmentModal(false)}
+              onClick={() => {
+                setShowEnrollmentModal(false);
+                setEnrollmentForm({ student_id: '', course_id: '' });
+              }}
             >
               Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (selectedSession && enrollmentForm.student_id) {
+                  enrollStudentInSession(
+                    selectedSession.id,
+                    enrollmentForm.student_id,
+                    enrollmentForm.course_id || undefined
+                  );
+                  setShowEnrollmentModal(false);
+                  setEnrollmentForm({ student_id: '', course_id: '' });
+                }
+              }}
+              disabled={!enrollmentForm.student_id}
+            >
+              Enroll Student
             </Button>
           </div>
         </DialogContent>
