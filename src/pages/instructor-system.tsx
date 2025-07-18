@@ -208,28 +208,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
 
   const createTrainingSession = async (sessionData: any) => {
     try {
-      // First try to create in training_sessions table which has location_id
-      const { data: trainingSession, error: trainingError } = await supabase
-        .from('training_sessions')
-        .insert([{
-          title: sessionData.title,
-          session_date: sessionData.session_date,
-          start_time: sessionData.start_time,
-          end_time: sessionData.end_time,
-          instructor_id: sessionData.instructor_id,
-          location_id: sessionData.location_id,
-          max_capacity: sessionData.max_capacity,
-          course_template: sessionData.course_template,
-          description: sessionData.description,
-          status: 'SCHEDULED'
-        }])
-        .select()
-        .single();
-      
-      if (trainingError) throw trainingError;
-      
-      // Also create corresponding availability booking
-      const { data: booking, error: bookingError } = await supabase
+      const { data, error } = await supabase
         .from('availability_bookings')
         .insert([{
           title: sessionData.title,
@@ -240,21 +219,20 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
           booking_type: 'training_session',
           status: 'confirmed',
           created_by: user?.id,
+          location_id: sessionData.location_id,
           description: sessionData.description
         }])
         .select()
         .single();
       
-      if (bookingError) {
-        console.warn('Failed to create availability booking:', bookingError);
-      }
+      if (error) throw error;
       
       await loadTrainingSessions();
       toast.success('Training session created successfully');
-      return trainingSession;
+      return data;
     } catch (error: any) {
       console.error('Error creating training session:', error);
-      toast.error(`Failed to create training session: ${error.message}`);
+      toast.error('Failed to create training session');
       throw error;
     }
   };
