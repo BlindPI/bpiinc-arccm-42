@@ -278,11 +278,81 @@ export function SearchableStudentSelect({
                 <p>No students found for "{searchQuery}"</p>
                 <p className="text-xs mt-1">Try a different search term</p>
               </div>
-            ) : (
+            ) : students.length === 0 ? (
               <div className="p-6 text-center text-muted-foreground">
                 <User className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>Start typing to search students</p>
-                <p className="text-xs mt-1">Search by name, email, company, or phone</p>
+                <p>No students available</p>
+                <p className="text-xs mt-1">Add students to enable enrollment</p>
+              </div>
+            ) : (
+              <div className="p-1">
+                {students.slice(0, 100).map((student, index) => (
+                  <div
+                    key={student.id}
+                    className={cn(
+                      "flex items-center gap-2 p-2 rounded cursor-pointer transition-colors",
+                      "hover:bg-accent hover:text-accent-foreground",
+                      focusedIndex === index && "bg-accent text-accent-foreground",
+                      value === student.id && "bg-primary/10 text-primary"
+                    )}
+                    onClick={() => handleStudentSelect(student)}
+                    onMouseEnter={() => setFocusedIndex(index)}
+                  >
+                    {/* Student avatar */}
+                    <div className="flex items-center justify-center h-6 w-6 rounded-full bg-primary/10 text-primary shrink-0">
+                      <User className="h-3 w-3" />
+                    </div>
+                    
+                    {/* Student info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium truncate text-sm">{student.display_name}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                        <div className="flex items-center gap-1">
+                          <Mail className="h-3 w-3" />
+                          <span className="truncate">{student.email}</span>
+                        </div>
+                        
+                        {student.company && (
+                          <div className="flex items-center gap-1">
+                            <Building2 className="h-3 w-3" />
+                            <span className="truncate">{student.company}</span>
+                          </div>
+                        )}
+                        
+                        {student.phone && (
+                          <div className="flex items-center gap-1">
+                            <Phone className="h-3 w-3" />
+                            <span className="truncate">{student.phone}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Certification badges */}
+                      {(student.first_aid_level || student.cpr_level) && (
+                        <div className="flex gap-1 mt-1">
+                          {student.first_aid_level && (
+                            <Badge variant="secondary" className="text-xs">
+                              {student.first_aid_level} FA
+                            </Badge>
+                          )}
+                          {student.cpr_level && (
+                            <Badge variant="secondary" className="text-xs">
+                              CPR {student.cpr_level}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Selection indicator */}
+                    {value === student.id && (
+                      <Check className="h-4 w-4 text-primary shrink-0" />
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </ScrollArea>
