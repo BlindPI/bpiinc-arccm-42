@@ -74,6 +74,14 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
 
   // Selected template data for display
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  
+  // Track if user has manually edited the title
+  const [hasCustomTitle, setHasCustomTitle] = useState(false);
+  const [previousTemplateName, setPreviousTemplateName] = useState<string>('');
+
+  // Calendar hover state management
+  const [hoveredDay, setHoveredDay] = useState<string | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null);
 
   const [studentForm, setStudentForm] = useState({
     email: '',
@@ -675,6 +683,8 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
       description: ''
     });
     setSelectedTemplate(null);
+    setHasCustomTitle(false);
+    setPreviousTemplateName('');
   };
 
   // Handle template selection and auto-populate fields
@@ -683,17 +693,36 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
     if (template) {
       setSelectedTemplate(template);
       // Auto-populate fields from template
-      setSessionForm(prev => ({
-        ...prev,
-        course_template: templateId,
-        title: template.name,
-        max_capacity: template.max_students || 12,
-        description: template.description || '',
-        // Calculate end time based on duration
-        end_time: calculateEndTime(prev.start_time, template.duration_hours)
-      }));
+      setSessionForm(prev => {
+        // Only auto-populate title if:
+        // 1. Current title is empty, OR
+        // 2. Current title matches the previous template name (hasn't been manually edited)
+        const shouldUpdateTitle = !hasCustomTitle && (
+          !prev.title ||
+          prev.title === previousTemplateName
+        );
+        
+        const updatedForm = {
+          ...prev,
+          course_template: templateId,
+          max_capacity: template.max_students || 12,
+          description: template.description || '',
+          // Calculate end time based on duration
+          end_time: calculateEndTime(prev.start_time, template.duration_hours)
+        };
+        
+        if (shouldUpdateTitle) {
+          updatedForm.title = template.name;
+        }
+        
+        return updatedForm;
+      });
+      
+      // Track the template name for future comparisons
+      setPreviousTemplateName(template.name);
     } else {
       setSelectedTemplate(null);
+      setPreviousTemplateName('');
     }
   };
 
@@ -763,6 +792,83 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
   const days = getDaysInMonth(currentDate);
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
+
+  // Session details tooltip component
+  const SessionTooltip = ({ sessions, dateStr }: { sessions: any[], dateStr: string }) => {
+    if (!sessions.length || hoveredDay !== dateStr) return null;
+
+    return (
+      <div
+        className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-md"
+        style={{
+          left: tooltipPosition?.x || 0,
+          top: tooltipPosition?.y || 0,
+          transform: 'translate(-50%, -100%)',
+          marginTop: '-8px'
+        }}
+      >
+        <div className="space-y-3">
+          {sessions.map((session, idx) => {
+            // Get template details
+            const template = session.course_sequence?.template_id ?
+              courseTemplates.find(t => t.id === session.course_sequence.template_id) : null;
+            
+            return (
+              <div key={`tooltip-${session.id}-${idx}`} className="border-b border-gray-100 last:border-b-0 pb-3 last:pb-0">
+                <div className="font-semibold text-sm text-gray-900 mb-1">
+                  {session.title}
+                </div>
+                
+                <div className="text-xs text-gray-600 space-y-1">
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {session.start_time} - {session.end_time}
+                  </div>
+                  
+                  <div className="flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    {session.instructor_profiles?.display_name || 'No instructor'}
+                  </div>
+                  
+                  {session.location_details && (
+                    <div className="flex items-center gap-1">
+                      <span>📍</span>
+                      {session.location_details.name}, {session.location_details.city}
+                    </div>
+                  )}
+                  
+                  {session.description && (
+                    <div className="text-gray-500 mt-1">
+                      {session.description}
+                    </div>
+                  )}
+                  
+                  {template && (
+                    <div className="mt-2 p-2 bg-blue-50 rounded text-xs">
+                      <div className="font-medium text-blue-900 mb-1">Course Template</div>
+                      <div className="space-y-1 text-blue-800">
+                        <div><strong>Code:</strong> {template.code}</div>
+                        <div><strong>Duration:</strong> {template.duration_hours}h</div>
+                        <div><strong>Max Students:</strong> {template.max_students}</div>
+                        {template.description && (
+                          <div><strong>Description:</strong> {template.description}</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-1">
+                    <span>👥</span>
+                    {session.session_enrollments?.length || 0} enrolled
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   // Permission check
   if (!canManageSessions) {
@@ -900,7 +1006,15 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                         <Input
                           id="title"
                           value={sessionForm.title}
-                          onChange={(e) => setSessionForm({...sessionForm, title: e.target.value})}
+                          onChange={(e) => {
+                            setSessionForm({...sessionForm, title: e.target.value});
+                            // Mark as custom title if user manually edits
+                            if (e.target.value !== previousTemplateName) {
+                              setHasCustomTitle(true);
+                            } else {
+                              setHasCustomTitle(false);
+                            }
+                          }}
                           placeholder="e.g., CPR Certification Course"
                         />
                       </div>
@@ -1095,7 +1209,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                 ))}
               </div>
 
-              <div className="grid grid-cols-7 gap-1 mb-6">
+              <div className="grid grid-cols-7 gap-1 mb-6 relative">
                 {days.map((day, index) => {
                   if (!day) {
                     return <div key={`empty-${year}-${month}-${index}`} className="p-2 h-20"></div>;
@@ -1109,9 +1223,23 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                     <div
                       key={day}
                       onClick={() => handleDayClick(day)}
+                      onMouseEnter={(e) => {
+                        if (daySessions.length > 0) {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setTooltipPosition({
+                            x: rect.left + rect.width / 2,
+                            y: rect.top
+                          });
+                          setHoveredDay(dateStr);
+                        }
+                      }}
+                      onMouseLeave={() => {
+                        setHoveredDay(null);
+                        setTooltipPosition(null);
+                      }}
                       className={`p-2 h-20 border rounded-md cursor-pointer transition-colors hover:bg-muted ${
                         isSelected ? 'ring-2 ring-primary' : ''
-                      } ${daySessions.length > 0 ? 'bg-blue-50' : ''}`}
+                      } ${daySessions.length > 0 ? 'bg-blue-50 hover:bg-blue-100' : ''}`}
                     >
                       <div className="flex justify-between items-start">
                         <span className="font-medium">{day}</span>
@@ -1137,6 +1265,14 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                     </div>
                   );
                 })}
+                
+                {/* Render tooltip for hovered day */}
+                {hoveredDay && (
+                  <SessionTooltip
+                    sessions={getSessionsForDate(hoveredDay)}
+                    dateStr={hoveredDay}
+                  />
+                )}
               </div>
 
               {/* Selected Day Sessions */}
