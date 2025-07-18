@@ -14,22 +14,33 @@ import { Loader2, Save, RotateCcw, Eye, EyeOff, AlertTriangle, CheckCircle, XCir
 import { toast } from 'sonner';
 import { ROLE_LABELS } from '@/lib/roles';
 
-// Navigation structure matching AppSidebar - FIXED: Consolidated Training Management to resolve fragmentation
+// Navigation structure matching AppSidebar - Updated with expanded Training Management items
 const NAVIGATION_GROUPS = {
   'Dashboard': ['Dashboard', 'Profile'],
   'User Management': ['Users', 'Teams', 'Students', 'Role Management', 'Supervision'],
   'Provider Management': ['Provider Management'],
-  'Training Management': ['Training Management'],
+  'Training Management': [
+    'Instructor System',
+    'Training Sessions',
+    'Student Management',
+    'Instructor Management',
+    'Multi-Course Builder',
+    'Teams',
+    'Locations',
+    'Courses',
+    'Training Management'
+  ],
   'Certificates': ['Certificates', 'Certificate Analytics', 'Rosters'],
   'CRM': [
+    'CRM Hub',
     'Phase 4 CRM Dashboard',
     'Email Workflows',
     'Campaign Management',
     'Revenue Analytics'
   ],
-  'Analytics & Reports': ['Analytics', 'Executive Dashboard', 'Report Scheduler', 'Reports'],
+  'Analytics & Reports': ['Analytics Hub', 'Report Scheduler', 'Reports'],
   'Compliance & Automation': ['Automation', 'Progression Path Builder'],
-  'System Administration': ['Integrations', 'Notifications', 'System Monitoring', 'Settings']
+  'System Administration': ['Admin Hub', 'Integrations', 'Settings']
 };
 
 // Configuration validation function
@@ -122,19 +133,43 @@ export function SidebarNavigationControl() {
             'Compliance & Automation': { enabled: true, items: { 'Automation': true, 'Progression Path Builder': true } }
           } : role === 'AD' ? {
             'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } },
-            'User Management': { enabled: true, items: { 'Users': true, 'Teams': true, 'Role Management': true, 'Supervision': true } },
+            'User Management': { enabled: true, items: { 'Users': true, 'Teams': true, 'Students': true, 'Role Management': true, 'Supervision': true } },
             'Provider Management': { enabled: true, items: { 'Provider Management': true } },
-            'Training Management': { enabled: true, items: { 'Training Management': true } },
+            'Training Management': {
+              enabled: true,
+              items: {
+                'Instructor System': true,
+                'Training Sessions': true,
+                'Student Management': true,
+                'Instructor Management': true,
+                'Multi-Course Builder': true,
+                'Teams': true,
+                'Locations': true,
+                'Courses': true,
+                'Training Management': true
+              }
+            },
             'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
-            'CRM': { enabled: true, items: { 'Phase 4 CRM Dashboard': true, 'Email Workflows': true, 'Campaign Management': true, 'Revenue Analytics': true } },
-            'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Executive Dashboard': true, 'Report Scheduler': true, 'Reports': true } }
+            'CRM': { enabled: true, items: { 'CRM Hub': true, 'Phase 4 CRM Dashboard': true, 'Email Workflows': true, 'Campaign Management': true, 'Revenue Analytics': true } },
+            'Analytics & Reports': { enabled: true, items: { 'Analytics Hub': true, 'Report Scheduler': true, 'Reports': true } }
           } : role === 'TM' ? {
             'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } },
             'User Management': { enabled: true, items: { 'Teams': true, 'Supervision': true } },
-            'Training Management': { enabled: true, items: { 'Training Management': true } },
+            'Training Management': {
+              enabled: true,
+              items: {
+                'Instructor System': true,
+                'Training Sessions': true,
+                'Multi-Course Builder': true,
+                'Teams': true,
+                'Locations': true,
+                'Courses': true,
+                'Training Management': true
+              }
+            },
             'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
-            'CRM': { enabled: true, items: { 'Phase 4 CRM Dashboard': true, 'Email Workflows': true, 'Campaign Management': true } },
-            'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Reports': true } }
+            'CRM': { enabled: true, items: { 'CRM Hub': true, 'Phase 4 CRM Dashboard': true, 'Email Workflows': true, 'Campaign Management': true } },
+            'Analytics & Reports': { enabled: true, items: { 'Analytics Hub': true, 'Reports': true } }
           } : {
             'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } }
           };
