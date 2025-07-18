@@ -1289,7 +1289,12 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                                           <SelectContent>
                                             {courses.map(course => (
                                               <SelectItem key={course.id} value={course.id}>
-                                                {course.name}
+                                                <div className="flex flex-col">
+                                                  <span className="font-medium text-xs">{course.name}</span>
+                                                  <span className="text-xs text-muted-foreground">
+                                                    {course.length}h • Expires: {course.expiration_months}mo
+                                                  </span>
+                                                </div>
                                               </SelectItem>
                                             ))}
                                           </SelectContent>
@@ -1300,17 +1305,17 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                                       <div>
                                         <Label className="text-xs font-medium text-muted-foreground">Attendance</Label>
                                         <Select
-                                          value={enrollment.attendance_status || "REGISTERED"}
+                                          value={enrollment.attendance_status || "pending"}
                                           onValueChange={(value) => updateStudentAttendance(enrollment.id, value)}
                                         >
                                           <SelectTrigger className="w-full h-8 text-xs">
                                             <SelectValue />
                                           </SelectTrigger>
                                           <SelectContent>
-                                            <SelectItem value="REGISTERED">Registered</SelectItem>
-                                            <SelectItem value="PRESENT">Present</SelectItem>
-                                            <SelectItem value="ABSENT">Absent</SelectItem>
-                                            <SelectItem value="LATE">Late</SelectItem>
+                                            <SelectItem value="pending">Pending</SelectItem>
+                                            <SelectItem value="present">Present</SelectItem>
+                                            <SelectItem value="absent">Absent</SelectItem>
+                                            <SelectItem value="late">Late</SelectItem>
                                           </SelectContent>
                                         </Select>
                                       </div>
@@ -1356,9 +1361,9 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                                     <div className="mt-3 flex items-center gap-4">
                                       <div className="flex items-center gap-1">
                                         <div className={`w-2 h-2 rounded-full ${
-                                          enrollment.attendance_status === 'PRESENT' ? 'bg-green-500' :
-                                          enrollment.attendance_status === 'ABSENT' ? 'bg-red-500' :
-                                          enrollment.attendance_status === 'LATE' ? 'bg-yellow-500' : 'bg-gray-300'
+                                          enrollment.attendance_status === 'present' ? 'bg-green-500' :
+                                          enrollment.attendance_status === 'absent' ? 'bg-red-500' :
+                                          enrollment.attendance_status === 'late' ? 'bg-yellow-500' : 'bg-gray-300'
                                         }`} />
                                         <span className="text-xs text-muted-foreground">Attendance</span>
                                       </div>
