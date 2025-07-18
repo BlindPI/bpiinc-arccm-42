@@ -798,7 +798,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  // Smart positioning function for tooltip
+  // Smart positioning function for tooltip with viewport-aware logic
   const calculateTooltipPosition = (element: HTMLElement) => {
     const rect = element.getBoundingClientRect();
     const viewport = {
@@ -806,65 +806,65 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
       height: window.innerHeight
     };
     
-    // Tooltip dimensions - estimate based on content
-    const tooltipWidth = Math.min(500, viewport.width * 0.8); // Responsive max width
-    const tooltipHeight = 300; // Estimated height
+    // Dynamic tooltip dimensions based on content and screen size
+    const tooltipWidth = Math.min(480, Math.max(320, viewport.width * 0.4));
+    const tooltipHeight = 400; // Estimated height for content
     
-    // Available space in each direction
+    // Define the main content area (avoid narrow sidebars)
+    const mainContentStart = viewport.width * 0.1; // 10% margin from left
+    const mainContentEnd = viewport.width * 0.9;   // 10% margin from right
+    const mainContentCenter = viewport.width / 2;
+    
+    // Calculate optimal position - prefer center of main content area
+    let x = mainContentCenter;
+    let y = rect.top;
+    let placement: 'top' | 'bottom' | 'left' | 'right' = 'top';
+    
+    // Available space calculations
     const spaceTop = rect.top;
     const spaceBottom = viewport.height - rect.bottom;
     const spaceLeft = rect.left;
     const spaceRight = viewport.width - rect.right;
     
-    let placement: 'top' | 'bottom' | 'left' | 'right' = 'top';
-    let x = rect.left + rect.width / 2;
-    let y = rect.top;
-    
-    // Determine best placement based on available space
-    if (spaceTop >= tooltipHeight && spaceTop >= spaceBottom) {
-      placement = 'top';
-      y = rect.top;
-    } else if (spaceBottom >= tooltipHeight) {
-      placement = 'bottom';
-      y = rect.bottom;
-    } else if (spaceRight >= tooltipWidth) {
+    // Smart placement logic - prioritize main content area
+    if (rect.left < mainContentStart && spaceRight >= tooltipWidth) {
+      // Element is in left sidebar, place tooltip in main content area
       placement = 'right';
-      x = rect.right;
-      y = rect.top + rect.height / 2;
-    } else if (spaceLeft >= tooltipWidth) {
+      x = Math.max(mainContentStart + tooltipWidth / 2, rect.right + 20);
+      y = Math.max(100, Math.min(rect.top + rect.height / 2, viewport.height - tooltipHeight / 2));
+    } else if (rect.right > mainContentEnd && spaceLeft >= tooltipWidth) {
+      // Element is in right sidebar, place tooltip in main content area
       placement = 'left';
-      x = rect.left;
-      y = rect.top + rect.height / 2;
+      x = Math.min(mainContentEnd - tooltipWidth / 2, rect.left - 20);
+      y = Math.max(100, Math.min(rect.top + rect.height / 2, viewport.height - tooltipHeight / 2));
     } else {
-      // Fallback: use the side with most space
-      if (spaceBottom >= spaceTop) {
+      // Element is in main content area, use normal positioning logic
+      if (spaceTop >= tooltipHeight) {
+        placement = 'top';
+        x = Math.max(tooltipWidth / 2 + 20, Math.min(rect.left + rect.width / 2, viewport.width - tooltipWidth / 2 - 20));
+        y = rect.top;
+      } else if (spaceBottom >= tooltipHeight) {
         placement = 'bottom';
+        x = Math.max(tooltipWidth / 2 + 20, Math.min(rect.left + rect.width / 2, viewport.width - tooltipWidth / 2 - 20));
         y = rect.bottom;
       } else {
-        placement = 'top';
-        y = rect.top;
+        // Not enough vertical space, try horizontal
+        if (spaceRight >= tooltipWidth) {
+          placement = 'right';
+          x = rect.right;
+          y = Math.max(tooltipHeight / 2 + 20, Math.min(rect.top + rect.height / 2, viewport.height - tooltipHeight / 2 - 20));
+        } else {
+          placement = 'left';
+          x = rect.left;
+          y = Math.max(tooltipHeight / 2 + 20, Math.min(rect.top + rect.height / 2, viewport.height - tooltipHeight / 2 - 20));
+        }
       }
     }
     
-    // Ensure tooltip doesn't go off-screen horizontally
-    if (placement === 'top' || placement === 'bottom') {
-      const halfWidth = tooltipWidth / 2;
-      if (x - halfWidth < 10) {
-        x = halfWidth + 10;
-      } else if (x + halfWidth > viewport.width - 10) {
-        x = viewport.width - halfWidth - 10;
-      }
-    }
-    
-    // Ensure tooltip doesn't go off-screen vertically for side placements
-    if (placement === 'left' || placement === 'right') {
-      const halfHeight = tooltipHeight / 2;
-      if (y - halfHeight < 10) {
-        y = halfHeight + 10;
-      } else if (y + halfHeight > viewport.height - 10) {
-        y = viewport.height - halfHeight - 10;
-      }
-    }
+    // Final boundary checks
+    const padding = 20;
+    x = Math.max(padding + tooltipWidth / 2, Math.min(x, viewport.width - padding - tooltipWidth / 2));
+    y = Math.max(padding, Math.min(y, viewport.height - padding));
     
     return {
       x,
@@ -912,14 +912,14 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
 
     return (
       <div
-        className="absolute z-[60] bg-white border border-gray-300 rounded-xl shadow-xl backdrop-blur-sm"
+        className="fixed z-[9999] bg-white border border-gray-300 rounded-xl shadow-2xl backdrop-blur-sm"
         style={{
           left: tooltipPosition.x,
           top: tooltipPosition.y,
           transform: getTransform(),
           maxWidth: tooltipPosition.maxWidth,
-          width: 'max-content',
-          minWidth: '300px',
+          width: tooltipPosition.maxWidth,
+          minWidth: '320px',
           ...getMargin()
         }}
       >
