@@ -1315,7 +1315,6 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                                             <SelectItem value="pending">Pending</SelectItem>
                                             <SelectItem value="present">Present</SelectItem>
                                             <SelectItem value="absent">Absent</SelectItem>
-                                            <SelectItem value="late">Late</SelectItem>
                                           </SelectContent>
                                         </Select>
                                       </div>
@@ -1362,8 +1361,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                                       <div className="flex items-center gap-1">
                                         <div className={`w-2 h-2 rounded-full ${
                                           enrollment.attendance_status === 'present' ? 'bg-green-500' :
-                                          enrollment.attendance_status === 'absent' ? 'bg-red-500' :
-                                          enrollment.attendance_status === 'late' ? 'bg-yellow-500' : 'bg-gray-300'
+                                          enrollment.attendance_status === 'absent' ? 'bg-red-500' : 'bg-gray-300'
                                         }`} />
                                         <span className="text-xs text-muted-foreground">Attendance</span>
                                       </div>
