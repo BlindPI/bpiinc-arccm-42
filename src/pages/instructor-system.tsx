@@ -337,6 +337,35 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
 
   const deleteTrainingSession = async (sessionId: string) => {
     try {
+      // First, get all rosters for this session
+      const { data: rosters, error: rosterError } = await supabase
+        .from('student_rosters')
+        .select('id')
+        .eq('availability_booking_id', sessionId);
+      
+      if (rosterError) throw rosterError;
+      
+      // Delete all roster members for each roster
+      if (rosters && rosters.length > 0) {
+        for (const roster of rosters) {
+          const { error: membersError } = await supabase
+            .from('student_roster_members')
+            .delete()
+            .eq('roster_id', roster.id);
+          
+          if (membersError) throw membersError;
+        }
+        
+        // Delete all rosters for this session
+        const { error: deleteRostersError } = await supabase
+          .from('student_rosters')
+          .delete()
+          .eq('availability_booking_id', sessionId);
+        
+        if (deleteRostersError) throw deleteRostersError;
+      }
+      
+      // Finally, delete the training session
       const { error } = await supabase
         .from('availability_bookings')
         .delete()
@@ -345,10 +374,10 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
       if (error) throw error;
       
       await loadTrainingSessions();
-      toast.success('Training session deleted successfully');
+      toast.success('Training session and all enrollments deleted successfully');
     } catch (error: any) {
       console.error('Error deleting training session:', error);
-      toast.error('Failed to delete training session');
+      toast.error('Failed to delete training session: ' + (error.message || 'Unknown error'));
     }
   };
 
