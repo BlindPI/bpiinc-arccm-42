@@ -244,10 +244,17 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
             .from('student_rosters')
             .select(`
               id,
+              course_id,
+              courses:course_id(id, name, description),
               student_roster_members(
                 id,
                 enrollment_status,
                 attendance_status,
+                completion_status,
+                practical_score,
+                written_score,
+                course_id,
+                courses:course_id(id, name, description),
                 student_enrollment_profiles:student_enrollment_profiles!student_profile_id(id, display_name, email)
               )
             `)
@@ -255,13 +262,15 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
           
           return {
             ...session,
-            session_enrollments: rosterData?.[0]?.student_roster_members || []
+            session_enrollments: rosterData?.[0]?.student_roster_members || [],
+            session_course: rosterData?.[0]?.courses || null
           };
         } catch (rosterError) {
           console.warn('Failed to load roster for session:', session.id, rosterError);
           return {
             ...session,
-            session_enrollments: []
+            session_enrollments: [],
+            session_course: null
           };
         }
       }));
@@ -465,6 +474,69 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
     } catch (error: any) {
       console.error('Error updating attendance:', error);
       toast.error('Failed to update attendance');
+    }
+  };
+
+  const updateStudentCourseAssignment = async (enrollmentId: string, courseId: string) => {
+    try {
+      const { error } = await supabase
+        .from('student_roster_members')
+        .update({ course_id: courseId })
+        .eq('id', enrollmentId);
+      
+      if (error) throw error;
+      
+      await loadTrainingSessions();
+      toast.success('Course assignment updated successfully');
+    } catch (error: any) {
+      console.error('Error updating course assignment:', error);
+      toast.error('Failed to update course assignment');
+    }
+  };
+
+  const updateStudentInClassStatus = async (enrollmentId: string, status: string) => {
+    try {
+      // Update practical_score based on pass/fail
+      const practicalScore = status === 'PASS' ? 100 : status === 'FAIL' ? 0 : null;
+      
+      const { error } = await supabase
+        .from('student_roster_members')
+        .update({
+          practical_score: practicalScore,
+          completion_status: status === 'PASS' ? 'completed' : status === 'FAIL' ? 'failed' : 'pending'
+        })
+        .eq('id', enrollmentId);
+      
+      if (error) throw error;
+      
+      await loadTrainingSessions();
+      toast.success('In-class status updated successfully');
+    } catch (error: any) {
+      console.error('Error updating in-class status:', error);
+      toast.error('Failed to update in-class status');
+    }
+  };
+
+  const updateStudentOnlineStatus = async (enrollmentId: string, status: string) => {
+    try {
+      // Update written_score based on complete/incomplete
+      const writtenScore = status === 'COMPLETE' ? 100 : status === 'INCOMPLETE' ? 0 : null;
+      
+      const { error } = await supabase
+        .from('student_roster_members')
+        .update({
+          written_score: writtenScore,
+          completion_status: status === 'COMPLETE' ? 'completed' : status === 'INCOMPLETE' ? 'incomplete' : 'not_started'
+        })
+        .eq('id', enrollmentId);
+      
+      if (error) throw error;
+      
+      await loadTrainingSessions();
+      toast.success('Online content status updated successfully');
+    } catch (error: any) {
+      console.error('Error updating online content status:', error);
+      toast.error('Failed to update online content status');
     }
   };
 
@@ -1159,37 +1231,39 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                             </div>
                             
                             {session.session_enrollments?.length > 0 && (
-                              <div className="space-y-2">
+                              <div className="space-y-3">
                                 {session.session_enrollments.map((enrollment: any) => (
-                                  <div key={enrollment.id} className="flex items-center justify-between p-3 bg-muted rounded border">
-                                    <div className="flex items-center gap-3">
-                                      <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary">
-                                        <Users className="h-4 w-4" />
-                                      </div>
-                                      <div>
-                                        <div className="font-medium text-sm">
-                                          {enrollment.student_enrollment_profiles?.display_name}
+                                  <div key={enrollment.id} className="p-4 bg-muted rounded-lg border">
+                                    <div className="flex items-start justify-between">
+                                      <div className="flex items-center gap-3">
+                                        <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 text-primary">
+                                          <Users className="h-5 w-5" />
                                         </div>
-                                        <div className="text-xs text-muted-foreground">
-                                          {enrollment.student_enrollment_profiles?.email}
+                                        <div className="flex-1">
+                                          <div className="font-medium">
+                                            {enrollment.student_enrollment_profiles?.display_name}
+                                          </div>
+                                          <div className="text-sm text-muted-foreground">
+                                            {enrollment.student_enrollment_profiles?.email}
+                                          </div>
+                                          {/* Course Assignment Display */}
+                                          <div className="mt-1">
+                                            {enrollment.courses?.name ? (
+                                              <Badge variant="outline" className="text-xs">
+                                                📚 {enrollment.courses.name}
+                                              </Badge>
+                                            ) : session.session_course?.name ? (
+                                              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                                                📚 {session.session_course.name}
+                                              </Badge>
+                                            ) : (
+                                              <Badge variant="outline" className="text-xs bg-gray-50 text-gray-600">
+                                                📚 No Course Assigned
+                                              </Badge>
+                                            )}
+                                          </div>
                                         </div>
                                       </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <Select
-                                        value={enrollment.attendance_status || "REGISTERED"}
-                                        onValueChange={(value) => updateStudentAttendance(enrollment.id, value)}
-                                      >
-                                        <SelectTrigger className="w-32">
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="REGISTERED">Registered</SelectItem>
-                                          <SelectItem value="PRESENT">Present</SelectItem>
-                                          <SelectItem value="ABSENT">Absent</SelectItem>
-                                          <SelectItem value="LATE">Late</SelectItem>
-                                        </SelectContent>
-                                      </Select>
                                       <Button
                                         variant="ghost"
                                         size="sm"
@@ -1198,6 +1272,110 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                                       >
                                         <X className="h-4 w-4" />
                                       </Button>
+                                    </div>
+                                    
+                                    {/* Enhanced Status Controls */}
+                                    <div className="mt-3 grid grid-cols-1 md:grid-cols-4 gap-3">
+                                      {/* Course Assignment Dropdown */}
+                                      <div>
+                                        <Label className="text-xs font-medium text-muted-foreground">Course Assignment</Label>
+                                        <Select
+                                          value={enrollment.course_id || ""}
+                                          onValueChange={(value) => updateStudentCourseAssignment(enrollment.id, value)}
+                                        >
+                                          <SelectTrigger className="w-full h-8 text-xs">
+                                            <SelectValue placeholder="Select course..." />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {courses.map(course => (
+                                              <SelectItem key={course.id} value={course.id}>
+                                                {course.name}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+
+                                      {/* Attendance Status */}
+                                      <div>
+                                        <Label className="text-xs font-medium text-muted-foreground">Attendance</Label>
+                                        <Select
+                                          value={enrollment.attendance_status || "REGISTERED"}
+                                          onValueChange={(value) => updateStudentAttendance(enrollment.id, value)}
+                                        >
+                                          <SelectTrigger className="w-full h-8 text-xs">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="REGISTERED">Registered</SelectItem>
+                                            <SelectItem value="PRESENT">Present</SelectItem>
+                                            <SelectItem value="ABSENT">Absent</SelectItem>
+                                            <SelectItem value="LATE">Late</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+
+                                      {/* In-Class Performance (Pass/Fail) */}
+                                      <div>
+                                        <Label className="text-xs font-medium text-muted-foreground">In-Class Status</Label>
+                                        <Select
+                                          value={enrollment.practical_score === 100 ? "PASS" : enrollment.practical_score === 0 ? "FAIL" : "PENDING"}
+                                          onValueChange={(value) => updateStudentInClassStatus(enrollment.id, value)}
+                                        >
+                                          <SelectTrigger className="w-full h-8 text-xs">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="PENDING">Pending</SelectItem>
+                                            <SelectItem value="PASS">Pass</SelectItem>
+                                            <SelectItem value="FAIL">Fail</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+
+                                      {/* Online Content Completion */}
+                                      <div>
+                                        <Label className="text-xs font-medium text-muted-foreground">Online Content</Label>
+                                        <Select
+                                          value={enrollment.written_score === 100 ? "COMPLETE" : enrollment.written_score === 0 ? "INCOMPLETE" : "NOT_STARTED"}
+                                          onValueChange={(value) => updateStudentOnlineStatus(enrollment.id, value)}
+                                        >
+                                          <SelectTrigger className="w-full h-8 text-xs">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="NOT_STARTED">Not Started</SelectItem>
+                                            <SelectItem value="COMPLETE">Complete</SelectItem>
+                                            <SelectItem value="INCOMPLETE">Incomplete</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                    </div>
+
+                                    {/* Progress Indicators */}
+                                    <div className="mt-3 flex items-center gap-4">
+                                      <div className="flex items-center gap-1">
+                                        <div className={`w-2 h-2 rounded-full ${
+                                          enrollment.attendance_status === 'PRESENT' ? 'bg-green-500' :
+                                          enrollment.attendance_status === 'ABSENT' ? 'bg-red-500' :
+                                          enrollment.attendance_status === 'LATE' ? 'bg-yellow-500' : 'bg-gray-300'
+                                        }`} />
+                                        <span className="text-xs text-muted-foreground">Attendance</span>
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        <div className={`w-2 h-2 rounded-full ${
+                                          enrollment.practical_score === 100 ? 'bg-green-500' :
+                                          enrollment.practical_score === 0 ? 'bg-red-500' : 'bg-gray-300'
+                                        }`} />
+                                        <span className="text-xs text-muted-foreground">In-Class</span>
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        <div className={`w-2 h-2 rounded-full ${
+                                          enrollment.written_score === 100 ? 'bg-green-500' :
+                                          enrollment.written_score === 0 ? 'bg-red-500' : 'bg-gray-300'
+                                        }`} />
+                                        <span className="text-xs text-muted-foreground">Online</span>
+                                      </div>
                                     </div>
                                   </div>
                                 ))}
