@@ -1451,81 +1451,85 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
 
       {/* Enrollment Modal */}
       <Dialog open={showEnrollmentModal} onOpenChange={setShowEnrollmentModal}>
-        <DialogContent className="!max-w-[85vw] !w-[85vw] !max-h-[85vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="text-xl">Enroll Student in Session</DialogTitle>
-            {selectedSession && (
-              <p className="text-sm text-muted-foreground">
-                Session: {selectedSession.title} • {selectedSession.booking_date} • {selectedSession.start_time} - {selectedSession.end_time}
-              </p>
-            )}
-          </DialogHeader>
-          
-          <div className="space-y-6 flex-1 overflow-hidden">
-            <div className="space-y-2">
-              <Label className="text-base font-medium">Select Student *</Label>
-              <SearchableStudentSelect
-                value={enrollmentForm.student_id}
-                onValueChange={(value) => setEnrollmentForm({...enrollmentForm, student_id: value})}
-                students={students}
-                placeholder="Search for a student to enroll..."
-                className="w-full"
-              />
+        <DialogContent className="!max-w-[85vw] !w-[85vw] !max-h-[85vh] !p-0 overflow-hidden">
+          <div className="flex flex-col h-full max-h-[85vh]">
+            <DialogHeader className="px-6 py-4 border-b border-border flex-shrink-0">
+              <DialogTitle className="text-xl">Enroll Student in Session</DialogTitle>
+              {selectedSession && (
+                <p className="text-sm text-muted-foreground">
+                  Session: {selectedSession.title} • {selectedSession.booking_date} • {selectedSession.start_time} - {selectedSession.end_time}
+                </p>
+              )}
+            </DialogHeader>
+            
+            <div className="flex-1 px-6 py-4 overflow-hidden min-h-0">
+              <div className="space-y-6 h-full">
+                <div className="space-y-2">
+                  <Label className="text-base font-medium">Select Student *</Label>
+                  <SearchableStudentSelect
+                    value={enrollmentForm.student_id}
+                    onValueChange={(value) => setEnrollmentForm({...enrollmentForm, student_id: value})}
+                    students={students}
+                    placeholder="Search for a student to enroll..."
+                    className="w-full"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-base font-medium">Select Course (Optional)</Label>
+                  <Select
+                    value={enrollmentForm.course_id}
+                    onValueChange={(value) => setEnrollmentForm({...enrollmentForm, course_id: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a course..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {courses.map(course => (
+                        <SelectItem key={course.id} value={course.id}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{course.name}</span>
+                            <span className="text-sm text-muted-foreground">
+                              {course.description} • Expires: {course.expiration_months} months
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
             
-            <div className="space-y-2">
-              <Label className="text-base font-medium">Select Course (Optional)</Label>
-              <Select
-                value={enrollmentForm.course_id}
-                onValueChange={(value) => setEnrollmentForm({...enrollmentForm, course_id: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a course..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {courses.map(course => (
-                    <SelectItem key={course.id} value={course.id}>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{course.name}</span>
-                        <span className="text-sm text-muted-foreground">
-                          {course.description} • Expires: {course.expiration_months} months
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <div className="flex gap-3 mt-6 pt-4 border-t">
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={() => {
-                setShowEnrollmentModal(false);
-                setEnrollmentForm({ student_id: '', course_id: '' });
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="lg"
-              onClick={() => {
-                if (selectedSession && enrollmentForm.student_id) {
-                  enrollStudentInSession(
-                    selectedSession.id,
-                    enrollmentForm.student_id,
-                    enrollmentForm.course_id || undefined
-                  );
+            <div className="flex gap-3 px-6 py-4 border-t border-border flex-shrink-0">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => {
                   setShowEnrollmentModal(false);
                   setEnrollmentForm({ student_id: '', course_id: '' });
-                }
-              }}
-              disabled={!enrollmentForm.student_id}
-            >
-              Enroll Student
-            </Button>
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="lg"
+                onClick={() => {
+                  if (selectedSession && enrollmentForm.student_id) {
+                    enrollStudentInSession(
+                      selectedSession.id,
+                      enrollmentForm.student_id,
+                      enrollmentForm.course_id || undefined
+                    );
+                    setShowEnrollmentModal(false);
+                    setEnrollmentForm({ student_id: '', course_id: '' });
+                  }
+                }}
+                disabled={!enrollmentForm.student_id}
+              >
+                Enroll Student
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

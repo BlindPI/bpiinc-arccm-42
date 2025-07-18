@@ -47,7 +47,7 @@ export function SearchableStudentSelect({
     students,
     debounceMs: 300,
     maxResults: 100,
-    minScore: 100
+    minScore: 0
   });
 
   const {

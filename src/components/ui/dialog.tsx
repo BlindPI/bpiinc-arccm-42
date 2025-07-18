@@ -39,9 +39,12 @@ const DialogContent = React.forwardRef<
         className={cn(
           "fixed left-[50%] top-[50%] z-50 grid w-full translate-x-[-50%] translate-y-[-50%] gap-0 border-0 bg-background p-0 shadow-2xl duration-300",
           "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
-          isMobile 
-            ? "max-h-[95vh] max-w-[95vw] overflow-hidden rounded-t-2xl mx-2 my-2" 
-            : "max-h-[90vh] max-w-4xl overflow-hidden rounded-2xl mx-8",
+          // Only apply default sizing if custom sizing isn't provided
+          !className?.includes('max-w') && !className?.includes('max-h') ? (
+            isMobile
+              ? "max-h-[95vh] max-w-[95vw] overflow-hidden rounded-t-2xl mx-2 my-2"
+              : "max-h-[90vh] max-w-4xl overflow-hidden rounded-2xl mx-8"
+          ) : "rounded-2xl",
           className
         )}
         {...props}
