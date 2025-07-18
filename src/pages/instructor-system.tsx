@@ -17,7 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { DatabaseUserRole } from '@/types/database-roles';
 import { hasEnterpriseAccess } from '@/types/database-roles';
-import { SearchableStudentSelect } from '@/components/enrollment/SearchableStudentSelect';
+import { cn } from '@/lib/utils';
 
 interface InstructorSystemProps {
   teamId?: string;
@@ -1451,85 +1451,147 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
 
       {/* Enrollment Modal */}
       <Dialog open={showEnrollmentModal} onOpenChange={setShowEnrollmentModal}>
-        <DialogContent className="!max-w-[85vw] !w-[85vw] !max-h-[85vh] !p-0 overflow-hidden">
-          <div className="flex flex-col h-full max-h-[85vh]">
-            <DialogHeader className="px-6 py-4 border-b border-border flex-shrink-0">
-              <DialogTitle className="text-xl">Enroll Student in Session</DialogTitle>
-              {selectedSession && (
-                <p className="text-sm text-muted-foreground">
-                  Session: {selectedSession.title} • {selectedSession.booking_date} • {selectedSession.start_time} - {selectedSession.end_time}
-                </p>
-              )}
-            </DialogHeader>
-            
-            <div className="flex-1 px-6 py-4 overflow-hidden min-h-0">
-              <div className="space-y-6 h-full">
-                <div className="space-y-2">
-                  <Label className="text-base font-medium">Select Student *</Label>
-                  <SearchableStudentSelect
-                    value={enrollmentForm.student_id}
-                    onValueChange={(value) => setEnrollmentForm({...enrollmentForm, student_id: value})}
-                    students={students}
-                    placeholder="Search for a student to enroll..."
-                    className="w-full"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label className="text-base font-medium">Select Course (Optional)</Label>
-                  <Select
-                    value={enrollmentForm.course_id}
-                    onValueChange={(value) => setEnrollmentForm({...enrollmentForm, course_id: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a course..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {courses.map(course => (
-                        <SelectItem key={course.id} value={course.id}>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{course.name}</span>
-                            <span className="text-sm text-muted-foreground">
-                              {course.description} • Expires: {course.expiration_months} months
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Enroll Student in Session</DialogTitle>
+            {selectedSession && (
+              <p className="text-sm text-muted-foreground">
+                Session: {selectedSession.title} • {selectedSession.booking_date} • {selectedSession.start_time} - {selectedSession.end_time}
+              </p>
+            )}
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* Search Filter */}
+            <div className="space-y-2">
+              <Label>Search Students</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name, email, or company..."
+                  className="pl-10"
+                  value={filters.search}
+                  onChange={(e) => setFilters({...filters, search: e.target.value})}
+                />
               </div>
             </div>
+
+            {/* Student Selection */}
+            <div className="space-y-2">
+              <Label>Select Student *</Label>
+              <ScrollArea className="h-[300px] border rounded-md">
+                <div className="p-2">
+                  {filteredStudents.length > 0 ? (
+                    <div className="space-y-1">
+                      {filteredStudents.map((student) => (
+                        <div
+                          key={student.id}
+                          className={cn(
+                            "flex items-center justify-between p-3 rounded-md border cursor-pointer transition-colors",
+                            enrollmentForm.student_id === student.id ? "bg-primary/10 border-primary" : "hover:bg-muted"
+                          )}
+                          onClick={() => setEnrollmentForm({...enrollmentForm, student_id: student.id})}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary">
+                              <Users className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <div className="font-medium">{student.display_name}</div>
+                              <div className="text-sm text-muted-foreground">{student.email}</div>
+                              {student.company && (
+                                <div className="text-xs text-muted-foreground">{student.company}</div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {student.first_aid_level && (
+                              <Badge variant="secondary" className="text-xs">
+                                {student.first_aid_level} FA
+                              </Badge>
+                            )}
+                            {student.cpr_level && (
+                              <Badge variant="secondary" className="text-xs">
+                                CPR {student.cpr_level}
+                              </Badge>
+                            )}
+                            {enrollmentForm.student_id === student.id && (
+                              <Check className="h-4 w-4 text-primary" />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>No students found</p>
+                      {filters.search && (
+                        <p className="text-xs mt-1">Try a different search term</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+              <p className="text-xs text-muted-foreground">
+                {filteredStudents.length} student{filteredStudents.length !== 1 ? 's' : ''} available
+              </p>
+            </div>
             
-            <div className="flex gap-3 px-6 py-4 border-t border-border flex-shrink-0">
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => {
+            {/* Course Selection */}
+            <div className="space-y-2">
+              <Label>Select Course (Optional)</Label>
+              <Select
+                value={enrollmentForm.course_id}
+                onValueChange={(value) => setEnrollmentForm({...enrollmentForm, course_id: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a course..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {courses.map(course => (
+                    <SelectItem key={course.id} value={course.id}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{course.name}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {course.description} • Expires: {course.expiration_months} months
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <div className="flex gap-3 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowEnrollmentModal(false);
+                setEnrollmentForm({ student_id: '', course_id: '' });
+                setFilters({...filters, search: ''});
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (selectedSession && enrollmentForm.student_id) {
+                  enrollStudentInSession(
+                    selectedSession.id,
+                    enrollmentForm.student_id,
+                    enrollmentForm.course_id || undefined
+                  );
                   setShowEnrollmentModal(false);
                   setEnrollmentForm({ student_id: '', course_id: '' });
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="lg"
-                onClick={() => {
-                  if (selectedSession && enrollmentForm.student_id) {
-                    enrollStudentInSession(
-                      selectedSession.id,
-                      enrollmentForm.student_id,
-                      enrollmentForm.course_id || undefined
-                    );
-                    setShowEnrollmentModal(false);
-                    setEnrollmentForm({ student_id: '', course_id: '' });
-                  }
-                }}
-                disabled={!enrollmentForm.student_id}
-              >
-                Enroll Student
-              </Button>
-            </div>
+                  setFilters({...filters, search: ''});
+                }
+              }}
+              disabled={!enrollmentForm.student_id}
+            >
+              Enroll Student
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
