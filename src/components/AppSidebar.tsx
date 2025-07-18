@@ -68,7 +68,15 @@ const navigation: NavigationItem[] = [
   // Provider Management Group
   { name: 'Provider Management', href: '/authorized-providers', icon: Building2, group: 'Provider Management', enterpriseOnly: true },
   
-  // Training Management Group - UNIFIED SYSTEM
+  // Training Management Group - Expanded System
+  { name: 'Instructor System', href: '/instructor-system', icon: GraduationCap, group: 'Training Management' },
+  { name: 'Training Sessions', href: '/instructor-system?tab=sessions', icon: Calendar, group: 'Training Management' },
+  { name: 'Student Management', href: '/instructor-system?tab=students', icon: Users, group: 'Training Management' },
+  { name: 'Instructor Management', href: '/instructor-system?tab=instructors', icon: UserCheck, group: 'Training Management' },
+  { name: 'Multi-Course Builder', href: '/multi-course-training', icon: BookOpen, group: 'Training Management' },
+  { name: 'Teams', href: '/teams', icon: UsersIcon, group: 'Training Management' },
+  { name: 'Locations', href: '/locations', icon: MapPin, group: 'Training Management' },
+  { name: 'Courses', href: '/courses', icon: BookOpen, group: 'Training Management' },
   { name: 'Training Management', href: '/training-management', icon: GraduationCap, group: 'Training Management' },
   
   // Certificates Group

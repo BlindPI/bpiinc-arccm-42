@@ -111,7 +111,7 @@ export function AppRoutes() {
       {/* DIRECT CLEAN PAGES - No More Nested Interfaces */}
       <Route path="/teams" element={
         <ProtectedRoute>
-          <InstructorManagementSystem />
+          <Teams />
         </ProtectedRoute>
       } />
 
@@ -160,9 +160,16 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      <Route path="/courses" element={
+      {/* Instructor System Hub */}
+      <Route path="/instructor-system" element={
         <ProtectedRoute>
           <InstructorManagementSystem />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/courses" element={
+        <ProtectedRoute>
+          <CourseManagement />
         </ProtectedRoute>
       } />
 
@@ -174,7 +181,7 @@ export function AppRoutes() {
 
       <Route path="/locations" element={
         <ProtectedRoute>
-          <InstructorManagementSystem />
+          <LocationManagement />
         </ProtectedRoute>
       } />
 
