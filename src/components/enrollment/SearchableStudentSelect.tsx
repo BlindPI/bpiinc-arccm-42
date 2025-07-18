@@ -201,7 +201,7 @@ export function SearchableStudentSelect({
           </div>
 
           {/* Results list */}
-          <ScrollArea className="h-[70vh]">
+          <ScrollArea className="h-[500px]">
             {hasResults ? (
               <div className="p-1">
                 {filteredStudents.map((student, index) => (
@@ -225,11 +225,6 @@ export function SearchableStudentSelect({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-medium truncate text-sm">{student.display_name}</span>
-                        {searchQuery && student.score >= 75 && (
-                          <Badge variant="outline" className="text-xs">
-                            {student.score}%
-                          </Badge>
-                        )}
                       </div>
                       
                       <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">

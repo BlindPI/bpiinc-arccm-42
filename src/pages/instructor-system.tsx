@@ -1451,24 +1451,30 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
 
       {/* Enrollment Modal */}
       <Dialog open={showEnrollmentModal} onOpenChange={setShowEnrollmentModal}>
-        <DialogContent className="max-w-6xl w-[95vw] max-h-[95vh] overflow-hidden">
+        <DialogContent className="max-w-7xl w-[90vw] max-h-[90vh] overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Enroll Student in Session</DialogTitle>
+            <DialogTitle className="text-xl">Enroll Student in Session</DialogTitle>
+            {selectedSession && (
+              <p className="text-sm text-muted-foreground">
+                Session: {selectedSession.title} • {selectedSession.booking_date} • {selectedSession.start_time} - {selectedSession.end_time}
+              </p>
+            )}
           </DialogHeader>
           
-          <div className="space-y-4">
-            <div>
-              <Label>Select Student *</Label>
+          <div className="space-y-6 flex-1 overflow-hidden">
+            <div className="space-y-2">
+              <Label className="text-base font-medium">Select Student *</Label>
               <SearchableStudentSelect
                 value={enrollmentForm.student_id}
                 onValueChange={(value) => setEnrollmentForm({...enrollmentForm, student_id: value})}
                 students={students}
                 placeholder="Search for a student to enroll..."
+                className="w-full"
               />
             </div>
             
-            <div>
-              <Label>Select Course (Optional)</Label>
+            <div className="space-y-2">
+              <Label className="text-base font-medium">Select Course (Optional)</Label>
               <Select
                 value={enrollmentForm.course_id}
                 onValueChange={(value) => setEnrollmentForm({...enrollmentForm, course_id: value})}
@@ -1492,9 +1498,10 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
             </div>
           </div>
           
-          <div className="flex gap-2 mt-4">
+          <div className="flex gap-3 mt-6 pt-4 border-t">
             <Button
               variant="outline"
+              size="lg"
               onClick={() => {
                 setShowEnrollmentModal(false);
                 setEnrollmentForm({ student_id: '', course_id: '' });
@@ -1503,6 +1510,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
               Cancel
             </Button>
             <Button
+              size="lg"
               onClick={() => {
                 if (selectedSession && enrollmentForm.student_id) {
                   enrollStudentInSession(
