@@ -21,14 +21,10 @@ const NAVIGATION_GROUPS = {
   'Provider Management': ['Provider Management'],
   'Training Management': [
     'Instructor System',
-    'Training Sessions',
-    'Student Management',
-    'Instructor Management',
     'Multi-Course Builder',
     'Teams',
     'Locations',
-    'Courses',
-    'Training Management'
+    'Courses'
   ],
   'Certificates': ['Certificates', 'Certificate Analytics', 'Rosters'],
   'CRM': [

@@ -61,11 +61,8 @@ const navigation = [
   { name: 'Role Management', href: '/role-management', icon: Shield, group: 'User Management' },
   { name: 'Supervision', href: '/supervision', icon: UserCheck, group: 'User Management' },
   
-  // Training Management Group - Expanded System (matching AppSidebar)
+  // Training Management Group - Corrected (matching AppSidebar)
   { name: 'Instructor System', href: '/instructor-system', icon: GraduationCap, group: 'Training Management' },
-  { name: 'Training Sessions', href: '/instructor-system?tab=sessions', icon: ClipboardList, group: 'Training Management' },
-  { name: 'Student Management', href: '/instructor-system?tab=students', icon: Users, group: 'Training Management' },
-  { name: 'Instructor Management', href: '/instructor-system?tab=instructors', icon: UserCheck, group: 'Training Management' },
   { name: 'Multi-Course Builder', href: '/multi-course-training', icon: BookOpen, group: 'Training Management' },
   { name: 'Teams', href: '/teams', icon: UsersIcon, group: 'Training Management' },
   { name: 'Locations', href: '/locations', icon: MapPin, group: 'Training Management' },
