@@ -46,7 +46,8 @@ export function SearchableStudentSelect({
   } = useStudentSearch({
     students,
     debounceMs: 300,
-    maxResults: 100
+    maxResults: 100,
+    minScore: 100
   });
 
   const {
@@ -200,7 +201,7 @@ export function SearchableStudentSelect({
           </div>
 
           {/* Results list */}
-          <ScrollArea className="max-h-96">
+          <ScrollArea className="max-h-[60vh]">
             {hasResults ? (
               <div className="p-1">
                 {filteredStudents.map((student, index) => (
@@ -224,7 +225,7 @@ export function SearchableStudentSelect({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-medium truncate">{student.display_name}</span>
-                        {searchQuery && student.score > 0 && (
+                        {searchQuery && student.score >= 75 && (
                           <Badge variant="outline" className="text-xs">
                             {student.score}%
                           </Badge>

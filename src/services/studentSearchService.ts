@@ -56,6 +56,9 @@ function calculateFieldScore(fieldValue: string, searchQuery: string): number {
   const field = fieldValue.toLowerCase().trim();
   const query = searchQuery.toLowerCase().trim();
   
+  // Don't match if query is just repeated characters or too short
+  if (query.length < 2 || /^(.)\1+$/.test(query)) return 0;
+  
   // Exact match
   if (field === query) return SCORING.EXACT_MATCH;
   
@@ -65,10 +68,21 @@ function calculateFieldScore(fieldValue: string, searchQuery: string): number {
   // Contains match
   if (field.includes(query)) return SCORING.CONTAINS_MATCH;
   
-  // Fuzzy match - check if all query characters exist in field
-  if (containsAllCharacters(field, query)) return SCORING.FUZZY_MATCH;
+  // Only do fuzzy matching for reasonable queries (3+ chars, not repetitive)
+  if (query.length >= 3 && !isRepeatedChars(query)) {
+    if (containsAllCharacters(field, query)) return SCORING.FUZZY_MATCH;
+  }
   
   return 0;
+}
+
+/**
+ * Check if string is mostly repeated characters
+ */
+function isRepeatedChars(str: string): boolean {
+  const chars = str.split('');
+  const uniqueChars = new Set(chars);
+  return uniqueChars.size === 1 || uniqueChars.size < str.length / 2;
 }
 
 /**
