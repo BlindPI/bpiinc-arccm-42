@@ -1,128 +1,382 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, Users, Clock, MapPin, BookOpen, TrendingUp, Plus } from 'lucide-react';
-import { CourseTemplateManager } from '@/components/training/CourseTemplateManager';
-import { MultiCourseSessionCreator } from '@/components/training/MultiCourseSessionCreator';
-import { ComponentProgressTracker } from '@/components/training/ComponentProgressTracker';
-import { MultiCourseTrainingService, SessionTemplate } from '@/services/multiCourseTraining';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  BookOpen,
+  Coffee,
+  Clock,
+  Users,
+  Plus,
+  X,
+  Save,
+  ArrowUp,
+  ArrowDown,
+  Utensils,
+  ClipboardCheck,
+  Activity
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
-interface Session {
+interface CourseComponent {
   id: string;
-  session_template_id: string;
-  session_date: string;
-  start_time: string;
-  status: string;
-  training_session_templates?: {
-    name: string;
-    code: string;
-  };
-  instructor_profiles?: {
-    user_id: string;
-    users: {
-      first_name: string;
-      last_name: string;
-      email: string;
-    };
-  };
-  locations?: {
-    name: string;
-    address: string;
-  };
+  type: 'COURSE' | 'BREAK' | 'LUNCH' | 'ASSESSMENT' | 'ACTIVITY';
+  name: string;
+  duration_minutes: number;
+  description?: string;
+  order: number;
 }
 
-interface DashboardStats {
-  totalTemplates: number;
-  activeSessions: number;
-  totalEnrollments: number;
-  completionRate: number;
+interface CourseTemplate {
+  id?: string;
+  name: string;
+  code: string;
+  description?: string;
+  duration_hours: number;
+  max_students: number;
+  required_specialties?: string[];
+  course_components?: CourseComponent[];
+  is_active: boolean;
 }
+
+// Component Item without drag and drop
+const ComponentItem: React.FC<{
+  component: CourseComponent;
+  index: number;
+  totalComponents: number;
+  onUpdate: (id: string, updates: Partial<CourseComponent>) => void;
+  onDelete: (id: string) => void;
+  onMoveUp: (index: number) => void;
+  onMoveDown: (index: number) => void;
+}> = ({ component, index, totalComponents, onUpdate, onDelete, onMoveUp, onMoveDown }) => {
+
+  const getIcon = () => {
+    switch (component.type) {
+      case 'COURSE': return <BookOpen className="h-4 w-4 text-blue-600" />;
+      case 'BREAK': return <Coffee className="h-4 w-4 text-orange-600" />;
+      case 'LUNCH': return <Utensils className="h-4 w-4 text-green-600" />;
+      case 'ASSESSMENT': return <ClipboardCheck className="h-4 w-4 text-purple-600" />;
+      case 'ACTIVITY': return <Activity className="h-4 w-4 text-red-600" />;
+      default: return <BookOpen className="h-4 w-4" />;
+    }
+  };
+
+  const getTypeColor = () => {
+    switch (component.type) {
+      case 'COURSE': return 'border-l-blue-500';
+      case 'BREAK': return 'border-l-orange-500';
+      case 'LUNCH': return 'border-l-green-500';
+      case 'ASSESSMENT': return 'border-l-purple-500';
+      case 'ACTIVITY': return 'border-l-red-500';
+      default: return 'border-l-gray-500';
+    }
+  };
+
+  return (
+    <Card className={`border-l-4 ${getTypeColor()}`}>
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex flex-col gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => onMoveUp(index)}
+              disabled={index === 0}
+              className="h-6 w-6 p-0"
+            >
+              <ArrowUp className="h-3 w-3" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => onMoveDown(index)}
+              disabled={index === totalComponents - 1}
+              className="h-6 w-6 p-0"
+            >
+              <ArrowDown className="h-3 w-3" />
+            </Button>
+          </div>
+          
+          <div className="flex-1 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {getIcon()}
+                <Input
+                  value={component.name}
+                  onChange={(e) => onUpdate(component.id, { name: e.target.value })}
+                  className="font-medium text-sm h-8 min-w-[200px]"
+                  placeholder="Component name"
+                />
+                <Badge variant="secondary" className="text-xs">
+                  {component.type}
+                </Badge>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onDelete(component.id)}
+                className="text-red-600 hover:text-red-700"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Duration (minutes)</Label>
+                <Input
+                  type="number"
+                  value={component.duration_minutes}
+                  onChange={(e) => onUpdate(component.id, { duration_minutes: parseInt(e.target.value) || 0 })}
+                  className="h-8"
+                  min="1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Type</Label>
+                <Select
+                  value={component.type}
+                  onValueChange={(value: any) => onUpdate(component.id, { type: value })}
+                >
+                  <SelectTrigger className="h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="COURSE">Course</SelectItem>
+                    <SelectItem value="BREAK">Break</SelectItem>
+                    <SelectItem value="LUNCH">Lunch</SelectItem>
+                    <SelectItem value="ASSESSMENT">Assessment</SelectItem>
+                    <SelectItem value="ACTIVITY">Activity</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-xs">Description</Label>
+              <Textarea
+                value={component.description || ''}
+                onChange={(e) => onUpdate(component.id, { description: e.target.value })}
+                className="h-16 text-sm"
+                placeholder="Optional description"
+              />
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 const MultiCourseTrainingHub: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [templates, setTemplates] = useState<SessionTemplate[]>([]);
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [courses, setCourses] = useState<any[]>([]);
-  const [instructors, setInstructors] = useState<any[]>([]);
-  const [locations, setLocations] = useState<any[]>([]);
-  const [stats, setStats] = useState<DashboardStats>({
-    totalTemplates: 0,
-    activeSessions: 0,
-    totalEnrollments: 0,
-    completionRate: 0
-  });
+  const [templates, setTemplates] = useState<CourseTemplate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showSessionCreator, setShowSessionCreator] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<CourseTemplate | undefined>();
+  
+  const [formData, setFormData] = useState<CourseTemplate>({
+    name: '',
+    code: '',
+    description: '',
+    duration_hours: 8,
+    max_students: 18,
+    required_specialties: [],
+    course_components: [],
+    is_active: true
+  });
+  
+  const [components, setComponents] = useState<CourseComponent[]>([]);
+  const [newSpecialty, setNewSpecialty] = useState('');
+  const [formLoading, setFormLoading] = useState(false);
 
   useEffect(() => {
-    loadDashboardData();
+    loadTemplates();
   }, []);
 
-  const loadDashboardData = async () => {
+  const loadTemplates = async () => {
     try {
       setLoading(true);
-      
-      // Load all required data
-      const [templatesData, sessionsData, coursesData, instructorsData, locationsData] = await Promise.all([
-        // Load course templates from the new simple table
-        (supabase as any).from('course_templates').select('*').then((result: any) => result.data || []),
-        MultiCourseTrainingService.getMultiCourseSessions(),
-        MultiCourseTrainingService.getCourses(),
-        MultiCourseTrainingService.getInstructors(),
-        MultiCourseTrainingService.getLocations()
-      ]);
-      
-      setTemplates(templatesData || []);
-      setSessions(sessionsData || []);
-      setCourses(coursesData || []);
-      setInstructors(instructorsData || []);
-      setLocations(locationsData || []);
-      
-      // Calculate stats
-      const totalTemplates = templatesData?.length || 0;
-      const activeSessions = sessionsData?.filter(s => s.status === 'scheduled')?.length || 0;
-      const totalEnrollments = 0; // Would need to count from enrollments table
-      const completionRate = 85; // This would come from progress tracking in real implementation
-      
-      setStats({
-        totalTemplates,
-        activeSessions,
-        totalEnrollments,
-        completionRate
-      });
+      const { data, error } = await (supabase as any)
+        .from('course_templates')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setTemplates(data || []);
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      console.error('Error loading course templates:', error);
+      toast.error('Failed to load course templates');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSessionCreated = () => {
-    loadDashboardData();
-    setShowSessionCreator(false);
-    setActiveTab('dashboard');
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      code: '',
+      description: '',
+      duration_hours: 8,
+      max_students: 18,
+      required_specialties: [],
+      course_components: [],
+      is_active: true
+    });
+    setComponents([]);
+    setEditingTemplate(undefined);
+    setShowForm(false);
   };
 
-  const handleSaveSession = async (sessionData: any) => {
-    try {
-      await MultiCourseTrainingService.createSessionFromTemplate(sessionData.sessionTemplateId, sessionData);
-      handleSessionCreated();
-    } catch (error) {
-      console.error('Error creating session:', error);
-    }
+  const handleEdit = (template: CourseTemplate) => {
+    setFormData({ ...template });
+    setComponents(template.course_components || []);
+    setEditingTemplate(template);
+    setShowForm(true);
   };
 
-  const getSessionInfo = (session: Session) => {
-    return {
-      templateName: session.training_session_templates?.name || 'Unknown Template',
-      instructorName: session.instructor_profiles?.users
-        ? `${session.instructor_profiles.users.first_name} ${session.instructor_profiles.users.last_name}`
-        : 'Unassigned',
-      locationName: session.locations?.name || 'TBD'
+  const addComponent = (type: CourseComponent['type']) => {
+    const defaultDurations = {
+      'COURSE': 120,
+      'BREAK': 15,
+      'LUNCH': 60,
+      'ASSESSMENT': 30,
+      'ACTIVITY': 45
     };
+
+    const defaultNames = {
+      'COURSE': 'New Course',
+      'BREAK': 'Break',
+      'LUNCH': 'Lunch Break',
+      'ASSESSMENT': 'Assessment',
+      'ACTIVITY': 'Activity'
+    };
+
+    const newComponent: CourseComponent = {
+      id: `comp_${Date.now()}`,
+      type,
+      name: defaultNames[type],
+      duration_minutes: defaultDurations[type],
+      description: '',
+      order: components.length + 1
+    };
+
+    setComponents(prev => [...prev, newComponent]);
+    calculateTotalDuration([...components, newComponent]);
+  };
+
+  const updateComponent = (id: string, updates: Partial<CourseComponent>) => {
+    const updatedComponents = components.map(comp =>
+      comp.id === id ? { ...comp, ...updates } : comp
+    );
+    setComponents(updatedComponents);
+    calculateTotalDuration(updatedComponents);
+  };
+
+  const deleteComponent = (id: string) => {
+    const updatedComponents = components.filter(comp => comp.id !== id);
+    setComponents(updatedComponents);
+    calculateTotalDuration(updatedComponents);
+  };
+
+  const moveComponentUp = (index: number) => {
+    if (index === 0) return;
+    const newComponents = [...components];
+    [newComponents[index], newComponents[index - 1]] = [newComponents[index - 1], newComponents[index]];
+    
+    // Update order numbers
+    newComponents.forEach((comp, idx) => {
+      comp.order = idx + 1;
+    });
+    
+    setComponents(newComponents);
+  };
+
+  const moveComponentDown = (index: number) => {
+    if (index === components.length - 1) return;
+    const newComponents = [...components];
+    [newComponents[index], newComponents[index + 1]] = [newComponents[index + 1], newComponents[index]];
+    
+    // Update order numbers
+    newComponents.forEach((comp, idx) => {
+      comp.order = idx + 1;
+    });
+    
+    setComponents(newComponents);
+  };
+
+  const calculateTotalDuration = (componentList: CourseComponent[]) => {
+    const totalMinutes = componentList.reduce((sum, comp) => sum + comp.duration_minutes, 0);
+    const totalHours = Math.round((totalMinutes / 60) * 100) / 100;
+    setFormData(prev => ({ ...prev, duration_hours: totalHours }));
+  };
+
+  const addSpecialty = () => {
+    if (!newSpecialty.trim()) return;
+    setFormData(prev => ({
+      ...prev,
+      required_specialties: [...(prev.required_specialties || []), newSpecialty.trim()]
+    }));
+    setNewSpecialty('');
+  };
+
+  const removeSpecialty = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      required_specialties: prev.required_specialties?.filter((_, i) => i !== index) || []
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormLoading(true);
+
+    try {
+      if (!formData.name.trim() || !formData.code.trim()) {
+        toast.error('Please fill in name and code');
+        return;
+      }
+
+      const templateData = {
+        ...formData,
+        course_components: components,
+        code: formData.code.toUpperCase(),
+      };
+
+      if (editingTemplate?.id) {
+        const { error } = await (supabase as any)
+          .from('course_templates')
+          .update(templateData)
+          .eq('id', editingTemplate.id);
+
+        if (error) throw error;
+        toast.success('Course template updated successfully');
+      } else {
+        const { error } = await (supabase as any)
+          .from('course_templates')
+          .insert([templateData]);
+
+        if (error) throw error;
+        toast.success('Course template created successfully');
+      }
+
+      resetForm();
+      loadTemplates();
+    } catch (error: any) {
+      console.error('Error saving course template:', error);
+      if (error.code === '23505') {
+        toast.error('A course template with this code already exists');
+      } else {
+        toast.error('Failed to save course template');
+      }
+    } finally {
+      setFormLoading(false);
+    }
   };
 
   const formatDuration = (minutes: number) => {
@@ -131,20 +385,14 @@ const MultiCourseTrainingHub: React.FC = () => {
     return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
   };
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'scheduled': return 'default';
-      case 'in_progress': return 'secondary';
-      case 'completed': return 'outline';
-      case 'cancelled': return 'destructive';
-      default: return 'default';
-    }
+  const getTotalMinutes = () => {
+    return components.reduce((sum, comp) => sum + comp.duration_minutes, 0);
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Loading multi-course training data...</div>
+        <div className="text-lg">Loading course templates...</div>
       </div>
     );
   }
@@ -153,477 +401,280 @@ const MultiCourseTrainingHub: React.FC = () => {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Multi-Course Training Hub</h1>
+          <h1 className="text-3xl font-bold">Course Template Builder</h1>
           <p className="text-muted-foreground">
-            Manage complex training sessions with multiple courses, breaks, and activities
+            Build multi-course training templates with visual timeline
           </p>
         </div>
-        <Button onClick={loadDashboardData} variant="outline">
+        <Button onClick={loadTemplates} variant="outline">
           Refresh Data
         </Button>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="templates">Templates</TabsTrigger>
-          <TabsTrigger value="sessions">Sessions</TabsTrigger>
-          <TabsTrigger value="progress">Progress</TabsTrigger>
-          <TabsTrigger value="create">Create</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="dashboard" className="space-y-6">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Templates</CardTitle>
-                <BookOpen className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalTemplates}</div>
-                <p className="text-xs text-muted-foreground">Active course templates</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Sessions</CardTitle>
-                <CalendarDays className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.activeSessions}</div>
-                <p className="text-xs text-muted-foreground">Scheduled sessions</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Enrollments</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalEnrollments}</div>
-                <p className="text-xs text-muted-foreground">Total student enrollments</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.completionRate}%</div>
-                <p className="text-xs text-muted-foreground">Average completion</p>
-              </CardContent>
-            </Card>
+      {!showForm ? (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-xl font-semibold">Existing Templates</h3>
+              <p className="text-sm text-muted-foreground">
+                Manage your course templates
+              </p>
+            </div>
+            <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              New Template
+            </Button>
           </div>
 
-          {/* Recent Templates */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Templates</CardTitle>
-              <CardDescription>Latest multi-course training templates</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {templates.slice(0, 5).map((template) => (
-                  <div key={template.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="space-y-1">
-                      <h4 className="font-medium">{template.name}</h4>
-                      <p className="text-sm text-muted-foreground">{template.description}</p>
-                      <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                        <span className="flex items-center">
-                          <Clock className="w-3 h-3 mr-1" />
-                          {template.duration_hours ? `${template.duration_hours}h` : 'Duration TBD'}
-                        </span>
-                        <span>Max students: {template.max_students || 12}</span>
+          <div className="grid gap-4">
+            {templates.length > 0 ? (
+              templates.map((template) => (
+                <Card key={template.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-2 flex-1">
+                        <div className="flex items-center gap-3">
+                          <h4 className="font-semibold text-lg">{template.name}</h4>
+                          <Badge variant="outline">{template.code}</Badge>
+                          <Badge variant={template.is_active ? "default" : "secondary"}>
+                            {template.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                        </div>
+                        {template.description && (
+                          <p className="text-muted-foreground">{template.description}</p>
+                        )}
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span>Duration: {template.duration_hours} hours</span>
+                          <span>Max Students: {template.max_students}</span>
+                          <span>Components: {template.course_components?.length || 0}</span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex gap-2">
                       <Button
+                        variant="outline"
                         size="sm"
-                        onClick={() => {
-                          setShowSessionCreator(true);
-                        }}
+                        onClick={() => handleEdit(template)}
                       >
-                        Use Template
+                        Edit Template
                       </Button>
                     </div>
-                  </div>
-                ))}
-                {templates.length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">
-                    No templates found. Create your first template in the Templates tab.
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <BookOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <h3 className="text-lg font-medium mb-2">No course templates found</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Create your first course template to get started.
                   </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Upcoming Sessions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Upcoming Sessions</CardTitle>
-              <CardDescription>Scheduled multi-course training sessions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {sessions.slice(0, 5).map((session) => {
-                  const sessionInfo = getSessionInfo(session);
-                  return (
-                    <div key={session.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="space-y-1">
-                        <h4 className="font-medium">{sessionInfo.templateName}</h4>
-                        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                          <span className="flex items-center">
-                            <CalendarDays className="w-3 h-3 mr-1" />
-                            {new Date(session.session_date).toLocaleDateString()}
-                          </span>
-                          <span className="flex items-center">
-                            <Clock className="w-3 h-3 mr-1" />
-                            {session.start_time}
-                          </span>
-                          <span className="flex items-center">
-                            <MapPin className="w-3 h-3 mr-1" />
-                            {sessionInfo.locationName}
-                          </span>
-                          <span className="flex items-center">
-                            <Users className="w-3 h-3 mr-1" />
-                            Instructor: {sessionInfo.instructorName}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant={getStatusBadgeVariant(session.status)}>
-                          {session.status}
-                        </Badge>
-                        <Button variant="outline" size="sm">
-                          View Details
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-                {sessions.length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">
-                    No sessions scheduled. Create your first session in the Sessions tab.
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="templates" className="space-y-6">
-          <CourseTemplateManager />
-        </TabsContent>
-
-        <TabsContent value="sessions" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Create Training Session</CardTitle>
-              <CardDescription>
-                Schedule a new training session from an existing template
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-medium">Schedule New Session</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Create sessions from existing templates
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => setShowSessionCreator(true)}
-                    className="flex items-center gap-2"
-                    disabled={templates.length === 0}
-                  >
-                    <Plus className="h-4 w-4" />
-                    New Session
+                  <Button onClick={() => setShowForm(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Template
                   </Button>
-                </div>
-
-                <MultiCourseSessionCreator
-                  isOpen={showSessionCreator}
-                  onClose={() => setShowSessionCreator(false)}
-                  onSave={handleSaveSession}
-                  templates={templates.map(t => ({
-                    id: t.id,
-                    name: t.name,
-                    code: t.code,
-                    description: t.description || '',
-                    templateType: t.template_type,
-                    totalDuration: t.total_duration_minutes,
-                    estimatedBreakMinutes: t.estimated_break_minutes,
-                    maxParticipants: t.max_participants || 12,
-                    requiredInstructors: t.required_instructors,
-                    requiredRooms: t.required_rooms,
-                    requiredEquipment: t.required_equipment,
-                    components: []
-                  }))}
-                  instructors={instructors.map(i => ({
-                    id: i.id,
-                    name: `${i.users?.first_name || ''} ${i.users?.last_name || ''}`.trim(),
-                    email: i.users?.email || '',
-                    specializations: i.specializations || [],
-                    isAvailable: i.is_active
-                  }))}
-                  locations={locations.map(l => ({
-                    id: l.id,
-                    name: l.name,
-                    address: l.address || '',
-                    capacity: l.capacity || 12,
-                    equipment: l.equipment || []
-                  }))}
-                />
-
-                {!showSessionCreator && (
-                  <div className="space-y-3">
-                    {sessions.length > 0 ? (
-                      <div>
-                        <h4 className="font-medium mb-3">Recent Sessions</h4>
-                        {sessions.slice(0, 5).map(session => {
-                          const sessionInfo = getSessionInfo(session);
-                          return (
-                            <div key={session.id} className="flex items-center justify-between p-4 border rounded-lg mb-3">
-                              <div className="space-y-1">
-                                <h5 className="font-medium text-sm">{sessionInfo.templateName}</h5>
-                                <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                                  <span className="flex items-center">
-                                    <CalendarDays className="w-3 h-3 mr-1" />
-                                    {new Date(session.session_date).toLocaleDateString()}
-                                  </span>
-                                  <span className="flex items-center">
-                                    <Clock className="w-3 h-3 mr-1" />
-                                    {session.start_time}
-                                  </span>
-                                  <span className="flex items-center">
-                                    <MapPin className="w-3 h-3 mr-1" />
-                                    {sessionInfo.locationName}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Badge variant={getStatusBadgeVariant(session.status)}>
-                                  {session.status}
-                                </Badge>
-                                <Button variant="outline" size="sm">
-                                  View Details
-                                </Button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <CalendarDays className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                        <p>No sessions scheduled</p>
-                        <p className="text-sm">
-                          {templates.length === 0
-                            ? 'Create templates first to schedule sessions'
-                            : 'Create your first session from an existing template'}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="progress" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Progress Tracking</CardTitle>
-              <CardDescription>
-                Monitor student progress through multi-course training sessions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {sessions.length > 0 ? (
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="font-medium">Active Sessions</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Select a session to track component-level progress
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {sessions.filter(s => ['scheduled', 'in_progress'].includes(s.status)).map(session => {
-                      const sessionInfo = getSessionInfo(session);
-                      return (
-                        <div key={session.id} className="p-4 border rounded-lg">
-                          <div className="flex items-center justify-between mb-3">
-                            <div>
-                              <h4 className="font-medium">{sessionInfo.templateName}</h4>
-                              <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                                <span className="flex items-center">
-                                  <CalendarDays className="w-3 h-3 mr-1" />
-                                  {new Date(session.session_date).toLocaleDateString()}
-                                </span>
-                                <span className="flex items-center">
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  {session.start_time}
-                                </span>
-                                <span className="flex items-center">
-                                  <MapPin className="w-3 h-3 mr-1" />
-                                  {sessionInfo.locationName}
-                                </span>
-                                <span className="flex items-center">
-                                  <Users className="w-3 h-3 mr-1" />
-                                  {sessionInfo.instructorName}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant={getStatusBadgeVariant(session.status)}>
-                                {session.status}
-                              </Badge>
-                            </div>
-                          </div>
-                          
-                          {/* Progress tracker integration */}
-                          <ComponentProgressTracker
-                            sessionId={session.id}
-                            sessionData={{
-                              id: session.id,
-                              title: sessionInfo.templateName,
-                              sessionDate: session.session_date,
-                              startTime: session.start_time,
-                              endTime: '', // Would need end time from session
-                              instructorName: sessionInfo.instructorName,
-                              locationName: sessionInfo.locationName,
-                              templateName: sessionInfo.templateName,
-                              status: session.status
-                            }}
-                            studentProgress={[]} // Would be loaded from enrollments
-                            onUpdateProgress={(enrollmentId, componentId, updates) => {
-                              // Handle progress updates
-                              console.log('Progress update:', { enrollmentId, componentId, updates });
-                            }}
-                            onBulkUpdate={(updates) => {
-                              // Handle bulk updates
-                              console.log('Bulk update:', updates);
-                            }}
-                            isInstructor={true}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p>No active sessions to track</p>
-                    <p className="text-sm">Schedule sessions to monitor student progress</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="create" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Template Configuration */}
+          <div className="lg:col-span-1 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Quick Template</CardTitle>
-                <CardDescription>
-                  Create a new training template with multiple courses
-                </CardDescription>
+                <CardTitle>Template Details</CardTitle>
+                <CardDescription>Basic information for your course template</CardDescription>
               </CardHeader>
-              <CardContent>
-                <Button 
-                  onClick={() => setActiveTab('templates')} 
-                  className="w-full"
-                  size="lg"
-                >
-                  <BookOpen className="w-4 h-4 mr-2" />
-                  Create Template
-                </Button>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Template Name *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g., Full Day CPR & First Aid"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="code">Template Code *</Label>
+                  <Input
+                    id="code"
+                    value={formData.code}
+                    onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
+                    placeholder="e.g., CPR-FA-FULL"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Describe this training template..."
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="max_students">Max Students</Label>
+                  <Input
+                    id="max_students"
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={formData.max_students}
+                    onChange={(e) => setFormData(prev => ({ ...prev, max_students: parseInt(e.target.value) }))}
+                  />
+                </div>
+
+                <div>
+                  <Label>Required Specialties</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={newSpecialty}
+                      onChange={(e) => setNewSpecialty(e.target.value)}
+                      placeholder="Add specialty..."
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSpecialty())}
+                    />
+                    <Button type="button" variant="outline" size="sm" onClick={addSpecialty}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {formData.required_specialties?.map((specialty, index) => (
+                      <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                        {specialty}
+                        <button
+                          type="button"
+                          onClick={() => removeSpecialty(index)}
+                          className="ml-1 hover:text-red-600"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="is_active"
+                    checked={formData.is_active}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: !!checked }))}
+                  />
+                  <Label htmlFor="is_active">Is Active</Label>
+                </div>
               </CardContent>
             </Card>
 
+            {/* Timeline Summary */}
             <Card>
               <CardHeader>
-                <CardTitle>Schedule Session</CardTitle>
-                <CardDescription>
-                  Schedule a new training session from existing templates
-                </CardDescription>
+                <CardTitle>Timeline Summary</CardTitle>
               </CardHeader>
               <CardContent>
-                <Button 
-                  onClick={() => setActiveTab('sessions')} 
-                  className="w-full"
-                  size="lg"
-                  variant="outline"
-                >
-                  <CalendarDays className="w-4 h-4 mr-2" />
-                  Schedule Session
-                </Button>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>Total Duration:</span>
+                    <span className="font-medium">{formatDuration(getTotalMinutes())}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Components:</span>
+                    <span className="font-medium">{components.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Break Time:</span>
+                    <span className="font-medium">
+                      {formatDuration(components.filter(c => c.type === 'BREAK' || c.type === 'LUNCH').reduce((sum, c) => sum + c.duration_minutes, 0))}
+                    </span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>System Features</CardTitle>
-              <CardDescription>
-                Key capabilities of the multi-course training system
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Multi-Course Templates</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Create reusable templates with courses, breaks, and activities in sequence
-                  </p>
+          {/* Component Builder */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  Course Components Timeline
+                  <Badge variant="outline">{components.length} components</Badge>
+                </CardTitle>
+                <CardDescription>
+                  Build your course timeline by adding components in sequence
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {/* Add Component Buttons */}
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium mb-3">Add Components</h4>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" onClick={() => addComponent('COURSE')}>
+                      <BookOpen className="h-4 w-4 mr-1" />
+                      Course
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => addComponent('BREAK')}>
+                      <Coffee className="h-4 w-4 mr-1" />
+                      Break
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => addComponent('LUNCH')}>
+                      <Utensils className="h-4 w-4 mr-1" />
+                      Lunch
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => addComponent('ASSESSMENT')}>
+                      <ClipboardCheck className="h-4 w-4 mr-1" />
+                      Assessment
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => addComponent('ACTIVITY')}>
+                      <Activity className="h-4 w-4 mr-1" />
+                      Activity
+                    </Button>
+                  </div>
                 </div>
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Progress Tracking</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Track student progress through each component with detailed status
-                  </p>
+
+                {/* Components List */}
+                <div className="space-y-3">
+                  {components.map((component, index) => (
+                    <ComponentItem
+                      key={component.id}
+                      component={component}
+                      index={index}
+                      totalComponents={components.length}
+                      onUpdate={updateComponent}
+                      onDelete={deleteComponent}
+                      onMoveUp={moveComponentUp}
+                      onMoveDown={moveComponentDown}
+                    />
+                  ))}
                 </div>
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Prerequisites</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Define course dependencies and validation requirements
-                  </p>
+
+                {components.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <Clock className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>No components added yet</p>
+                    <p className="text-sm">Add courses, breaks, or activities above to build your timeline</p>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-2 mt-6 pt-6 border-t">
+                  <Button onClick={handleSubmit} disabled={formLoading}>
+                    <Save className="h-4 w-4 mr-2" />
+                    {formLoading ? 'Saving...' : 'Save Template'}
+                  </Button>
+                  <Button variant="outline" onClick={resetForm}>
+                    Cancel
+                  </Button>
                 </div>
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Resource Management</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Allocate instructors, rooms, and equipment per session
-                  </p>
-                </div>
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Flexible Scheduling</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Support breaks, activities, and complex time arrangements
-                  </p>
-                </div>
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Security & Access</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Role-based access control with provider isolation
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
