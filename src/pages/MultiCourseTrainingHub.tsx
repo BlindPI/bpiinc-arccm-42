@@ -4,10 +4,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CalendarDays, Users, Clock, MapPin, BookOpen, TrendingUp, Plus } from 'lucide-react';
-import { MultiCourseTemplateBuilder } from '@/components/training/MultiCourseTemplateBuilder';
+import { CourseTemplateManager } from '@/components/training/CourseTemplateManager';
 import { MultiCourseSessionCreator } from '@/components/training/MultiCourseSessionCreator';
 import { ComponentProgressTracker } from '@/components/training/ComponentProgressTracker';
 import { MultiCourseTrainingService, SessionTemplate } from '@/services/multiCourseTraining';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Session {
   id: string;
@@ -54,9 +55,7 @@ const MultiCourseTrainingHub: React.FC = () => {
     completionRate: 0
   });
   const [loading, setLoading] = useState(true);
-  const [showTemplateBuilder, setShowTemplateBuilder] = useState(false);
   const [showSessionCreator, setShowSessionCreator] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState<SessionTemplate | undefined>();
 
   useEffect(() => {
     loadDashboardData();
@@ -68,7 +67,8 @@ const MultiCourseTrainingHub: React.FC = () => {
       
       // Load all required data
       const [templatesData, sessionsData, coursesData, instructorsData, locationsData] = await Promise.all([
-        MultiCourseTrainingService.getSessionTemplates(),
+        // Load course templates from the new simple table
+        (supabase as any).from('course_templates').select('*').then((result: any) => result.data || []),
         MultiCourseTrainingService.getMultiCourseSessions(),
         MultiCourseTrainingService.getCourses(),
         MultiCourseTrainingService.getInstructors(),
@@ -100,36 +100,10 @@ const MultiCourseTrainingHub: React.FC = () => {
     }
   };
 
-  const handleTemplateCreated = () => {
-    loadDashboardData();
-    setShowTemplateBuilder(false);
-    setEditingTemplate(undefined);
-    setActiveTab('dashboard');
-  };
-
   const handleSessionCreated = () => {
     loadDashboardData();
     setShowSessionCreator(false);
     setActiveTab('dashboard');
-  };
-
-  const handleTemplateEdit = (template: SessionTemplate) => {
-    setEditingTemplate(template);
-    setShowTemplateBuilder(true);
-    setActiveTab('templates');
-  };
-
-  const handleSaveTemplate = async (templateData: any) => {
-    try {
-      if (editingTemplate) {
-        await MultiCourseTrainingService.updateSessionTemplate(editingTemplate.id, templateData);
-      } else {
-        await MultiCourseTrainingService.createSessionTemplate(templateData);
-      }
-      handleTemplateCreated();
-    } catch (error) {
-      console.error('Error saving template:', error);
-    }
   };
 
   const handleSaveSession = async (sessionData: any) => {
@@ -139,10 +113,6 @@ const MultiCourseTrainingHub: React.FC = () => {
     } catch (error) {
       console.error('Error creating session:', error);
     }
-  };
-
-  const getTemplateComponentCount = (template: SessionTemplate) => {
-    return template.session_template_components?.length || 0;
   };
 
   const getSessionInfo = (session: Session) => {
@@ -266,19 +236,12 @@ const MultiCourseTrainingHub: React.FC = () => {
                       <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                         <span className="flex items-center">
                           <Clock className="w-3 h-3 mr-1" />
-                          {formatDuration(template.total_duration_minutes)}
+                          {template.duration_hours ? `${template.duration_hours}h` : 'Duration TBD'}
                         </span>
-                        <span>{getTemplateComponentCount(template)} components</span>
+                        <span>Max students: {template.max_students || 12}</span>
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleTemplateEdit(template)}
-                      >
-                        Edit
-                      </Button>
                       <Button
                         size="sm"
                         onClick={() => {
@@ -354,113 +317,7 @@ const MultiCourseTrainingHub: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="templates" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Training Session Templates</CardTitle>
-              <CardDescription>
-                Create reusable templates for complex multi-course training sessions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-medium">Template Management</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Build reusable multi-course session templates
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => setShowTemplateBuilder(true)}
-                    className="flex items-center gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    New Template
-                  </Button>
-                </div>
-
-                {showTemplateBuilder && (
-                  <MultiCourseTemplateBuilder
-                    courses={courses.map(c => ({
-                      id: c.id,
-                      name: c.name,
-                      code: c.code,
-                      duration: c.duration_hours * 60 // Convert hours to minutes
-                    }))}
-                    template={editingTemplate ? {
-                      id: editingTemplate.id,
-                      name: editingTemplate.name,
-                      code: editingTemplate.code,
-                      description: editingTemplate.description || '',
-                      templateType: editingTemplate.template_type,
-                      totalDuration: editingTemplate.total_duration_minutes,
-                      estimatedBreakMinutes: editingTemplate.estimated_break_minutes,
-                      maxParticipants: editingTemplate.max_participants || 12,
-                      isActive: editingTemplate.is_active,
-                      isPublic: editingTemplate.is_public,
-                      requiresApproval: editingTemplate.requires_approval,
-                      requiredInstructors: editingTemplate.required_instructors,
-                      requiredRooms: editingTemplate.required_rooms,
-                      requiredEquipment: editingTemplate.required_equipment,
-                      components: []
-                    } : undefined}
-                    onSave={handleSaveTemplate}
-                    onCancel={() => {
-                      setShowTemplateBuilder(false);
-                      setEditingTemplate(undefined);
-                    }}
-                  />
-                )}
-
-                {!showTemplateBuilder && (
-                  <div className="space-y-3">
-                    {templates.length > 0 ? (
-                      templates.map((template) => (
-                        <div key={template.id} className="flex items-center justify-between p-4 border rounded-lg">
-                          <div className="space-y-1">
-                            <h4 className="font-medium">{template.name}</h4>
-                            <p className="text-sm text-muted-foreground">{template.description}</p>
-                            <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                              <span className="flex items-center">
-                                <Clock className="w-3 h-3 mr-1" />
-                                {formatDuration(template.total_duration_minutes)}
-                              </span>
-                              <span>{getTemplateComponentCount(template)} components</span>
-                              <Badge variant="outline">{template.template_type}</Badge>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleTemplateEdit(template)}
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => {
-                                setShowSessionCreator(true);
-                                setActiveTab('sessions');
-                              }}
-                            >
-                              Use Template
-                            </Button>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <BookOpen className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                        <p>No templates found</p>
-                        <p className="text-sm">Create your first multi-course template above</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <CourseTemplateManager />
         </TabsContent>
 
         <TabsContent value="sessions" className="space-y-6">
