@@ -173,8 +173,8 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
     try {
       const { data, error } = await supabase
         .from('locations')
-        .select('id, name, address, city, state')
-        .eq('is_active', true)
+        .select('id, name, address, city, state, status')
+        .eq('status', 'ACTIVE')
         .order('name');
       
       if (error) throw error;
@@ -208,7 +208,28 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
 
   const createTrainingSession = async (sessionData: any) => {
     try {
-      const { data, error } = await supabase
+      // First try to create in training_sessions table which has location_id
+      const { data: trainingSession, error: trainingError } = await supabase
+        .from('training_sessions')
+        .insert([{
+          title: sessionData.title,
+          session_date: sessionData.session_date,
+          start_time: sessionData.start_time,
+          end_time: sessionData.end_time,
+          instructor_id: sessionData.instructor_id,
+          location_id: sessionData.location_id,
+          max_capacity: sessionData.max_capacity,
+          course_template: sessionData.course_template,
+          description: sessionData.description,
+          status: 'SCHEDULED'
+        }])
+        .select()
+        .single();
+      
+      if (trainingError) throw trainingError;
+      
+      // Also create corresponding availability booking
+      const { data: booking, error: bookingError } = await supabase
         .from('availability_bookings')
         .insert([{
           title: sessionData.title,
@@ -219,20 +240,21 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
           booking_type: 'training_session',
           status: 'confirmed',
           created_by: user?.id,
-          location_id: sessionData.location_id || locationId,
           description: sessionData.description
         }])
         .select()
         .single();
       
-      if (error) throw error;
+      if (bookingError) {
+        console.warn('Failed to create availability booking:', bookingError);
+      }
       
       await loadTrainingSessions();
       toast.success('Training session created successfully');
-      return data;
+      return trainingSession;
     } catch (error: any) {
       console.error('Error creating training session:', error);
-      toast.error('Failed to create training session');
+      toast.error(`Failed to create training session: ${error.message}`);
       throw error;
     }
   };
