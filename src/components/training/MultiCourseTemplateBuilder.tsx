@@ -21,7 +21,25 @@ import {
   Settings,
   Utensils
 } from 'lucide-react';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface TemplateComponent {
   id: string;
@@ -75,6 +93,155 @@ interface MultiCourseTemplateBuilderProps {
   onCancel: () => void;
 }
 
+// Sortable component for individual template components
+const SortableComponent: React.FC<{
+  component: TemplateComponent;
+  index: number;
+  componentTypeIcons: any;
+  formatDuration: (minutes: number) => string;
+  updateComponent: (componentId: string, updates: Partial<TemplateComponent>) => void;
+  removeComponent: (componentId: string) => void;
+}> = ({ component, index, componentTypeIcons, formatDuration, updateComponent, removeComponent }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: component.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const IconComponent = componentTypeIcons[component.type];
+
+  return (
+    <Card
+      ref={setNodeRef}
+      style={style}
+      className="border-l-4 border-l-blue-500"
+    >
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <div
+            {...attributes}
+            {...listeners}
+            className="mt-1 cursor-grab text-gray-400"
+          >
+            <GripVertical className="h-4 w-4" />
+          </div>
+          
+          <div className="flex-1 space-y-3">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2">
+                <IconComponent className="h-5 w-5 text-blue-600" />
+                <div>
+                  <h4 className="font-medium">{component.name}</h4>
+                  <p className="text-sm text-gray-600">
+                    {component.type} • {formatDuration(component.duration)}
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => removeComponent(component.id)}
+                className="text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor={`duration-${component.id}`} className="text-xs">Duration (minutes)</Label>
+                <Input
+                  id={`duration-${component.id}`}
+                  type="number"
+                  value={component.duration}
+                  onChange={(e) => updateComponent(component.id, { duration: parseInt(e.target.value) })}
+                  className="h-8"
+                />
+              </div>
+              {!component.isBreak && (
+                <div>
+                  <Label htmlFor={`participants-${component.id}`} className="text-xs">Max Participants</Label>
+                  <Input
+                    id={`participants-${component.id}`}
+                    type="number"
+                    value={component.maxParticipants || ''}
+                    onChange={(e) => updateComponent(component.id, { maxParticipants: parseInt(e.target.value) })}
+                    className="h-8"
+                    placeholder="Inherit"
+                  />
+                </div>
+              )}
+            </div>
+
+            {component.hasAssessment && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Assessment Type</Label>
+                  <Select
+                    value={component.assessmentType}
+                    onValueChange={(value: any) => updateComponent(component.id, { assessmentType: value })}
+                  >
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="WRITTEN">Written</SelectItem>
+                      <SelectItem value="PRACTICAL">Practical</SelectItem>
+                      <SelectItem value="BOTH">Both</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Minimum Score (%)</Label>
+                  <Input
+                    type="number"
+                    value={component.minScore || ''}
+                    onChange={(e) => updateComponent(component.id, { minScore: parseInt(e.target.value) })}
+                    className="h-8"
+                    placeholder="80"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-4 text-xs">
+              <div className="flex items-center gap-1">
+                <Switch
+                  checked={component.isMandatory}
+                  onCheckedChange={(checked) => updateComponent(component.id, { isMandatory: checked })}
+                  disabled={component.isBreak}
+                />
+                <Label>Mandatory</Label>
+              </div>
+              <div className="flex items-center gap-1">
+                <Switch
+                  checked={component.instructorRequired}
+                  onCheckedChange={(checked) => updateComponent(component.id, { instructorRequired: checked })}
+                />
+                <Label>Instructor</Label>
+              </div>
+              <div className="flex items-center gap-1">
+                <Switch
+                  checked={component.roomRequired}
+                  onCheckedChange={(checked) => updateComponent(component.id, { roomRequired: checked })}
+                />
+                <Label>Room</Label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 export const MultiCourseTemplateBuilder: React.FC<MultiCourseTemplateBuilderProps> = ({
   courses,
   template,
@@ -101,6 +268,13 @@ export const MultiCourseTemplateBuilder: React.FC<MultiCourseTemplateBuilderProp
 
   const [selectedCourse, setSelectedCourse] = useState<string>('');
   const [newEquipment, setNewEquipment] = useState<string>('');
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const componentTypeIcons = {
     COURSE: BookOpen,
@@ -197,23 +371,23 @@ export const MultiCourseTemplateBuilder: React.FC<MultiCourseTemplateBuilderProp
     });
   };
 
-  const handleDragEnd = (result: any) => {
-    if (!result.destination) return;
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
 
-    const items = Array.from(sessionTemplate.components);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
+    if (active.id !== over?.id) {
+      const oldIndex = sessionTemplate.components.findIndex((item) => item.id === active.id);
+      const newIndex = sessionTemplate.components.findIndex((item) => item.id === over?.id);
 
-    // Update sequence order
-    const updatedItems = items.map((item, index) => ({
-      ...item,
-      sequenceOrder: index + 1
-    }));
+      const updatedItems = arrayMove(sessionTemplate.components, oldIndex, newIndex).map((item, index) => ({
+        ...item,
+        sequenceOrder: index + 1
+      }));
 
-    setSessionTemplate(prev => ({
-      ...prev,
-      components: updatedItems
-    }));
+      setSessionTemplate(prev => ({
+        ...prev,
+        components: updatedItems
+      }));
+    }
   };
 
   const addEquipment = () => {
@@ -477,145 +651,30 @@ export const MultiCourseTemplateBuilder: React.FC<MultiCourseTemplateBuilderProp
             </div>
 
             {/* Components List */}
-            <DragDropContext onDragEnd={handleDragEnd}>
-              <Droppable droppableId="components">
-                {(provided) => (
-                  <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
-                    {sessionTemplate.components.map((component, index) => {
-                      const IconComponent = componentTypeIcons[component.type];
-                      
-                      return (
-                        <Draggable key={component.id} draggableId={component.id} index={index}>
-                          {(provided) => (
-                            <Card
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              className="border-l-4 border-l-blue-500"
-                            >
-                              <CardContent className="p-4">
-                                <div className="flex items-start gap-3">
-                                  <div
-                                    {...provided.dragHandleProps}
-                                    className="mt-1 cursor-grab text-gray-400"
-                                  >
-                                    <GripVertical className="h-4 w-4" />
-                                  </div>
-                                  
-                                  <div className="flex-1 space-y-3">
-                                    <div className="flex items-start justify-between">
-                                      <div className="flex items-center gap-2">
-                                        <IconComponent className="h-5 w-5 text-blue-600" />
-                                        <div>
-                                          <h4 className="font-medium">{component.name}</h4>
-                                          <p className="text-sm text-gray-600">
-                                            {component.type} • {formatDuration(component.duration)}
-                                          </p>
-                                        </div>
-                                      </div>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => removeComponent(component.id)}
-                                        className="text-red-600 hover:text-red-700"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-3">
-                                      <div>
-                                        <Label htmlFor={`duration-${component.id}`} className="text-xs">Duration (minutes)</Label>
-                                        <Input
-                                          id={`duration-${component.id}`}
-                                          type="number"
-                                          value={component.duration}
-                                          onChange={(e) => updateComponent(component.id, { duration: parseInt(e.target.value) })}
-                                          className="h-8"
-                                        />
-                                      </div>
-                                      {!component.isBreak && (
-                                        <div>
-                                          <Label htmlFor={`participants-${component.id}`} className="text-xs">Max Participants</Label>
-                                          <Input
-                                            id={`participants-${component.id}`}
-                                            type="number"
-                                            value={component.maxParticipants || ''}
-                                            onChange={(e) => updateComponent(component.id, { maxParticipants: parseInt(e.target.value) })}
-                                            className="h-8"
-                                            placeholder="Inherit"
-                                          />
-                                        </div>
-                                      )}
-                                    </div>
-
-                                    {component.hasAssessment && (
-                                      <div className="grid grid-cols-2 gap-3">
-                                        <div>
-                                          <Label className="text-xs">Assessment Type</Label>
-                                          <Select
-                                            value={component.assessmentType}
-                                            onValueChange={(value: any) => updateComponent(component.id, { assessmentType: value })}
-                                          >
-                                            <SelectTrigger className="h-8">
-                                              <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="WRITTEN">Written</SelectItem>
-                                              <SelectItem value="PRACTICAL">Practical</SelectItem>
-                                              <SelectItem value="BOTH">Both</SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                        <div>
-                                          <Label className="text-xs">Minimum Score (%)</Label>
-                                          <Input
-                                            type="number"
-                                            value={component.minScore || ''}
-                                            onChange={(e) => updateComponent(component.id, { minScore: parseInt(e.target.value) })}
-                                            className="h-8"
-                                            placeholder="80"
-                                          />
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    <div className="flex items-center gap-4 text-xs">
-                                      <div className="flex items-center gap-1">
-                                        <Switch
-                                          checked={component.isMandatory}
-                                          onCheckedChange={(checked) => updateComponent(component.id, { isMandatory: checked })}
-                                          disabled={component.isBreak}
-                                        />
-                                        <Label>Mandatory</Label>
-                                      </div>
-                                      <div className="flex items-center gap-1">
-                                        <Switch
-                                          checked={component.instructorRequired}
-                                          onCheckedChange={(checked) => updateComponent(component.id, { instructorRequired: checked })}
-                                        />
-                                        <Label>Instructor</Label>
-                                      </div>
-                                      <div className="flex items-center gap-1">
-                                        <Switch
-                                          checked={component.roomRequired}
-                                          onCheckedChange={(checked) => updateComponent(component.id, { roomRequired: checked })}
-                                        />
-                                        <Label>Room</Label>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          )}
-                        </Draggable>
-                      );
-                    })}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </DragDropContext>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={sessionTemplate.components.map(c => c.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-3">
+                  {sessionTemplate.components.map((component, index) => (
+                    <SortableComponent
+                      key={component.id}
+                      component={component}
+                      index={index}
+                      componentTypeIcons={componentTypeIcons}
+                      formatDuration={formatDuration}
+                      updateComponent={updateComponent}
+                      removeComponent={removeComponent}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
 
             {sessionTemplate.components.length === 0 && (
               <div className="text-center py-8 text-gray-500">
