@@ -71,6 +71,9 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
     description: ''
   });
 
+  // Selected template data for display
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+
   const [studentForm, setStudentForm] = useState({
     email: '',
     first_name: '',
@@ -280,6 +283,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
           end_time: sessionData.end_time,
           user_id: sessionData.instructor_id,
           course_sequence: sessionData.course_template ? { template_id: sessionData.course_template } : null,
+          course_id: sessionData.course_template || null, // Also store as course_id for backward compatibility
           booking_type: 'training_session',
           status: 'scheduled',
           created_by: user?.id,
@@ -312,6 +316,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
           end_time: updates.end_time,
           user_id: updates.instructor_id,
           course_sequence: updates.course_template ? { template_id: updates.course_template } : null,
+          course_id: updates.course_template || null, // Also store as course_id for backward compatibility
           location_id: updates.location_id,
           description: updates.description
         })
@@ -552,6 +557,41 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
       location_id: locationId || '',
       description: ''
     });
+    setSelectedTemplate(null);
+  };
+
+  // Handle template selection and auto-populate fields
+  const handleTemplateSelection = (templateId: string) => {
+    const template = courseTemplates.find(t => t.id === templateId);
+    if (template) {
+      setSelectedTemplate(template);
+      // Auto-populate fields from template
+      setSessionForm(prev => ({
+        ...prev,
+        course_template: templateId,
+        title: template.name,
+        max_capacity: template.max_students || 12,
+        description: template.description || '',
+        // Calculate end time based on duration
+        end_time: calculateEndTime(prev.start_time, template.duration_hours)
+      }));
+    } else {
+      setSelectedTemplate(null);
+    }
+  };
+
+  // Calculate end time based on start time and duration
+  const calculateEndTime = (startTime: string, durationHours: number) => {
+    if (!startTime || !durationHours) return '17:00';
+    
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const startMinutes = hours * 60 + minutes;
+    const endMinutes = startMinutes + (durationHours * 60);
+    
+    const endHours = Math.floor(endMinutes / 60);
+    const endMins = endMinutes % 60;
+    
+    return `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
   };
 
   const resetEnrollmentForm = () => {
@@ -769,9 +809,9 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                       
                       <div>
                         <Label htmlFor="template">Course Template *</Label>
-                        <Select 
-                          value={sessionForm.course_template} 
-                          onValueChange={(value) => setSessionForm({...sessionForm, course_template: value})}
+                        <Select
+                          value={sessionForm.course_template}
+                          onValueChange={handleTemplateSelection}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select course template..." />
@@ -779,11 +819,51 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                           <SelectContent>
                             {courseTemplates.map(template => (
                               <SelectItem key={template.id} value={template.id}>
-                                {template.name} ({template.duration_hours}h)
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{template.name}</span>
+                                  <span className="text-sm text-muted-foreground">
+                                    {template.duration_hours}h • Max {template.max_students} students
+                                  </span>
+                                </div>
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
+                        
+                        {/* Template Details Display */}
+                        {selectedTemplate && (
+                          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                            <h4 className="font-medium text-blue-900 mb-2">Template Details</h4>
+                            <div className="space-y-1 text-sm text-blue-800">
+                              <div><strong>Code:</strong> {selectedTemplate.code}</div>
+                              <div><strong>Duration:</strong> {selectedTemplate.duration_hours} hours</div>
+                              <div><strong>Max Students:</strong> {selectedTemplate.max_students}</div>
+                              {selectedTemplate.description && (
+                                <div><strong>Description:</strong> {selectedTemplate.description}</div>
+                              )}
+                              {selectedTemplate.course_components && selectedTemplate.course_components.length > 0 && (
+                                <div>
+                                  <strong>Components ({selectedTemplate.course_components.length}):</strong>
+                                  <ul className="list-disc list-inside ml-2 mt-1">
+                                    {selectedTemplate.course_components.slice(0, 3).map((comp: any, idx: number) => (
+                                      <li key={idx} className="text-xs">
+                                        {comp.name} ({comp.duration_minutes}min)
+                                      </li>
+                                    ))}
+                                    {selectedTemplate.course_components.length > 3 && (
+                                      <li className="text-xs italic">+{selectedTemplate.course_components.length - 3} more components</li>
+                                    )}
+                                  </ul>
+                                </div>
+                              )}
+                              {selectedTemplate.required_specialties && selectedTemplate.required_specialties.length > 0 && (
+                                <div>
+                                  <strong>Required Specialties:</strong> {selectedTemplate.required_specialties.join(', ')}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                       
                       <div>
@@ -981,10 +1061,11 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                                   size="sm"
                                   onClick={() => {
                                     setEditingSession(session);
+                                    const templateId = session.course_sequence?.template_id || session.course_id || '';
                                     setSessionForm({
                                       title: session.title,
                                       instructor_id: session.user_id,
-                                      course_template: session.course_id || session.course_sequence || '',
+                                      course_template: templateId,
                                       session_date: session.booking_date,
                                       start_time: session.start_time,
                                       end_time: session.end_time,
@@ -992,6 +1073,13 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                                       location_id: session.location_id || '',
                                       description: session.description || ''
                                     });
+                                    // Set selected template for editing
+                                    if (templateId) {
+                                      const template = courseTemplates.find(t => t.id === templateId);
+                                      setSelectedTemplate(template || null);
+                                    } else {
+                                      setSelectedTemplate(null);
+                                    }
                                     setShowSessionModal(true);
                                   }}
                                 >
