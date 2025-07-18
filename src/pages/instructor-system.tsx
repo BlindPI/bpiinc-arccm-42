@@ -798,7 +798,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  // Smart positioning function for tooltip with viewport-aware logic
+  // Simple consistent positioning for tooltip
   const calculateTooltipPosition = (element: HTMLElement) => {
     const rect = element.getBoundingClientRect();
     const viewport = {
@@ -806,65 +806,34 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
       height: window.innerHeight
     };
     
-    // Dynamic tooltip dimensions based on content and screen size
-    const tooltipWidth = Math.min(480, Math.max(320, viewport.width * 0.4));
-    const tooltipHeight = 400; // Estimated height for content
+    // Fixed tooltip size - same as calendar cell
+    const tooltipWidth = rect.width;
+    const tooltipHeight = 120; // Fixed compact height
     
-    // Define the main content area (avoid narrow sidebars)
-    const mainContentStart = viewport.width * 0.1; // 10% margin from left
-    const mainContentEnd = viewport.width * 0.9;   // 10% margin from right
-    const mainContentCenter = viewport.width / 2;
+    // Simple positioning logic - always above, adjust if off-screen
+    let x = rect.left;
+    let y = rect.top - tooltipHeight - 10;
+    let placement: 'top' | 'bottom' = 'top';
     
-    // Calculate optimal position - prefer center of main content area
-    let x = mainContentCenter;
-    let y = rect.top;
-    let placement: 'top' | 'bottom' | 'left' | 'right' = 'top';
-    
-    // Available space calculations
-    const spaceTop = rect.top;
-    const spaceBottom = viewport.height - rect.bottom;
-    const spaceLeft = rect.left;
-    const spaceRight = viewport.width - rect.right;
-    
-    // Smart placement logic - prioritize main content area
-    if (rect.left < mainContentStart && spaceRight >= tooltipWidth) {
-      // Element is in left sidebar, place tooltip in main content area
-      placement = 'right';
-      x = Math.max(mainContentStart + tooltipWidth / 2, rect.right + 20);
-      y = Math.max(100, Math.min(rect.top + rect.height / 2, viewport.height - tooltipHeight / 2));
-    } else if (rect.right > mainContentEnd && spaceLeft >= tooltipWidth) {
-      // Element is in right sidebar, place tooltip in main content area
-      placement = 'left';
-      x = Math.min(mainContentEnd - tooltipWidth / 2, rect.left - 20);
-      y = Math.max(100, Math.min(rect.top + rect.height / 2, viewport.height - tooltipHeight / 2));
-    } else {
-      // Element is in main content area, use normal positioning logic
-      if (spaceTop >= tooltipHeight) {
-        placement = 'top';
-        x = Math.max(tooltipWidth / 2 + 20, Math.min(rect.left + rect.width / 2, viewport.width - tooltipWidth / 2 - 20));
-        y = rect.top;
-      } else if (spaceBottom >= tooltipHeight) {
-        placement = 'bottom';
-        x = Math.max(tooltipWidth / 2 + 20, Math.min(rect.left + rect.width / 2, viewport.width - tooltipWidth / 2 - 20));
-        y = rect.bottom;
-      } else {
-        // Not enough vertical space, try horizontal
-        if (spaceRight >= tooltipWidth) {
-          placement = 'right';
-          x = rect.right;
-          y = Math.max(tooltipHeight / 2 + 20, Math.min(rect.top + rect.height / 2, viewport.height - tooltipHeight / 2 - 20));
-        } else {
-          placement = 'left';
-          x = rect.left;
-          y = Math.max(tooltipHeight / 2 + 20, Math.min(rect.top + rect.height / 2, viewport.height - tooltipHeight / 2 - 20));
-        }
-      }
+    // If tooltip would go off top of screen, show below
+    if (y < 20) {
+      placement = 'bottom';
+      y = rect.bottom + 10;
     }
     
-    // Final boundary checks
-    const padding = 20;
-    x = Math.max(padding + tooltipWidth / 2, Math.min(x, viewport.width - padding - tooltipWidth / 2));
-    y = Math.max(padding, Math.min(y, viewport.height - padding));
+    // If tooltip would go off bottom of screen, force above
+    if (y + tooltipHeight > viewport.height - 20) {
+      placement = 'top';
+      y = rect.top - tooltipHeight - 10;
+    }
+    
+    // Ensure tooltip doesn't go off horizontal edges
+    if (x + tooltipWidth > viewport.width - 20) {
+      x = viewport.width - tooltipWidth - 20;
+    }
+    if (x < 20) {
+      x = 20;
+    }
     
     return {
       x,
@@ -878,143 +847,56 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
   const SessionTooltip = ({ sessions, dateStr }: { sessions: any[], dateStr: string }) => {
     if (!sessions.length || hoveredDay !== dateStr || !tooltipPosition) return null;
 
-    // Calculate transform based on placement
-    const getTransform = () => {
-      switch (tooltipPosition.placement) {
-        case 'top':
-          return 'translate(-50%, -100%)';
-        case 'bottom':
-          return 'translate(-50%, 8px)';
-        case 'left':
-          return 'translate(-100%, -50%)';
-        case 'right':
-          return 'translate(8px, -50%)';
-        default:
-          return 'translate(-50%, -100%)';
-      }
-    };
-
-    // Add placement-specific margins
-    const getMargin = () => {
-      switch (tooltipPosition.placement) {
-        case 'top':
-          return { marginTop: '-12px' };
-        case 'bottom':
-          return { marginTop: '12px' };
-        case 'left':
-          return { marginLeft: '-12px' };
-        case 'right':
-          return { marginLeft: '12px' };
-        default:
-          return { marginTop: '-12px' };
-      }
-    };
-
     return (
       <div
-        className="fixed z-[9999] bg-white border border-gray-300 rounded-xl shadow-2xl backdrop-blur-sm"
+        className="fixed z-[9999] bg-white border border-gray-300 rounded-lg shadow-lg"
         style={{
           left: tooltipPosition.x,
           top: tooltipPosition.y,
-          transform: getTransform(),
-          maxWidth: tooltipPosition.maxWidth,
           width: tooltipPosition.maxWidth,
-          minWidth: '320px',
-          ...getMargin()
+          height: '120px'
         }}
       >
-        {/* Arrow indicator */}
-        <div
-          className={`absolute w-3 h-3 bg-white border-gray-300 transform rotate-45 ${
-            tooltipPosition.placement === 'top' ? 'bottom-[-6px] left-1/2 -translate-x-1/2 border-r border-b' :
-            tooltipPosition.placement === 'bottom' ? 'top-[-6px] left-1/2 -translate-x-1/2 border-l border-t' :
-            tooltipPosition.placement === 'left' ? 'right-[-6px] top-1/2 -translate-y-1/2 border-t border-r' :
-            'left-[-6px] top-1/2 -translate-y-1/2 border-b border-l'
-          }`}
-        />
+        {/* Simple arrow */}
+        {tooltipPosition.placement === 'top' && (
+          <div className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-r border-b border-gray-300 transform rotate-45" />
+        )}
+        {tooltipPosition.placement === 'bottom' && (
+          <div className="absolute top-[-6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-l border-t border-gray-300 transform rotate-45" />
+        )}
         
-        {/* Content with enhanced styling */}
-        <div className="p-5 relative">
-          <div className="space-y-4">
-            {sessions.map((session, idx) => {
-              // Get template details
-              const template = session.course_sequence?.template_id ?
-                courseTemplates.find(t => t.id === session.course_sequence.template_id) : null;
+        {/* Compact content */}
+        <div className="p-3 h-full overflow-hidden">
+          {sessions.slice(0, 1).map((session, idx) => (
+            <div key={`tooltip-${session.id}-${idx}`} className="h-full flex flex-col justify-between">
+              {/* Session title */}
+              <div className="text-sm font-semibold text-gray-900 truncate mb-1">
+                {session.title}
+              </div>
               
-              return (
-                <div key={`tooltip-${session.id}-${idx}`} className="border-b border-gray-100 last:border-b-0 pb-4 last:pb-0">
-                  {/* Session Header */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-base text-gray-900 mb-1 leading-tight">
-                        {session.title}
-                      </h3>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Badge variant="outline" className="text-xs px-2 py-0.5">
-                          {session.status || 'SCHEDULED'}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Session Details Grid */}
-                  <div className="grid grid-cols-1 gap-3 text-sm">
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <Clock className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                      <span className="font-medium">{session.start_time} - {session.end_time}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <Users className="h-4 w-4 text-green-600 flex-shrink-0" />
-                      <span>{session.instructor_profiles?.display_name || 'No instructor assigned'}</span>
-                    </div>
-                    
-                    {session.location_details && (
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <span className="text-orange-600 flex-shrink-0">📍</span>
-                        <span>{session.location_details.name}, {session.location_details.city}</span>
-                      </div>
-                    )}
-                    
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <span className="text-purple-600 flex-shrink-0">👥</span>
-                      <span><strong>{session.session_enrollments?.length || 0}</strong> students enrolled</span>
-                    </div>
-                  </div>
-                  
-                  {/* Description */}
-                  {session.description && (
-                    <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-700 leading-relaxed">{session.description}</p>
-                    </div>
-                  )}
-                  
-                  {/* Template Information */}
-                  {template && (
-                    <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-blue-600">📚</span>
-                        <h4 className="font-semibold text-blue-900">Course Template: {template.name}</h4>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 text-sm text-blue-800">
-                        <div><span className="font-medium">Code:</span> {template.code}</div>
-                        <div><span className="font-medium">Duration:</span> {template.duration_hours}h</div>
-                        <div><span className="font-medium">Max Students:</span> {template.max_students}</div>
-                        {template.required_specialties?.length > 0 && (
-                          <div className="col-span-2">
-                            <span className="font-medium">Specialties:</span> {template.required_specialties.join(', ')}
-                          </div>
-                        )}
-                      </div>
-                      {template.description && (
-                        <p className="mt-2 text-sm text-blue-700 italic">{template.description}</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+              {/* Description or time */}
+              <div className="text-xs text-gray-600 flex-1 overflow-hidden">
+                {session.description ? (
+                  <p className="leading-tight line-clamp-3">{session.description}</p>
+                ) : (
+                  <p className="leading-tight">{session.start_time} - {session.end_time}</p>
+                )}
+              </div>
+              
+              {/* Student count */}
+              <div className="flex items-center gap-1 text-xs text-gray-700 mt-2">
+                <Users className="h-3 w-3" />
+                <span className="font-medium">{session.session_enrollments?.length || 0} students</span>
+              </div>
+            </div>
+          ))}
+          
+          {/* Multiple sessions indicator */}
+          {sessions.length > 1 && (
+            <div className="absolute bottom-1 right-2 text-xs text-gray-500">
+              +{sessions.length - 1} more
+            </div>
+          )}
         </div>
       </div>
     );
