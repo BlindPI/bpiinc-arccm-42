@@ -526,7 +526,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
         .from('student_roster_members')
         .update({
           written_score: writtenScore,
-          completion_status: status === 'COMPLETE' ? 'completed' : status === 'INCOMPLETE' ? 'incomplete' : 'not_started'
+          completion_status: status === 'COMPLETE' ? 'completed' : status === 'INCOMPLETE' ? 'failed' : 'not_started'
         })
         .eq('id', enrollmentId);
       
