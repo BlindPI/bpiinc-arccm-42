@@ -283,7 +283,6 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
           end_time: sessionData.end_time,
           user_id: sessionData.instructor_id,
           course_sequence: sessionData.course_template ? { template_id: sessionData.course_template } : null,
-          course_id: sessionData.course_template || null, // Also store as course_id for backward compatibility
           booking_type: 'training_session',
           status: 'scheduled',
           created_by: user?.id,
@@ -316,7 +315,6 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
           end_time: updates.end_time,
           user_id: updates.instructor_id,
           course_sequence: updates.course_template ? { template_id: updates.course_template } : null,
-          course_id: updates.course_template || null, // Also store as course_id for backward compatibility
           location_id: updates.location_id,
           description: updates.description
         })
