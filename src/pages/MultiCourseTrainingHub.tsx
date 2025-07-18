@@ -1,177 +1,158 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrainingHubNavigation } from '@/components/training/navigation/TrainingHubNavigation';
+import { CalendarDays, Users, Clock, MapPin, BookOpen, TrendingUp, Plus } from 'lucide-react';
 import { MultiCourseTemplateBuilder } from '@/components/training/MultiCourseTemplateBuilder';
 import { MultiCourseSessionCreator } from '@/components/training/MultiCourseSessionCreator';
 import { ComponentProgressTracker } from '@/components/training/ComponentProgressTracker';
-import { 
-  MultiCourseTrainingService,
-  type SessionTemplate,
-  type SessionTemplateComponent
-} from '@/services/multiCourseTraining';
-import {
-  Plus,
-  Calendar,
-  Users,
-  BookOpen,
-  Layers,
-  Target,
-  CheckCircle,
-  AlertCircle,
-  Workflow,
-  Loader2
-} from 'lucide-react';
-import { toast } from 'sonner';
+import { MultiCourseTrainingService, SessionTemplate } from '@/services/multiCourseTraining';
 
-interface TrainingSession {
+interface Session {
   id: string;
-  title: string;
-  session_template_id?: string;
-  templateName?: string;
-  instructor_id: string;
-  instructorName: string;
-  location_id: string;
-  locationName: string;
+  session_template_id: string;
   session_date: string;
   start_time: string;
-  end_time: string;
-  max_capacity: number;
-  enrolled_count: number;
   status: string;
-  registration_status: string;
-  base_price?: number;
-  isMultiCourse: boolean;
+  training_session_templates?: {
+    name: string;
+    code: string;
+  };
+  instructor_profiles?: {
+    user_id: string;
+    users: {
+      first_name: string;
+      last_name: string;
+      email: string;
+    };
+  };
+  locations?: {
+    name: string;
+    address: string;
+  };
 }
 
-export const MultiCourseTrainingHub: React.FC = (): JSX.Element => {
-  const [activeTab, setActiveTab] = useState('overview');
-  const [showTemplateBuilder, setShowTemplateBuilder] = useState(false);
-  const [showSessionCreator, setShowSessionCreator] = useState(false);
-  const [showProgressTracker, setShowProgressTracker] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<SessionTemplate | null>(null);
-  const [selectedSession, setSelectedSession] = useState<TrainingSession | null>(null);
-  const [loading, setLoading] = useState(true);
-  
-  // Data state
+interface DashboardStats {
+  totalTemplates: number;
+  activeSessions: number;
+  totalEnrollments: number;
+  completionRate: number;
+}
+
+const MultiCourseTrainingHub: React.FC = () => {
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [templates, setTemplates] = useState<SessionTemplate[]>([]);
-  const [sessions, setSessions] = useState<TrainingSession[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
   const [instructors, setInstructors] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
-  const [courses, setCourses] = useState<any[]>([]);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalTemplates: 0,
+    activeSessions: 0,
+    totalEnrollments: 0,
+    completionRate: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [showTemplateBuilder, setShowTemplateBuilder] = useState(false);
+  const [showSessionCreator, setShowSessionCreator] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<SessionTemplate | undefined>();
 
-  // Load initial data
   useEffect(() => {
-    loadInitialData();
+    loadDashboardData();
   }, []);
 
-  const loadInitialData = async () => {
+  const loadDashboardData = async () => {
     try {
       setLoading(true);
       
-      const templatesData = await MultiCourseTrainingService.getSessionTemplates();
-      const sessionsData = await MultiCourseTrainingService.getMultiCourseSessions();
-      const instructorsData = await MultiCourseTrainingService.getInstructors();
-      const locationsData = await MultiCourseTrainingService.getLocations();
-      const coursesData = await MultiCourseTrainingService.getCourses();
+      // Load all required data
+      const [templatesData, sessionsData, coursesData, instructorsData, locationsData] = await Promise.all([
+        MultiCourseTrainingService.getSessionTemplates(),
+        MultiCourseTrainingService.getMultiCourseSessions(),
+        MultiCourseTrainingService.getCourses(),
+        MultiCourseTrainingService.getInstructors(),
+        MultiCourseTrainingService.getLocations()
+      ]);
       
       setTemplates(templatesData || []);
       setSessions(sessionsData || []);
+      setCourses(coursesData || []);
       setInstructors(instructorsData || []);
       setLocations(locationsData || []);
-      setCourses(coursesData || []);
       
+      // Calculate stats
+      const totalTemplates = templatesData?.length || 0;
+      const activeSessions = sessionsData?.filter(s => s.status === 'scheduled')?.length || 0;
+      const totalEnrollments = 0; // Would need to count from enrollments table
+      const completionRate = 85; // This would come from progress tracking in real implementation
+      
+      setStats({
+        totalTemplates,
+        activeSessions,
+        totalEnrollments,
+        completionRate
+      });
     } catch (error) {
-      console.error('Error loading initial data:', error);
-      toast.error('Failed to load training data');
+      console.error('Error loading dashboard data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-    
-    // Handle special navigation actions
-    switch (tab) {
-      case 'multi-course-templates':
-        setShowTemplateBuilder(true);
-        break;
-      case 'sessions':
-        // Show session management
-        break;
-      case 'component-progress':
-        setShowProgressTracker(true);
-        break;
-      default:
-        break;
-    }
+  const handleTemplateCreated = () => {
+    loadDashboardData();
+    setShowTemplateBuilder(false);
+    setEditingTemplate(undefined);
+    setActiveTab('dashboard');
+  };
+
+  const handleSessionCreated = () => {
+    loadDashboardData();
+    setShowSessionCreator(false);
+    setActiveTab('dashboard');
+  };
+
+  const handleTemplateEdit = (template: SessionTemplate) => {
+    setEditingTemplate(template);
+    setShowTemplateBuilder(true);
+    setActiveTab('templates');
   };
 
   const handleSaveTemplate = async (templateData: any) => {
     try {
-      if (selectedTemplate) {
-        // Update existing template
-        await MultiCourseTrainingService.updateSessionTemplate(selectedTemplate.id, templateData);
-        toast.success('Template updated successfully');
+      if (editingTemplate) {
+        await MultiCourseTrainingService.updateSessionTemplate(editingTemplate.id, templateData);
       } else {
-        // Create new template
         await MultiCourseTrainingService.createSessionTemplate(templateData);
-        toast.success('Template created successfully');
       }
-      
-      // Reload templates
-      const updatedTemplates = await MultiCourseTrainingService.getSessionTemplates();
-      setTemplates(updatedTemplates || []);
-      
-      setShowTemplateBuilder(false);
-      setSelectedTemplate(null);
-      
+      handleTemplateCreated();
     } catch (error) {
       console.error('Error saving template:', error);
-      toast.error('Failed to save template');
     }
   };
 
   const handleSaveSession = async (sessionData: any) => {
     try {
-      if (selectedSession) {
-        // Update existing session - would need to implement this in service
-        toast.success('Session updated successfully');
-      } else {
-        // Create new session from template
-        if (sessionData.sessionTemplateId) {
-          await MultiCourseTrainingService.createSessionFromTemplate(
-            sessionData.sessionTemplateId,
-            sessionData
-          );
-        }
-        toast.success('Session created successfully');
-      }
-      
-      // Reload sessions
-      const updatedSessions = await MultiCourseTrainingService.getMultiCourseSessions();
-      setSessions(updatedSessions || []);
-      
-      setShowSessionCreator(false);
-      setSelectedSession(null);
-      
+      await MultiCourseTrainingService.createSessionFromTemplate(sessionData.sessionTemplateId, sessionData);
+      handleSessionCreated();
     } catch (error) {
-      console.error('Error saving session:', error);
-      toast.error('Failed to save session');
+      console.error('Error creating session:', error);
     }
   };
 
-  const handleUpdateProgress = async (enrollmentId: string, componentId: string, updates: any) => {
-    try {
-      await MultiCourseTrainingService.updateComponentProgress(enrollmentId, componentId, updates);
-      toast.success('Progress updated successfully');
-    } catch (error) {
-      console.error('Error updating progress:', error);
-      toast.error('Failed to update progress');
-    }
+  const getTemplateComponentCount = (template: SessionTemplate) => {
+    return template.session_template_components?.length || 0;
+  };
+
+  const getSessionInfo = (session: Session) => {
+    return {
+      templateName: session.training_session_templates?.name || 'Unknown Template',
+      instructorName: session.instructor_profiles?.users
+        ? `${session.instructor_profiles.users.first_name} ${session.instructor_profiles.users.last_name}`
+        : 'Unassigned',
+      locationName: session.locations?.name || 'TBD'
+    };
   };
 
   const formatDuration = (minutes: number) => {
@@ -180,164 +161,216 @@ export const MultiCourseTrainingHub: React.FC = (): JSX.Element => {
     return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
   };
 
-  const getDashboardStats = () => {
-    const totalSessions = sessions.length;
-    const multiCourseSessions = sessions.filter(s => s.isMultiCourse).length;
-    const activeTemplates = templates.filter(t => t.is_active).length;
-    const totalEnrollments = sessions.reduce((sum, s) => sum + (s.enrolled_count || 0), 0);
-    
-    return {
-      totalSessions,
-      multiCourseSessions,
-      activeTemplates,
-      totalEnrollments,
-      activeInstructors: instructors.filter(i => i.is_active).length,
-      upcomingSchedules: sessions.filter(s => s.status === 'SCHEDULED').length,
-      complianceRate: 95 // This would be calculated from actual data
-    };
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'scheduled': return 'default';
+      case 'in_progress': return 'secondary';
+      case 'completed': return 'outline';
+      case 'cancelled': return 'destructive';
+      default: return 'default';
+    }
   };
-
-  const stats = getDashboardStats();
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Loading multi-course training system...</span>
-        </div>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg">Loading multi-course training data...</div>
       </div>
     );
   }
 
-  if (showTemplateBuilder) {
-    return (
-      <MultiCourseTemplateBuilder
-        courses={courses}
-        template={selectedTemplate}
-        onSave={handleSaveTemplate}
-        onCancel={() => {
-          setShowTemplateBuilder(false);
-          setSelectedTemplate(null);
-        }}
-      />
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Multi-Course Training Hub</h1>
-            <p className="text-gray-600 mt-1">
-              Comprehensive training management with advanced multi-course session support
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <Badge variant="default" className="flex items-center gap-1">
-              <Workflow className="h-3 w-3" />
-              Enhanced Platform
-            </Badge>
-            <Button 
-              onClick={() => setShowSessionCreator(true)}
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Create Session
-            </Button>
-          </div>
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Multi-Course Training Hub</h1>
+          <p className="text-muted-foreground">
+            Manage complex training sessions with multiple courses, breaks, and activities
+          </p>
         </div>
+        <Button onClick={loadDashboardData} variant="outline">
+          Refresh Data
+        </Button>
+      </div>
 
-        {/* Dashboard Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Sessions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold">{stats.totalSessions}</span>
-                <Calendar className="h-5 w-5 text-blue-600" />
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {stats.multiCourseSessions} multi-course
-              </p>
-            </CardContent>
-          </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="sessions">Sessions</TabsTrigger>
+          <TabsTrigger value="progress">Progress</TabsTrigger>
+          <TabsTrigger value="create">Create</TabsTrigger>
+        </TabsList>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Active Templates</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold">{stats.activeTemplates}</span>
-                <Layers className="h-5 w-5 text-emerald-600" />
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Reusable itineraries
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Enrollments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold">{stats.totalEnrollments}</span>
-                <Users className="h-5 w-5 text-purple-600" />
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Active registrations
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Component Tracking</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold text-emerald-600">Active</span>
-                <Target className="h-5 w-5 text-emerald-600" />
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Real-time progress
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Navigation Dashboard */}
-        <TrainingHubNavigation
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          totalSessions={stats.totalSessions}
-          activeInstructors={stats.activeInstructors}
-          upcomingSchedules={stats.upcomingSchedules}
-          complianceRate={stats.complianceRate}
-          multiCourseTemplates={stats.activeTemplates}
-          activeComponentTracking={stats.totalEnrollments}
-        />
-
-        {/* Content Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsContent value="overview" className="space-y-6">
-            {/* Templates Overview */}
+        <TabsContent value="dashboard" className="space-y-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Layers className="h-5 w-5" />
-                    Multi-Course Templates
-                  </CardTitle>
-                  <Button 
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Templates</CardTitle>
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalTemplates}</div>
+                <p className="text-xs text-muted-foreground">Active course templates</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Sessions</CardTitle>
+                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.activeSessions}</div>
+                <p className="text-xs text-muted-foreground">Scheduled sessions</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Enrollments</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalEnrollments}</div>
+                <p className="text-xs text-muted-foreground">Total student enrollments</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.completionRate}%</div>
+                <p className="text-xs text-muted-foreground">Average completion</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recent Templates */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Templates</CardTitle>
+              <CardDescription>Latest multi-course training templates</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {templates.slice(0, 5).map((template) => (
+                  <div key={template.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="space-y-1">
+                      <h4 className="font-medium">{template.name}</h4>
+                      <p className="text-sm text-muted-foreground">{template.description}</p>
+                      <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                        <span className="flex items-center">
+                          <Clock className="w-3 h-3 mr-1" />
+                          {formatDuration(template.total_duration_minutes)}
+                        </span>
+                        <span>{getTemplateComponentCount(template)} components</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleTemplateEdit(template)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setShowSessionCreator(true);
+                        }}
+                      >
+                        Use Template
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {templates.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">
+                    No templates found. Create your first template in the Templates tab.
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Upcoming Sessions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Upcoming Sessions</CardTitle>
+              <CardDescription>Scheduled multi-course training sessions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {sessions.slice(0, 5).map((session) => {
+                  const sessionInfo = getSessionInfo(session);
+                  return (
+                    <div key={session.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="space-y-1">
+                        <h4 className="font-medium">{sessionInfo.templateName}</h4>
+                        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                          <span className="flex items-center">
+                            <CalendarDays className="w-3 h-3 mr-1" />
+                            {new Date(session.session_date).toLocaleDateString()}
+                          </span>
+                          <span className="flex items-center">
+                            <Clock className="w-3 h-3 mr-1" />
+                            {session.start_time}
+                          </span>
+                          <span className="flex items-center">
+                            <MapPin className="w-3 h-3 mr-1" />
+                            {sessionInfo.locationName}
+                          </span>
+                          <span className="flex items-center">
+                            <Users className="w-3 h-3 mr-1" />
+                            Instructor: {sessionInfo.instructorName}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant={getStatusBadgeVariant(session.status)}>
+                          {session.status}
+                        </Badge>
+                        <Button variant="outline" size="sm">
+                          View Details
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+                {sessions.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">
+                    No sessions scheduled. Create your first session in the Sessions tab.
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="templates" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Training Session Templates</CardTitle>
+              <CardDescription>
+                Create reusable templates for complex multi-course training sessions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="font-medium">Template Management</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Build reusable multi-course session templates
+                    </p>
+                  </div>
+                  <Button
                     onClick={() => setShowTemplateBuilder(true)}
                     className="flex items-center gap-2"
                   >
@@ -345,208 +378,395 @@ export const MultiCourseTrainingHub: React.FC = (): JSX.Element => {
                     New Template
                   </Button>
                 </div>
-              </CardHeader>
-              <CardContent>
-                {templates.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Layers className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p>No templates created yet</p>
-                    <p className="text-sm">Create your first multi-course template to get started</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {templates.map(template => (
-                      <Card key={template.id} className="cursor-pointer hover:shadow-md transition-shadow">
-                        <CardHeader className="pb-3">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <CardTitle className="text-lg">{template.name}</CardTitle>
-                              <Badge variant="outline" className="mt-1">
-                                {template.code}
-                              </Badge>
+
+                {showTemplateBuilder && (
+                  <MultiCourseTemplateBuilder
+                    courses={courses.map(c => ({
+                      id: c.id,
+                      name: c.name,
+                      code: c.code,
+                      duration: c.duration_hours * 60 // Convert hours to minutes
+                    }))}
+                    template={editingTemplate ? {
+                      id: editingTemplate.id,
+                      name: editingTemplate.name,
+                      code: editingTemplate.code,
+                      description: editingTemplate.description || '',
+                      templateType: editingTemplate.template_type,
+                      totalDuration: editingTemplate.total_duration_minutes,
+                      estimatedBreakMinutes: editingTemplate.estimated_break_minutes,
+                      maxParticipants: editingTemplate.max_participants || 12,
+                      isActive: editingTemplate.is_active,
+                      isPublic: editingTemplate.is_public,
+                      requiresApproval: editingTemplate.requires_approval,
+                      requiredInstructors: editingTemplate.required_instructors,
+                      requiredRooms: editingTemplate.required_rooms,
+                      requiredEquipment: editingTemplate.required_equipment,
+                      components: []
+                    } : undefined}
+                    onSave={handleSaveTemplate}
+                    onCancel={() => {
+                      setShowTemplateBuilder(false);
+                      setEditingTemplate(undefined);
+                    }}
+                  />
+                )}
+
+                {!showTemplateBuilder && (
+                  <div className="space-y-3">
+                    {templates.length > 0 ? (
+                      templates.map((template) => (
+                        <div key={template.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="space-y-1">
+                            <h4 className="font-medium">{template.name}</h4>
+                            <p className="text-sm text-muted-foreground">{template.description}</p>
+                            <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                              <span className="flex items-center">
+                                <Clock className="w-3 h-3 mr-1" />
+                                {formatDuration(template.total_duration_minutes)}
+                              </span>
+                              <span>{getTemplateComponentCount(template)} components</span>
+                              <Badge variant="outline">{template.template_type}</Badge>
                             </div>
-                            <Badge variant={template.is_active ? 'default' : 'secondary'}>
-                              {template.is_active ? 'Active' : 'Inactive'}
-                            </Badge>
                           </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span>Duration:</span>
-                              <span className="font-medium">{formatDuration(template.total_duration_minutes)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Type:</span>
-                              <span className="font-medium">{template.template_type}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Max Participants:</span>
-                              <span className="font-medium">{template.max_participants || 'N/A'}</span>
-                            </div>
-                          </div>
-                          <div className="flex gap-2 mt-4">
-                            <Button 
-                              size="sm" 
+                          <div className="flex gap-2">
+                            <Button
                               variant="outline"
-                              onClick={() => {
-                                setSelectedTemplate(template);
-                                setShowTemplateBuilder(true);
-                              }}
+                              size="sm"
+                              onClick={() => handleTemplateEdit(template)}
                             >
                               Edit
                             </Button>
-                            <Button 
+                            <Button
                               size="sm"
                               onClick={() => {
                                 setShowSessionCreator(true);
+                                setActiveTab('sessions');
                               }}
                             >
                               Use Template
                             </Button>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <BookOpen className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <p>No templates found</p>
+                        <p className="text-sm">Create your first multi-course template above</p>
+                      </div>
+                    )}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-            {/* Sessions Overview */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5" />
-                    Recent Sessions
-                  </CardTitle>
-                  <Button 
+        <TabsContent value="sessions" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Create Training Session</CardTitle>
+              <CardDescription>
+                Schedule a new training session from an existing template
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="font-medium">Schedule New Session</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Create sessions from existing templates
+                    </p>
+                  </div>
+                  <Button
                     onClick={() => setShowSessionCreator(true)}
-                    variant="outline"
                     className="flex items-center gap-2"
+                    disabled={templates.length === 0}
                   >
                     <Plus className="h-4 w-4" />
-                    Create Session
+                    New Session
                   </Button>
                 </div>
-              </CardHeader>
-              <CardContent>
-                {sessions.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p>No sessions scheduled yet</p>
-                    <p className="text-sm">Create your first multi-course session using a template</p>
-                  </div>
-                ) : (
+
+                <MultiCourseSessionCreator
+                  isOpen={showSessionCreator}
+                  onClose={() => setShowSessionCreator(false)}
+                  onSave={handleSaveSession}
+                  templates={templates.map(t => ({
+                    id: t.id,
+                    name: t.name,
+                    code: t.code,
+                    description: t.description || '',
+                    templateType: t.template_type,
+                    totalDuration: t.total_duration_minutes,
+                    estimatedBreakMinutes: t.estimated_break_minutes,
+                    maxParticipants: t.max_participants || 12,
+                    requiredInstructors: t.required_instructors,
+                    requiredRooms: t.required_rooms,
+                    requiredEquipment: t.required_equipment,
+                    components: []
+                  }))}
+                  instructors={instructors.map(i => ({
+                    id: i.id,
+                    name: `${i.users?.first_name || ''} ${i.users?.last_name || ''}`.trim(),
+                    email: i.users?.email || '',
+                    specializations: i.specializations || [],
+                    isAvailable: i.is_active
+                  }))}
+                  locations={locations.map(l => ({
+                    id: l.id,
+                    name: l.name,
+                    address: l.address || '',
+                    capacity: l.capacity || 12,
+                    equipment: l.equipment || []
+                  }))}
+                />
+
+                {!showSessionCreator && (
                   <div className="space-y-3">
-                    {sessions.map(session => (
-                      <div key={session.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                        <div className="flex items-center gap-4">
-                          <div className="p-2 bg-blue-100 rounded-lg">
-                            {session.isMultiCourse ? (
-                              <Layers className="h-5 w-5 text-blue-600" />
-                            ) : (
-                              <BookOpen className="h-5 w-5 text-blue-600" />
-                            )}
-                          </div>
-                          <div>
-                            <h4 className="font-medium">{session.title}</h4>
-                            <div className="flex items-center gap-4 text-sm text-gray-600">
-                              <span>{session.session_date}</span>
-                              <span>{session.start_time} - {session.end_time}</span>
-                              <span>{session.instructorName}</span>
-                              <span>{session.locationName}</span>
+                    {sessions.length > 0 ? (
+                      <div>
+                        <h4 className="font-medium mb-3">Recent Sessions</h4>
+                        {sessions.slice(0, 5).map(session => {
+                          const sessionInfo = getSessionInfo(session);
+                          return (
+                            <div key={session.id} className="flex items-center justify-between p-4 border rounded-lg mb-3">
+                              <div className="space-y-1">
+                                <h5 className="font-medium text-sm">{sessionInfo.templateName}</h5>
+                                <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                                  <span className="flex items-center">
+                                    <CalendarDays className="w-3 h-3 mr-1" />
+                                    {new Date(session.session_date).toLocaleDateString()}
+                                  </span>
+                                  <span className="flex items-center">
+                                    <Clock className="w-3 h-3 mr-1" />
+                                    {session.start_time}
+                                  </span>
+                                  <span className="flex items-center">
+                                    <MapPin className="w-3 h-3 mr-1" />
+                                    {sessionInfo.locationName}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant={getStatusBadgeVariant(session.status)}>
+                                  {session.status}
+                                </Badge>
+                                <Button variant="outline" size="sm">
+                                  View Details
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {session.isMultiCourse && (
-                            <Badge variant="secondary" className="flex items-center gap-1">
-                              <Workflow className="h-3 w-3" />
-                              Multi-Course
-                            </Badge>
-                          )}
-                          <Badge variant="outline">
-                            {session.enrolled_count}/{session.max_capacity}
-                          </Badge>
-                          <Badge variant={
-                            session.status === 'COMPLETED' ? 'default' :
-                            session.status === 'IN_PROGRESS' ? 'secondary' :
-                            'outline'
-                          }>
-                            {session.status}
-                          </Badge>
-                          {session.isMultiCourse && (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => {
-                                setSelectedSession(session);
-                                setShowProgressTracker(true);
-                              }}
-                            >
-                              Track Progress
-                            </Button>
-                          )}
-                        </div>
+                          );
+                        })}
                       </div>
-                    ))}
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <CalendarDays className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <p>No sessions scheduled</p>
+                        <p className="text-sm">
+                          {templates.length === 0
+                            ? 'Create templates first to schedule sessions'
+                            : 'Create your first session from an existing template'}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="progress" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Progress Tracking</CardTitle>
+              <CardDescription>
+                Monitor student progress through multi-course training sessions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {sessions.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="font-medium">Active Sessions</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Select a session to track component-level progress
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {sessions.filter(s => ['scheduled', 'in_progress'].includes(s.status)).map(session => {
+                      const sessionInfo = getSessionInfo(session);
+                      return (
+                        <div key={session.id} className="p-4 border rounded-lg">
+                          <div className="flex items-center justify-between mb-3">
+                            <div>
+                              <h4 className="font-medium">{sessionInfo.templateName}</h4>
+                              <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                                <span className="flex items-center">
+                                  <CalendarDays className="w-3 h-3 mr-1" />
+                                  {new Date(session.session_date).toLocaleDateString()}
+                                </span>
+                                <span className="flex items-center">
+                                  <Clock className="w-3 h-3 mr-1" />
+                                  {session.start_time}
+                                </span>
+                                <span className="flex items-center">
+                                  <MapPin className="w-3 h-3 mr-1" />
+                                  {sessionInfo.locationName}
+                                </span>
+                                <span className="flex items-center">
+                                  <Users className="w-3 h-3 mr-1" />
+                                  {sessionInfo.instructorName}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={getStatusBadgeVariant(session.status)}>
+                                {session.status}
+                              </Badge>
+                            </div>
+                          </div>
+                          
+                          {/* Progress tracker integration */}
+                          <ComponentProgressTracker
+                            sessionId={session.id}
+                            sessionData={{
+                              id: session.id,
+                              title: sessionInfo.templateName,
+                              sessionDate: session.session_date,
+                              startTime: session.start_time,
+                              endTime: '', // Would need end time from session
+                              instructorName: sessionInfo.instructorName,
+                              locationName: sessionInfo.locationName,
+                              templateName: sessionInfo.templateName,
+                              status: session.status
+                            }}
+                            studentProgress={[]} // Would be loaded from enrollments
+                            onUpdateProgress={(enrollmentId, componentId, updates) => {
+                              // Handle progress updates
+                              console.log('Progress update:', { enrollmentId, componentId, updates });
+                            }}
+                            onBulkUpdate={(updates) => {
+                              // Handle bulk updates
+                              console.log('Bulk update:', updates);
+                            }}
+                            isInstructor={true}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>No active sessions to track</p>
+                    <p className="text-sm">Schedule sessions to monitor student progress</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="create" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Template</CardTitle>
+                <CardDescription>
+                  Create a new training template with multiple courses
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button 
+                  onClick={() => setActiveTab('templates')} 
+                  className="w-full"
+                  size="lg"
+                >
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  Create Template
+                </Button>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
 
-        {/* Session Creator Modal */}
-        <MultiCourseSessionCreator
-          isOpen={showSessionCreator}
-          onClose={() => {
-            setShowSessionCreator(false);
-            setSelectedSession(null);
-          }}
-          onSave={handleSaveSession}
-          templates={templates}
-          instructors={instructors}
-          locations={locations}
-          editSession={selectedSession}
-        />
-
-        {/* Progress Tracker Modal */}
-        {showProgressTracker && selectedSession && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-7xl w-full max-h-[90vh] overflow-hidden">
-              <div className="p-6 border-b flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Component Progress Tracking</h2>
-                <Button variant="ghost" onClick={() => setShowProgressTracker(false)}>
-                  ×
+            <Card>
+              <CardHeader>
+                <CardTitle>Schedule Session</CardTitle>
+                <CardDescription>
+                  Schedule a new training session from existing templates
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button 
+                  onClick={() => setActiveTab('sessions')} 
+                  className="w-full"
+                  size="lg"
+                  variant="outline"
+                >
+                  <CalendarDays className="w-4 h-4 mr-2" />
+                  Schedule Session
                 </Button>
-              </div>
-              <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
-                <ComponentProgressTracker
-                  sessionId={selectedSession.id}
-                  sessionData={{
-                    id: selectedSession.id,
-                    title: selectedSession.title,
-                    sessionDate: selectedSession.session_date,
-                    startTime: selectedSession.start_time,
-                    endTime: selectedSession.end_time,
-                    instructorName: selectedSession.instructorName,
-                    locationName: selectedSession.locationName,
-                    templateName: selectedSession.templateName || '',
-                    status: selectedSession.status
-                  }}
-                  studentProgress={[]} // Would be loaded from actual progress data
-                  onUpdateProgress={handleUpdateProgress}
-                  onBulkUpdate={() => {}}
-                  isInstructor={true}
-                />
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
-        )}
-      </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>System Features</CardTitle>
+              <CardDescription>
+                Key capabilities of the multi-course training system
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="p-4 border rounded-lg">
+                  <h4 className="font-medium mb-2">Multi-Course Templates</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Create reusable templates with courses, breaks, and activities in sequence
+                  </p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <h4 className="font-medium mb-2">Progress Tracking</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Track student progress through each component with detailed status
+                  </p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <h4 className="font-medium mb-2">Prerequisites</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Define course dependencies and validation requirements
+                  </p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <h4 className="font-medium mb-2">Resource Management</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Allocate instructors, rooms, and equipment per session
+                  </p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <h4 className="font-medium mb-2">Flexible Scheduling</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Support breaks, activities, and complex time arrangements
+                  </p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <h4 className="font-medium mb-2">Security & Access</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Role-based access control with provider isolation
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

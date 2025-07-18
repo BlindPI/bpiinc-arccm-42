@@ -46,6 +46,7 @@ import LocationManagement from '@/pages/LocationManagement';
 import InstructorDashboard from '@/pages/InstructorDashboard';
 import InstructorRosterDetail from '@/pages/InstructorRosterDetail';
 import InstructorManagementSystem from '@/pages/instructor-system';
+import MultiCourseTrainingHub from '@/pages/MultiCourseTrainingHub';
 
 export function AppRoutes() {
   const { user } = useAuth();
@@ -149,6 +150,13 @@ export function AppRoutes() {
       <Route path="/training-management" element={
         <ProtectedRoute>
           <InstructorManagementSystem />
+        </ProtectedRoute>
+      } />
+
+      {/* Multi-Course Training Hub */}
+      <Route path="/multi-course-training" element={
+        <ProtectedRoute>
+          <MultiCourseTrainingHub />
         </ProtectedRoute>
       } />
 

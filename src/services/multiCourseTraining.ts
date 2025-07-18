@@ -259,7 +259,11 @@ export class MultiCourseTrainingService {
   static async createSessionFromTemplate(templateId: string, sessionData: any) {
     const { data, error } = await supabase.rpc('create_session_from_template', {
       p_template_id: templateId,
-      p_session_data: sessionData
+      p_session_date: sessionData.sessionDate,
+      p_start_time: sessionData.startTime,
+      p_location_id: sessionData.locationId,
+      p_instructor_id: sessionData.instructorId,
+      p_created_by: null // Will use auth.uid() in function
     });
     
     if (error) {

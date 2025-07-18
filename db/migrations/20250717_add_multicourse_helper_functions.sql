@@ -70,6 +70,31 @@ BEGIN
         NOW()
     ) RETURNING id INTO v_session_id;
     
+    -- Create availability booking for the session (required for location constraint)
+    INSERT INTO availability_bookings (
+        title,
+        booking_date,
+        start_time,
+        end_time,
+        user_id,
+        booking_type,
+        status,
+        location_id,
+        description,
+        created_by
+    ) VALUES (
+        v_template_record.name,
+        p_session_date,
+        p_start_time,
+        v_end_time,
+        p_instructor_id,
+        'training_session',
+        'confirmed',
+        p_location_id,
+        'Multi-course training session: ' || COALESCE(v_template_record.description, ''),
+        COALESCE(p_created_by, auth.uid())
+    );
+    
     RETURN v_session_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
