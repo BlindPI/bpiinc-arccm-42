@@ -1195,20 +1195,22 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                       key={day}
                       onClick={() => handleDayClick(day)}
                       onMouseEnter={() => {
+                        // Calculate sessions fresh on hover
+                        const freshDaySessions = getSessionsForDate(dateStr);
                         console.log('🔍 OVERLAY DEBUG - Mouse Enter:', {
                           dateStr,
                           hoveredDay: dateStr,
-                          sessionsCount: daySessions.length,
-                          firstSession: daySessions[0] ? {
-                            id: daySessions[0].id,
-                            title: daySessions[0].title,
-                            description: daySessions[0].description,
-                            instructor_profiles: daySessions[0].instructor_profiles,
-                            booking_date: daySessions[0].booking_date
+                          sessionsCount: freshDaySessions.length,
+                          firstSession: freshDaySessions[0] ? {
+                            id: freshDaySessions[0].id,
+                            title: freshDaySessions[0].title,
+                            description: freshDaySessions[0].description,
+                            instructor_profiles: freshDaySessions[0].instructor_profiles,
+                            booking_date: freshDaySessions[0].booking_date
                           } : null
                         });
                         
-                        if (daySessions.length > 0) {
+                        if (freshDaySessions.length > 0) {
                           setHoveredDay(dateStr);
                           setHoveredDayIndex(index);
                         }
