@@ -81,7 +81,12 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
 
   // Calendar hover state management
   const [hoveredDay, setHoveredDay] = useState<string | null>(null);
-  const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState<{
+    x: number;
+    y: number;
+    placement: 'top' | 'bottom' | 'left' | 'right';
+    maxWidth: number;
+  } | null>(null);
 
   const [studentForm, setStudentForm] = useState({
     email: '',
@@ -793,78 +798,223 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
+  // Smart positioning function for tooltip
+  const calculateTooltipPosition = (element: HTMLElement) => {
+    const rect = element.getBoundingClientRect();
+    const viewport = {
+      width: window.innerWidth,
+      height: window.innerHeight
+    };
+    
+    // Tooltip dimensions - estimate based on content
+    const tooltipWidth = Math.min(500, viewport.width * 0.8); // Responsive max width
+    const tooltipHeight = 300; // Estimated height
+    
+    // Available space in each direction
+    const spaceTop = rect.top;
+    const spaceBottom = viewport.height - rect.bottom;
+    const spaceLeft = rect.left;
+    const spaceRight = viewport.width - rect.right;
+    
+    let placement: 'top' | 'bottom' | 'left' | 'right' = 'top';
+    let x = rect.left + rect.width / 2;
+    let y = rect.top;
+    
+    // Determine best placement based on available space
+    if (spaceTop >= tooltipHeight && spaceTop >= spaceBottom) {
+      placement = 'top';
+      y = rect.top;
+    } else if (spaceBottom >= tooltipHeight) {
+      placement = 'bottom';
+      y = rect.bottom;
+    } else if (spaceRight >= tooltipWidth) {
+      placement = 'right';
+      x = rect.right;
+      y = rect.top + rect.height / 2;
+    } else if (spaceLeft >= tooltipWidth) {
+      placement = 'left';
+      x = rect.left;
+      y = rect.top + rect.height / 2;
+    } else {
+      // Fallback: use the side with most space
+      if (spaceBottom >= spaceTop) {
+        placement = 'bottom';
+        y = rect.bottom;
+      } else {
+        placement = 'top';
+        y = rect.top;
+      }
+    }
+    
+    // Ensure tooltip doesn't go off-screen horizontally
+    if (placement === 'top' || placement === 'bottom') {
+      const halfWidth = tooltipWidth / 2;
+      if (x - halfWidth < 10) {
+        x = halfWidth + 10;
+      } else if (x + halfWidth > viewport.width - 10) {
+        x = viewport.width - halfWidth - 10;
+      }
+    }
+    
+    // Ensure tooltip doesn't go off-screen vertically for side placements
+    if (placement === 'left' || placement === 'right') {
+      const halfHeight = tooltipHeight / 2;
+      if (y - halfHeight < 10) {
+        y = halfHeight + 10;
+      } else if (y + halfHeight > viewport.height - 10) {
+        y = viewport.height - halfHeight - 10;
+      }
+    }
+    
+    return {
+      x,
+      y,
+      placement,
+      maxWidth: tooltipWidth
+    };
+  };
+
   // Session details tooltip component
   const SessionTooltip = ({ sessions, dateStr }: { sessions: any[], dateStr: string }) => {
-    if (!sessions.length || hoveredDay !== dateStr) return null;
+    if (!sessions.length || hoveredDay !== dateStr || !tooltipPosition) return null;
+
+    // Calculate transform based on placement
+    const getTransform = () => {
+      switch (tooltipPosition.placement) {
+        case 'top':
+          return 'translate(-50%, -100%)';
+        case 'bottom':
+          return 'translate(-50%, 8px)';
+        case 'left':
+          return 'translate(-100%, -50%)';
+        case 'right':
+          return 'translate(8px, -50%)';
+        default:
+          return 'translate(-50%, -100%)';
+      }
+    };
+
+    // Add placement-specific margins
+    const getMargin = () => {
+      switch (tooltipPosition.placement) {
+        case 'top':
+          return { marginTop: '-12px' };
+        case 'bottom':
+          return { marginTop: '12px' };
+        case 'left':
+          return { marginLeft: '-12px' };
+        case 'right':
+          return { marginLeft: '12px' };
+        default:
+          return { marginTop: '-12px' };
+      }
+    };
 
     return (
       <div
-        className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-md"
+        className="absolute z-[60] bg-white border border-gray-300 rounded-xl shadow-xl backdrop-blur-sm"
         style={{
-          left: tooltipPosition?.x || 0,
-          top: tooltipPosition?.y || 0,
-          transform: 'translate(-50%, -100%)',
-          marginTop: '-8px'
+          left: tooltipPosition.x,
+          top: tooltipPosition.y,
+          transform: getTransform(),
+          maxWidth: tooltipPosition.maxWidth,
+          width: 'max-content',
+          minWidth: '300px',
+          ...getMargin()
         }}
       >
-        <div className="space-y-3">
-          {sessions.map((session, idx) => {
-            // Get template details
-            const template = session.course_sequence?.template_id ?
-              courseTemplates.find(t => t.id === session.course_sequence.template_id) : null;
-            
-            return (
-              <div key={`tooltip-${session.id}-${idx}`} className="border-b border-gray-100 last:border-b-0 pb-3 last:pb-0">
-                <div className="font-semibold text-sm text-gray-900 mb-1">
-                  {session.title}
-                </div>
-                
-                <div className="text-xs text-gray-600 space-y-1">
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {session.start_time} - {session.end_time}
-                  </div>
-                  
-                  <div className="flex items-center gap-1">
-                    <Users className="h-3 w-3" />
-                    {session.instructor_profiles?.display_name || 'No instructor'}
-                  </div>
-                  
-                  {session.location_details && (
-                    <div className="flex items-center gap-1">
-                      <span>📍</span>
-                      {session.location_details.name}, {session.location_details.city}
-                    </div>
-                  )}
-                  
-                  {session.description && (
-                    <div className="text-gray-500 mt-1">
-                      {session.description}
-                    </div>
-                  )}
-                  
-                  {template && (
-                    <div className="mt-2 p-2 bg-blue-50 rounded text-xs">
-                      <div className="font-medium text-blue-900 mb-1">Course Template</div>
-                      <div className="space-y-1 text-blue-800">
-                        <div><strong>Code:</strong> {template.code}</div>
-                        <div><strong>Duration:</strong> {template.duration_hours}h</div>
-                        <div><strong>Max Students:</strong> {template.max_students}</div>
-                        {template.description && (
-                          <div><strong>Description:</strong> {template.description}</div>
-                        )}
+        {/* Arrow indicator */}
+        <div
+          className={`absolute w-3 h-3 bg-white border-gray-300 transform rotate-45 ${
+            tooltipPosition.placement === 'top' ? 'bottom-[-6px] left-1/2 -translate-x-1/2 border-r border-b' :
+            tooltipPosition.placement === 'bottom' ? 'top-[-6px] left-1/2 -translate-x-1/2 border-l border-t' :
+            tooltipPosition.placement === 'left' ? 'right-[-6px] top-1/2 -translate-y-1/2 border-t border-r' :
+            'left-[-6px] top-1/2 -translate-y-1/2 border-b border-l'
+          }`}
+        />
+        
+        {/* Content with enhanced styling */}
+        <div className="p-5 relative">
+          <div className="space-y-4">
+            {sessions.map((session, idx) => {
+              // Get template details
+              const template = session.course_sequence?.template_id ?
+                courseTemplates.find(t => t.id === session.course_sequence.template_id) : null;
+              
+              return (
+                <div key={`tooltip-${session.id}-${idx}`} className="border-b border-gray-100 last:border-b-0 pb-4 last:pb-0">
+                  {/* Session Header */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-base text-gray-900 mb-1 leading-tight">
+                        {session.title}
+                      </h3>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Badge variant="outline" className="text-xs px-2 py-0.5">
+                          {session.status || 'SCHEDULED'}
+                        </Badge>
                       </div>
                     </div>
+                  </div>
+                  
+                  {/* Session Details Grid */}
+                  <div className="grid grid-cols-1 gap-3 text-sm">
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Clock className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                      <span className="font-medium">{session.start_time} - {session.end_time}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Users className="h-4 w-4 text-green-600 flex-shrink-0" />
+                      <span>{session.instructor_profiles?.display_name || 'No instructor assigned'}</span>
+                    </div>
+                    
+                    {session.location_details && (
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <span className="text-orange-600 flex-shrink-0">📍</span>
+                        <span>{session.location_details.name}, {session.location_details.city}</span>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <span className="text-purple-600 flex-shrink-0">👥</span>
+                      <span><strong>{session.session_enrollments?.length || 0}</strong> students enrolled</span>
+                    </div>
+                  </div>
+                  
+                  {/* Description */}
+                  {session.description && (
+                    <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                      <p className="text-sm text-gray-700 leading-relaxed">{session.description}</p>
+                    </div>
                   )}
                   
-                  <div className="flex items-center gap-1">
-                    <span>👥</span>
-                    {session.session_enrollments?.length || 0} enrolled
-                  </div>
+                  {/* Template Information */}
+                  {template && (
+                    <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-blue-600">📚</span>
+                        <h4 className="font-semibold text-blue-900">Course Template: {template.name}</h4>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm text-blue-800">
+                        <div><span className="font-medium">Code:</span> {template.code}</div>
+                        <div><span className="font-medium">Duration:</span> {template.duration_hours}h</div>
+                        <div><span className="font-medium">Max Students:</span> {template.max_students}</div>
+                        {template.required_specialties?.length > 0 && (
+                          <div className="col-span-2">
+                            <span className="font-medium">Specialties:</span> {template.required_specialties.join(', ')}
+                          </div>
+                        )}
+                      </div>
+                      {template.description && (
+                        <p className="mt-2 text-sm text-blue-700 italic">{template.description}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
     );
@@ -1225,11 +1375,8 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                       onClick={() => handleDayClick(day)}
                       onMouseEnter={(e) => {
                         if (daySessions.length > 0) {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          setTooltipPosition({
-                            x: rect.left + rect.width / 2,
-                            y: rect.top
-                          });
+                          const position = calculateTooltipPosition(e.currentTarget);
+                          setTooltipPosition(position);
                           setHoveredDay(dateStr);
                         }
                       }}
