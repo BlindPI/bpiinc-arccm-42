@@ -363,7 +363,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                   student_enrollment_profiles:student_enrollment_profiles!student_profile_id(id, display_name, email)
                 )
               `)
-              .or(`availability_booking_id.eq.${session.id},booking_id.eq.${session.id},session_id.eq.${session.id}`)
+              .eq('booking_id', session.id)
               .limit(1);
               
             if (directRosterData && directRosterData.length > 0) {
@@ -576,11 +576,15 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
       // Try multiple approaches to find existing roster with better error handling
       let existingRoster;
       try {
-        const { data: directRoster } = await supabase
+        const { data: directRoster, error: rosterError } = await supabase
           .from('student_rosters')
           .select('id')
-          .or(`availability_booking_id.eq.${sessionId},booking_id.eq.${sessionId},session_id.eq.${sessionId}`)
-          .single();
+          .eq('booking_id', sessionId)
+          .maybeSingle();
+        
+        if (rosterError) {
+          console.warn('Roster query error:', rosterError);
+        }
         existingRoster = directRoster;
       } catch (rosterQueryError) {
         console.warn('Could not find existing roster, will create new one:', rosterQueryError);
@@ -1148,7 +1152,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                 </div>
                 
                 <Dialog open={showSessionModal} onOpenChange={setShowSessionModal}>
-                  <DialogTrigger asChild>
+                  <DialogTrigger>
                     <Button>
                       <Plus className="h-4 w-4 mr-2" />
                       New Session
@@ -1801,7 +1805,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                     />
                   </div>
                   <Dialog open={showStudentModal} onOpenChange={setShowStudentModal}>
-                    <DialogTrigger asChild>
+                    <DialogTrigger>
                       <Button>
                         <Plus className="h-4 w-4 mr-2" />
                         Add Student
