@@ -21,7 +21,6 @@ import { cn } from '@/lib/utils';
 
 // Phase 1: Capacity Management Integration
 import { CapacityStatusBadge, getCapacityStatus } from '@/components/enrollment/capacity';
-import { useRosterCapacityValidation } from '@/hooks/useRosterCapacityValidation';
 import type { RosterCapacityInfo, CapacityStatus } from '@/types/roster-enrollment';
 
 interface InstructorSystemProps {
@@ -471,7 +470,9 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
           created_by: user?.id,
           location_id: sessionData.location_id,
           description: sessionData.description,
-          max_capacity: sessionData.max_capacity || 18 // REAL max_capacity field!
+          max_capacity: typeof sessionData.max_capacity === 'number' && sessionData.max_capacity > 0
+            ? sessionData.max_capacity
+            : 18 // REAL max_capacity field with validation!
         }])
         .select()
         .single();
@@ -501,7 +502,9 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
           course_sequence: updates.course_template ? { template_id: updates.course_template } : null,
           location_id: updates.location_id,
           description: updates.description,
-          max_capacity: updates.max_capacity || 18 // REAL max_capacity field!
+          max_capacity: typeof updates.max_capacity === 'number' && updates.max_capacity > 0
+            ? updates.max_capacity
+            : 18 // REAL max_capacity field with validation!
         })
         .eq('id', sessionId)
         .select()
@@ -1318,7 +1321,13 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                           id="capacity"
                           type="number"
                           value={sessionForm.max_capacity}
-                          onChange={(e) => setSessionForm({...sessionForm, max_capacity: parseInt(e.target.value)})}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            // Only allow numeric values, default to 18 for empty/invalid input
+                            const numValue = value === '' ? 18 : parseInt(value);
+                            const finalValue = isNaN(numValue) ? 18 : Math.max(1, Math.min(500, numValue));
+                            setSessionForm({...sessionForm, max_capacity: finalValue});
+                          }}
                           min="1"
                           max="50"
                         />
