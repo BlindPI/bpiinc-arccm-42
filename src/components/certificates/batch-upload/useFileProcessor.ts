@@ -133,9 +133,9 @@ export function useFileProcessor() {
       }
 
       // Process data rows
-      const processedData = { 
-        data: [] as any[], 
-        totalCount: data.length,
+      const processedData = {
+        data: [] as any[],
+        totalCount: 0, // Will be updated based on non-empty rows
         errorCount: 0,
         courseMismatches: 0
       };
@@ -146,7 +146,7 @@ export function useFileProcessor() {
         processed: 0,
         successful: 0,
         failed: 0,
-        total: data.length,
+        total: 0, // Will be updated based on non-empty rows
         errors: [] as string[]
       };
       
@@ -169,6 +169,17 @@ export function useFileProcessor() {
       for (let i = 0; i < data.length; i++) {
         const row = data[i];
         const rowNum = i + 1;
+        
+        // Skip empty rows - check if student name is empty or row is completely empty
+        const studentName = (row['Student Name'] || row['NAME'] || row['Name'] || '').toString().trim();
+        const email = (row['Email'] || row['EMAIL'] || row['email'] || '').toString().trim();
+        
+        // Skip if no name or if row appears to be completely empty
+        if (!studentName || (!studentName && !email && Object.values(row).every(val => !val || val.toString().trim() === ''))) {
+          console.log(`Skipping empty row ${rowNum}`);
+          continue;
+        }
+        
         try {
           status.processed++;
           setProcessingStatus({ ...status });
@@ -178,7 +189,7 @@ export function useFileProcessor() {
           
           // Extract and standardize all fields with comprehensive mapping
           const processedRow = {
-            name: (row['Student Name'] || row['NAME'] || row['Name'] || '').toString().trim(),
+            name: studentName,
             email: (row['Email'] || row['EMAIL'] || row['email'] || '').toString().trim(),
             phone: (row['Phone'] || row['PHONE'] || row['phone'] || '').toString().trim(),
             company: (row['Company'] || row['COMPANY'] || row['Organization'] || row['company'] || '').toString().trim(),
@@ -362,6 +373,10 @@ export function useFileProcessor() {
         setProcessingStatus({ ...status });
       }
 
+      // Update total count to reflect actually processed rows
+      processedData.totalCount = processedData.data.length;
+      status.total = processedData.data.length;
+      
       // Set the processed data and extracted course
       setProcessedData(processedData);
       setExtractedCourse(extractedCourse);
