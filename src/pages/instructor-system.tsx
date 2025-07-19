@@ -662,7 +662,30 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
     }
   };
 
-  // Phase 2: Enhanced Capacity Validation Functions
+  // ============================================================================
+  // Phase 2: ENROLLMENT ACTION PROTECTION WITH CAPACITY CHECKS
+  // ============================================================================
+  //
+  // This implementation provides comprehensive enrollment protection by:
+  //
+  // 1. **Capacity Validation**: Validates session capacity before all enrollment actions
+  // 2. **Waitlist Support**: Automatically handles waitlist enrollment when capacity exceeded
+  // 3. **Batch Protection**: Validates capacity for multiple student enrollments
+  // 4. **Error Handling**: Provides clear feedback for capacity scenarios
+  // 5. **Integration**: Uses robust RosterEnrollmentService with ACID transactions
+  //
+  // Key Features:
+  // - Pre-enrollment capacity checks prevent over-capacity enrollment
+  // - Automatic waitlist enrollment when session at capacity
+  // - Batch enrollment with partial success handling
+  // - Enhanced error messages for capacity scenarios
+  // - Integration with existing toast notifications and loading states
+  // - Preservation of all existing functionality
+  //
+  // The system follows the established validation patterns and integrates seamlessly
+  // with the existing instructor management interface.
+  // ============================================================================
+
   /**
    * Validate enrollment capacity for a session before proceeding with enrollment
    * @param sessionId - The training session ID
@@ -754,7 +777,19 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
         console.log('✅ Capacity available - enrolling normally');
       }
 
-      // Use the robust RosterEnrollmentService for enrollment
+      // Get the actual user ID for the student profile for notifications
+      const { data: studentProfile, error: studentProfileError } = await supabase
+        .from('student_enrollment_profiles')
+        .select('id, user_id')
+        .eq('id', studentId)
+        .single();
+
+      if (studentProfileError) {
+        toast.error('Student profile not found');
+        return;
+      }
+
+      // Use the robust RosterEnrollmentService for enrollment with proper user ID
       const enrollmentParams: RosterEnrollmentParams = {
         rosterId,
         studentId,
@@ -766,59 +801,93 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
       };
 
       console.log('📝 Enrolling student with parameters:', enrollmentParams);
-      const result = await RosterEnrollmentService.enrollStudentWithCapacityCheck(enrollmentParams);
-
-      if (!result.success) {
-        console.error('❌ Enrollment failed:', result.error);
-        
-        // Enhanced error handling based on enrollment service response
-        if (result.error?.includes('CAPACITY_EXCEEDED')) {
-          toast.error('Session is at full capacity');
-        } else if (result.error?.includes('ALREADY_ENROLLED')) {
-          toast.error('Student is already enrolled in this session');
-        } else if (result.error?.includes('STUDENT_NOT_FOUND')) {
-          toast.error('Student profile not found');
-        } else if (result.error?.includes('ROSTER_NOT_FOUND')) {
-          toast.error('Session roster not found');
-        } else if (result.error?.includes('INSUFFICIENT_PERMISSIONS')) {
-          toast.error('Permission denied: Contact administrator');
-        } else {
-          toast.error(`Enrollment failed: ${result.error || 'Unknown error'}`);
-        }
-        return;
-      }
-
-      // Update course assignment if provided
-      if (courseId && result.results.enrollment?.id) {
-        try {
-          await updateStudentCourseAssignment(result.results.enrollment.id, courseId);
-        } catch (courseError) {
-          console.warn('Failed to update course assignment:', courseError);
-          // Don't fail the entire enrollment for course assignment issues
-        }
-      }
-
-      // Reload sessions to show updated enrollment
-      await loadTrainingSessions();
       
-      // Success feedback based on enrollment status
-      const enrollmentStatus = result.results.enrollment?.enrollment_status;
-      if (enrollmentStatus === 'waitlisted') {
-        toast.success('Student added to waitlist successfully');
-      } else {
-        toast.success('Student enrolled successfully');
-      }
+      // Temporarily disable notifications in service to avoid foreign key issues
+      const originalConfig = RosterEnrollmentService.getConfig();
+      RosterEnrollmentService.updateConfig({ enableNotifications: false });
+      
+      try {
+        const result = await RosterEnrollmentService.enrollStudentWithCapacityCheck(enrollmentParams);
 
-      // Log capacity status after enrollment
-      if (capacityCheck.capacityInfo) {
-        console.log('📊 Post-enrollment capacity:', {
-          enrolled: capacityCheck.capacityInfo.current_enrollment + 1,
-          capacity: capacityCheck.capacityInfo.max_capacity,
-          available: Math.max(0, (capacityCheck.capacityInfo.available_spots || 0) - 1)
-        });
-      }
+        if (!result.success) {
+          console.error('❌ Enrollment failed:', result.error);
+          
+          // Enhanced error handling based on enrollment service response
+          if (result.error?.includes('CAPACITY_EXCEEDED')) {
+            toast.error('Session is at full capacity');
+          } else if (result.error?.includes('ALREADY_ENROLLED')) {
+            toast.error('Student is already enrolled in this session');
+          } else if (result.error?.includes('STUDENT_NOT_FOUND')) {
+            toast.error('Student profile not found');
+          } else if (result.error?.includes('ROSTER_NOT_FOUND')) {
+            toast.error('Session roster not found');
+          } else if (result.error?.includes('INSUFFICIENT_PERMISSIONS')) {
+            toast.error('Permission denied: Contact administrator');
+          } else {
+            toast.error(`Enrollment failed: ${result.error || 'Unknown error'}`);
+          }
+          return;
+        }
 
-      return result.results.enrollment;
+        // Update course assignment if provided
+        if (courseId && result.results.enrollment?.id) {
+          try {
+            await updateStudentCourseAssignment(result.results.enrollment.id, courseId);
+          } catch (courseError) {
+            console.warn('Failed to update course assignment:', courseError);
+            // Don't fail the entire enrollment for course assignment issues
+          }
+        }
+
+        // Create our own notification if user_id exists and notifications are needed
+        if (studentProfile.user_id) {
+          try {
+            const enrollmentStatus = result.results.enrollment?.enrollment_status;
+            const isWaitlisted = enrollmentStatus === 'waitlisted';
+            const title = isWaitlisted ? 'Added to Waitlist' : 'Enrollment Confirmed';
+            const message = isWaitlisted
+              ? `You have been added to the waitlist for the training session`
+              : `You have been successfully enrolled in the training session`;
+
+            await supabase.from('notifications').insert({
+              user_id: studentProfile.user_id,
+              title,
+              message,
+              type: isWaitlisted ? 'INFO' : 'SUCCESS',
+              category: 'ENROLLMENT',
+              priority: 'NORMAL'
+            });
+          } catch (notificationError) {
+            console.warn('Failed to create notification (non-critical):', notificationError);
+            // Don't fail enrollment for notification issues
+          }
+        }
+
+        // Reload sessions to show updated enrollment
+        await loadTrainingSessions();
+        
+        // Success feedback based on enrollment status
+        const enrollmentStatus = result.results.enrollment?.enrollment_status;
+        if (enrollmentStatus === 'waitlisted') {
+          toast.success('Student added to waitlist successfully');
+        } else {
+          toast.success('Student enrolled successfully');
+        }
+
+        // Log capacity status after enrollment
+        if (capacityCheck.capacityInfo) {
+          console.log('📊 Post-enrollment capacity:', {
+            enrolled: capacityCheck.capacityInfo.current_enrollment + 1,
+            capacity: capacityCheck.capacityInfo.max_capacity,
+            available: Math.max(0, (capacityCheck.capacityInfo.available_spots || 0) - 1)
+          });
+        }
+
+        return result.results.enrollment;
+      } finally {
+        // Restore original configuration
+        RosterEnrollmentService.updateConfig(originalConfig);
+      }
     } catch (error: any) {
       console.error('💥 Error enrolling student:', error);
       
