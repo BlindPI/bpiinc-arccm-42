@@ -209,10 +209,6 @@ export function useFileProcessor() {
             assessmentWarnings: assessmentResult.warnings,
             wasGradeConversion: assessmentResult.wasGradeConversion,
             wasAssessmentDefaulted: assessmentResult.wasDefaulted,
-            // Set scores based on assessment status to prevent "Pending Scores" blocking
-            practical_score: assessmentResult.status === 'PASS' ? 85 : assessmentResult.status === 'FAIL' ? 65 : undefined,
-            written_score: assessmentResult.status === 'PASS' ? 85 : assessmentResult.status === 'FAIL' ? 65 : undefined,
-            total_score: assessmentResult.status === 'PASS' ? 85 : assessmentResult.status === 'FAIL' ? 65 : undefined,
             rowNum,
             isProcessed: false,
             error: '',
@@ -246,8 +242,12 @@ export function useFileProcessor() {
             expiration_months: 12
           });
 
-          // Set validation errors on the processed row instead of throwing
+          // Set validation errors on the processed row for successful records
           processedRow.validationErrors = validationErrors;
+
+          if (validationErrors.length > 0) {
+            throw new Error(validationErrors.join('; '));
+          }
 
           // Find matching course if enabled - using simplified exact matching on CPR and First Aid levels
           if (enableCourseMatching && courses) {
