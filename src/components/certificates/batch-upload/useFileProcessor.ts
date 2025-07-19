@@ -56,13 +56,7 @@ function addMonthsToDate(date: Date, months: number): Date {
   return newDate;
 }
 
-// Import centralized assessment processor
-import {
-  processAssessmentStatus,
-  type AssessmentProcessingResult,
-  type AssessmentWarning,
-  DEFAULT_ASSESSMENT_CONFIG
-} from '../utils/assessmentStatusProcessor';
+// Import centralized assessment processor (already imported above)
 
 function determineAssessmentStatus(row: any): {
   status: string;
@@ -219,7 +213,8 @@ export function useFileProcessor() {
             isProcessed: false,
             error: '',
             courseMatches: [] as any[],
-            certifications: {} as Record<string, string>
+            certifications: {} as Record<string, string>,
+            validationErrors: [] as string[]
           };
 
           // Map standard fields to the certification types
@@ -247,9 +242,8 @@ export function useFileProcessor() {
             expiration_months: 12
           });
 
-          if (validationErrors.length > 0) {
-            throw new Error(validationErrors.join('; '));
-          }
+          // Set validation errors on the processed row instead of throwing
+          processedRow.validationErrors = validationErrors;
 
           // Find matching course if enabled - using simplified exact matching on CPR and First Aid levels
           if (enableCourseMatching && courses) {
@@ -396,7 +390,8 @@ export function useFileProcessor() {
             rowNum,
             isProcessed: false,
             error: error instanceof Error ? error.message : 'Unknown error',
-            courseMatches: []
+            courseMatches: [],
+            validationErrors: [error instanceof Error ? error.message : 'Unknown error']
           });
           
           processedData.errorCount++;
