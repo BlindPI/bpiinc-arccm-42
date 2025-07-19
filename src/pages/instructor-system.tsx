@@ -599,9 +599,16 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
       if (existingRoster) {
         rosterId = existingRoster.id;
       } else {
-        // Create a new roster for this session with safe data types
+        // Get session details to copy max_capacity from availability_bookings
+        const { data: sessionData, error: sessionError } = await supabase
+          .from('availability_bookings')
+          .select('max_capacity, title')
+          .eq('id', sessionId)
+          .single();
+
+        // Create a new roster for this session with capacity from availability_bookings
         const rosterData = {
-          roster_name: 'Training Session Roster',
+          roster_name: (!sessionError && sessionData?.title) ? sessionData.title : 'Training Session Roster',
           course_name: 'Training Session',
           instructor_id: user?.id || null,
           location_id: locationId || null,
@@ -609,6 +616,8 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
           roster_type: 'course',
           course_id: courseId || null,
           created_by: user?.id || null,
+          // CRITICAL: Copy max_capacity from availability_bookings.max_capacity
+          max_capacity: (!sessionError && sessionData?.max_capacity) ? sessionData.max_capacity : 18,
           // Link to session using the unique availability_booking_id field
           availability_booking_id: sessionId
         };
