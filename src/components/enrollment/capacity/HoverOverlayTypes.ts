@@ -125,6 +125,16 @@ export interface CapacityInfoOverlayProps {
   isLoading?: boolean;
   /** Error state */
   error?: string;
+  
+  /** REAL INSTRUCTOR SYSTEM INTEGRATION CALLBACKS */
+  /** Real view details function - sets selected day to show session details */
+  onViewDetails?: (sessionId: string, sessionDate: string) => void;
+  /** Real edit session function - opens session editor modal */
+  onEditSession?: (session: SessionData) => void;
+  /** Real enrollment function - connects to instructor system enrollment */
+  onEnrollStudent?: (sessionId: string, studentId: string) => Promise<any>;
+  /** Real reload function - refreshes instructor system data */
+  onReloadData?: () => Promise<void>;
 }
 
 // ============================================================================

@@ -1596,6 +1596,113 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
     []
   );
 
+  // ============================================================================
+  // REAL INSTRUCTOR SYSTEM INTEGRATION FUNCTIONS
+  // ============================================================================
+
+  /**
+   * REAL View Details Function - Sets selected day to show session details
+   * This replaces the placeholder window.open navigation
+   */
+  const handleRealViewDetails = useCallback((sessionId: string, sessionDate: string) => {
+    console.log('🔗 REAL View Details:', sessionId, sessionDate);
+    
+    // Set the selected day to display session details in the main interface
+    setSelectedDay(sessionDate);
+    
+    // Optional: Scroll to the session details section
+    setTimeout(() => {
+      const sessionElement = document.querySelector(`[data-session-id="${sessionId}"]`);
+      if (sessionElement) {
+        sessionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+    
+    toast.success('Session details displayed', {
+      description: `Showing details for session on ${new Date(sessionDate).toLocaleDateString()}`
+    });
+  }, []);
+
+  /**
+   * REAL Edit Session Function - Opens the session editor modal
+   * This replaces the placeholder window.open navigation
+   */
+  const handleRealEditSession = useCallback((session: any) => {
+    console.log('🔗 REAL Edit Session:', session.id, session.title);
+    
+    // Set the editing session and populate the form
+    setEditingSession(session);
+    const templateId = session.course_sequence?.template_id || session.course_id || '';
+    
+    setSessionForm({
+      title: session.title,
+      instructor_id: session.user_id,
+      course_template: templateId,
+      session_date: session.booking_date,
+      start_time: session.start_time,
+      end_time: session.end_time,
+      max_capacity: session.max_capacity || 18,
+      location_id: session.location_id || '',
+      description: session.description || ''
+    });
+    
+    // Set selected template for editing
+    if (templateId) {
+      const template = courseTemplates.find(t => t.id === templateId);
+      setSelectedTemplate(template || null);
+    } else {
+      setSelectedTemplate(null);
+    }
+    
+    // Open the session modal
+    setShowSessionModal(true);
+    
+    toast.success('Session editor opened', {
+      description: `Editing ${session.title}`
+    });
+  }, [courseTemplates]);
+
+  /**
+   * REAL Enrollment Function - Uses the existing instructor system enrollment
+   * This connects to the real enrollStudentInSession function
+   */
+  const handleRealEnrollStudent = useCallback(async (sessionId: string, studentId: string): Promise<any> => {
+    console.log('🔗 REAL Enroll Student:', sessionId, studentId);
+    
+    try {
+      // Use the existing robust enrollment function
+      const result = await enrollStudentInSession(sessionId, studentId);
+      
+      // Return success result
+      return {
+        success: true,
+        result,
+        message: 'Student enrolled successfully via instructor system'
+      };
+    } catch (error: any) {
+      console.error('❌ Real enrollment failed:', error);
+      throw error; // Re-throw to be handled by the calling component
+    }
+  }, [enrollStudentInSession]);
+
+  /**
+   * REAL Reload Data Function - Refreshes instructor system data
+   * This uses the existing loadTrainingSessions function
+   */
+  const handleRealReloadData = useCallback(async (): Promise<void> => {
+    console.log('🔗 REAL Reload Data - refreshing instructor system');
+    
+    try {
+      // Use the existing optimized session loading
+      await loadTrainingSessionsOptimized();
+      
+      console.log('✅ Instructor system data reloaded successfully');
+    } catch (error: any) {
+      console.error('❌ Failed to reload instructor system data:', error);
+      throw error; // Re-throw to be handled by the calling component
+    }
+  }, [loadTrainingSessionsOptimized]);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'SCHEDULED': return 'bg-blue-100 text-blue-800';
@@ -2144,6 +2251,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                   );
 
                   // Phase 3 Task 3: Enhanced hover overlay with CalendarCapacityHover
+                  // CRITICAL FIX: Connect to real instructor system functions
                   return daySessions.length > 0 ? (
                     <CalendarCapacityHover
                       key={day}
@@ -2158,6 +2266,11 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                       onActionComplete={handleOptimizedActionComplete}
                       onActionError={handleOptimizedActionError}
                       className="h-full"
+                      // REAL INSTRUCTOR SYSTEM INTEGRATION - Connect to actual workflows
+                      onViewDetails={handleRealViewDetails}
+                      onEditSession={handleRealEditSession}
+                      onEnrollStudent={handleRealEnrollStudent}
+                      onReloadData={handleRealReloadData}
                     />
                   ) : (
                     calendarCell

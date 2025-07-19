@@ -109,6 +109,11 @@ interface SessionCardProps {
   onActionClick?: (action: string, sessionId: string) => void;
   onActionComplete?: (action: string, sessionId: string, result: any) => void;
   onActionError?: (action: string, sessionId: string, error: string) => void;
+  /** REAL INSTRUCTOR SYSTEM INTEGRATION CALLBACKS */
+  onViewDetails?: (sessionId: string, sessionDate: string) => void;
+  onEditSession?: (session: SessionData) => void;
+  onEnrollStudent?: (sessionId: string, studentId: string) => Promise<any>;
+  onReloadData?: () => Promise<void>;
 }
 
 const SessionCard: React.FC<SessionCardProps> = ({
@@ -120,7 +125,12 @@ const SessionCard: React.FC<SessionCardProps> = ({
   studentId,
   onActionClick,
   onActionComplete,
-  onActionError
+  onActionError,
+  // REAL INSTRUCTOR SYSTEM INTEGRATION CALLBACKS
+  onViewDetails,
+  onEditSession,
+  onEnrollStudent,
+  onReloadData
 }) => {
   const enrollmentCount = session.session_enrollments?.length || 0;
   const hasCapacityInfo = session.capacity_info && session.capacity_status;
@@ -230,6 +240,11 @@ const SessionCard: React.FC<SessionCardProps> = ({
             compact={compact}
             onActionComplete={onActionComplete}
             onActionError={onActionError}
+            // PASS THROUGH REAL INSTRUCTOR SYSTEM INTEGRATION CALLBACKS
+            onViewDetails={onViewDetails}
+            onEditSession={onEditSession}
+            onEnrollStudent={onEnrollStudent}
+            onReloadData={onReloadData}
           />
         </div>
       )}
@@ -305,7 +320,12 @@ export const CapacityInfoOverlay: React.FC<CapacityInfoOverlayProps> = ({
   onActionComplete,
   onActionError,
   isLoading = false,
-  error
+  error,
+  // REAL INSTRUCTOR SYSTEM INTEGRATION CALLBACKS
+  onViewDetails,
+  onEditSession,
+  onEnrollStudent,
+  onReloadData
 }) => {
   const [selectedSessionId, setSelectedSessionId] = useState<string>(session.id);
   
@@ -427,6 +447,11 @@ export const CapacityInfoOverlay: React.FC<CapacityInfoOverlayProps> = ({
           onActionClick={onActionClick}
           onActionComplete={handleActionComplete}
           onActionError={handleActionError}
+          // PASS THROUGH REAL INSTRUCTOR SYSTEM INTEGRATION CALLBACKS
+          onViewDetails={onViewDetails}
+          onEditSession={onEditSession}
+          onEnrollStudent={onEnrollStudent}
+          onReloadData={onReloadData}
         />
         
         {/* Additional Sessions (Compact) */}
@@ -566,6 +591,16 @@ export interface CalendarCapacityHoverProps {
   hideDelay?: number;
   /** Disabled state */
   disabled?: boolean;
+  
+  /** REAL INSTRUCTOR SYSTEM INTEGRATION CALLBACKS */
+  /** Real view details function - sets selected day to show session details */
+  onViewDetails?: (sessionId: string, sessionDate: string) => void;
+  /** Real edit session function - opens session editor modal */
+  onEditSession?: (session: SessionData) => void;
+  /** Real enrollment function - connects to instructor system enrollment */
+  onEnrollStudent?: (sessionId: string, studentId: string) => Promise<any>;
+  /** Real reload function - refreshes instructor system data */
+  onReloadData?: () => Promise<void>;
 }
 
 export const CalendarCapacityHover: React.FC<CalendarCapacityHoverProps> = ({
@@ -582,7 +617,12 @@ export const CalendarCapacityHover: React.FC<CalendarCapacityHoverProps> = ({
   compact = false,
   showDelay = 500,
   hideDelay = 200,
-  disabled = false
+  disabled = false,
+  // REAL INSTRUCTOR SYSTEM INTEGRATION CALLBACKS
+  onViewDetails,
+  onEditSession,
+  onEnrollStudent,
+  onReloadData
 }) => {
   // Don't show overlay if no sessions
   if (!sessions || sessions.length === 0 || disabled) {
@@ -616,6 +656,11 @@ export const CalendarCapacityHover: React.FC<CalendarCapacityHoverProps> = ({
         onActionClick={onActionClick}
         onActionComplete={onActionComplete}
         onActionError={onActionError}
+        // PASS THROUGH REAL INSTRUCTOR SYSTEM INTEGRATION CALLBACKS
+        onViewDetails={onViewDetails}
+        onEditSession={onEditSession}
+        onEnrollStudent={onEnrollStudent}
+        onReloadData={onReloadData}
       />
     </BaseHoverOverlay>
   );

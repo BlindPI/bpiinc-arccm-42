@@ -5,9 +5,15 @@ import { toast } from 'sonner';
 import { useCourseData } from '@/hooks/useCourseData';
 import { processExcelFile, extractDataFromFile } from '../utils/fileProcessing';
 import { findBestCourseMatch } from '../utils/courseMatching';
-import { Course } from '@/types/courses'; 
+import { Course } from '@/types/courses';
 import { useCertificationLevelsCache } from '@/hooks/useCertificationLevelsCache';
 import { addMonths, format } from 'date-fns';
+import {
+  processAssessmentStatus,
+  type AssessmentProcessingResult,
+  type AssessmentWarning,
+  DEFAULT_ASSESSMENT_CONFIG
+} from '../utils/assessmentStatusProcessor';
 
 // Helper functions
 function formatDate(dateInput: any): string {
@@ -49,23 +55,27 @@ function addMonthsToDate(date: Date, months: number): Date {
   return newDate;
 }
 
-function determineAssessmentStatus(row: any): string {
-  // Enhanced field mapping to capture GRADE and other assessment field variants
-  const assessmentField = row['assessment'] || row['Assessment'] || row['assessment_status'] ||
-                         row['Assessment Status'] || row['Pass/Fail'] || row['GRADE'] ||
-                         row['Grade'] || row['grade'] || '';
-  
-  if (!assessmentField) return 'PASS'; // Default to pass if not specified
-  
-  const status = String(assessmentField).trim().toUpperCase();
-  
-  if (status === 'FAIL' || status === 'FAILED' || status === 'F') {
-    return 'FAIL';
-  } else if (status === 'PENDING' || status === 'NOT ASSESSED' || status === 'P') {
-    return 'PENDING';
-  }
-  
-  return 'PASS'; // Default to pass for any other value (including 'PASS', 'PASSED', grades like 'A', 'B', etc.)
+// Import centralized assessment processor
+import {
+  processAssessmentStatus,
+  type AssessmentProcessingResult,
+  type AssessmentWarning,
+  DEFAULT_ASSESSMENT_CONFIG
+} from '../utils/assessmentStatusProcessor';
+
+function determineAssessmentStatus(row: any): {
+  status: string;
+  warnings: AssessmentWarning[];
+  wasGradeConversion: boolean;
+  wasDefaulted: boolean;
+} {
+  const result = processAssessmentStatus(row, DEFAULT_ASSESSMENT_CONFIG);
+  return {
+    status: result.status,
+    warnings: result.warnings,
+    wasGradeConversion: result.wasGradeConversion,
+    wasDefaulted: result.wasDefaulted
+  };
 }
 
 export function useFileProcessor() {
@@ -168,6 +178,9 @@ export function useFileProcessor() {
           status.processed++;
           setProcessingStatus({ ...status });
 
+          // Process assessment status with warnings
+          const assessmentResult = determineAssessmentStatus(row);
+          
           // Extract and standardize all fields with comprehensive mapping
           const processedRow = {
             name: (row['Student Name'] || row['NAME'] || row['Name'] || '').toString().trim(),
@@ -197,7 +210,10 @@ export function useFileProcessor() {
             instructorName: (row['Instructor Name'] || row['INSTRUCTOR_NAME'] || row['Instructor'] || row['instructor_name'] || '').toString().trim(),
             instructorLevel: (row['Instructor Level'] || row['Instructor Type'] || row['instructor_level'] || '').toString().trim(),
             notes: (row['Notes'] || row['NOTES'] || row['notes'] || row['Comments'] || row['comments'] || '').toString().trim(),
-            assessmentStatus: determineAssessmentStatus(row),
+            assessmentStatus: assessmentResult.status,
+            assessmentWarnings: assessmentResult.warnings,
+            wasGradeConversion: assessmentResult.wasGradeConversion,
+            wasAssessmentDefaulted: assessmentResult.wasDefaulted,
             rowNum,
             isProcessed: false,
             error: '',

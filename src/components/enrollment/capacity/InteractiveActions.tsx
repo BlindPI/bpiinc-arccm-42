@@ -75,6 +75,15 @@ export interface ActionButtonProps {
   onError?: (error: string) => void;
   /** Custom styling */
   className?: string;
+  /** REAL INSTRUCTOR SYSTEM INTEGRATION CALLBACKS */
+  /** Real view details function - sets selected day to show session details */
+  onViewDetails?: (sessionId: string, sessionDate: string) => void;
+  /** Real edit session function - opens session editor modal */
+  onEditSession?: (session: SessionData) => void;
+  /** Real enrollment function - connects to instructor system enrollment */
+  onEnrollStudent?: (sessionId: string, studentId: string) => Promise<any>;
+  /** Real reload function - refreshes instructor system data */
+  onReloadData?: () => Promise<void>;
 }
 
 export interface EnrollmentConfirmationDialogProps {
@@ -254,7 +263,12 @@ export const InteractiveActionButton: React.FC<ActionButtonProps> = ({
   compact = false,
   onComplete,
   onError,
-  className
+  className,
+  // REAL INSTRUCTOR SYSTEM INTEGRATION CALLBACKS
+  onViewDetails,
+  onEditSession,
+  onEnrollStudent,
+  onReloadData
 }) => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -299,39 +313,68 @@ export const InteractiveActionButton: React.FC<ActionButtonProps> = ({
       switch (action) {
         case 'enroll':
         case 'waitlist':
-          if (!session.roster_id) {
-            throw new Error('Session roster ID not found');
+          // REAL INTEGRATION: Use instructor system enrollment function if provided
+          if (onEnrollStudent && studentId) {
+            console.log('🔗 Using REAL instructor system enrollment function');
+            result = await onEnrollStudent(session.id, studentId);
+            
+            if (!result || (typeof result === 'object' && !result.success)) {
+              throw new Error(result?.error || 'Enrollment failed');
+            }
+            
+            // Show success toast
+            const message = action === 'waitlist' || !canEnrollInSession(session)
+              ? 'Student added to waitlist successfully'
+              : 'Student enrolled successfully';
+            
+            toast.success(message, {
+              description: `${session.title} - ${new Date(session.booking_date).toLocaleDateString()}`
+            });
+            
+            // Reload instructor system data
+            if (onReloadData) {
+              await onReloadData();
+            }
+            
+            // Refresh capacity data
+            capacityValidation.refetch();
+            
+          } else {
+            // FALLBACK: Use direct service call (original logic)
+            if (!session.roster_id) {
+              throw new Error('Session roster ID not found');
+            }
+            
+            if (!userRole) {
+              throw new Error('User role is required for enrollment');
+            }
+            
+            result = await RosterEnrollmentService.enrollStudentWithCapacityCheck({
+              rosterId: session.roster_id,
+              studentId,
+              enrolledBy: userRole,
+              userRole: userRole,
+              enrollmentType: 'standard',
+              notes: `Enrolled via capacity overlay on ${new Date().toISOString()}`
+            });
+            
+            if (!result.success) {
+              throw new Error(result.error || 'Enrollment failed');
+            }
+            
+            // Show success toast
+            const enrollmentStatus = result.results.enrollment?.enrollment_status;
+            const message = enrollmentStatus === 'waitlisted'
+              ? 'Student added to waitlist successfully'
+              : 'Student enrolled successfully';
+            
+            toast.success(message, {
+              description: `${session.title} - ${new Date(session.booking_date).toLocaleDateString()}`
+            });
+            
+            // Refresh capacity data
+            capacityValidation.refetch();
           }
-          
-          if (!userRole) {
-            throw new Error('User role is required for enrollment');
-          }
-          
-          result = await RosterEnrollmentService.enrollStudentWithCapacityCheck({
-            rosterId: session.roster_id,
-            studentId,
-            enrolledBy: userRole,
-            userRole: userRole,
-            enrollmentType: 'standard',
-            notes: `Enrolled via hover overlay on ${new Date().toISOString()}`
-          });
-          
-          if (!result.success) {
-            throw new Error(result.error || 'Enrollment failed');
-          }
-          
-          // Show success toast
-          const enrollmentStatus = result.results.enrollment?.enrollment_status;
-          const message = enrollmentStatus === 'waitlisted' 
-            ? 'Student added to waitlist successfully'
-            : 'Student enrolled successfully';
-          
-          toast.success(message, {
-            description: `${session.title} - ${new Date(session.booking_date).toLocaleDateString()}`
-          });
-          
-          // Refresh capacity data
-          capacityValidation.refetch();
           
           break;
           
@@ -354,15 +397,41 @@ export const InteractiveActionButton: React.FC<ActionButtonProps> = ({
           break;
           
         case 'view':
-          // Open session details (this would typically navigate or open a modal)
-          window.open(`/sessions/${session.id}`, '_blank');
-          result = { success: true, message: 'Opening session details' };
+          // REAL INTEGRATION: Use instructor system view details function
+          if (onViewDetails) {
+            console.log('🔗 Using REAL instructor system view details function');
+            onViewDetails(session.id, session.booking_date);
+            
+            toast.success('Session details displayed', {
+              description: `Showing details for ${session.title}`
+            });
+            
+            result = { success: true, message: 'Session details displayed in main interface' };
+          } else {
+            // FALLBACK: Placeholder navigation (should not be used in production)
+            console.warn('⚠️ No real view details function provided - using placeholder');
+            window.open(`/sessions/${session.id}`, '_blank');
+            result = { success: true, message: 'Opening session details (placeholder)' };
+          }
           break;
           
         case 'edit':
-          // Open session edit dialog/page
-          window.open(`/sessions/${session.id}/edit`, '_blank');
-          result = { success: true, message: 'Opening session editor' };
+          // REAL INTEGRATION: Use instructor system edit session function
+          if (onEditSession) {
+            console.log('🔗 Using REAL instructor system edit session function');
+            onEditSession(session);
+            
+            toast.success('Session editor opened', {
+              description: `Editing ${session.title}`
+            });
+            
+            result = { success: true, message: 'Session editor opened in main interface' };
+          } else {
+            // FALLBACK: Placeholder navigation (should not be used in production)
+            console.warn('⚠️ No real edit session function provided - using placeholder');
+            window.open(`/sessions/${session.id}/edit`, '_blank');
+            result = { success: true, message: 'Opening session editor (placeholder)' };
+          }
           break;
           
         default:
@@ -458,6 +527,15 @@ export interface ActionButtonGroupProps {
   onActionComplete?: (action: string, sessionId: string, result: any) => void;
   onActionError?: (action: string, sessionId: string, error: string) => void;
   className?: string;
+  /** REAL INSTRUCTOR SYSTEM INTEGRATION CALLBACKS */
+  /** Real view details function - sets selected day to show session details */
+  onViewDetails?: (sessionId: string, sessionDate: string) => void;
+  /** Real edit session function - opens session editor modal */
+  onEditSession?: (session: SessionData) => void;
+  /** Real enrollment function - connects to instructor system enrollment */
+  onEnrollStudent?: (sessionId: string, studentId: string) => Promise<any>;
+  /** Real reload function - refreshes instructor system data */
+  onReloadData?: () => Promise<void>;
 }
 
 export const ActionButtonGroup: React.FC<ActionButtonGroupProps> = ({
@@ -469,7 +547,12 @@ export const ActionButtonGroup: React.FC<ActionButtonGroupProps> = ({
   orientation = 'horizontal',
   onActionComplete,
   onActionError,
-  className
+  className,
+  // REAL INSTRUCTOR SYSTEM INTEGRATION CALLBACKS
+  onViewDetails,
+  onEditSession,
+  onEnrollStudent,
+  onReloadData
 }) => {
   const handleComplete = useCallback((action: string) => (result: any) => {
     onActionComplete?.(action, session.id, result);
@@ -516,6 +599,11 @@ export const ActionButtonGroup: React.FC<ActionButtonGroupProps> = ({
           compact={compact}
           onComplete={handleComplete(action)}
           onError={handleError(action)}
+          // PASS THROUGH REAL INSTRUCTOR SYSTEM INTEGRATION CALLBACKS
+          onViewDetails={onViewDetails}
+          onEditSession={onEditSession}
+          onEnrollStudent={onEnrollStudent}
+          onReloadData={onReloadData}
         />
       ))}
     </div>

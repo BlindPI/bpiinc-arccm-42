@@ -9,6 +9,12 @@ import { ProcessedData, ProcessingStatus } from '@/types/batch-upload';
 import { format, addMonths, parse } from 'date-fns';
 import { useCourseData } from '@/hooks/useCourseData';
 import { processExcelFile, extractDataFromFile } from '../utils/fileProcessing';
+import {
+  processAssessmentStatus,
+  type AssessmentProcessingResult,
+  type AssessmentWarning,
+  DEFAULT_ASSESSMENT_CONFIG
+} from '../utils/assessmentStatusProcessor';
 
 interface CourseMatch {
   courseId: string;
@@ -363,19 +369,8 @@ export function useBatchUploadHandler() {
   };
 
   const determineAssessmentStatus = (row: any): string => {
-    const assessmentField = row['assessment'] || row['Assessment'] || row['assessment_status'] || row['Assessment Status'] || row['Pass/Fail'] || '';
-    
-    if (!assessmentField) return 'PASS';
-    
-    const status = String(assessmentField).trim().toUpperCase();
-    
-    if (status === 'FAIL' || status === 'FAILED') {
-      return 'FAIL';
-    } else if (status === 'PENDING' || status === 'NOT ASSESSED') {
-      return 'PENDING';
-    }
-    
-    return 'PASS';
+    const result = processAssessmentStatus(row, DEFAULT_ASSESSMENT_CONFIG);
+    return result.status;
   };
 
   const submitProcessedData = async () => {
