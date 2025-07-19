@@ -19,11 +19,99 @@ import type { DatabaseUserRole } from '@/types/database-roles';
 import { hasEnterpriseAccess } from '@/types/database-roles';
 import { cn } from '@/lib/utils';
 
+// Phase 1: Capacity Management Integration
+import { CapacityStatusBadge, getCapacityStatus } from '@/components/enrollment/capacity';
+import { useRosterCapacityValidation } from '@/hooks/useRosterCapacityValidation';
+import type { RosterCapacityInfo, CapacityStatus } from '@/types/roster-enrollment';
+
 interface InstructorSystemProps {
   teamId?: string;
   locationId?: string;
   restrictToTeam?: boolean;
 }
+
+// Phase 1: Enhanced session data structure with capacity information
+interface EnhancedSessionData {
+  // Original session fields
+  id: string;
+  title: string;
+  booking_date: string;
+  start_time: string;
+  end_time: string;
+  user_id: string;
+  location_id: string;
+  description?: string;
+  status: string;
+  instructor_profiles?: any;
+  location_details?: any;
+  session_enrollments?: any[];
+  session_course?: any;
+  
+  // Enhanced capacity fields
+  roster_id?: string;
+  capacity_info?: RosterCapacityInfo;
+  capacity_status?: CapacityStatus;
+  max_capacity?: number;
+}
+
+// Phase 1: Roster ID mapping utilities
+const getRosterIdForSession = (session: any): string | null => {
+  // Try to get roster ID from session enrollments
+  if (session.session_enrollments && session.session_enrollments.length > 0) {
+    // Check if any enrollment has a roster_id through the student_rosters table
+    const firstEnrollment = session.session_enrollments[0];
+    return firstEnrollment.roster_id || null;
+  }
+  
+  // Fallback: look for rosters linked to the availability_booking_id
+  return null;
+};
+
+const createRosterIdMapping = (sessions: any[]): Map<string, string> => {
+  const mapping = new Map<string, string>();
+  
+  sessions.forEach(session => {
+    const rosterId = getRosterIdForSession(session);
+    if (rosterId) {
+      mapping.set(session.id, rosterId);
+    }
+  });
+  
+  return mapping;
+};
+
+const getCapacityInfoFromSession = (session: any): RosterCapacityInfo | null => {
+  const enrollmentCount = session.session_enrollments?.length || 0;
+  const maxCapacity = session.max_capacity || 18; // Default from session form
+  const rosterId = getRosterIdForSession(session);
+  
+  if (!rosterId && enrollmentCount === 0) {
+    // No roster and no enrollments - return null for graceful fallback
+    return null;
+  }
+  
+  return {
+    success: true,
+    roster_id: rosterId || '',
+    roster_name: session.title || 'Training Session',
+    max_capacity: maxCapacity,
+    current_enrollment: enrollmentCount,
+    available_spots: Math.max(0, maxCapacity - enrollmentCount),
+    can_enroll: enrollmentCount < maxCapacity,
+    requested_students: 0 // Not applicable for display purposes
+  };
+};
+
+const getCapacityStatusFromSession = (session: any): CapacityStatus => {
+  const capacityInfo = getCapacityInfoFromSession(session);
+  if (!capacityInfo) return 'UNLIMITED';
+  
+  return getCapacityStatus({
+    max_capacity: capacityInfo.max_capacity,
+    current_enrollment: capacityInfo.current_enrollment,
+    available_spots: capacityInfo.available_spots
+  });
+};
 
 const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
   teamId,
@@ -245,8 +333,8 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
       
       if (error) throw error;
       
-      // Load roster data separately for sessions that have them
-      const sessionsWithEnrollments = await Promise.all((data || []).map(async (session) => {
+      // Phase 1: Enhanced session loading with capacity data
+      const sessionsWithEnrollments = await Promise.all((data || []).map(async (session): Promise<EnhancedSessionData> => {
         try {
           const { data: rosterData } = await supabase
             .from('student_rosters')
@@ -268,18 +356,39 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
             `)
             .eq('availability_booking_id', session.id);
           
-          return {
+          const enrollments = rosterData?.[0]?.student_roster_members || [];
+          const rosterId = rosterData?.[0]?.id || null;
+          
+          // Phase 1: Calculate capacity information
+          const enhancedSession: EnhancedSessionData = {
             ...session,
-            session_enrollments: rosterData?.[0]?.student_roster_members || [],
-            session_course: rosterData?.[0]?.courses || null
+            session_enrollments: enrollments,
+            session_course: rosterData?.[0]?.courses || null,
+            roster_id: rosterId,
+            max_capacity: session.max_capacity || 18, // Default capacity
           };
+          
+          // Add capacity info and status
+          enhancedSession.capacity_info = getCapacityInfoFromSession(enhancedSession);
+          enhancedSession.capacity_status = getCapacityStatusFromSession(enhancedSession);
+          
+          return enhancedSession;
         } catch (rosterError) {
           console.warn('Failed to load roster for session:', session.id, rosterError);
-          return {
+          
+          // Return session with minimal capacity info
+          const enhancedSession: EnhancedSessionData = {
             ...session,
             session_enrollments: [],
-            session_course: null
+            session_course: null,
+            roster_id: null,
+            max_capacity: session.max_capacity || 18,
           };
+          
+          enhancedSession.capacity_info = getCapacityInfoFromSession(enhancedSession);
+          enhancedSession.capacity_status = getCapacityStatusFromSession(enhancedSession);
+          
+          return enhancedSession;
         }
       }));
       
@@ -1313,6 +1422,16 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                               </div>
                               
                               <div className="flex items-center gap-2">
+                                {/* Phase 1: Add capacity status badge */}
+                                {session.capacity_status && session.capacity_info && (
+                                  <CapacityStatusBadge
+                                    status={session.capacity_status}
+                                    capacityInfo={session.capacity_info}
+                                    showSpots={true}
+                                    size="sm"
+                                    className="mr-1"
+                                  />
+                                )}
                                 <Badge className={getStatusColor(session.status)}>
                                   {session.status}
                                 </Badge>
@@ -1357,9 +1476,21 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                           </CardHeader>
                           <CardContent>
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium">
-                                Students ({session.session_enrollments?.length || 0}/{session.max_capacity})
-                              </span>
+                              <div className="flex items-center gap-3">
+                                <span className="text-sm font-medium">
+                                  Students ({session.session_enrollments?.length || 0}/{session.max_capacity || 'N/A'})
+                                </span>
+                                {/* Phase 1: Enhanced capacity display in content area */}
+                                {session.capacity_status && session.capacity_info && (
+                                  <CapacityStatusBadge
+                                    status={session.capacity_status}
+                                    capacityInfo={session.capacity_info}
+                                    showPercentage={true}
+                                    size="sm"
+                                    variant="outline"
+                                  />
+                                )}
+                              </div>
                               <Button
                                 variant="outline"
                                 size="sm"
