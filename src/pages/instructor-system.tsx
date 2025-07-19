@@ -260,9 +260,6 @@ const getCapacityStatusA11yDescription = (capacityInfo: ReturnType<typeof getCap
     case 'FULL':
       description += 'At maximum capacity.';
       break;
-    case 'OVER_CAPACITY':
-      description += 'Over capacity - immediate attention required.';
-      break;
     case 'EMPTY':
       description += 'No students currently enrolled.';
       break;
@@ -2049,21 +2046,31 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                   const capacityInfo = dailyCapacityMap.get(dateStr);
                   const capacityColors = capacityInfo ? getCapacityColors(capacityInfo.status) : null;
 
-                  // Enhanced calendar cell with capacity indicators
+                  // Enhanced calendar cell with capacity indicators and WCAG compliance
                   const calendarCell = (
                     <div
                       key={day}
                       onClick={() => handleDayClick(day)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleDayClick(day);
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`${day} ${months[month]}, ${year}${daySessions.length > 0 ? `. ${getCapacityStatusA11yDescription(capacityInfo)}` : '. No sessions scheduled.'}`}
+                      aria-pressed={isSelected}
                       className={cn(
                         'p-2 h-20 border rounded-md cursor-pointer transition-all duration-200 relative overflow-hidden',
-                        // Base styling
-                        'hover:shadow-md hover:scale-[1.02]',
+                        // Base styling with focus indicators for accessibility
+                        'hover:shadow-md hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
                         // Selection state
                         isSelected && 'ring-2 ring-primary shadow-lg',
-                        // Capacity-based background colors
+                        // Capacity-based background colors with WCAG compliance
                         daySessions.length > 0 && capacityColors ? [
                           capacityColors.bg,
-                          `hover:${capacityColors.bg.replace('50', '100')}`,
+                          capacityColors.hoverBg,
                           capacityColors.border
                         ] : 'bg-background hover:bg-muted',
                         // Enhanced visual feedback
