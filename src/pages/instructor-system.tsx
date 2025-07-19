@@ -1189,6 +1189,16 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                   // Calculate target square for overlay description
                   const targetSquareIndex = isHovered ? getTargetSquareIndex(index, days.length) : null;
                   const isTargetSquare = targetSquareIndex === index;
+                  
+                  console.log('🔍 OVERLAY DEBUG - Target Square Calculation:', {
+                    dateStr,
+                    index,
+                    isHovered,
+                    hoveredDay,
+                    targetSquareIndex,
+                    isTargetSquare,
+                    daysLength: days.length
+                  });
 
                   return (
                     <div
