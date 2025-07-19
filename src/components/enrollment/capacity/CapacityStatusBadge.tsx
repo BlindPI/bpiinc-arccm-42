@@ -221,7 +221,9 @@ export function CapacityStatusBadge({
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            {badge}
+            <div>
+              {badge}
+            </div>
           </TooltipTrigger>
           <TooltipContent side="top" className="max-w-xs">
             <p className="text-sm">{getTooltipContent()}</p>

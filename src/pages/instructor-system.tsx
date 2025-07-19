@@ -20,7 +20,12 @@ import { hasEnterpriseAccess } from '@/types/database-roles';
 import { cn } from '@/lib/utils';
 
 // Phase 1: Capacity Management Integration
-import { CapacityStatusBadge, getCapacityStatus } from '@/components/enrollment/capacity';
+import {
+  CapacityStatusBadge,
+  getCapacityStatus,
+  EnrollmentCapacityGuard,
+  RosterCapacityDisplay
+} from '@/components/enrollment/capacity';
 import type { RosterCapacityInfo, CapacityStatus } from '@/types/roster-enrollment';
 
 interface InstructorSystemProps {
@@ -2020,116 +2025,139 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
           <DialogHeader>
             <DialogTitle>Enroll Student in Session</DialogTitle>
             {selectedSession && (
-              <p className="text-sm text-muted-foreground">
-                Session: {selectedSession.title} • {selectedSession.booking_date} • {selectedSession.start_time} - {selectedSession.end_time}
-              </p>
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Session: {selectedSession.title} • {selectedSession.booking_date} • {selectedSession.start_time} - {selectedSession.end_time}
+                </p>
+                {/* Add capacity status display */}
+                {selectedSession.roster_id && (
+                  <RosterCapacityDisplay
+                    rosterId={selectedSession.roster_id}
+                    compact={true}
+                    showDetails={false}
+                    showWaitlist={true}
+                    showActions={false}
+                    className="mt-2"
+                  />
+                )}
+              </div>
             )}
           </DialogHeader>
           
-          <div className="space-y-6">
-            {/* Search Filter */}
-            <div className="space-y-2">
-              <Label>Search Students</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name, email, or company..."
-                  className="pl-10"
-                  value={filters.search}
-                  onChange={(e) => setFilters({...filters, search: e.target.value})}
-                />
+          <EnrollmentCapacityGuard
+            rosterId={selectedSession?.roster_id || ''}
+            studentCount={1}
+            showCapacityInFallback={true}
+            allowWaitlist={true}
+            onCapacityExceeded={(capacity) => {
+              toast.warning('Session at capacity - student will be waitlisted');
+            }}
+          >
+            <div className="space-y-6">
+              {/* Search Filter */}
+              <div className="space-y-2">
+                <Label>Search Students</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by name, email, or company..."
+                    className="pl-10"
+                    value={filters.search}
+                    onChange={(e) => setFilters({...filters, search: e.target.value})}
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Student Selection */}
-            <div className="space-y-2">
-              <Label>Select Student *</Label>
-              <ScrollArea className="h-[300px] border rounded-md">
-                <div className="p-2">
-                  {filteredStudents.length > 0 ? (
-                    <div className="space-y-1">
-                      {filteredStudents.map((student) => (
-                        <div
-                          key={student.id}
-                          className={cn(
-                            "flex items-center justify-between p-3 rounded-md border cursor-pointer transition-colors",
-                            enrollmentForm.student_id === student.id ? "bg-primary/10 border-primary" : "hover:bg-muted"
-                          )}
-                          onClick={() => setEnrollmentForm({...enrollmentForm, student_id: student.id})}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary">
-                              <Users className="h-4 w-4" />
+              {/* Student Selection */}
+              <div className="space-y-2">
+                <Label>Select Student *</Label>
+                <ScrollArea className="h-[300px] border rounded-md">
+                  <div className="p-2">
+                    {filteredStudents.length > 0 ? (
+                      <div className="space-y-1">
+                        {filteredStudents.map((student) => (
+                          <div
+                            key={student.id}
+                            className={cn(
+                              "flex items-center justify-between p-3 rounded-md border cursor-pointer transition-colors",
+                              enrollmentForm.student_id === student.id ? "bg-primary/10 border-primary" : "hover:bg-muted"
+                            )}
+                            onClick={() => setEnrollmentForm({...enrollmentForm, student_id: student.id})}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary">
+                                <Users className="h-4 w-4" />
+                              </div>
+                              <div>
+                                <div className="font-medium">{student.display_name}</div>
+                                <div className="text-sm text-muted-foreground">{student.email}</div>
+                                {student.company && (
+                                  <div className="text-xs text-muted-foreground">{student.company}</div>
+                                )}
+                              </div>
                             </div>
-                            <div>
-                              <div className="font-medium">{student.display_name}</div>
-                              <div className="text-sm text-muted-foreground">{student.email}</div>
-                              {student.company && (
-                                <div className="text-xs text-muted-foreground">{student.company}</div>
+                            <div className="flex items-center gap-2">
+                              {student.first_aid_level && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {student.first_aid_level} FA
+                                </Badge>
+                              )}
+                              {student.cpr_level && (
+                                <Badge variant="secondary" className="text-xs">
+                                  CPR {student.cpr_level}
+                                </Badge>
+                              )}
+                              {enrollmentForm.student_id === student.id && (
+                                <Check className="h-4 w-4 text-primary" />
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {student.first_aid_level && (
-                              <Badge variant="secondary" className="text-xs">
-                                {student.first_aid_level} FA
-                              </Badge>
-                            )}
-                            {student.cpr_level && (
-                              <Badge variant="secondary" className="text-xs">
-                                CPR {student.cpr_level}
-                              </Badge>
-                            )}
-                            {enrollmentForm.student_id === student.id && (
-                              <Check className="h-4 w-4 text-primary" />
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>No students found</p>
-                      {filters.search && (
-                        <p className="text-xs mt-1">Try a different search term</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
-              <p className="text-xs text-muted-foreground">
-                {filteredStudents.length} student{filteredStudents.length !== 1 ? 's' : ''} available
-              </p>
-            </div>
-            
-            {/* Course Selection */}
-            <div className="space-y-2">
-              <Label>Select Course (Optional)</Label>
-              <Select
-                value={enrollmentForm.course_id}
-                onValueChange={(value) => setEnrollmentForm({...enrollmentForm, course_id: value})}
-              >
-                <SelectTrigger className="h-auto min-h-[2.5rem] py-2">
-                  <SelectValue placeholder="Choose a course..." />
-                </SelectTrigger>
-                <SelectContent className="max-w-[500px]">
-                  {courses.map(course => (
-                    <SelectItem key={course.id} value={course.id}>
-                      <div className="flex flex-col py-2 max-w-[460px]">
-                        <span className="font-medium leading-tight text-wrap" title={course.name}>
-                          {course.name}
-                        </span>
-                        <span className="text-sm text-muted-foreground leading-tight">
-                          {course.description} • Expires: {course.expiration_months} months
-                        </span>
+                        ))}
                       </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                        <p>No students found</p>
+                        {filters.search && (
+                          <p className="text-xs mt-1">Try a different search term</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+                <p className="text-xs text-muted-foreground">
+                  {filteredStudents.length} student{filteredStudents.length !== 1 ? 's' : ''} available
+                </p>
+              </div>
+              
+              {/* Course Selection */}
+              <div className="space-y-2">
+                <Label>Select Course (Optional)</Label>
+                <Select
+                  value={enrollmentForm.course_id}
+                  onValueChange={(value) => setEnrollmentForm({...enrollmentForm, course_id: value})}
+                >
+                  <SelectTrigger className="h-auto min-h-[2.5rem] py-2">
+                    <SelectValue placeholder="Choose a course..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-w-[500px]">
+                    {courses.map(course => (
+                      <SelectItem key={course.id} value={course.id}>
+                        <div className="flex flex-col py-2 max-w-[460px]">
+                          <span className="font-medium leading-tight text-wrap" title={course.name}>
+                            {course.name}
+                          </span>
+                          <span className="text-sm text-muted-foreground leading-tight">
+                            {course.description} • Expires: {course.expiration_months} months
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
+          </EnrollmentCapacityGuard>
           
           <div className="flex gap-3 pt-4">
             <Button
