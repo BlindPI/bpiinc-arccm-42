@@ -1419,15 +1419,48 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                           type="number"
                           value={sessionForm.max_capacity}
                           onChange={(e) => {
-                            const value = e.target.value;
-                            // Only allow numeric values, default to 18 for empty/invalid input
-                            const numValue = value === '' ? 18 : parseInt(value);
-                            const finalValue = isNaN(numValue) ? 18 : Math.max(1, Math.min(500, numValue));
-                            setSessionForm({...sessionForm, max_capacity: finalValue});
+                            const newCapacity = parseInt(e.target.value);
+                            setSessionForm({...sessionForm, max_capacity: newCapacity});
+                            
+                            // Real-time validation against template limits
+                            if (selectedTemplate && newCapacity > selectedTemplate.max_students) {
+                              toast.warning(`Capacity exceeds template maximum of ${selectedTemplate.max_students}`);
+                            }
                           }}
                           min="1"
-                          max="50"
+                          max={selectedTemplate?.max_students || 50}
+                          className={cn(
+                            selectedTemplate && sessionForm.max_capacity > selectedTemplate.max_students
+                              ? "border-yellow-500 focus:border-yellow-500"
+                              : ""
+                          )}
                         />
+                        
+                        {/* Enhanced capacity guidance */}
+                        {selectedTemplate && (
+                          <div className="mt-2 space-y-1">
+                            <p className="text-xs text-muted-foreground">
+                              Template recommends max {selectedTemplate.max_students} students
+                            </p>
+                            {sessionForm.max_capacity > selectedTemplate.max_students && (
+                              <p className="text-xs text-yellow-600 flex items-center gap-1">
+                                ⚠️ Capacity exceeds template recommendation
+                              </p>
+                            )}
+                            {sessionForm.max_capacity <= selectedTemplate.max_students && sessionForm.max_capacity > 0 && (
+                              <p className="text-xs text-green-600 flex items-center gap-1">
+                                ✓ Capacity within template limits
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* General capacity guidance when no template selected */}
+                        {!selectedTemplate && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Select a course template for capacity recommendations
+                          </p>
+                        )}
                       </div>
                       
                       <div>
