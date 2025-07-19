@@ -573,6 +573,87 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
     }
   };
 
+  // Helper function to sync roster capacity with session capacity
+  const syncRosterCapacityWithSession = async (sessionId: string) => {
+    try {
+      // Get session capacity
+      const { data: session, error: sessionError } = await supabase
+        .from('availability_bookings')
+        .select('max_capacity')
+        .eq('id', sessionId)
+        .single();
+
+      if (sessionError || !session) {
+        console.warn('Could not fetch session capacity:', sessionError);
+        return;
+      }
+
+      // Update roster capacity to match session capacity
+      const { error: updateError } = await supabase
+        .from('student_rosters')
+        .update({ max_capacity: session.max_capacity })
+        .eq('availability_booking_id', sessionId);
+
+      if (updateError) {
+        console.warn('Could not update roster capacity:', updateError);
+      } else {
+        console.log(`Synced roster capacity to ${session.max_capacity} for session ${sessionId}`);
+      }
+    } catch (error) {
+      console.warn('Error syncing roster capacity:', error);
+    }
+  };
+
+  // Helper function to ensure roster exists and is synced before enrollment modal
+  const ensureRosterForSession = async (sessionId: string): Promise<string | null> => {
+    try {
+      // First try to find existing roster
+      const { data: existingRoster, error: rosterError } = await supabase
+        .from('student_rosters')
+        .select('id')
+        .eq('availability_booking_id', sessionId)
+        .maybeSingle();
+
+      if (existingRoster) {
+        // Sync existing roster capacity with session capacity
+        await syncRosterCapacityWithSession(sessionId);
+        return existingRoster.id;
+      }
+
+      // No roster exists, create one using data from the session that's already loaded
+      const session = trainingSessions.find(s => s.id === sessionId);
+      
+      const rosterData = {
+        roster_name: session?.title || 'Training Session Roster',
+        course_name: 'Training Session',
+        instructor_id: user?.id || null,
+        location_id: locationId || null,
+        roster_status: 'active',
+        roster_type: 'course',
+        course_id: null,
+        created_by: user?.id || null,
+        max_capacity: session?.max_capacity || 18,
+        availability_booking_id: sessionId
+      };
+
+      const { data: newRoster, error: createError } = await supabase
+        .from('student_rosters')
+        .insert([rosterData])
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Error creating roster:', createError);
+        return null;
+      }
+
+      return newRoster.id;
+    } catch (error) {
+      console.error('Error ensuring roster for session:', error);
+      return null;
+    }
+  };
+
   const enrollStudentInSession = async (sessionId: string, studentId: string, courseId?: string) => {
     try {
       // First create or get a roster for this session
@@ -598,6 +679,8 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
       
       if (existingRoster) {
         rosterId = existingRoster.id;
+        // Sync existing roster capacity with session capacity
+        await syncRosterCapacityWithSession(sessionId);
       } else {
         // Get session details to copy max_capacity from availability_bookings
         const { data: sessionData, error: sessionError } = await supabase
@@ -1614,8 +1697,15 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => {
-                                  setSelectedSession(session);
+                                onClick={async () => {
+                                  // Ensure roster exists before opening modal
+                                  const rosterId = await ensureRosterForSession(session.id);
+                                  if (rosterId) {
+                                    // Update session with roster_id for the modal
+                                    setSelectedSession({...session, roster_id: rosterId});
+                                  } else {
+                                    setSelectedSession(session);
+                                  }
                                   setShowEnrollmentModal(true);
                                 }}
                               >
