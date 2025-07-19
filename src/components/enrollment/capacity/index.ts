@@ -3,14 +3,46 @@
  *
  * These components integrate with the roster capacity management backend services
  * to provide real-time capacity validation and user feedback for enrollment processes.
+ *
+ * Phase 2: Core capacity management components
+ * Phase 3: Enhanced hover overlay components for calendar integration
  */
+
+// ============================================================================
+// PHASE 2: CORE CAPACITY COMPONENTS
+// ============================================================================
 
 export { RosterCapacityDisplay, CapacityIndicator, CapacityProgressBar } from './RosterCapacityDisplay';
 export { EnrollmentCapacityGuard, SimpleCapacityGuard, InlineCapacityGuard } from './EnrollmentCapacityGuard';
 export { WaitlistOfferComponent, WaitlistButton, WaitlistOfferDialog } from './WaitlistOfferComponent';
 export { CapacityStatusBadge, getCapacityStatus, getStatusVariant, getStatusConfig } from './CapacityStatusBadge';
 
-// Re-export types for convenience
+// ============================================================================
+// PHASE 3: ENHANCED HOVER OVERLAY COMPONENTS
+// ============================================================================
+
+// Base hover overlay components
+export { BaseHoverOverlay, MobileHoverOverlay } from './BaseHoverOverlay';
+export type { BaseHoverOverlayRef } from './BaseHoverOverlay';
+
+// Capacity metrics display components
+export {
+  CapacityMetricsDisplay,
+  WaitlistDisplay,
+  CapacityTrends
+} from './CapacityMetricsDisplay';
+
+// Main capacity info overlay components
+export {
+  CapacityInfoOverlay,
+  CalendarCapacityHover
+} from './CapacityInfoOverlay';
+
+// ============================================================================
+// TYPE EXPORTS
+// ============================================================================
+
+// Phase 2 types
 export type {
   RosterCapacityDisplayProps,
   EnrollmentCapacityGuardProps,
@@ -27,3 +59,56 @@ export type {
   CapacityValidatedFormProps,
   EnrollmentFormFieldProps
 } from './types';
+
+// Phase 3 hover overlay types
+export type {
+  // Base hover overlay types
+  BaseHoverOverlayProps,
+  MobileHoverOverlayProps,
+  HoverOverlayState,
+  HoverOverlayConfig,
+  OverlayA11yProps,
+  OverlayTheme,
+  ResponsiveOverlayProps,
+  OverlayPositionConfig,
+  
+  // Session and capacity types
+  SessionData,
+  CapacityInfoOverlayProps,
+  CapacityMetric,
+  CapacityMetricsDisplayProps,
+  WaitlistInfo,
+  WaitlistDisplayProps,
+  CapacityTrendsProps,
+  TrendData,
+  
+  // Calendar integration types
+  CalendarIntegrationProps,
+  CalendarCapacityHoverProps,
+  OverlayManagerState,
+  
+  // Event and utility types
+  OverlayEvent,
+  OverlayEventHandlers,
+  OverlayPosition,
+  OverlaySize,
+  OverlayVariant,
+  OverlayAnimation
+} from './HoverOverlayTypes';
+
+// ============================================================================
+// CONVENIENCE RE-EXPORTS
+// ============================================================================
+
+// Main components most commonly used
+export {
+  // Phase 2 essentials
+  CapacityStatusBadge as CapacityBadge,
+  EnrollmentCapacityGuard as CapacityGuard,
+  RosterCapacityDisplay as CapacityDisplay,
+  
+  // Phase 3 essentials
+  CalendarCapacityHover as CalendarHover,
+  CapacityInfoOverlay as InfoOverlay,
+  CapacityMetricsDisplay as MetricsDisplay
+};
