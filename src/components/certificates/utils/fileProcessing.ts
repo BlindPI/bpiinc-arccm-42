@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { findBestCourseMatch, validateCourseMatch } from './courseMatching';
+import { REQUIRED_COLUMNS } from '../constants';
 import type { Course } from '@/types/courses';
 import type { CourseMatch } from '../types';
 
@@ -67,7 +68,7 @@ export function extractDataFromFile(processedRows: ProcessedRow[]): ExtractedDat
   
   processedRows.forEach((row, index) => {
     // Basic validation - check if required fields exist
-    const requiredFields = ['Student Name'];
+    const requiredFields = Array.from(REQUIRED_COLUMNS);
     const missingFields = requiredFields.filter(field => !row[field] || row[field].toString().trim() === '');
     
     if (missingFields.length === 0 && !row.hasError) {

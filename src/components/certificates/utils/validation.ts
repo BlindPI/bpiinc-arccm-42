@@ -1,12 +1,16 @@
 
-import { VALID_CPR_LEVELS, VALID_FIRST_AID_LEVELS } from '../constants';
+import { VALID_CPR_LEVELS, VALID_FIRST_AID_LEVELS, REQUIRED_COLUMNS } from '../constants';
 import { RowData } from '../types';
 
 export const validateRowData = (rowData: RowData, rowIndex: number, selectedCourse: { name: string; expiration_months: number } | null) => {
   const errors: string[] = [];
 
-  if (!rowData['Student Name']?.toString().trim()) {
-    errors.push(`Row ${rowIndex + 1}: Student name is required`);
+  // First, validate all required fields are present and non-empty
+  for (const field of REQUIRED_COLUMNS) {
+    if (!rowData[field]?.toString().trim()) {
+      const fieldName = field === 'Student Name' ? 'Student name' : field;
+      errors.push(`Row ${rowIndex + 1}: ${fieldName} is required`);
+    }
   }
 
   if (!selectedCourse) {
@@ -23,6 +27,7 @@ export const validateRowData = (rowData: RowData, rowIndex: number, selectedCour
     errors.push(`Row ${rowIndex + 1}: Phone number format should be (XXX) XXX-XXXX`);
   }
 
+  // Format validation for fields that are present and non-empty
   const email = rowData['Email']?.toString().trim();
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     errors.push(`Row ${rowIndex + 1}: Invalid email format`);

@@ -25,8 +25,8 @@ export interface ProcessingStatus {
 
 // Add the RowData type that was referenced but missing
 export interface RowData {
-  'Student Name'?: string | number;
-  'Email'?: string | number;
+  'Student Name': string | number;
+  'Email': string | number;
   'Phone'?: string | number;
   'Company'?: string | number;
   'Organization'?: string | number;
