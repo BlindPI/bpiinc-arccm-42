@@ -35,9 +35,9 @@ export function useBatchSubmission() {
       console.log('Starting batch submission process...');
 
       // Filter out invalid records
-      const validRecords = processedData.data.filter(record => 
-        record.validationErrors.length === 0 && 
-        record.recipientName && 
+      const validRecords = processedData.data.filter(record =>
+        record.validationErrors.length === 0 &&
+        record.name &&
         record.email &&
         !record.hasCourseMismatch
       );
@@ -116,7 +116,7 @@ export function useBatchSubmission() {
               batch_name: batchName,
               user_id: user.id,
               location_id: selectedLocationId,
-              recipient_name: record.recipientName,
+              recipient_name: record.name,
               recipient_email: record.email,
               email: record.email,
               phone: record.phone || null,
