@@ -363,7 +363,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                   student_enrollment_profiles:student_enrollment_profiles!student_profile_id(id, display_name, email)
                 )
               `)
-              .eq('booking_id', session.id)
+              .eq('availability_booking_id', session.id)
               .limit(1);
               
             if (directRosterData && directRosterData.length > 0) {
@@ -579,7 +579,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
         const { data: directRoster, error: rosterError } = await supabase
           .from('student_rosters')
           .select('id')
-          .eq('booking_id', sessionId)
+          .eq('availability_booking_id', sessionId)
           .maybeSingle();
         
         if (rosterError) {
@@ -604,8 +604,8 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
           roster_type: 'course',
           course_id: courseId || null,
           created_by: user?.id || null,
-          // Add session reference if the field exists, but use safe fallback
-          ...(sessionId && { booking_id: sessionId })
+          // Link to session using the unique availability_booking_id field
+          availability_booking_id: sessionId
         };
         
         const { data: newRoster, error: rosterError } = await supabase
