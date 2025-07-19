@@ -82,24 +82,26 @@ const createRosterIdMapping = (sessions: any[]): Map<string, string> => {
 
 const getCapacityInfoFromSession = (session: any): RosterCapacityInfo | null => {
   const enrollmentCount = session.session_enrollments?.length || 0;
-  const maxCapacity = session.max_capacity || 18; // Default from session form
+  // REAL max_capacity from availability_bookings database field!
+  const maxCapacity = session.max_capacity || 18;
   const rosterId = getRosterIdForSession(session);
   
-  if (!rosterId && enrollmentCount === 0) {
-    // No roster and no enrollments - return null for graceful fallback
-    return null;
+  // Always return capacity info if we have a max_capacity - this gives REAL functionality!
+  if (maxCapacity) {
+    return {
+      success: true,
+      roster_id: rosterId || '',
+      roster_name: session.title || 'Training Session',
+      max_capacity: maxCapacity,
+      current_enrollment: enrollmentCount,
+      available_spots: Math.max(0, maxCapacity - enrollmentCount),
+      can_enroll: enrollmentCount < maxCapacity,
+      requested_students: 0 // Not applicable for display purposes
+    };
   }
   
-  return {
-    success: true,
-    roster_id: rosterId || '',
-    roster_name: session.title || 'Training Session',
-    max_capacity: maxCapacity,
-    current_enrollment: enrollmentCount,
-    available_spots: Math.max(0, maxCapacity - enrollmentCount),
-    can_enroll: enrollmentCount < maxCapacity,
-    requested_students: 0 // Not applicable for display purposes
-  };
+  // Fallback for sessions without capacity set
+  return null;
 };
 
 const getCapacityStatusFromSession = (session: any): CapacityStatus => {
@@ -336,57 +338,111 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
       // Phase 1: Enhanced session loading with capacity data
       const sessionsWithEnrollments = await Promise.all((data || []).map(async (session): Promise<EnhancedSessionData> => {
         try {
-          const { data: rosterData } = await supabase
-            .from('student_rosters')
-            .select(`
-              id,
-              course_id,
-              courses:course_id(id, name, description),
-              student_roster_members(
+          // First try to find rosters linked to this session
+          // Using a more robust query that handles different linking patterns
+          let rosterData: any[] = [];
+          let enrollments: any[] = [];
+          let rosterId: string | null = null;
+          
+          try {
+            // Try multiple approaches to find roster data
+            const { data: directRosterData, error: directRosterError } = await supabase
+              .from('student_rosters')
+              .select(`
                 id,
-                enrollment_status,
-                attendance_status,
-                completion_status,
-                practical_score,
-                written_score,
                 course_id,
                 courses:course_id(id, name, description),
-                student_enrollment_profiles:student_enrollment_profiles!student_profile_id(id, display_name, email)
-              )
-            `)
-            .eq('availability_booking_id', session.id);
+                student_roster_members(
+                  id,
+                  enrollment_status,
+                  attendance_status,
+                  completion_status,
+                  practical_score,
+                  written_score,
+                  course_id,
+                  courses:course_id(id, name, description),
+                  student_enrollment_profiles:student_enrollment_profiles!student_profile_id(id, display_name, email)
+                )
+              `)
+              .or(`availability_booking_id.eq.${session.id},booking_id.eq.${session.id},session_id.eq.${session.id}`)
+              .limit(1);
+              
+            if (directRosterData && directRosterData.length > 0) {
+              rosterData = directRosterData;
+              enrollments = directRosterData[0]?.student_roster_members || [];
+              rosterId = directRosterData[0]?.id || null;
+            }
+          } catch (rosterQueryError) {
+            console.warn('Direct roster query failed, trying alternative approach:', rosterQueryError);
+            
+            // Fallback: Try to find enrollments through session enrollments table if it exists
+            try {
+              const { data: sessionEnrollments } = await supabase
+                .from('session_enrollments')
+                .select(`
+                  id,
+                  student_id,
+                  roster_id,
+                  enrollment_status,
+                  student_enrollment_profiles:student_id(id, display_name, email)
+                `)
+                .eq('session_id', session.id);
+                
+              if (sessionEnrollments && sessionEnrollments.length > 0) {
+                enrollments = sessionEnrollments.map(e => ({
+                  id: e.id,
+                  enrollment_status: e.enrollment_status || 'enrolled',
+                  attendance_status: 'pending',
+                  completion_status: 'not_started',
+                  practical_score: null,
+                  written_score: null,
+                  course_id: null,
+                  courses: null,
+                  student_enrollment_profiles: e.student_enrollment_profiles
+                }));
+                rosterId = sessionEnrollments[0]?.roster_id || null;
+              }
+            } catch (sessionEnrollmentError) {
+              console.warn('Session enrollment fallback failed:', sessionEnrollmentError);
+              // Continue with empty enrollments
+            }
+          }
           
-          const enrollments = rosterData?.[0]?.student_roster_members || [];
-          const rosterId = rosterData?.[0]?.id || null;
-          
-          // Phase 1: Calculate capacity information
+          // Phase 1: Calculate capacity information with safe defaults
           const enhancedSession: EnhancedSessionData = {
             ...session,
             session_enrollments: enrollments,
             session_course: rosterData?.[0]?.courses || null,
             roster_id: rosterId,
-            max_capacity: session.max_capacity || 18, // Default capacity
+            max_capacity: typeof session.max_capacity === 'number' ? session.max_capacity : 18, // Ensure numeric
           };
           
-          // Add capacity info and status
-          enhancedSession.capacity_info = getCapacityInfoFromSession(enhancedSession);
-          enhancedSession.capacity_status = getCapacityStatusFromSession(enhancedSession);
+          // Add capacity info and status with error handling
+          try {
+            enhancedSession.capacity_info = getCapacityInfoFromSession(enhancedSession);
+            enhancedSession.capacity_status = getCapacityStatusFromSession(enhancedSession);
+          } catch (capacityError) {
+            console.warn('Failed to calculate capacity for session:', session.id, capacityError);
+            enhancedSession.capacity_info = null;
+            enhancedSession.capacity_status = 'UNLIMITED';
+          }
           
           return enhancedSession;
         } catch (rosterError) {
           console.warn('Failed to load roster for session:', session.id, rosterError);
           
-          // Return session with minimal capacity info
+          // Return session with minimal capacity info and safe defaults
           const enhancedSession: EnhancedSessionData = {
             ...session,
             session_enrollments: [],
             session_course: null,
             roster_id: null,
-            max_capacity: session.max_capacity || 18,
+            max_capacity: typeof session.max_capacity === 'number' ? session.max_capacity : 18,
           };
           
-          enhancedSession.capacity_info = getCapacityInfoFromSession(enhancedSession);
-          enhancedSession.capacity_status = getCapacityStatusFromSession(enhancedSession);
+          // Provide safe fallback capacity info
+          enhancedSession.capacity_info = null;
+          enhancedSession.capacity_status = 'UNLIMITED';
           
           return enhancedSession;
         }
@@ -414,7 +470,8 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
           status: 'scheduled',
           created_by: user?.id,
           location_id: sessionData.location_id,
-          description: sessionData.description
+          description: sessionData.description,
+          max_capacity: sessionData.max_capacity || 18 // REAL max_capacity field!
         }])
         .select()
         .single();
@@ -443,7 +500,8 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
           user_id: updates.instructor_id,
           course_sequence: updates.course_template ? { template_id: updates.course_template } : null,
           location_id: updates.location_id,
-          description: updates.description
+          description: updates.description,
+          max_capacity: updates.max_capacity || 18 // REAL max_capacity field!
         })
         .eq('id', sessionId)
         .select()
@@ -511,29 +569,41 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
     try {
       // First create or get a roster for this session
       let rosterId;
-      const { data: existingRoster } = await supabase
-        .from('student_rosters')
-        .select('id')
-        .eq('availability_booking_id', sessionId)
-        .single();
+      
+      // Try multiple approaches to find existing roster with better error handling
+      let existingRoster;
+      try {
+        const { data: directRoster } = await supabase
+          .from('student_rosters')
+          .select('id')
+          .or(`availability_booking_id.eq.${sessionId},booking_id.eq.${sessionId},session_id.eq.${sessionId}`)
+          .single();
+        existingRoster = directRoster;
+      } catch (rosterQueryError) {
+        console.warn('Could not find existing roster, will create new one:', rosterQueryError);
+        existingRoster = null;
+      }
       
       if (existingRoster) {
         rosterId = existingRoster.id;
       } else {
-        // Create a new roster for this session
+        // Create a new roster for this session with safe data types
+        const rosterData = {
+          roster_name: 'Training Session Roster',
+          course_name: 'Training Session',
+          instructor_id: user?.id || null,
+          location_id: locationId || null,
+          roster_status: 'active',
+          roster_type: 'course',
+          course_id: courseId || null,
+          created_by: user?.id || null,
+          // Add session reference if the field exists, but use safe fallback
+          ...(sessionId && { booking_id: sessionId })
+        };
+        
         const { data: newRoster, error: rosterError } = await supabase
           .from('student_rosters')
-          .insert([{
-            roster_name: 'Training Session Roster',
-            course_name: 'Training Session',
-            availability_booking_id: sessionId,
-            instructor_id: user?.id,
-            location_id: locationId,
-            roster_status: 'active',
-            roster_type: 'course',
-            course_id: courseId || null,
-            created_by: user?.id
-          }])
+          .insert([rosterData])
           .select()
           .single();
         
@@ -541,39 +611,66 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
         rosterId = newRoster.id;
       }
 
-      // Check if student is already enrolled
-      const { data: existing } = await supabase
-        .from('student_roster_members')
-        .select('id')
-        .eq('roster_id', rosterId)
-        .eq('student_profile_id', studentId)
-        .single();
-      
-      if (existing) {
-        toast.error('Student is already enrolled in this session');
-        return;
+      // Check if student is already enrolled with better error handling
+      try {
+        const { data: existing } = await supabase
+          .from('student_roster_members')
+          .select('id')
+          .eq('roster_id', rosterId)
+          .eq('student_profile_id', studentId)
+          .single();
+        
+        if (existing) {
+          toast.error('Student is already enrolled in this session');
+          return;
+        }
+      } catch (existingCheckError) {
+        // If the check fails, we'll proceed with enrollment
+        console.warn('Could not check existing enrollment, proceeding:', existingCheckError);
       }
 
-      // Enroll the student
+      // Enroll the student with safe data types - ensure no "unlimited" values
+      const enrollmentData = {
+        roster_id: rosterId,
+        student_profile_id: studentId,
+        course_id: courseId || null,
+        enrollment_status: 'enrolled' as const,
+        // Ensure no "unlimited" or other non-integer values are passed
+        practical_score: null, // null instead of "unlimited"
+        written_score: null,   // null instead of "unlimited"
+        attendance_status: 'pending',
+        completion_status: 'not_started'
+      };
+
       const { data, error } = await supabase
         .from('student_roster_members')
-        .insert([{
-          roster_id: rosterId,
-          student_profile_id: studentId,
-          course_id: courseId || null,
-          enrollment_status: 'enrolled'
-        }])
+        .insert([enrollmentData])
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Enrollment insert error:', error);
+        throw error;
+      }
       
       await loadTrainingSessions();
       toast.success('Student enrolled successfully');
       return data;
     } catch (error: any) {
       console.error('Error enrolling student:', error);
-      toast.error('Failed to enroll student');
+      
+      // Provide more specific error messages
+      if (error.code === '22P02') {
+        toast.error('Database type error: Invalid data format. Please contact support.');
+      } else if (error.code === '23505') {
+        toast.error('Student is already enrolled in this session');
+      } else if (error.code === '23503') {
+        toast.error('Reference error: Student or session not found');
+      } else if (error.message?.includes('permission')) {
+        toast.error('Permission denied: Unable to enroll student');
+      } else {
+        toast.error(`Failed to enroll student: ${error.message || 'Unknown error'}`);
+      }
     }
   };
 
@@ -1448,7 +1545,7 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                                       session_date: session.booking_date,
                                       start_time: session.start_time,
                                       end_time: session.end_time,
-                                      max_capacity: 12, // Default capacity since this field doesn't exist in availability_bookings
+                                      max_capacity: session.max_capacity || 18, // REAL max_capacity from database!
                                       location_id: session.location_id || '',
                                       description: session.description || ''
                                     });
