@@ -618,23 +618,8 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
         rosterId = newRoster.id;
       }
 
-      // Check if student is already enrolled with better error handling
-      try {
-        const { data: existing } = await supabase
-          .from('student_roster_members')
-          .select('id')
-          .eq('roster_id', rosterId)
-          .eq('student_profile_id', studentId)
-          .single();
-        
-        if (existing) {
-          toast.error('Student is already enrolled in this session');
-          return;
-        }
-      } catch (existingCheckError) {
-        // If the check fails, we'll proceed with enrollment
-        console.warn('Could not check existing enrollment, proceeding:', existingCheckError);
-      }
+      // Skip duplicate check due to RLS permission issues - let database handle duplicates with constraints
+      console.log('Proceeding with enrollment - duplicate prevention handled by database constraints');
 
       // Enroll the student with safe data types - ensure no "unlimited" values
       const enrollmentData = {
@@ -657,6 +642,13 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
       
       if (error) {
         console.error('Enrollment insert error:', error);
+        
+        // Handle specific database constraint violations
+        if (error.code === '23505') {
+          toast.error('Student is already enrolled in this session');
+          return;
+        }
+        
         throw error;
       }
       
@@ -673,8 +665,10 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
         toast.error('Student is already enrolled in this session');
       } else if (error.code === '23503') {
         toast.error('Reference error: Student or session not found');
-      } else if (error.message?.includes('permission')) {
-        toast.error('Permission denied: Unable to enroll student');
+      } else if (error.code === '42501' || error.message?.includes('permission') || error.message?.includes('RLS')) {
+        toast.error('Permission denied: Database access restricted. Contact administrator.');
+      } else if (error.code === '406' || error.message?.includes('Not Acceptable')) {
+        toast.error('Database query denied: Row Level Security issue. Contact administrator.');
       } else {
         toast.error(`Failed to enroll student: ${error.message || 'Unknown error'}`);
       }
@@ -1152,11 +1146,13 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                 </div>
                 
                 <Dialog open={showSessionModal} onOpenChange={setShowSessionModal}>
-                  <DialogTrigger>
-                    <Button>
-                      <Plus className="h-4 w-4 mr-2" />
-                      New Session
-                    </Button>
+                  <DialogTrigger asChild>
+                    <div>
+                      <Button>
+                        <Plus className="h-4 w-4 mr-2" />
+                        New Session
+                      </Button>
+                    </div>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
@@ -1805,11 +1801,13 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                     />
                   </div>
                   <Dialog open={showStudentModal} onOpenChange={setShowStudentModal}>
-                    <DialogTrigger>
-                      <Button>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Student
-                      </Button>
+                    <DialogTrigger asChild>
+                      <div>
+                        <Button>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Student
+                        </Button>
+                      </div>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
