@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useCourseData } from '@/hooks/useCourseData';
 import { processExcelFile, extractDataFromFile } from '../utils/fileProcessing';
 import { findBestCourseMatch } from '../utils/courseMatching';
+import { validateRowData } from '../utils/validation';
 import { Course } from '@/types/courses';
 import { useCertificationLevelsCache } from '@/hooks/useCertificationLevelsCache';
 import { addMonths, format } from 'date-fns';
@@ -230,13 +231,24 @@ export function useFileProcessor() {
             processedRow.certifications['CPR'] = processedRow.cprLevel;
           }
 
-          // Validate required fields
-          if (!processedRow.name) {
-            throw new Error('Name is required');
-          }
+          // Validate required fields using centralized validation
+          const rowDataForValidation = {
+            'Student Name': processedRow.name,
+            'Email': processedRow.email,
+            'Phone': processedRow.phone,
+            'Company': processedRow.company,
+            'Assessment Status': processedRow.assessmentStatus,
+            'First Aid Level': processedRow.firstAidLevel,
+            'CPR Level': processedRow.cprLevel
+          };
 
-          if (!processedRow.email) {
-            throw new Error('Email is required');
+          const validationErrors = validateRowData(rowDataForValidation, i, {
+            name: 'Selected Course',
+            expiration_months: 12
+          });
+
+          if (validationErrors.length > 0) {
+            throw new Error(validationErrors.join('; '));
           }
 
           // Find matching course if enabled - using simplified exact matching on CPR and First Aid levels

@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, FileText, AlertTriangle, CheckCircle } from 'lucide-react';
 import { BatchValidationResult } from '@/types/certificateValidation';
+import { validateRowData } from '@/components/certificates/utils/validation';
+import { REQUIRED_COLUMNS } from '@/components/certificates/constants';
 import * as XLSX from 'xlsx';
 
 interface EnhancedFileDropZoneProps {
@@ -54,26 +56,36 @@ export function EnhancedFileDropZone({
         validationErrors: []
       }));
 
-      // Validate each record
+      // Validate each record using centralized validation
       let validRecords = 0;
       const errors: any[] = [];
 
       processedData.forEach((record, index) => {
-        const recordErrors = [];
-        
-        if (!record.recipientName?.trim()) {
-          recordErrors.push({ field: 'recipientName', message: 'Name is required', type: 'required' });
-        }
-        
-        if (!record.email?.trim()) {
-          recordErrors.push({ field: 'email', message: 'Email is required', type: 'required' });
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.email)) {
-          recordErrors.push({ field: 'email', message: 'Invalid email format', type: 'invalid' });
-        }
+        // Convert record to match RowData interface expected by validateRowData
+        const rowData = {
+          'Student Name': record.recipientName,
+          'Email': record.email,
+          'Phone': record.phone,
+          'Company': record.company,
+          'Assessment Status': record.assessmentStatus
+        };
 
-        if (recordErrors.length === 0) {
+        // Use the centralized validation function
+        const validationErrors = validateRowData(rowData, index, { name: record.courseName, expiration_months: 12 });
+        
+        if (validationErrors.length === 0) {
           validRecords++;
         } else {
+          // Convert validation errors to the format expected by the UI
+          const recordErrors = validationErrors.map(error => ({
+            field: error.includes('Student name') ? 'recipientName' :
+                   error.includes('Email') ? 'email' :
+                   error.includes('Phone') ? 'phone' : 'general',
+            message: error,
+            type: error.includes('required') ? 'required' :
+                   error.includes('format') || error.includes('Invalid') ? 'invalid' : 'validation'
+          }));
+          
           record.validationErrors = recordErrors;
           errors.push(...recordErrors);
         }
