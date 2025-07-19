@@ -28,6 +28,14 @@ import {
 } from '@/components/enrollment/capacity';
 import type { RosterCapacityInfo, CapacityStatus } from '@/types/roster-enrollment';
 
+// Phase 2: Enhanced Enrollment Protection - Import the robust enrollment service
+import { RosterEnrollmentService } from '@/services/enrollment/rosterEnrollmentService';
+import type {
+  RosterEnrollmentParams,
+  BatchRosterEnrollmentParams,
+  CapacityValidationParams
+} from '@/types/roster-enrollment';
+
 interface InstructorSystemProps {
   teamId?: string;
   locationId?: string;
@@ -654,121 +662,319 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
     }
   };
 
+  // Phase 2: Enhanced Capacity Validation Functions
+  /**
+   * Validate enrollment capacity for a session before proceeding with enrollment
+   * @param sessionId - The training session ID
+   * @param studentCount - Number of students to enroll (default: 1)
+   * @returns CapacityValidationResult indicating if enrollment is allowed
+   */
+  const validateEnrollmentCapacity = async (sessionId: string, studentCount: number = 1) => {
+    try {
+      // Get or create roster for the session
+      const rosterId = await ensureRosterForSession(sessionId);
+      if (!rosterId) {
+        return {
+          allowed: false,
+          allowWaitlist: false,
+          error: 'Could not create or find roster for session',
+          capacityInfo: null
+        };
+      }
+
+      // Use the robust capacity validation service
+      const capacityValidation = await RosterEnrollmentService.checkRosterCapacityStatus({
+        rosterId,
+        additionalStudents: studentCount,
+        includeWaitlist: true
+      });
+
+      if (!capacityValidation.success) {
+        return {
+          allowed: false,
+          allowWaitlist: false,
+          error: capacityValidation.error || 'Capacity validation failed',
+          capacityInfo: capacityValidation.capacity
+        };
+      }
+
+      const canEnroll = capacityValidation.capacity.can_enroll;
+      const allowWaitlist = !canEnroll && capacityValidation.capacity.max_capacity !== null;
+
+      return {
+        allowed: canEnroll,
+        allowWaitlist,
+        capacityInfo: capacityValidation.capacity,
+        waitlistInfo: capacityValidation.waitlist,
+        recommendations: capacityValidation.recommendations,
+        warnings: capacityValidation.warnings
+      };
+    } catch (error: any) {
+      console.error('Error validating enrollment capacity:', error);
+      return {
+        allowed: false,
+        allowWaitlist: false,
+        error: error.message || 'Failed to validate capacity',
+        capacityInfo: null
+      };
+    }
+  };
+
+  /**
+   * Enhanced enrollment function with capacity protection and waitlist support
+   * Replaces the legacy enrollStudentInSession with robust capacity validation
+   */
   const enrollStudentInSession = async (sessionId: string, studentId: string, courseId?: string) => {
     try {
-      // First create or get a roster for this session
-      let rosterId;
+      setLoading(true);
+
+      // Phase 2: Enhanced capacity validation before enrollment
+      console.log('🔍 Validating enrollment capacity before proceeding...');
+      const capacityCheck = await validateEnrollmentCapacity(sessionId, 1);
       
-      // Try multiple approaches to find existing roster with better error handling
-      let existingRoster;
-      try {
-        const { data: directRoster, error: rosterError } = await supabase
-          .from('student_rosters')
-          .select('id')
-          .eq('availability_booking_id', sessionId)
-          .maybeSingle();
-        
-        if (rosterError) {
-          console.warn('Roster query error:', rosterError);
-        }
-        existingRoster = directRoster;
-      } catch (rosterQueryError) {
-        console.warn('Could not find existing roster, will create new one:', rosterQueryError);
-        existingRoster = null;
+      if (!capacityCheck.allowed && !capacityCheck.allowWaitlist) {
+        toast.error(capacityCheck.error || 'Cannot enroll - session capacity exceeded');
+        return;
       }
+
+      // Get or create roster for the session
+      const rosterId = await ensureRosterForSession(sessionId);
+      if (!rosterId) {
+        toast.error('Could not create roster for session');
+        return;
+      }
+
+      // Determine enrollment type based on capacity
+      const isWaitlistEnrollment = !capacityCheck.allowed && capacityCheck.allowWaitlist;
       
-      if (existingRoster) {
-        rosterId = existingRoster.id;
-        // Sync existing roster capacity with session capacity
-        await syncRosterCapacityWithSession(sessionId);
+      if (isWaitlistEnrollment) {
+        console.log('⚠️ Session at capacity - enrolling as waitlisted');
+        toast.warning('Session at capacity - student added to waitlist');
       } else {
-        // Get session details to copy max_capacity from availability_bookings
-        const { data: sessionData, error: sessionError } = await supabase
-          .from('availability_bookings')
-          .select('max_capacity, title')
-          .eq('id', sessionId)
-          .single();
-
-        // Create a new roster for this session with capacity from availability_bookings
-        const rosterData = {
-          roster_name: (!sessionError && sessionData?.title) ? sessionData.title : 'Training Session Roster',
-          course_name: 'Training Session',
-          instructor_id: user?.id || null,
-          location_id: locationId || null,
-          roster_status: 'active',
-          roster_type: 'course',
-          course_id: courseId || null,
-          created_by: user?.id || null,
-          // CRITICAL: Copy max_capacity from availability_bookings.max_capacity
-          max_capacity: (!sessionError && sessionData?.max_capacity) ? sessionData.max_capacity : 18,
-          // Link to session using the unique availability_booking_id field
-          availability_booking_id: sessionId
-        };
-        
-        const { data: newRoster, error: rosterError } = await supabase
-          .from('student_rosters')
-          .insert([rosterData])
-          .select()
-          .single();
-        
-        if (rosterError) throw rosterError;
-        rosterId = newRoster.id;
+        console.log('✅ Capacity available - enrolling normally');
       }
 
-      // Skip duplicate check due to RLS permission issues - let database handle duplicates with constraints
-      console.log('Proceeding with enrollment - duplicate prevention handled by database constraints');
-
-      // Enroll the student with safe data types - ensure no "unlimited" values
-      const enrollmentData = {
-        roster_id: rosterId,
-        student_profile_id: studentId,
-        course_id: courseId || null,
-        enrollment_status: 'enrolled' as const,
-        // Ensure no "unlimited" or other non-integer values are passed
-        practical_score: null, // null instead of "unlimited"
-        written_score: null,   // null instead of "unlimited"
-        attendance_status: 'pending',
-        completion_status: 'not_started'
+      // Use the robust RosterEnrollmentService for enrollment
+      const enrollmentParams: RosterEnrollmentParams = {
+        rosterId,
+        studentId,
+        enrolledBy: user?.id || 'system',
+        userRole: (profile?.role as DatabaseUserRole) || 'AP',
+        enrollmentType: 'standard',
+        notes: courseId ? `Course: ${courseId}` : undefined,
+        forceEnrollment: false // Don't force - let capacity system handle waitlist
       };
 
-      const { data, error } = await supabase
-        .from('student_roster_members')
-        .insert([enrollmentData])
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('Enrollment insert error:', error);
+      console.log('📝 Enrolling student with parameters:', enrollmentParams);
+      const result = await RosterEnrollmentService.enrollStudentWithCapacityCheck(enrollmentParams);
+
+      if (!result.success) {
+        console.error('❌ Enrollment failed:', result.error);
         
-        // Handle specific database constraint violations
-        if (error.code === '23505') {
+        // Enhanced error handling based on enrollment service response
+        if (result.error?.includes('CAPACITY_EXCEEDED')) {
+          toast.error('Session is at full capacity');
+        } else if (result.error?.includes('ALREADY_ENROLLED')) {
           toast.error('Student is already enrolled in this session');
-          return;
+        } else if (result.error?.includes('STUDENT_NOT_FOUND')) {
+          toast.error('Student profile not found');
+        } else if (result.error?.includes('ROSTER_NOT_FOUND')) {
+          toast.error('Session roster not found');
+        } else if (result.error?.includes('INSUFFICIENT_PERMISSIONS')) {
+          toast.error('Permission denied: Contact administrator');
+        } else {
+          toast.error(`Enrollment failed: ${result.error || 'Unknown error'}`);
         }
-        
-        throw error;
+        return;
       }
-      
+
+      // Update course assignment if provided
+      if (courseId && result.results.enrollment?.id) {
+        try {
+          await updateStudentCourseAssignment(result.results.enrollment.id, courseId);
+        } catch (courseError) {
+          console.warn('Failed to update course assignment:', courseError);
+          // Don't fail the entire enrollment for course assignment issues
+        }
+      }
+
+      // Reload sessions to show updated enrollment
       await loadTrainingSessions();
-      toast.success('Student enrolled successfully');
-      return data;
-    } catch (error: any) {
-      console.error('Error enrolling student:', error);
       
-      // Provide more specific error messages
-      if (error.code === '22P02') {
-        toast.error('Database type error: Invalid data format. Please contact support.');
+      // Success feedback based on enrollment status
+      const enrollmentStatus = result.results.enrollment?.enrollment_status;
+      if (enrollmentStatus === 'waitlisted') {
+        toast.success('Student added to waitlist successfully');
+      } else {
+        toast.success('Student enrolled successfully');
+      }
+
+      // Log capacity status after enrollment
+      if (capacityCheck.capacityInfo) {
+        console.log('📊 Post-enrollment capacity:', {
+          enrolled: capacityCheck.capacityInfo.current_enrollment + 1,
+          capacity: capacityCheck.capacityInfo.max_capacity,
+          available: Math.max(0, (capacityCheck.capacityInfo.available_spots || 0) - 1)
+        });
+      }
+
+      return result.results.enrollment;
+    } catch (error: any) {
+      console.error('💥 Error enrolling student:', error);
+      
+      // Enhanced error handling with specific messaging
+      if (error.message?.includes('CAPACITY_EXCEEDED')) {
+        toast.error('Session is at full capacity - please try waitlist enrollment');
+      } else if (error.message?.includes('ALREADY_ENROLLED')) {
+        toast.error('Student is already enrolled in this session');
+      } else if (error.message?.includes('STUDENT_NOT_FOUND')) {
+        toast.error('Student profile not found');
+      } else if (error.message?.includes('INSUFFICIENT_PERMISSIONS')) {
+        toast.error('Permission denied: Contact administrator');
       } else if (error.code === '23505') {
         toast.error('Student is already enrolled in this session');
       } else if (error.code === '23503') {
         toast.error('Reference error: Student or session not found');
       } else if (error.code === '42501' || error.message?.includes('permission') || error.message?.includes('RLS')) {
         toast.error('Permission denied: Database access restricted. Contact administrator.');
-      } else if (error.code === '406' || error.message?.includes('Not Acceptable')) {
-        toast.error('Database query denied: Row Level Security issue. Contact administrator.');
       } else {
         toast.error(`Failed to enroll student: ${error.message || 'Unknown error'}`);
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Phase 2: Batch enrollment protection with capacity validation
+   * Handles enrolling multiple students while respecting capacity limits
+   */
+  const enrollMultipleStudentsInSession = async (
+    sessionId: string,
+    studentIds: string[],
+    courseId?: string
+  ) => {
+    if (!studentIds || studentIds.length === 0) {
+      toast.error('No students selected for enrollment');
+      return { success: false, enrolled: [], waitlisted: [], failed: [] };
+    }
+
+    try {
+      setLoading(true);
+      console.log(`🔍 Starting batch enrollment for ${studentIds.length} students...`);
+
+      // Phase 2: Validate batch capacity before starting enrollments
+      const capacityCheck = await validateEnrollmentCapacity(sessionId, studentIds.length);
+      
+      if (!capacityCheck.allowed && !capacityCheck.allowWaitlist) {
+        toast.error(`Cannot enroll ${studentIds.length} students - session capacity exceeded`);
+        return { success: false, enrolled: [], waitlisted: [], failed: studentIds };
+      }
+
+      // Get or create roster for the session
+      const rosterId = await ensureRosterForSession(sessionId);
+      if (!rosterId) {
+        toast.error('Could not create roster for session');
+        return { success: false, enrolled: [], waitlisted: [], failed: studentIds };
+      }
+
+      // Show capacity warning if needed
+      if (capacityCheck.capacityInfo) {
+        const availableSpots = capacityCheck.capacityInfo.available_spots || 0;
+        if (studentIds.length > availableSpots && availableSpots > 0) {
+          toast.warning(
+            `Only ${availableSpots} spots available. ${studentIds.length - availableSpots} students will be waitlisted.`
+          );
+        } else if (availableSpots === 0) {
+          toast.warning('Session at capacity - all students will be waitlisted');
+        }
+      }
+
+      // Use the robust batch enrollment service
+      const batchParams: BatchRosterEnrollmentParams = {
+        rosterId,
+        studentIds,
+        enrolledBy: user?.id || 'system',
+        userRole: (profile?.role as DatabaseUserRole) || 'AP',
+        enrollmentType: 'standard',
+        notes: courseId ? `Course: ${courseId}` : undefined,
+        continueOnError: true // Continue enrolling even if some fail
+      };
+
+      console.log('📝 Starting batch enrollment with parameters:', batchParams);
+      const batchResult = await RosterEnrollmentService.enrollMultipleStudents(batchParams);
+
+      // Process results and update course assignments if needed
+      const enrolled = batchResult.summary?.enrolled || [];
+      const waitlisted = batchResult.summary?.waitlisted || [];
+      const failed = batchResult.summary?.failed || [];
+
+      // Update course assignments for successfully enrolled students
+      if (courseId && batchResult.results) {
+        const successfulEnrollments = batchResult.results.filter(r => r.success && r.results.enrollment?.id);
+        
+        for (const result of successfulEnrollments) {
+          try {
+            await updateStudentCourseAssignment(result.results.enrollment.id, courseId);
+          } catch (courseError) {
+            console.warn('Failed to update course assignment for student:', result.student_id, courseError);
+            // Don't fail the entire batch for course assignment issues
+          }
+        }
+      }
+
+      // Reload sessions to show updated enrollments
+      await loadTrainingSessions();
+
+      // Provide comprehensive feedback
+      const totalSuccessful = enrolled.length + waitlisted.length;
+      const totalFailed = failed.length;
+
+      if (totalSuccessful === studentIds.length) {
+        if (waitlisted.length > 0) {
+          toast.success(
+            `Batch enrollment complete: ${enrolled.length} enrolled, ${waitlisted.length} waitlisted`
+          );
+        } else {
+          toast.success(`All ${enrolled.length} students enrolled successfully`);
+        }
+      } else if (totalSuccessful > 0) {
+        toast.warning(
+          `Partial success: ${totalSuccessful} enrolled/waitlisted, ${totalFailed} failed`
+        );
+      } else {
+        toast.error(`Batch enrollment failed for all ${studentIds.length} students`);
+      }
+
+      // Log detailed results
+      console.log('📊 Batch enrollment results:', {
+        total: studentIds.length,
+        enrolled: enrolled.length,
+        waitlisted: waitlisted.length,
+        failed: totalFailed,
+        details: batchResult.summary
+      });
+
+      return {
+        success: batchResult.success,
+        enrolled,
+        waitlisted,
+        failed: failed.map((f: any) => f.studentId || f),
+        capacityInfo: batchResult.capacityInfo
+      };
+
+    } catch (error: any) {
+      console.error('💥 Error in batch enrollment:', error);
+      toast.error(`Batch enrollment failed: ${error.message || 'Unknown error'}`);
+      
+      return {
+        success: false,
+        enrolled: [],
+        waitlisted: [],
+        failed: studentIds
+      };
+    } finally {
+      setLoading(false);
     }
   };
 
