@@ -213,8 +213,7 @@ export function useFileProcessor() {
             isProcessed: false,
             error: '',
             courseMatches: [] as any[],
-            certifications: {} as Record<string, string>,
-            validationErrors: [] as string[]
+            certifications: {} as Record<string, string>
           };
 
           // Map standard fields to the certification types
@@ -242,71 +241,32 @@ export function useFileProcessor() {
             expiration_months: 12
           });
 
-          // Set validation errors on the processed row for successful records
-          processedRow.validationErrors = validationErrors;
-
           if (validationErrors.length > 0) {
             throw new Error(validationErrors.join('; '));
           }
 
-          // Find matching course if enabled - using simplified exact matching on CPR and First Aid levels
+          // Simple course matching based ONLY on CPR_LEVEL and FIRST_AID_LEVEL
           if (enableCourseMatching && courses) {
-            // For each row, find the best matching course based on its own data
-            const rowCourseInfo = {
-              firstAidLevel: processedRow.firstAidLevel,
-              cprLevel: processedRow.cprLevel
-            };
-            
-            console.log(`Finding course match for row ${rowNum}:`, rowCourseInfo);
-            
-            // Type assertion to resolve the incompatible type issue
-            const coursesForMatching = courses as unknown as Course[];
-            
-            // Use the actual selected course ID if one is provided
-            const defaultId = selectedCourseId && selectedCourseId !== 'none' 
-              ? selectedCourseId 
-              : 'default';
-            
-            // Use the course matching function to find the best match
-            const bestMatch = await findBestCourseMatch(
-              rowCourseInfo,
-              defaultId,
-              coursesForMatching
+            // Direct lookup in courses table based on CPR and First Aid levels
+            const matchedCourse = courses.find(course =>
+              course.cpr_level === processedRow.cprLevel &&
+              course.first_aid_level === processedRow.firstAidLevel
             );
             
-            if (bestMatch) {
+            if (matchedCourse) {
               hasCourseMatches = true;
               processedRow.courseMatches = [{
-                courseId: bestMatch.id,
-                courseName: bestMatch.name,
-                matchType: bestMatch.matchType,
-                confidence: bestMatch.matchType === 'exact' ? 100 : bestMatch.matchType === 'partial' ? 70 : 50,
-                certifications: bestMatch.certifications,
-                expirationMonths: bestMatch.expiration_months
+                courseId: matchedCourse.id,
+                courseName: matchedCourse.name,
+                matchType: 'exact',
+                confidence: 100,
+                certifications: [],
+                expirationMonths: matchedCourse.expiration_months
               }];
-              
-              console.log(`DEBUG - Match found for row ${rowNum}:`, {
-                match: processedRow.courseMatches[0],
-                studentData: { firstAidLevel: processedRow.firstAidLevel, cprLevel: processedRow.cprLevel },
-                assessmentStatus: processedRow.assessmentStatus
-              });
-            } else if (selectedCourseId && selectedCourseId !== 'none') {
-              // Fallback to the manually selected course if no match was found
-              const manualCourse = courses.find(c => c.id === selectedCourseId);
-              if (manualCourse) {
-                processedRow.courseMatches = [{
-                  courseId: manualCourse.id,
-                  courseName: manualCourse.name,
-                  matchType: 'manual',
-                  confidence: 100,
-                  certifications: [],
-                  expirationMonths: manualCourse.expiration_months
-                }];
-                console.log(`Using manually selected course for row ${rowNum}:`, processedRow.courseMatches[0]);
-              }
+              console.log(`Course match found for row ${rowNum}: ${matchedCourse.name}`);
             }
           } else if (selectedCourseId && selectedCourseId !== 'none' && courses) {
-            // If course matching is disabled but we have a selected course, use that
+            // Use manually selected course
             const selectedCourse = courses.find(c => c.id === selectedCourseId);
             if (selectedCourse) {
               processedRow.courseMatches = [{
@@ -317,7 +277,6 @@ export function useFileProcessor() {
                 certifications: [],
                 expirationMonths: selectedCourse.expiration_months
               }];
-              console.log(`Using selected course for row ${rowNum}:`, processedRow.courseMatches[0]);
             }
           }
 
@@ -394,8 +353,7 @@ export function useFileProcessor() {
             rowNum,
             isProcessed: false,
             error: error instanceof Error ? error.message : 'Unknown error',
-            courseMatches: [],
-            validationErrors: [error instanceof Error ? error.message : 'Unknown error']
+            courseMatches: []
           });
           
           processedData.errorCount++;
