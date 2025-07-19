@@ -1184,20 +1184,15 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                   const dateStr = formatDate(year, month, day);
                   const daySessions = getSessionsForDate(dateStr);
                   const isSelected = selectedDay === dateStr;
-                  const isHovered = hoveredDay === dateStr;
+                  const isHovered = hoveredDay === dateStr && daySessions.length > 0;
                   
-                  // Calculate target square for overlay description
-                  const targetSquareIndex = isHovered ? getTargetSquareIndex(index, days.length) : null;
-                  const isTargetSquare = targetSquareIndex === index;
-                  
-                  console.log('🔍 OVERLAY DEBUG - Target Square Calculation:', {
+                  console.log('🔍 OVERLAY DEBUG - Hover State:', {
                     dateStr,
                     index,
                     isHovered,
                     hoveredDay,
-                    targetSquareIndex,
-                    isTargetSquare,
-                    daysLength: days.length
+                    sessionsCount: daySessions.length,
+                    willShowOverlay: isHovered
                   });
 
                   return (
@@ -1232,11 +1227,11 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                       className={`p-2 h-20 border rounded-md cursor-pointer transition-colors hover:bg-muted relative ${
                         isSelected ? 'ring-2 ring-primary' : ''
                       } ${daySessions.length > 0 ? 'bg-blue-50 hover:bg-blue-100' : ''} ${
-                        isTargetSquare ? 'z-10' : ''
+                        isHovered ? 'z-10 relative' : ''
                       }`}
                     >
                       {/* Normal calendar day content */}
-                      {!isTargetSquare && (
+                      {!isHovered && (
                         <>
                           <div className="flex justify-between items-start">
                             <span className="font-medium">{day}</span>
@@ -1262,17 +1257,16 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                         </>
                       )}
                       
-                      {/* Session description overlay when this square is the target */}
-                      {isTargetSquare && hoveredDay && (
+                      {/* Session description overlay when hovered */}
+                      {isHovered && (
                         <div className="absolute inset-0 bg-white border-2 border-blue-500 rounded-md shadow-lg p-2 z-20">
                           <div className="h-full overflow-hidden">
                             {(() => {
-                              const hoveredDaySessions = getSessionsForDate(hoveredDay);
-                              const session = hoveredDaySessions[0]; // Show first session
+                              const session = daySessions[0]; // Show first session
                               
                               console.log('🔍 OVERLAY DEBUG - Rendering overlay:', {
-                                hoveredDay,
-                                hoveredDaySessions: hoveredDaySessions.length,
+                                dateStr,
+                                sessionsCount: daySessions.length,
                                 hasSession: !!session,
                                 sessionData: session ? {
                                   id: session.id,
@@ -1287,27 +1281,32 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                               
                               if (!session) {
                                 console.log('🚨 OVERLAY DEBUG - No session found for overlay!');
-                                return null;
+                                return <div className="text-xs text-red-500">No session data</div>;
                               }
                               
                               return (
                                 <div className="h-full flex flex-col">
                                   {/* Session title */}
                                   <div className="text-xs font-semibold text-gray-900 truncate mb-1">
-                                    {session.title}
+                                    {session.title || 'Untitled Session'}
                                   </div>
                                   
                                   {/* Time */}
                                   <div className="text-xs text-gray-600 mb-1">
-                                    {session.start_time} - {session.end_time}
+                                    {session.start_time && session.end_time ?
+                                      `${session.start_time} - ${session.end_time}` :
+                                      'Time not set'
+                                    }
                                   </div>
                                   
                                   {/* Description or instructor */}
                                   <div className="text-xs text-gray-600 flex-1 overflow-hidden">
                                     {session.description ? (
                                       <p className="leading-tight line-clamp-2">{session.description}</p>
+                                    ) : session.instructor_profiles?.display_name ? (
+                                      <p className="leading-tight">Instructor: {session.instructor_profiles.display_name}</p>
                                     ) : (
-                                      <p className="leading-tight">{session.instructor_profiles?.display_name || 'No instructor'}</p>
+                                      <p className="leading-tight text-gray-400">No details available</p>
                                     )}
                                   </div>
                                   
@@ -1317,8 +1316,8 @@ const InstructorManagementSystem: React.FC<InstructorSystemProps> = ({
                                       <Users className="h-3 w-3" />
                                       <span>{session.session_enrollments?.length || 0}</span>
                                     </div>
-                                    {hoveredDaySessions.length > 1 && (
-                                      <span className="text-gray-500">+{hoveredDaySessions.length - 1}</span>
+                                    {daySessions.length > 1 && (
+                                      <span className="text-gray-500">+{daySessions.length - 1}</span>
                                     )}
                                   </div>
                                 </div>
