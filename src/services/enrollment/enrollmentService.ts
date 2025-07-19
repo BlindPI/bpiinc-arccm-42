@@ -1,6 +1,13 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import type { Enrollment, EnrollmentInsert } from '@/types/enrollment';
+import { RosterEnrollmentService } from './rosterEnrollmentService';
+import {
+  RosterCapacityInfo,
+  CapacityValidationResult,
+  WaitlistPromotionResult
+} from '@/types/roster-enrollment';
+import { DatabaseUserRole } from '@/types/database-roles';
 
 export interface EnrollmentMetrics {
   totalEnrollments: number;
@@ -274,38 +281,38 @@ export class EnrollmentService {
     }
   }
 
-  static async promoteFromWaitlist(rosterId: string): Promise<void> {
+  static async promoteFromWaitlist(
+    rosterId: string,
+    promotedBy: string = 'system',
+    userRole: DatabaseUserRole = 'ADMIN',
+    maxPromotions: number = 1
+  ): Promise<WaitlistPromotionResult> {
     try {
-      // Find the first waitlisted student in the roster
-      const { data: waitlistedStudent, error: waitlistError } = await supabase
-        .from('student_roster_members')
-        .select('*')
-        .eq('roster_id', rosterId)
-        .eq('enrollment_status', 'waitlisted')
-        .order('enrolled_at', { ascending: true })
-        .limit(1)
-        .single();
-
-      if (waitlistError || !waitlistedStudent) return;
-
-      // Check if there's space available in the roster
-      const { data: roster } = await supabase
-        .from('student_rosters')
-        .select('max_capacity')
-        .eq('id', rosterId)
-        .single();
-
-      const { count: enrolledCount } = await supabase
-        .from('student_roster_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('roster_id', rosterId)
-        .eq('enrollment_status', 'enrolled');
-
-      if (enrolledCount && roster && enrolledCount < roster.max_capacity) {
-        await this.approveEnrollment(waitlistedStudent.id, 'system');
-      }
+      // Use the new RosterEnrollmentService for capacity-aware waitlist promotion
+      return await RosterEnrollmentService.promoteFromWaitlist({
+        rosterId,
+        promotedBy,
+        userRole,
+        maxPromotions
+      });
     } catch (error) {
       console.error('Error promoting from waitlist:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Enhanced waitlist promotion with detailed results
+   * @deprecated Use promoteFromWaitlist instead
+   */
+  static async promoteFromWaitlistLegacy(rosterId: string): Promise<void> {
+    try {
+      const result = await this.promoteFromWaitlist(rosterId, 'system', 'ADMIN', 1);
+      if (!result.success && result.error) {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error('Error promoting from waitlist (legacy):', error);
       throw error;
     }
   }
@@ -331,6 +338,199 @@ export class EnrollmentService {
     } catch (error) {
       console.error('Error exporting enrollment data:', error);
       throw error;
+    }
+  }
+  /**
+   * Check roster capacity status using the new capacity validation system
+   */
+  static async checkRosterCapacityStatus(
+    rosterId: string,
+    additionalStudents: number = 0,
+    includeWaitlist: boolean = true
+  ): Promise<CapacityValidationResult> {
+    try {
+      return await RosterEnrollmentService.checkRosterCapacityStatus({
+        rosterId,
+        additionalStudents,
+        includeWaitlist
+      });
+    } catch (error) {
+      console.error('Error checking roster capacity:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get basic capacity information for a roster
+   */
+  static async getRosterCapacityInfo(rosterId: string): Promise<RosterCapacityInfo> {
+    try {
+      const result = await this.checkRosterCapacityStatus(rosterId, 0, false);
+      return result.capacity;
+    } catch (error) {
+      console.error('Error getting roster capacity info:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if a roster can accommodate additional students
+   */
+  static async canEnrollStudents(rosterId: string, studentCount: number = 1): Promise<boolean> {
+    try {
+      const capacityInfo = await this.getRosterCapacityInfo(rosterId);
+      return capacityInfo.can_enroll && (
+        capacityInfo.available_spots === null ||
+        capacityInfo.available_spots >= studentCount
+      );
+    } catch (error) {
+      console.error('Error checking enrollment capacity:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get detailed roster capacity metrics for analytics
+   */
+  static async getRosterCapacityMetrics(rosterId?: string): Promise<{
+    totalRosters: number;
+    rostersWithCapacity: number;
+    averageUtilization: number;
+    fullRosters: number;
+    nearlyFullRosters: number;
+    rosterDetails?: CapacityValidationResult;
+  }> {
+    try {
+      if (rosterId) {
+        // Get specific roster details
+        const rosterDetails = await this.checkRosterCapacityStatus(rosterId, 0, true);
+        
+        return {
+          totalRosters: 1,
+          rostersWithCapacity: rosterDetails.capacity.max_capacity ? 1 : 0,
+          averageUtilization: rosterDetails.capacity.max_capacity
+            ? (rosterDetails.capacity.current_enrollment / rosterDetails.capacity.max_capacity) * 100
+            : 0,
+          fullRosters: rosterDetails.capacity.available_spots === 0 ? 1 : 0,
+          nearlyFullRosters: rosterDetails.warnings.some(w => w.includes('nearly full')) ? 1 : 0,
+          rosterDetails
+        };
+      }
+
+      // Get capacity status for all rosters using the database view
+      const capacityStatuses = await RosterEnrollmentService.getRosterCapacityStatusView();
+      
+      const totalRosters = capacityStatuses.length;
+      const rostersWithCapacity = capacityStatuses.filter(r => r.max_capacity !== null).length;
+      const fullRosters = capacityStatuses.filter(r => r.capacity_status === 'FULL').length;
+      const nearlyFullRosters = capacityStatuses.filter(r => r.capacity_status === 'NEARLY_FULL').length;
+      
+      const utilizationSum = capacityStatuses
+        .filter(r => r.utilization_percentage !== null)
+        .reduce((sum, r) => sum + (r.utilization_percentage || 0), 0);
+      
+      const averageUtilization = rostersWithCapacity > 0
+        ? utilizationSum / rostersWithCapacity
+        : 0;
+
+      return {
+        totalRosters,
+        rostersWithCapacity,
+        averageUtilization,
+        fullRosters,
+        nearlyFullRosters
+      };
+    } catch (error) {
+      console.error('Error getting roster capacity metrics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Auto-promote eligible students from waitlists across all rosters
+   */
+  static async autoPromoteFromWaitlists(
+    promotedBy: string = 'system',
+    userRole: DatabaseUserRole = 'ADMIN',
+    maxPromotionsPerRoster: number = 5
+  ): Promise<{
+    success: boolean;
+    totalPromoted: number;
+    rosterResults: Array<{
+      rosterId: string;
+      rosterName: string;
+      promoted: number;
+      error?: string;
+    }>;
+  }> {
+    try {
+      // Get all rosters with available capacity and waitlisted students
+      const { data: rostersWithWaitlist, error } = await supabase
+        .from('student_rosters')
+        .select(`
+          id,
+          roster_name,
+          max_capacity,
+          current_enrollment
+        `)
+        .not('max_capacity', 'is', null)
+        .gt('max_capacity', supabase.sql`current_enrollment`);
+
+      if (error) throw error;
+
+      const results = [];
+      let totalPromoted = 0;
+
+      for (const roster of rostersWithWaitlist || []) {
+        try {
+          const availableSpots = (roster.max_capacity || 0) - (roster.current_enrollment || 0);
+          const maxToPromote = Math.min(maxPromotionsPerRoster, availableSpots);
+
+          if (maxToPromote > 0) {
+            const promotionResult = await this.promoteFromWaitlist(
+              roster.id,
+              promotedBy,
+              userRole,
+              maxToPromote
+            );
+
+            results.push({
+              rosterId: roster.id,
+              rosterName: roster.roster_name,
+              promoted: promotionResult.promotedCount,
+              error: promotionResult.success ? undefined : promotionResult.error
+            });
+
+            totalPromoted += promotionResult.promotedCount;
+          } else {
+            results.push({
+              rosterId: roster.id,
+              rosterName: roster.roster_name,
+              promoted: 0
+            });
+          }
+        } catch (rosterError: any) {
+          results.push({
+            rosterId: roster.id,
+            rosterName: roster.roster_name,
+            promoted: 0,
+            error: rosterError.message
+          });
+        }
+      }
+
+      return {
+        success: true,
+        totalPromoted,
+        rosterResults: results
+      };
+    } catch (error: any) {
+      console.error('Error in auto-promote from waitlists:', error);
+      return {
+        success: false,
+        totalPromoted: 0,
+        rosterResults: [],
+      };
     }
   }
 }

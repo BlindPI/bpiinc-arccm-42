@@ -8,12 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { 
-  Users, 
-  Plus, 
-  Download, 
-  Edit, 
-  Trash2, 
+import {
+  Users,
+  Plus,
+  Download,
+  Edit,
+  Trash2,
   Calendar,
   MapPin,
   User,
@@ -21,7 +21,8 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  Settings
+  Settings,
+  TrendingUp
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,6 +33,8 @@ import { RosterExportDialog } from './RosterExportDialog';
 import { RosterStudentManager } from './RosterStudentManager';
 import { RosterBookingAssignment } from './RosterBookingAssignment';
 import { StudentCourseAssignment } from './StudentCourseAssignment';
+import { CapacityStatusBadge, CapacityIndicator } from './capacity';
+import { useRosterCapacityValidation } from '@/hooks/useRosterCapacityValidation';
 
 interface StudentRoster {
   id: string;
@@ -180,6 +183,220 @@ export function RosterManagement() {
       case 'ARCHIVED': return <Clock className="h-4 w-4" />;
       default: return <AlertCircle className="h-4 w-4" />;
     }
+  };
+
+  // Enhanced roster card component with capacity integration
+  const RosterCardWithCapacity = ({ roster }: { roster: StudentRoster & {
+    availability_bookings?: {
+      id: string;
+      title: string;
+      booking_date: string;
+      start_time: string;
+      end_time: string;
+      user_id: string;
+      profiles?: { display_name: string };
+    };
+  } }) => {
+    const { capacityStatusType, isNearlyFull, isFull, isOverCapacity } = useRosterCapacityValidation({
+      rosterId: roster.id,
+      includeWaitlist: false
+    });
+
+    return (
+      <Card key={roster.id} className="hover:shadow-md transition-shadow">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <CardTitle className="text-lg">{roster.roster_name}</CardTitle>
+              <div className="flex items-center gap-2">
+                <Badge variant={getStatusBadgeVariant(roster.roster_status)} className="text-xs">
+                  {getStatusIcon(roster.roster_status)}
+                  <span className="ml-1">{roster.roster_status}</span>
+                </Badge>
+                {/* Enhanced capacity status badge */}
+                <CapacityStatusBadge
+                  status={capacityStatusType}
+                  capacityInfo={{
+                    success: true,
+                    roster_id: roster.id,
+                    roster_name: roster.roster_name,
+                    max_capacity: roster.max_capacity,
+                    current_enrollment: roster.current_enrollment,
+                    available_spots: roster.max_capacity ? roster.max_capacity - roster.current_enrollment : null,
+                    can_enroll: roster.max_capacity ? roster.current_enrollment < roster.max_capacity : true,
+                    requested_students: 0
+                  }}
+                  showSpots={true}
+                  size="sm"
+                />
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <div className="flex items-center text-sm text-muted-foreground">
+              <FileText className="h-4 w-4 mr-2" />
+              {roster.course_name}
+            </div>
+            {roster.locations && (
+              <div className="flex items-center text-sm text-muted-foreground">
+                <MapPin className="h-4 w-4 mr-2" />
+                {roster.locations.name}, {roster.locations.city}
+              </div>
+            )}
+            {roster.profiles && (
+              <div className="flex items-center text-sm text-muted-foreground">
+                <User className="h-4 w-4 mr-2" />
+                {roster.profiles.display_name}
+              </div>
+            )}
+            {roster.scheduled_start_date && (
+              <div className="flex items-center text-sm text-muted-foreground">
+                <Calendar className="h-4 w-4 mr-2" />
+                {new Date(roster.scheduled_start_date).toLocaleDateString()}
+              </div>
+            )}
+            
+            {/* Booking Assignment Status */}
+            {roster.availability_bookings ? (
+              <div className="flex items-start text-sm text-green-700 bg-green-50 p-2 rounded">
+                <CheckCircle className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
+                <div className="space-y-1">
+                  <div className="font-medium">Assigned to: {roster.availability_bookings.title}</div>
+                  <div className="text-xs text-green-600">
+                    {new Date(roster.availability_bookings.booking_date).toLocaleDateString()} at {roster.availability_bookings.start_time} - {roster.availability_bookings.end_time}
+                  </div>
+                  {roster.availability_bookings.profiles && (
+                    <div className="text-xs text-green-600">
+                      Instructor: {roster.availability_bookings.profiles.display_name}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center text-sm text-amber-700 bg-amber-50 p-2 rounded">
+                <AlertCircle className="h-4 w-4 mr-2" />
+                <span>Not assigned to any booking</span>
+              </div>
+            )}
+
+            {/* Capacity warnings */}
+            {(isNearlyFull || isFull || isOverCapacity) && (
+              <div className={`flex items-center text-sm p-2 rounded ${
+                isOverCapacity ? 'text-red-700 bg-red-50' :
+                isFull ? 'text-orange-700 bg-orange-50' :
+                'text-yellow-700 bg-yellow-50'
+              }`}>
+                <AlertCircle className="h-4 w-4 mr-2" />
+                <span>
+                  {isOverCapacity ? 'Over capacity - requires attention' :
+                   isFull ? 'At full capacity' :
+                   'Nearly full - monitor closely'}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Enhanced enrollment progress with capacity integration */}
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Enrollment</span>
+              <span>{roster.current_enrollment} / {roster.max_capacity || '∞'}</span>
+            </div>
+            <CapacityIndicator rosterId={roster.id} />
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectedRoster(roster);
+                  setActiveView('manage');
+                }}
+              >
+                <Edit className="h-4 w-4 mr-1" />
+                Manage Students
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectedRoster(roster);
+                  setActiveView('assign-courses');
+                }}
+              >
+                <FileText className="h-4 w-4 mr-1" />
+                Assign Courses
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant={roster.availability_bookings ? "secondary" : "default"}
+                size="sm"
+                onClick={() => {
+                  setSelectedRoster(roster);
+                  setActiveView('assign-booking');
+                }}
+              >
+                <Calendar className="h-4 w-4 mr-1" />
+                {roster.availability_bookings ? 'Reassign Booking' : 'Assign to Booking'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectedRoster(roster);
+                  setActiveView('edit');
+                }}
+              >
+                <Settings className="h-4 w-4 mr-1" />
+                Edit Status
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedRoster(roster);
+                      setShowExportDialog(true);
+                    }}
+                  >
+                    <Settings className="h-4 w-4 mr-1" />
+                    Export
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  {selectedRoster && (
+                    <RosterExportDialog
+                      roster={selectedRoster}
+                      onClose={() => setShowExportDialog(false)}
+                    />
+                  )}
+                </DialogContent>
+              </Dialog>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => deleteRosterMutation.mutate(roster.id)}
+                disabled={deleteRosterMutation.isPending}
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Delete
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   if (activeView === 'create') {
