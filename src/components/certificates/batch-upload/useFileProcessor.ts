@@ -224,7 +224,8 @@ export function useFileProcessor() {
             isProcessed: false,
             error: '',
             courseMatches: [] as any[],
-            certifications: {} as Record<string, string>
+            certifications: {} as Record<string, string>,
+            validationErrors: [] as string[]
           };
 
           // Map standard fields to the certification types

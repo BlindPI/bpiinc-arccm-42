@@ -75,13 +75,15 @@ export function BatchReviewSection() {
             <SelectCourseSection />
             
             <div className="border rounded-lg overflow-hidden">
-              <RosterReview 
+              <RosterReview
                 data={data || []}
                 enableCourseMatching={enableCourseMatching}
                 selectedCourseId={selectedCourseId}
                 extractedCourse={extractedCourse}
                 totalCount={totalCount}
                 errorCount={errorCount}
+                showScoreDetails={false}
+                enableScoreFiltering={false}
               />
             </div>
           </div>

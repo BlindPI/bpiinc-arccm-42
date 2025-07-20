@@ -51,8 +51,8 @@ export function RosterReview({
   extractedCourse,
   totalCount,
   errorCount,
-  showScoreDetails = true,
-  enableScoreFiltering = true
+  showScoreDetails = false,
+  enableScoreFiltering = false
 }: RosterReviewProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [filterType, setFilterType] = useState<FilterType>('all');
