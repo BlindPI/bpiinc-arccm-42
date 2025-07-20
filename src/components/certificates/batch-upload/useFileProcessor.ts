@@ -244,8 +244,8 @@ export function useFileProcessor() {
             'Phone': processedRow.phone,
             'Company': processedRow.company,
             'Assessment Status': processedRow.assessmentStatus,
-            'First Aid Level': processedRow.firstAidLevel,
-            'CPR Level': processedRow.cprLevel
+            'FIRST_AID_LEVEL': processedRow.firstAidLevel,
+            'CPR_LEVEL': processedRow.cprLevel
           };
 
           const validationErrors = validateRowData(rowDataForValidation, i, {
@@ -253,6 +253,9 @@ export function useFileProcessor() {
             expiration_months: 12
           });
 
+          processedRow.validationErrors = validationErrors;
+
+          // Only throw if there are validation errors
           if (validationErrors.length > 0) {
             throw new Error(validationErrors.join('; '));
           }
@@ -365,7 +368,8 @@ export function useFileProcessor() {
             rowNum,
             isProcessed: false,
             error: error instanceof Error ? error.message : 'Unknown error',
-            courseMatches: []
+            courseMatches: [],
+            validationErrors: [error instanceof Error ? error.message : 'Unknown error']
           });
           
           processedData.errorCount++;
