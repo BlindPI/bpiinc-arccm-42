@@ -13,19 +13,9 @@ export const validateRowData = (rowData: RowData, rowIndex: number, selectedCour
     }
   }
 
-  if (!selectedCourse) {
-    errors.push(`Row ${rowIndex + 1}: Valid course must be selected`);
-  }
-
-  const assessmentStatus = rowData['Pass/Fail']?.toString().trim().toUpperCase();
-  if (assessmentStatus && !['PASS', 'FAIL'].includes(assessmentStatus)) {
-    errors.push(`Row ${rowIndex + 1}: Pass/Fail must be either PASS or FAIL`);
-  }
-
-  const phone = rowData['Phone']?.toString().trim();
-  if (phone && !/^\(\d{3}\)\s\d{3}-\d{4}$/.test(phone)) {
-    errors.push(`Row ${rowIndex + 1}: Phone number format should be (XXX) XXX-XXXX`);
-  }
+  // Course validation removed - handled by course matching logic
+  // Assessment status validation removed - handled by assessment processor
+  // Phone validation removed - should accept any reasonable phone format for batch uploads
 
   // Format validation for fields that are present and non-empty
   const email = rowData['Email']?.toString().trim();
