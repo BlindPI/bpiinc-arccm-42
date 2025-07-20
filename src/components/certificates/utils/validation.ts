@@ -33,12 +33,12 @@ export const validateRowData = (rowData: RowData, rowIndex: number, selectedCour
     errors.push(`Row ${rowIndex + 1}: Invalid email format`);
   }
 
-  const cprLevel = rowData['CPR Level']?.toString().trim();
+  const cprLevel = rowData['CPR_LEVEL']?.toString().trim();
   if (cprLevel && !VALID_CPR_LEVELS.includes(cprLevel)) {
     errors.push(`Row ${rowIndex + 1}: Invalid CPR Level. Must be one of: ${VALID_CPR_LEVELS.join(', ')}`);
   }
 
-  const firstAidLevel = rowData['First Aid Level']?.toString().trim();
+  const firstAidLevel = rowData['FIRST_AID_LEVEL']?.toString().trim();
   if (firstAidLevel && !VALID_FIRST_AID_LEVELS.includes(firstAidLevel)) {
     errors.push(`Row ${rowIndex + 1}: Invalid First Aid Level. Must be one of: ${VALID_FIRST_AID_LEVELS.join(', ')}`);
   }
