@@ -345,7 +345,8 @@ export const CapacityInfoOverlay: React.FC<CapacityInfoOverlayProps> = ({
     }, []),
     onUpdateError: useCallback((error: string) => {
       console.error('Capacity update error:', error);
-      onActionError?.('capacity_update', selectedSessionId, error);
+      const errorMessage = typeof error === 'string' ? error : (error as any)?.message || 'Capacity update failed';
+      onActionError?.('capacity_update', selectedSessionId, errorMessage);
     }, [onActionError, selectedSessionId])
   });
 

@@ -299,8 +299,14 @@ export const InteractiveActionButton: React.FC<ActionButtonProps> = ({
 
   // Handle action execution
   const handleAction = useCallback(async () => {
-    if (!canPerformAction() || !studentId) {
-      onError?.('Insufficient permissions or missing student information');
+    if (!canPerformAction()) {
+      onError?.('Insufficient permissions or missing user role');
+      return;
+    }
+
+    // Additional check for enrollment actions that require studentId
+    if ((action === 'enroll' || action === 'waitlist' || action === 'promote') && !studentId) {
+      onError?.('Missing student information for enrollment action');
       return;
     }
 
