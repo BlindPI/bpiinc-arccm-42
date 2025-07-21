@@ -109,37 +109,39 @@ export const SimpleDashboard: React.FC<SimpleDashboardProps> = ({ userId }) => {
         </AlertDescription>
       </Alert>
 
-      {/* Teams Section - Always show if user has teams */}
+      {/* TEAM DATA - Show actual team information */}
       {config.showTeams && dashboardData.teams.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Your Teams
+              Team Data ({dashboardData.teams.length} teams)
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-4">
               {dashboardData.teams.map(team => (
-                <Button
-                  key={team.team_id}
-                  variant="outline"
-                  className="h-auto p-4 border rounded-lg hover:bg-gray-50 transition-colors text-left"
-                  onClick={() => navigate('/teams')}
-                >
-                  <div className="space-y-2 w-full">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold">{team.team_name}</h3>
-                      <Badge variant="outline" className="text-xs">
+                <div key={team.team_id} className="p-4 border rounded-lg bg-gray-50">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <h3 className="font-semibold text-lg">{team.team_name}</h3>
+                      <Badge variant="outline" className="mt-1">
                         {team.team_role}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-1 text-sm text-gray-600">
-                      <MapPin className="h-3 w-3" />
-                      <span>{team.location_name}</span>
+                    <div>
+                      <div className="text-sm font-medium text-gray-600">Location</div>
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-4 w-4" />
+                        <span>{team.location_name}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-600">Team ID</div>
+                      <div className="text-sm text-gray-500">{team.team_id}</div>
                     </div>
                   </div>
-                </Button>
+                </div>
               ))}
             </div>
           </CardContent>
