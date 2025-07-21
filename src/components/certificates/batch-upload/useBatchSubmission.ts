@@ -108,6 +108,10 @@ export function useBatchSubmission() {
       console.log('Creating certificate requests...');
       for (const record of validRecords) {
         try {
+          // Determine status based on assessment result
+          const assessmentStatus = record.assessmentStatus || 'PASS';
+          const recordStatus = assessmentStatus.toUpperCase() === 'FAIL' ? 'FAILED' : 'PENDING';
+          
           const { data: certificateRequest, error } = await supabase
             .from('certificate_requests')
             .insert({
@@ -124,7 +128,7 @@ export function useBatchSubmission() {
               course_name: record.courseMatches?.[0]?.name || 'Unknown Course',
               issue_date: record.issueDate,
               expiry_date: record.expiryDate,
-              assessment_status: record.assessmentStatus || 'PASS',
+              assessment_status: assessmentStatus,
               cpr_level: record.cprLevel || null,
               first_aid_level: record.firstAidLevel || null,
               instructor_name: record.instructorName || null,
@@ -133,7 +137,7 @@ export function useBatchSubmission() {
               city: record.city || null,
               province: record.province || null,
               postal_code: record.postalCode || null,
-              status: 'PENDING'
+              status: recordStatus
             });
 
           if (error) {

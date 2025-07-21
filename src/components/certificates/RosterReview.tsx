@@ -295,8 +295,28 @@ export function RosterReview({
                         )}
                       </div>
                       <div className="flex items-center gap-2">
+                        {/* Assessment Status from Batch Upload */}
+                        {(row as any).assessmentStatus && (
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
+                            (row as any).assessmentStatus?.toUpperCase() === 'PASS'
+                              ? 'bg-green-100 text-green-800'
+                              : (row as any).assessmentStatus?.toUpperCase() === 'FAIL'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {(row as any).assessmentStatus?.toUpperCase() === 'PASS' ? (
+                              <CheckCircle className="h-3 w-3" />
+                            ) : (row as any).assessmentStatus?.toUpperCase() === 'FAIL' ? (
+                              <XCircle className="h-3 w-3" />
+                            ) : (
+                              <AlertCircle className="h-3 w-3" />
+                            )}
+                            {(row as any).assessmentStatus?.toUpperCase()}
+                          </div>
+                        )}
+                        
                         {/* Enhanced Score Status Indicator */}
-                        {hasScores && (
+                        {hasScores && !((row as any).assessmentStatus) && (
                           <ScoreStatusBadge
                             status={passFailStatus}
                             size="sm"
