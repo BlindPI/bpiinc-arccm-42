@@ -183,55 +183,61 @@ export const SimpleDashboard: React.FC<SimpleDashboardProps> = ({ userId }) => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* ONLY PAGES WITH VERIFIED ROLE-BASED ACCESS */}
+            
+            {/* Analytics - Has proper role checks for all user types */}
             <Button
               variant="outline"
               className="h-auto p-4 flex flex-col items-start text-left"
-              onClick={() => navigate('/profile')}
+              onClick={() => navigate('/analytics')}
             >
               <div className="flex items-center gap-2 mb-1">
-                <User className="h-4 w-4" />
-                <span className="text-sm font-medium">View Profile</span>
+                <BarChart3 className="h-4 w-4" />
+                <span className="text-sm font-medium">Analytics</span>
               </div>
-              <div className="text-xs text-gray-500">Update your information</div>
+              <div className="text-xs text-gray-500">Performance insights</div>
             </Button>
             
+            {/* Teams - Has canManageAll/canManageAssigned role logic */}
             <Button
               variant="outline"
               className="h-auto p-4 flex flex-col items-start text-left"
-              onClick={() => navigate('/certifications')}
+              onClick={() => navigate('/teams')}
             >
               <div className="flex items-center gap-2 mb-1">
-                <GraduationCap className="h-4 w-4" />
-                <span className="text-sm font-medium">Certifications</span>
+                <Users className="h-4 w-4" />
+                <span className="text-sm font-medium">Teams</span>
               </div>
-              <div className="text-xs text-gray-500">View your certificates</div>
+              <div className="text-xs text-gray-500">Team management</div>
             </Button>
             
-            {config.showTeams && (
+            {/* CRM Hub - Has hasEnterpriseAccess & hasCRMAccess checks */}
+            {(dashboardData.user_role === 'AP' || ['SA', 'AD', 'IC', 'IP', 'IT'].includes(dashboardData.user_role)) && (
               <Button
                 variant="outline"
                 className="h-auto p-4 flex flex-col items-start text-left"
-                onClick={() => navigate('/teams')}
+                onClick={() => navigate('/crm/hub')}
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <Users className="h-4 w-4" />
-                  <span className="text-sm font-medium">Teams</span>
+                  <User className="h-4 w-4" />
+                  <span className="text-sm font-medium">CRM</span>
                 </div>
-                <div className="text-xs text-gray-500">Manage your teams</div>
+                <div className="text-xs text-gray-500">Customer management</div>
               </Button>
             )}
             
-            {config.showReports && (
+            {/* Admin Hub - Only SA/AD roles */}
+            {['SA', 'AD'].includes(dashboardData.user_role) && (
               <Button
                 variant="outline"
                 className="h-auto p-4 flex flex-col items-start text-left"
-                onClick={() => navigate('/reports')}
+                onClick={() => navigate('/admin-hub')}
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <BarChart3 className="h-4 w-4" />
-                  <span className="text-sm font-medium">Reports</span>
+                  <Settings className="h-4 w-4" />
+                  <span className="text-sm font-medium">Admin</span>
                 </div>
-                <div className="text-xs text-gray-500">View system reports</div>
+                <div className="text-xs text-gray-500">System administration</div>
               </Button>
             )}
           </div>

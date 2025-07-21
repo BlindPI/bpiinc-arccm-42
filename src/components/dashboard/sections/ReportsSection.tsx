@@ -12,61 +12,44 @@ interface ReportsSectionProps {
 export const ReportsSection: React.FC<ReportsSectionProps> = ({ userRole }) => {
   const navigate = useNavigate();
   const getAvailableReports = () => {
+    // Only include pages with VERIFIED role-based access
     const baseReports = [
       {
-        id: 'all-reports',
-        title: 'View All Reports',
-        description: 'Access the main reports dashboard',
-        icon: BarChart3,
-        href: '/reports'
-      },
-      {
         id: 'analytics',
-        title: 'Analytics',
-        description: 'View system analytics and insights',
+        title: 'Analytics Hub',
+        description: 'Performance insights with role-based access',
         icon: TrendingUp,
         href: '/analytics'
+      },
+      {
+        id: 'teams',
+        title: 'Team Reports',
+        description: 'Team management and performance',
+        icon: Users,
+        href: '/teams'
       }
     ];
 
-    if (userRole === 'AP') {
-      return [
-        ...baseReports,
-        {
-          id: 'crm-analytics',
-          title: 'CRM Analytics',
-          description: 'Customer relationship management analytics',
-          icon: Users,
-          href: '/crm-analytics'
-        },
-        {
-          id: 'compliance',
-          title: 'Compliance Reports',
-          description: 'Compliance tracking and audit reports',
-          icon: FileText,
-          href: '/compliance'
-        }
-      ];
+    // AP users - verified access to CRM Hub
+    if (userRole === 'AP' || ['SA', 'AD', 'IC', 'IP', 'IT'].includes(userRole)) {
+      baseReports.push({
+        id: 'crm-hub',
+        title: 'CRM Hub',
+        description: 'Customer relationship management',
+        icon: Users,
+        href: '/crm/hub'
+      });
     }
 
-    if (userRole === 'IT') {
-      return [
-        ...baseReports,
-        {
-          id: 'admin-hub',
-          title: 'Admin Hub',
-          description: 'System administration dashboard',
-          icon: Users,
-          href: '/admin-hub'
-        },
-        {
-          id: 'automation',
-          title: 'Automation',
-          description: 'Automated processes and workflows',
-          icon: FileText,
-          href: '/automation'
-        }
-      ];
+    // Admin only - verified access control
+    if (['SA', 'AD'].includes(userRole)) {
+      baseReports.push({
+        id: 'admin-hub',
+        title: 'Admin Hub',
+        description: 'System administration',
+        icon: FileText,
+        href: '/admin-hub'
+      });
     }
 
     return baseReports;
