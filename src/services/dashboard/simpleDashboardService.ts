@@ -263,7 +263,7 @@ export class SimpleDashboardService {
     try {
       const { data: certificates, error } = await supabase
         .from('certificate_requests')
-        .select('id, student_name, course_name, status, created_at')
+        .select('id, recipient_name, course_name, status, created_at')
         .eq('location_id', locationId)
         .order('created_at', { ascending: false });
 

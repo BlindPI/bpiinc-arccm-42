@@ -208,7 +208,7 @@ export const SimpleDashboard: React.FC<SimpleDashboardProps> = ({ userId }) => {
               <div className="space-y-2">
                 {locationCertificates.map(cert => (
                   <div key={cert.id} className="p-3 border rounded-lg">
-                    <div className="font-medium">{cert.student_name}</div>
+                    <div className="font-medium">{cert.recipient_name}</div>
                     <div className="text-sm text-gray-600">{cert.course_name}</div>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge variant={cert.status === 'approved' ? 'default' : 'secondary'}>
