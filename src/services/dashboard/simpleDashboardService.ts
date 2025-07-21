@@ -81,9 +81,9 @@ export class SimpleDashboardService {
       throw new Error(`Failed to get locations: ${locationsError.message}`);
     }
 
-    // Step 5: Get certificate counts by location
-    const { data: certificates, error: certificatesError } = await supabase
-      .from('certificates')
+    // Step 5: Get certificate counts by location from certificate_requests
+    const { data: certificateRequests, error: certificatesError } = await supabase
+      .from('certificate_requests')
       .select('id, location_id')
       .in('location_id', locationIds);
 
@@ -91,8 +91,8 @@ export class SimpleDashboardService {
       console.warn('Failed to get certificate counts:', certificatesError.message);
     }
 
-    // Count certificates by location
-    const certificateCountsByLocation = (certificates || []).reduce((acc, cert) => {
+    // Count certificate requests by location
+    const certificateCountsByLocation = (certificateRequests || []).reduce((acc, cert) => {
       acc[cert.location_id] = (acc[cert.location_id] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -207,5 +207,74 @@ export class SimpleDashboardService {
       });
     });
     return Array.from(locationMap.values());
+  }
+
+  /**
+   * Get team members for a specific team
+   */
+  static async getTeamMembers(teamId: string) {
+    try {
+      // Get team member user IDs
+      const { data: teamMembers, error: teamError } = await supabase
+        .from('team_members')
+        .select('user_id, role')
+        .eq('team_id', teamId)
+        .eq('status', 'active');
+
+      if (teamError) {
+        throw new Error(`Failed to get team members: ${teamError.message}`);
+      }
+
+      if (!teamMembers || teamMembers.length === 0) {
+        return [];
+      }
+
+      // Get profile details for team members
+      const userIds = teamMembers.map(tm => tm.user_id);
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, display_name, email')
+        .in('id', userIds);
+
+      if (profileError) {
+        throw new Error(`Failed to get member profiles: ${profileError.message}`);
+      }
+
+      // Join the data
+      return teamMembers.map(member => {
+        const profile = profiles?.find(p => p.id === member.user_id);
+        return {
+          user_id: member.user_id,
+          display_name: profile?.display_name || 'Unknown',
+          email: profile?.email || '',
+          role: member.role
+        };
+      });
+    } catch (error) {
+      console.error('Error getting team members:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get certificate requests for a specific location
+   */
+  static async getLocationCertificates(locationId: string) {
+    try {
+      const { data: certificates, error } = await supabase
+        .from('certificate_requests')
+        .select('id, student_name, course_name, status, created_at')
+        .eq('location_id', locationId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw new Error(`Failed to get certificates: ${error.message}`);
+      }
+
+      return certificates || [];
+    } catch (error) {
+      console.error('Error getting location certificates:', error);
+      return [];
+    }
   }
 }
