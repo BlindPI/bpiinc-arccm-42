@@ -25,47 +25,84 @@ export class SimpleDashboardService {
    * Get user's dashboard data - one simple query
    */
   static async getUserDashboardData(userId: string): Promise<UserDashboardData> {
-    const { data, error } = await supabase
+    // Step 1: Get user profile
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select(`
-        id,
-        role,
-        display_name,
-        team_members!inner(
-          team_id,
-          role,
-          teams!inner(
-            id,
-            name,
-            location_id,
-            locations!inner(
-              id,
-              name
-            )
-          )
-        )
-      `)
+      .select('id, role, display_name')
       .eq('id', userId)
-      .eq('team_members.status', 'active')
-      .eq('team_members.teams.status', 'active')
-      .eq('team_members.teams.locations.status', 'ACTIVE')
       .single();
 
-    if (error || !data) {
-      throw new Error(`Failed to get user dashboard data: ${error?.message}`);
+    if (profileError || !profile) {
+      throw new Error(`Failed to get user profile: ${profileError?.message}`);
     }
 
+    // Step 2: Get user's team memberships (simple query)
+    const { data: teamMemberships, error: teamError } = await supabase
+      .from('team_members')
+      .select('team_id, role')
+      .eq('user_id', userId)
+      .eq('status', 'active');
+
+    if (teamError) {
+      throw new Error(`Failed to get team memberships: ${teamError.message}`);
+    }
+
+    if (!teamMemberships || teamMemberships.length === 0) {
+      return {
+        user_id: profile.id,
+        user_role: profile.role,
+        display_name: profile.display_name,
+        teams: []
+      };
+    }
+
+    // Step 3: Get team details for each team
+    const teamIds = teamMemberships.map(tm => tm.team_id);
+    const { data: teams, error: teamsError } = await supabase
+      .from('teams')
+      .select('id, name, location_id')
+      .in('id', teamIds)
+      .eq('status', 'active');
+
+    if (teamsError) {
+      throw new Error(`Failed to get teams: ${teamsError.message}`);
+    }
+
+    // Step 4: Get location details for each team
+    const locationIds = (teams || []).map(t => t.location_id).filter(Boolean);
+    const { data: locations, error: locationsError } = await supabase
+      .from('locations')
+      .select('id, name')
+      .in('id', locationIds)
+      .eq('status', 'ACTIVE');
+
+    if (locationsError) {
+      throw new Error(`Failed to get locations: ${locationsError.message}`);
+    }
+
+    // Step 5: Join the data in JavaScript
+    const teamsWithDetails = teamMemberships
+      .map(membership => {
+        const team = teams?.find(t => t.id === membership.team_id);
+        const location = locations?.find(l => l.id === team?.location_id);
+        
+        if (!team || !location) return null;
+        
+        return {
+          team_id: team.id,
+          team_name: team.name,
+          team_role: membership.role,
+          location_id: team.location_id,
+          location_name: location.name
+        };
+      })
+      .filter(Boolean) as UserDashboardData['teams'];
+
     return {
-      user_id: data.id,
-      user_role: data.role,
-      display_name: data.display_name,
-      teams: data.team_members?.map((tm: any) => ({
-        team_id: tm.teams.id,
-        team_name: tm.teams.name,
-        team_role: tm.role,
-        location_id: tm.teams.location_id,
-        location_name: tm.teams.locations.name
-      })) || []
+      user_id: profile.id,
+      user_role: profile.role,
+      display_name: profile.display_name,
+      teams: teamsWithDetails
     };
   }
 
