@@ -236,6 +236,17 @@ export function useBatchSubmission() {
         console.error('Failed to log team activity, but continuing:', activityError);
       }
 
+      // Update roster status to PROCESSED after successful completion
+      try {
+        await supabase
+          .from('rosters')
+          .update({ status: 'PROCESSED' })
+          .eq('id', rosterId);
+        console.log('Roster status updated to PROCESSED');
+      } catch (statusError) {
+        console.error('Failed to update roster status, but continuing:', statusError);
+      }
+
       // Success!
       console.log('Batch submission completed successfully');
       toast.success(`Successfully submitted ${validRecords.length} certificate requests!`);

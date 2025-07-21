@@ -7,7 +7,7 @@ export interface Roster {
   course_id?: string;
   location_id?: string;
   created_by: string;
-  status: 'ACTIVE' | 'ARCHIVED' | 'DRAFT';
+  status: 'PENDING' | 'PROCESSED' | 'ACTIVE' | 'ARCHIVED' | 'DRAFT';
   issue_date?: string;
   created_at: string;
   updated_at: string;
@@ -64,7 +64,7 @@ export interface CreateRosterData {
   course_id?: string;
   location_id?: string;
   created_by: string;
-  status?: 'ACTIVE' | 'ARCHIVED' | 'DRAFT';
+  status?: 'PENDING' | 'PROCESSED' | 'ACTIVE' | 'ARCHIVED' | 'DRAFT';
   issue_date?: string;
 }
 
@@ -74,6 +74,6 @@ export interface UpdateRosterData {
   description?: string;
   course_id?: string;
   location_id?: string;
-  status?: 'ACTIVE' | 'ARCHIVED' | 'DRAFT';
+  status?: 'PENDING' | 'PROCESSED' | 'ACTIVE' | 'ARCHIVED' | 'DRAFT';
   issue_date?: string;
 }

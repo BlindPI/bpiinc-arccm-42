@@ -15,22 +15,44 @@ export function RosterEmailStatusBadge({ rosterId, certificateCount }: RosterEma
   const { data: emailStatus } = useQuery({
     queryKey: ['roster-email-status', rosterId],
     queryFn: async () => {
-      if (certificateCount === 0) return { emailed: 0, total: 0 };
+      if (certificateCount === 0) return { emailed: 0, total: 0, failed: 0, archived: 0 };
       
-      const { data, error } = await supabase
-        .from('certificates')
-        .select('email_status, is_batch_emailed, last_emailed_at')
-        .eq('roster_id', rosterId);
+      // Check both certificates and certificate_requests tables
+      const [certsResult, requestsResult] = await Promise.all([
+        supabase
+          .from('certificates')
+          .select('email_status, is_batch_emailed, last_emailed_at, status')
+          .eq('roster_id', rosterId),
+        supabase
+          .from('certificate_requests')
+          .select('status, assessment_status')
+          .eq('roster_id', rosterId)
+      ]);
       
-      if (error) throw error;
+      if (certsResult.error && requestsResult.error) throw certsResult.error || requestsResult.error;
       
-      const emailed = data?.filter(cert => 
-        cert.is_batch_emailed || 
-        cert.email_status === 'SENT' || 
+      const certificates = certsResult.data || [];
+      const requests = requestsResult.data || [];
+      
+      const emailed = certificates.filter(cert =>
+        cert.is_batch_emailed ||
+        cert.email_status === 'SENT' ||
         cert.last_emailed_at
-      ).length || 0;
+      ).length;
       
-      return { emailed, total: data?.length || 0 };
+      const failed = requests.filter(req =>
+        req.assessment_status === 'FAIL' ||
+        req.status === 'ARCHIVED'
+      ).length;
+      
+      const archived = requests.filter(req => req.status === 'ARCHIVED').length;
+      
+      return {
+        emailed,
+        total: Math.max(certificates.length, requests.length),
+        failed,
+        archived
+      };
     },
     enabled: certificateCount > 0,
     staleTime: 30000, // 30 seconds - shorter cache time
@@ -85,15 +107,25 @@ export function RosterEmailStatusBadge({ rosterId, certificateCount }: RosterEma
     );
   }
 
-  const { emailed, total } = emailStatus;
+  const { emailed, total, failed, archived } = emailStatus;
 
   if (emailed === 0) {
-    return (
-      <Badge variant="outline" className="bg-red-50 text-red-700">
-        <Mail className="h-3 w-3 mr-1" />
-        Not Emailed
-      </Badge>
-    );
+    // Provide specific reason why not emailed
+    if (failed > 0 || archived > 0) {
+      return (
+        <Badge variant="outline" className="bg-red-50 text-red-700" title={`${failed} failed assessments, ${archived} archived`}>
+          <AlertCircle className="h-3 w-3 mr-1" />
+          Not Emailed (Failed)
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
+          <Mail className="h-3 w-3 mr-1" />
+          Not Emailed (Pending)
+        </Badge>
+      );
+    }
   }
 
   if (emailed === total) {

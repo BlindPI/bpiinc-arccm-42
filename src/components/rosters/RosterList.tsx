@@ -200,6 +200,7 @@ export const RosterList: React.FC<RosterListProps> = ({
                     <ChevronsUpDownIcon className="h-4 w-4" />
                   </button>
                 </TableHead>
+                <TableHead className="w-[120px]">Status</TableHead>
                 <TableHead className="w-[80px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -243,6 +244,20 @@ export const RosterList: React.FC<RosterListProps> = ({
                       <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
                       <span>{formatDate(roster.created_at)}</span>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={
+                        roster.status === 'PROCESSED' ? 'bg-green-50 text-green-700' :
+                        roster.status === 'PENDING' ? 'bg-yellow-50 text-yellow-700' :
+                        roster.status === 'ACTIVE' ? 'bg-blue-50 text-blue-700' :
+                        roster.status === 'ARCHIVED' ? 'bg-gray-50 text-gray-700' :
+                        'bg-orange-50 text-orange-700'
+                      }
+                    >
+                      {roster.status}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
