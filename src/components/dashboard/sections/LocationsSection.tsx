@@ -51,11 +51,11 @@ export const LocationsSection: React.FC<LocationsSectionProps> = ({ teams }) => 
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => navigate(`/locations/${location.id}`)}
+                  onClick={() => navigate('/location-management')}
                   className="text-xs"
                 >
                   <ExternalLink className="h-3 w-3 mr-1" />
-                  View Location
+                  Manage Locations
                 </Button>
               </div>
             </div>
@@ -66,7 +66,7 @@ export const LocationsSection: React.FC<LocationsSectionProps> = ({ teams }) => 
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => navigate(`/teams/${team.id}`)}
+                    onClick={() => navigate('/teams')}
                     className="flex-1 justify-start p-2 h-auto"
                   >
                     <span className="font-medium">{team.name}</span>

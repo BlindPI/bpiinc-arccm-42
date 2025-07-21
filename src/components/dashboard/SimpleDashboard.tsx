@@ -125,7 +125,7 @@ export const SimpleDashboard: React.FC<SimpleDashboardProps> = ({ userId }) => {
                   key={team.team_id}
                   variant="outline"
                   className="h-auto p-4 border rounded-lg hover:bg-gray-50 transition-colors text-left"
-                  onClick={() => navigate(`/teams/${team.team_id}`)}
+                  onClick={() => navigate('/teams')}
                 >
                   <div className="space-y-2 w-full">
                     <div className="flex items-center justify-between">
@@ -215,7 +215,7 @@ export const SimpleDashboard: React.FC<SimpleDashboardProps> = ({ userId }) => {
               >
                 <div className="flex items-center gap-2 mb-1">
                   <Users className="h-4 w-4" />
-                  <span className="text-sm font-medium">Team Management</span>
+                  <span className="text-sm font-medium">Teams</span>
                 </div>
                 <div className="text-xs text-gray-500">Manage your teams</div>
               </Button>
@@ -229,9 +229,9 @@ export const SimpleDashboard: React.FC<SimpleDashboardProps> = ({ userId }) => {
               >
                 <div className="flex items-center gap-2 mb-1">
                   <BarChart3 className="h-4 w-4" />
-                  <span className="text-sm font-medium">All Reports</span>
+                  <span className="text-sm font-medium">Reports</span>
                 </div>
-                <div className="text-xs text-gray-500">View detailed reports</div>
+                <div className="text-xs text-gray-500">View system reports</div>
               </Button>
             )}
           </div>

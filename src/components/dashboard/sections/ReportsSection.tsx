@@ -14,18 +14,18 @@ export const ReportsSection: React.FC<ReportsSectionProps> = ({ userRole }) => {
   const getAvailableReports = () => {
     const baseReports = [
       {
-        id: 'team-performance',
-        title: 'Team Performance',
-        description: 'View team metrics and performance indicators',
-        icon: TrendingUp,
-        href: '/reports/team-performance'
+        id: 'all-reports',
+        title: 'View All Reports',
+        description: 'Access the main reports dashboard',
+        icon: BarChart3,
+        href: '/reports'
       },
       {
-        id: 'certifications',
-        title: 'Certification Reports',
-        description: 'Track certification progress and completions',
-        icon: GraduationCap,
-        href: '/reports/certifications'
+        id: 'analytics',
+        title: 'Analytics',
+        description: 'View system analytics and insights',
+        icon: TrendingUp,
+        href: '/analytics'
       }
     ];
 
@@ -33,18 +33,18 @@ export const ReportsSection: React.FC<ReportsSectionProps> = ({ userRole }) => {
       return [
         ...baseReports,
         {
-          id: 'location-overview',
-          title: 'Location Overview',
-          description: 'Comprehensive location-level reporting',
-          icon: MapPin,
-          href: '/reports/location-overview'
+          id: 'crm-analytics',
+          title: 'CRM Analytics',
+          description: 'Customer relationship management analytics',
+          icon: Users,
+          href: '/crm-analytics'
         },
         {
-          id: 'instructor-management',
-          title: 'Instructor Management',
-          description: 'Instructor performance and scheduling',
-          icon: Users,
-          href: '/reports/instructor-management'
+          id: 'compliance',
+          title: 'Compliance Reports',
+          description: 'Compliance tracking and audit reports',
+          icon: FileText,
+          href: '/compliance'
         }
       ];
     }
@@ -53,18 +53,18 @@ export const ReportsSection: React.FC<ReportsSectionProps> = ({ userRole }) => {
       return [
         ...baseReports,
         {
-          id: 'system-reports',
-          title: 'System Reports',
-          description: 'System-wide metrics and analytics',
-          icon: BarChart3,
-          href: '/reports/system'
+          id: 'admin-hub',
+          title: 'Admin Hub',
+          description: 'System administration dashboard',
+          icon: Users,
+          href: '/admin-hub'
         },
         {
-          id: 'compliance-reports',
-          title: 'Compliance Reports',
-          description: 'Compliance tracking and audit reports',
+          id: 'automation',
+          title: 'Automation',
+          description: 'Automated processes and workflows',
           icon: FileText,
-          href: '/reports/compliance'
+          href: '/automation'
         }
       ];
     }
