@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Users, UserCheck, MapPin, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Users, UserCheck, MapPin, AlertCircle, User, GraduationCap, Settings, BarChart3 } from 'lucide-react';
 import { SimpleDashboardService, UserDashboardData } from '@/services/dashboard/simpleDashboardService';
 import { LocationsSection } from './sections/LocationsSection';
 import { ReportsSection } from './sections/ReportsSection';
 import { LoadingDashboard } from './LoadingDashboard';
+import { useNavigate } from 'react-router-dom';
 
 interface SimpleDashboardProps {
   userId: string;
@@ -16,6 +18,7 @@ export const SimpleDashboard: React.FC<SimpleDashboardProps> = ({ userId }) => {
   const [dashboardData, setDashboardData] = useState<UserDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadDashboard = async () => {
@@ -118,8 +121,13 @@ export const SimpleDashboard: React.FC<SimpleDashboardProps> = ({ userId }) => {
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {dashboardData.teams.map(team => (
-                <div key={team.team_id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                  <div className="space-y-2">
+                <Button
+                  key={team.team_id}
+                  variant="outline"
+                  className="h-auto p-4 border rounded-lg hover:bg-gray-50 transition-colors text-left"
+                  onClick={() => navigate(`/teams/${team.team_id}`)}
+                >
+                  <div className="space-y-2 w-full">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold">{team.team_name}</h3>
                       <Badge variant="outline" className="text-xs">
@@ -131,7 +139,7 @@ export const SimpleDashboard: React.FC<SimpleDashboardProps> = ({ userId }) => {
                       <span>{team.location_name}</span>
                     </div>
                   </div>
-                </div>
+                </Button>
               ))}
             </div>
           </CardContent>
@@ -175,25 +183,56 @@ export const SimpleDashboard: React.FC<SimpleDashboardProps> = ({ userId }) => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button className="p-4 border rounded-lg hover:bg-gray-50 transition-colors text-left">
-              <div className="text-sm font-medium">View Profile</div>
-              <div className="text-xs text-gray-500 mt-1">Update your information</div>
-            </button>
-            <button className="p-4 border rounded-lg hover:bg-gray-50 transition-colors text-left">
-              <div className="text-sm font-medium">Certifications</div>
-              <div className="text-xs text-gray-500 mt-1">View your certificates</div>
-            </button>
+            <Button
+              variant="outline"
+              className="h-auto p-4 flex flex-col items-start text-left"
+              onClick={() => navigate('/profile')}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <User className="h-4 w-4" />
+                <span className="text-sm font-medium">View Profile</span>
+              </div>
+              <div className="text-xs text-gray-500">Update your information</div>
+            </Button>
+            
+            <Button
+              variant="outline"
+              className="h-auto p-4 flex flex-col items-start text-left"
+              onClick={() => navigate('/certifications')}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <GraduationCap className="h-4 w-4" />
+                <span className="text-sm font-medium">Certifications</span>
+              </div>
+              <div className="text-xs text-gray-500">View your certificates</div>
+            </Button>
+            
             {config.showTeams && (
-              <button className="p-4 border rounded-lg hover:bg-gray-50 transition-colors text-left">
-                <div className="text-sm font-medium">Team Management</div>
-                <div className="text-xs text-gray-500 mt-1">Manage your teams</div>
-              </button>
+              <Button
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-start text-left"
+                onClick={() => navigate('/teams')}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <Users className="h-4 w-4" />
+                  <span className="text-sm font-medium">Team Management</span>
+                </div>
+                <div className="text-xs text-gray-500">Manage your teams</div>
+              </Button>
             )}
+            
             {config.showReports && (
-              <button className="p-4 border rounded-lg hover:bg-gray-50 transition-colors text-left">
-                <div className="text-sm font-medium">All Reports</div>
-                <div className="text-xs text-gray-500 mt-1">View detailed reports</div>
-              </button>
+              <Button
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-start text-left"
+                onClick={() => navigate('/reports')}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <BarChart3 className="h-4 w-4" />
+                  <span className="text-sm font-medium">All Reports</span>
+                </div>
+                <div className="text-xs text-gray-500">View detailed reports</div>
+              </Button>
             )}
           </div>
         </CardContent>

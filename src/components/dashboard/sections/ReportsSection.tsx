@@ -3,12 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BarChart3, FileText, TrendingUp, Users, MapPin, GraduationCap } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface ReportsSectionProps {
   userRole: string;
 }
 
 export const ReportsSection: React.FC<ReportsSectionProps> = ({ userRole }) => {
+  const navigate = useNavigate();
   const getAvailableReports = () => {
     const baseReports = [
       {
@@ -116,10 +118,7 @@ export const ReportsSection: React.FC<ReportsSectionProps> = ({ userRole }) => {
                       variant="outline"
                       size="sm"
                       className="w-full text-xs"
-                      onClick={() => {
-                        // TODO: Navigate to report
-                        console.log(`Navigate to ${report.href}`);
-                      }}
+                      onClick={() => navigate(report.href)}
                     >
                       View Report
                     </Button>
