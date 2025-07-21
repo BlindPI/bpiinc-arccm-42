@@ -76,175 +76,43 @@ export const SimpleDashboard: React.FC<SimpleDashboardProps> = ({ userId }) => {
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Welcome, {dashboardData.display_name}
-          </h1>
-          <div className="flex items-center gap-2 mt-2">
-            <Badge variant="outline" className="flex items-center gap-1">
-              <UserCheck className="h-3 w-3" />
-              {roleDisplayName}
-            </Badge>
-            {dashboardData.teams.length > 0 && (
-              <Badge variant="secondary" className="flex items-center gap-1">
-                <Users className="h-3 w-3" />
-                {dashboardData.teams.length} team{dashboardData.teams.length !== 1 ? 's' : ''}
-              </Badge>
-            )}
-          </div>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">
+          Welcome, {dashboardData.display_name}
+        </h1>
       </div>
 
-      {/* Role Context Banner */}
-      <Alert className="bg-blue-50 border-blue-200">
-        <UserCheck className="h-4 w-4" />
-        <AlertDescription className="text-blue-800">
-          As a <strong>{roleDisplayName}</strong>, you have access to{' '}
-          {config.showTeams && 'team management, '}
-          {config.showLocations && 'location oversight, '}
-          {config.showReports && 'reports & analytics, '}
-          {config.showAllUsers && 'user management, '}
-          and basic dashboard features.
-        </AlertDescription>
-      </Alert>
-
-      {/* TEAM DATA - Show actual team information */}
-      {config.showTeams && dashboardData.teams.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Team Data ({dashboardData.teams.length} teams)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {dashboardData.teams.map(team => (
-                <div key={team.team_id} className="p-4 border rounded-lg bg-gray-50">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <h3 className="font-semibold text-lg">{team.team_name}</h3>
-                      <Badge variant="outline" className="mt-1">
-                        {team.team_role}
-                      </Badge>
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-gray-600">Location</div>
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-4 w-4" />
-                        <span>{team.location_name}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-gray-600">Team ID</div>
-                      <div className="text-sm text-gray-500">{team.team_id}</div>
-                    </div>
+      {/* SIMPLE DATA DISPLAY */}
+      {dashboardData.teams.length > 0 ? (
+        <div className="space-y-4">
+          {dashboardData.teams.map(team => (
+            <Card key={team.team_id}>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-lg">
+                  <div>
+                    <div className="font-medium text-gray-600">Team</div>
+                    <div className="text-xl font-bold">{team.team_name}</div>
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-600">Location</div>
+                    <div className="text-xl font-bold">{team.location_name}</div>
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-600">Certificates</div>
+                    <div className="text-xl font-bold">{team.certificate_count}</div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Empty Teams State */}
-      {config.showTeams && dashboardData.teams.length === 0 && (
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Your Teams
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Alert>
-              <Users className="h-4 w-4" />
-              <AlertDescription>
-                You are not currently assigned to any teams. Contact your administrator for team assignment.
-              </AlertDescription>
-            </Alert>
+          <CardContent className="p-6">
+            <div className="text-gray-500">No teams assigned</div>
           </CardContent>
         </Card>
       )}
-
-      {/* Locations Section */}
-      {config.showLocations && dashboardData.teams.length > 0 && (
-        <LocationsSection teams={dashboardData.teams} />
-      )}
-
-      {/* Reports Section */}
-      {config.showReports && (
-        <ReportsSection userRole={dashboardData.user_role} />
-      )}
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {/* ONLY PAGES WITH VERIFIED ROLE-BASED ACCESS */}
-            
-            {/* Analytics - Has proper role checks for all user types */}
-            <Button
-              variant="outline"
-              className="h-auto p-4 flex flex-col items-start text-left"
-              onClick={() => navigate('/analytics')}
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <BarChart3 className="h-4 w-4" />
-                <span className="text-sm font-medium">Analytics</span>
-              </div>
-              <div className="text-xs text-gray-500">Performance insights</div>
-            </Button>
-            
-            {/* Teams - Has canManageAll/canManageAssigned role logic */}
-            <Button
-              variant="outline"
-              className="h-auto p-4 flex flex-col items-start text-left"
-              onClick={() => navigate('/teams')}
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <Users className="h-4 w-4" />
-                <span className="text-sm font-medium">Teams</span>
-              </div>
-              <div className="text-xs text-gray-500">Team management</div>
-            </Button>
-            
-            {/* CRM Hub - Has hasEnterpriseAccess & hasCRMAccess checks */}
-            {(dashboardData.user_role === 'AP' || ['SA', 'AD', 'IC', 'IP', 'IT'].includes(dashboardData.user_role)) && (
-              <Button
-                variant="outline"
-                className="h-auto p-4 flex flex-col items-start text-left"
-                onClick={() => navigate('/crm/hub')}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <User className="h-4 w-4" />
-                  <span className="text-sm font-medium">CRM</span>
-                </div>
-                <div className="text-xs text-gray-500">Customer management</div>
-              </Button>
-            )}
-            
-            {/* Admin Hub - Only SA/AD roles */}
-            {['SA', 'AD'].includes(dashboardData.user_role) && (
-              <Button
-                variant="outline"
-                className="h-auto p-4 flex flex-col items-start text-left"
-                onClick={() => navigate('/admin-hub')}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <Settings className="h-4 w-4" />
-                  <span className="text-sm font-medium">Admin</span>
-                </div>
-                <div className="text-xs text-gray-500">System administration</div>
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

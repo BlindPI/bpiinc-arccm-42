@@ -10,6 +10,7 @@ export interface UserDashboardData {
     team_role: string;
     location_id: string;
     location_name: string;
+    certificate_count: number;
   }>;
 }
 
@@ -80,7 +81,23 @@ export class SimpleDashboardService {
       throw new Error(`Failed to get locations: ${locationsError.message}`);
     }
 
-    // Step 5: Join the data in JavaScript
+    // Step 5: Get certificate counts by location
+    const { data: certificates, error: certificatesError } = await supabase
+      .from('certificates')
+      .select('id, location_id')
+      .in('location_id', locationIds);
+
+    if (certificatesError) {
+      console.warn('Failed to get certificate counts:', certificatesError.message);
+    }
+
+    // Count certificates by location
+    const certificateCountsByLocation = (certificates || []).reduce((acc, cert) => {
+      acc[cert.location_id] = (acc[cert.location_id] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Step 6: Join the data in JavaScript
     const teamsWithDetails = teamMemberships
       .map(membership => {
         const team = teams?.find(t => t.id === membership.team_id);
@@ -93,7 +110,8 @@ export class SimpleDashboardService {
           team_name: team.name,
           team_role: membership.role,
           location_id: team.location_id,
-          location_name: location.name
+          location_name: location.name,
+          certificate_count: certificateCountsByLocation[team.location_id] || 0
         };
       })
       .filter(Boolean) as UserDashboardData['teams'];
