@@ -110,7 +110,7 @@ export function useBatchSubmission() {
         try {
           // Determine status based on assessment result
           const assessmentStatus = record.assessmentStatus || 'PASS';
-          const recordStatus = assessmentStatus.toUpperCase() === 'FAIL' ? 'FAILED' : 'PENDING';
+          const recordStatus = assessmentStatus.toUpperCase() === 'FAIL' ? 'ARCHIVED' : 'PENDING';
           
           const { data: certificateRequest, error } = await supabase
             .from('certificate_requests')

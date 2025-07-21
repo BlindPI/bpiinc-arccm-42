@@ -286,9 +286,30 @@ export function RosterReview({
                            'No Name'}
                         </div>
                         <div className="text-sm text-gray-600">{row.email || row.recipient_email || row.student_email}</div>
+                        
+                        {/* Issue Date */}
+                        <div className="text-xs text-gray-500 mt-1">
+                          <Calendar className="h-3 w-3 inline mr-1" />
+                          Issue Date: {row.issue_date || (row as any).issueDate || 'Not specified'}
+                        </div>
+                        
+                        {/* Instructor Name */}
+                        {(row.instructor_name || (row as any).instructorName) && (
+                          <div className="text-xs text-gray-500">
+                            <GraduationCap className="h-3 w-3 inline mr-1" />
+                            Instructor: {row.instructor_name || (row as any).instructorName}
+                          </div>
+                        )}
+                        
+                        {/* Course Name */}
+                        <div className="text-xs text-gray-600 font-medium mt-1">
+                          Course: {row.course_name || (row as any).courseMatches?.[0]?.courseName || (row as any).courseMatches?.[0]?.name || 'Course matching required'}
+                        </div>
+                        
+                        {/* CPR/First Aid Levels */}
                         {(row.first_aid_level || row.cpr_level) && (
                           <div className="text-xs text-gray-500 mt-1">
-                            Specified: {row.first_aid_level && `First Aid: ${row.first_aid_level}`}
+                            Levels: {row.first_aid_level && `First Aid: ${row.first_aid_level}`}
                             {row.first_aid_level && row.cpr_level && ' | '}
                             {row.cpr_level && `CPR: ${row.cpr_level}`}
                           </div>
