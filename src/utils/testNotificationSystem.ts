@@ -61,11 +61,12 @@ export async function clearTestNotifications() {
       return;
     }
 
-    // Delete all notifications for the current user
+    // Delete all certificate notifications for the current user
     const { error } = await supabase
-      .from('certificate_notifications')
+      .from('notifications')
       .delete()
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .eq('category', 'CERTIFICATE');
 
     if (error) {
       console.error('Error clearing notifications:', error);

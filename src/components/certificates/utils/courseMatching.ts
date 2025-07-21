@@ -1,4 +1,3 @@
-
 import type { Course } from '@/types/courses';
 import type { CourseMatch, CourseMatchType } from '../types';
 

@@ -4,26 +4,36 @@ import { toast } from 'sonner';
 export interface CertificateNotification {
   id: string;
   user_id: string;
-  certificate_request_id?: string;
-  batch_id?: string;
-  notification_type: 'batch_submitted' | 'batch_approved' | 'batch_rejected' | 'certificate_approved' | 'certificate_rejected';
   title: string;
   message: string;
-  email_sent: boolean;
-  email_sent_at?: string;
+  type: string;
   read: boolean;
   read_at?: string;
+  action_url?: string;
   created_at: string;
+  category: string;
+  priority: string;
+  badge_count?: number;
+  is_dismissed?: boolean;
+  metadata: {
+    certificate_request_id?: string;
+    batch_id?: string;
+    notification_type: 'batch_submitted' | 'batch_approved' | 'batch_rejected' | 'certificate_approved' | 'certificate_rejected';
+    email_sent?: boolean;
+    email_sent_at?: string;
+  };
 }
 
 export interface CreateCertificateNotificationParams {
   userId: string;
   certificateRequestId?: string;
   batchId?: string;
-  notificationType: CertificateNotification['notification_type'];
+  notificationType: 'batch_submitted' | 'batch_approved' | 'batch_rejected' | 'certificate_approved' | 'certificate_rejected';
   title: string;
   message: string;
   sendEmail?: boolean;
+  actionUrl?: string;
+  priority?: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
 }
 
 export class SimpleCertificateNotificationService {
@@ -34,16 +44,24 @@ export class SimpleCertificateNotificationService {
     try {
       console.log('Creating certificate notification:', params);
 
-      // Direct insert since the RPC function isn't in the types yet
+      // Insert into the actual notifications table
       const { data, error } = await supabase
-        .from('certificate_notifications')
+        .from('notifications')
         .insert({
           user_id: params.userId,
-          certificate_request_id: params.certificateRequestId || null,
-          batch_id: params.batchId || null,
-          notification_type: params.notificationType,
           title: params.title,
-          message: params.message
+          message: params.message,
+          type: 'CERTIFICATE',
+          category: 'CERTIFICATE',
+          priority: params.priority || 'NORMAL',
+          action_url: params.actionUrl || null,
+          metadata: {
+            certificate_request_id: params.certificateRequestId || null,
+            batch_id: params.batchId || null,
+            notification_type: params.notificationType,
+            email_sent: false,
+            email_sent_at: null
+          }
         })
         .select('id')
         .single();
@@ -65,6 +83,21 @@ export class SimpleCertificateNotificationService {
               notification_type: params.notificationType
             }
           });
+
+          // Update metadata to mark email as sent
+          await supabase
+            .from('notifications')
+            .update({
+              metadata: {
+                certificate_request_id: params.certificateRequestId || null,
+                batch_id: params.batchId || null,
+                notification_type: params.notificationType,
+                email_sent: true,
+                email_sent_at: new Date().toISOString()
+              }
+            })
+            .eq('id', data.id);
+
         } catch (emailError) {
           console.error('Failed to send email notification:', emailError);
           // Don't fail the notification creation if email fails
@@ -87,9 +120,10 @@ export class SimpleCertificateNotificationService {
   static async getUserNotifications(userId: string, limit: number = 50): Promise<CertificateNotification[]> {
     try {
       const { data, error } = await supabase
-        .from('certificate_notifications')
+        .from('notifications')
         .select('*')
         .eq('user_id', userId)
+        .eq('category', 'CERTIFICATE')
         .order('created_at', { ascending: false })
         .limit(limit);
 
@@ -98,7 +132,29 @@ export class SimpleCertificateNotificationService {
         throw error;
       }
 
-      return (data || []) as CertificateNotification[];
+      // Transform the data to match our interface
+      const transformedData: CertificateNotification[] = (data || []).map(notification => ({
+        id: notification.id,
+        user_id: notification.user_id,
+        title: notification.title,
+        message: notification.message,
+        type: notification.type,
+        read: notification.read,
+        read_at: notification.read_at,
+        action_url: notification.action_url,
+        created_at: notification.created_at,
+        category: notification.category,
+        priority: notification.priority,
+        badge_count: notification.badge_count,
+        is_dismissed: notification.is_dismissed,
+        metadata: (notification.metadata as any) || {
+          notification_type: 'certificate_approved',
+          email_sent: false,
+          email_sent_at: null
+        }
+      }));
+
+      return transformedData;
 
     } catch (error) {
       console.error('Failed to fetch certificate notifications:', error);
@@ -112,10 +168,11 @@ export class SimpleCertificateNotificationService {
   static async getUnreadCount(userId: string): Promise<number> {
     try {
       const { count, error } = await supabase
-        .from('certificate_notifications')
+        .from('notifications')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
-        .is('read_at', null);
+        .eq('category', 'CERTIFICATE')
+        .eq('read', false);
 
       if (error) {
         console.error('Error getting unread count:', error);
@@ -136,10 +193,13 @@ export class SimpleCertificateNotificationService {
   static async markAsRead(notificationId: string): Promise<boolean> {
     try {
       const { error } = await supabase
-        .from('certificate_notifications')
-        .update({ read_at: new Date().toISOString() })
+        .from('notifications')
+        .update({
+          read: true,
+          read_at: new Date().toISOString()
+        })
         .eq('id', notificationId)
-        .is('read_at', null);
+        .eq('read', false);
 
       if (error) {
         console.error('Error marking notification as read:', error);

@@ -13,14 +13,15 @@ export function NotificationQueueMonitor() {
   const [processing, setProcessing] = useState(false);
   const queryClient = useQueryClient();
   
-  // Query to get the queue status using certificate_notifications instead of notification_queue
+  // Query to get the queue status using notifications table
   const { data: queueStatus, isLoading, error } = useQuery({
     queryKey: ['notification-queue-status'],
     queryFn: async () => {
-      // Get counts by status from certificate_notifications
+      // Get counts by status from notifications table (certificate category)
       const { data: countData, error: countError } = await supabase
-        .from('certificate_notifications')
-        .select('id, notification_type, email_sent, created_at, email_sent_at')
+        .from('notifications')
+        .select('id, type, metadata, created_at, updated_at')
+        .eq('category', 'CERTIFICATE')
         .order('created_at', { ascending: false });
         
       if (countError) throw countError;
@@ -28,7 +29,7 @@ export function NotificationQueueMonitor() {
       // Get the latest few entries
       const latestItems = countData || [];
       
-      // Calculate counts by status from certificate_notifications
+      // Calculate counts by status from notifications
       const counts = {
         PENDING: 0,
         SENT: 0,
@@ -38,9 +39,12 @@ export function NotificationQueueMonitor() {
       
       if (countData) {
         countData.forEach(item => {
-          if (item.email_sent === null) {
+          const metadata = item.metadata as any;
+          const emailSent = metadata?.email_sent;
+          
+          if (emailSent === null || emailSent === undefined) {
             counts.PENDING++;
-          } else if (item.email_sent === true) {
+          } else if (emailSent === true) {
             counts.SENT++;
           } else {
             counts.FAILED++;
@@ -50,14 +54,19 @@ export function NotificationQueueMonitor() {
       
       return {
         counts,
-        latestItems: latestItems.slice(0, 10).map(item => ({
-          id: item.id,
-          status: item.email_sent === null ? 'PENDING' : item.email_sent ? 'SENT' : 'FAILED',
-          notification_id: item.id,
-          created_at: item.created_at,
-          processed_at: item.email_sent_at,
-          error: item.email_sent === false ? 'Email send failed' : null
-        }))
+        latestItems: latestItems.slice(0, 10).map(item => {
+          const metadata = item.metadata as any;
+          const emailSent = metadata?.email_sent;
+          
+          return {
+            id: item.id,
+            status: emailSent === null || emailSent === undefined ? 'PENDING' : emailSent ? 'SENT' : 'FAILED',
+            notification_id: item.id,
+            created_at: item.created_at,
+            processed_at: metadata?.email_sent_at,
+            error: emailSent === false ? 'Email send failed' : null
+          };
+        })
       };
     },
     refetchInterval: 30000 // Refresh every 30 seconds

@@ -4,7 +4,7 @@ import { generateCertificatePDF } from '@/utils/pdfUtils';
 import { FIELD_CONFIGS } from '@/types/certificate';
 import { FontCache } from '@/hooks/useFontLoader';
 import { AuditLogService } from '@/services/audit/auditLogService';
-import { NotificationProcessor } from '@/services/notifications/notificationProcessor';
+import { SimpleCertificateNotificationService } from '@/services/notifications/simpleCertificateNotificationService';
 import { format } from 'date-fns';
 
 export interface CertificateGenerationRequest {
@@ -373,19 +373,15 @@ export class CertificateService {
       });
 
       // Also create notification
-      await NotificationProcessor.createNotification({
+      await SimpleCertificateNotificationService.createNotification({
         userId: certificate.issued_by,
+        notificationType: 'certificate_approved',
         title: 'Certificate Email Sent',
         message: `Certificate email with verification code ${certificate.verification_code} sent to ${certificate.recipient_name}`,
-        type: 'SUCCESS',
-        category: 'CERTIFICATE',
+        certificateRequestId: certificate.id,
         priority: 'NORMAL',
         sendEmail: false,
-        metadata: {
-          certificate_id: certificate.id,
-          verification_code: certificate.verification_code,
-          pdf_url: pdfUrl
-        }
+        actionUrl: `/certificates?id=${certificate.id}`
       });
 
     } catch (error) {

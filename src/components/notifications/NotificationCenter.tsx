@@ -44,10 +44,17 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 interface NotificationCenterProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialCategory?: string;
+  categoryFilter?: string;
 }
 
-export function NotificationCenter({ open, onOpenChange }: NotificationCenterProps) {
-  const [activeTab, setActiveTab] = useState<string>("all");
+export function NotificationCenter({
+  open,
+  onOpenChange,
+  initialCategory = "all",
+  categoryFilter
+}: NotificationCenterProps) {
+  const [activeTab, setActiveTab] = useState<string>(initialCategory);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<NotificationFilters>({});
   const [searchTerm, setSearchTerm] = useState("");

@@ -6,16 +6,18 @@ import CertificateAnalyticsDashboard from '@/components/analytics/CertificateAna
 import InstructorPerformanceDashboard from '@/components/analytics/InstructorPerformanceDashboard';
 import { ExecutiveDashboard } from '@/components/crm/analytics/ExecutiveDashboard';
 import { AdvancedRevenueAnalytics } from '@/components/crm/analytics/AdvancedRevenueAnalytics';
+import { NotificationAnalyticsDashboard } from '@/components/notifications/NotificationAnalyticsDashboard';
 import { useProfile } from '@/hooks/useProfile';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  TrendingUp, 
-  Award, 
-  Users, 
-  DollarSign, 
+import {
+  TrendingUp,
+  Award,
+  Users,
+  DollarSign,
   BarChart3,
-  Crown
+  Crown,
+  Bell
 } from 'lucide-react';
 
 export default function Analytics() {
@@ -62,7 +64,7 @@ export default function Analytics() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6">
           <TabsTrigger value="overview" className="flex items-center space-x-2">
             <BarChart3 className="h-4 w-4" />
             <span>Overview</span>
@@ -72,6 +74,13 @@ export default function Analytics() {
             <TabsTrigger value="certificates" className="flex items-center space-x-2">
               <Award className="h-4 w-4" />
               <span>Certificates</span>
+            </TabsTrigger>
+          )}
+          
+          {isAdmin && (
+            <TabsTrigger value="notifications" className="flex items-center space-x-2">
+              <Bell className="h-4 w-4" />
+              <span>Notifications</span>
             </TabsTrigger>
           )}
           
@@ -106,6 +115,18 @@ export default function Analytics() {
               </p>
             </div>
             <CertificateAnalyticsDashboard />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="notifications" className="space-y-6">
+            <div className="space-y-2 mb-6">
+              <h2 className="text-2xl font-bold">Notification Analytics</h2>
+              <p className="text-muted-foreground">
+                User engagement metrics, notification performance, and push notification management
+              </p>
+            </div>
+            <NotificationAnalyticsDashboard showSystemMetrics={true} />
           </TabsContent>
         )}
 

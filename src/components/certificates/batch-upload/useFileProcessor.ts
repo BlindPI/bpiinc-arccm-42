@@ -260,25 +260,38 @@ export function useFileProcessor() {
             throw new Error(validationErrors.join('; '));
           }
 
-          // Simple course matching based ONLY on CPR_LEVEL and FIRST_AID_LEVEL
+          // Use proper course matching logic
           if (enableCourseMatching && courses) {
-            // Direct lookup in courses table based on CPR and First Aid levels
-            const matchedCourse = courses.find(course =>
-              course.cpr_level === processedRow.cprLevel &&
-              course.first_aid_level === processedRow.firstAidLevel
-            );
-            
-            if (matchedCourse) {
-              hasCourseMatches = true;
-              processedRow.courseMatches = [{
-                courseId: matchedCourse.id,
-                courseName: matchedCourse.name,
-                matchType: 'exact',
-                confidence: 100,
-                certifications: [],
-                expirationMonths: matchedCourse.expiration_months
-              }];
-              console.log(`Course match found for row ${rowNum}: ${matchedCourse.name}`);
+            try {
+              const courseMatch = await findBestCourseMatch(
+                {
+                  firstAidLevel: processedRow.firstAidLevel,
+                  cprLevel: processedRow.cprLevel
+                },
+                selectedCourseId || 'default',
+                courses as Course[]
+              );
+              
+              if (courseMatch && courseMatch.matchType !== 'mismatch') {
+                hasCourseMatches = true;
+                processedRow.courseMatches = [{
+                  courseId: courseMatch.id,
+                  courseName: courseMatch.name,
+                  matchType: courseMatch.matchType,
+                  confidence: courseMatch.matchType === 'exact' ? 100 : 80,
+                  certifications: courseMatch.certifications || [],
+                  expirationMonths: courseMatch.expiration_months
+                }];
+                console.log(`✓ Course match found for row ${rowNum}: ${courseMatch.name} (${courseMatch.matchType})`);
+              } else {
+                console.log(`❌ No course match for row ${rowNum}: FirstAid="${processedRow.firstAidLevel}", CPR="${processedRow.cprLevel}"`);
+                if (courseMatch?.mismatchReason) {
+                  processedRow.validationErrors.push(`Course matching: ${courseMatch.mismatchReason}`);
+                }
+              }
+            } catch (error) {
+              console.error(`Course matching error for row ${rowNum}:`, error);
+              processedRow.validationErrors.push(`Course matching failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
             }
           } else if (selectedCourseId && selectedCourseId !== 'none' && courses) {
             // Use manually selected course

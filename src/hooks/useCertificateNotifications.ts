@@ -80,8 +80,8 @@ export function useCertificateNotificationSubscription() {
         {
           event: '*',
           schema: 'public',
-          table: 'certificate_notifications',
-          filter: `user_id=eq.${user.id}`
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}&category=eq.CERTIFICATE`
         },
         (payload) => {
           console.log('Certificate notification change received:', payload);
@@ -92,7 +92,7 @@ export function useCertificateNotificationSubscription() {
           
           // Show browser notification if supported and permission granted
           if (window.Notification && window.Notification.permission === 'granted' && payload.eventType === 'INSERT') {
-            const notification = payload.new as CertificateNotification;
+            const notification = payload.new as any;
             if (notification && notification.title) {
               new window.Notification(notification.title, {
                 body: notification.message,

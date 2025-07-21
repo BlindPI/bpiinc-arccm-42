@@ -7,7 +7,7 @@ import { ROLE_LABELS } from "@/lib/roles";
 import { Skeleton } from "./ui/skeleton";
 import { useProfile } from "@/hooks/useProfile";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { SimpleCertificateNotificationBell } from "./notifications/SimpleCertificateNotificationBell";
+import { CertificateNotificationBell } from "./notifications/UnifiedNotificationBell";
 import { Separator } from "./ui/separator";
 import { useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -55,7 +55,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </div>
           {user && (
             <div className="flex items-center gap-4">
-              <SimpleCertificateNotificationBell />
+              <CertificateNotificationBell />
               <MobileUserMenu
                 user={user}
                 profile={profile}
