@@ -1,12 +1,10 @@
 /**
- * SIMPLE ROLE ROUTER - WORKING UI/UX FOR ALL USER ROLES
- * 
- * ✅ Routes correctly based on user role
- * ✅ AP users → EnhancedProviderDashboard (proven working)
- * ✅ Team members → EnhancedTeamProviderDashboard (proven working)  
- * ✅ Admin users → Simple admin view with real data
- * ✅ Others → Simple default view
- * ✅ No broken DashboardDataService dependencies
+ * SIMPLE ROLE ROUTER - Updated with Simple Dashboard Solution
+ *
+ * ✅ Uses new SimpleDashboard component for core functionality
+ * ✅ Maintains existing role-specific dashboards where needed
+ * ✅ Falls back to SimpleDashboard for simplified user experience
+ * ✅ Single query approach from SimpleDashboardService
  */
 
 import React from 'react';
@@ -22,12 +20,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { providerRelationshipService } from '@/services/provider/providerRelationshipService';
 import { Shield, MapPin, Users, AlertTriangle, CheckCircle, Crown, Building2, Award, BookOpen, Activity, RefreshCw } from 'lucide-react';
 
-// Import our proven working dashboards
+// Import new SimpleDashboard
+import { SimpleDashboard } from './SimpleDashboard';
+
+// Import existing proven working dashboards for fallback
 import EnhancedProviderDashboard from './role-dashboards/EnhancedProviderDashboard';
 import { EnhancedTeamProviderDashboard } from './team/EnhancedTeamProviderDashboard';
-import { ITDashboard } from './role-dashboards/ITDashboard'; // Import IT Dashboard
-import { IPDashboard } from './role-dashboards/IPDashboard'; // Import IP Dashboard
-import { EnterpriseICDashboard } from './EnterpriseICDashboard'; // Import Enterprise IC Dashboard
+import { ITDashboard } from './role-dashboards/ITDashboard';
+import { IPDashboard } from './role-dashboards/IPDashboard';
+import { EnterpriseICDashboard } from './EnterpriseICDashboard';
 
 export function SimpleRoleRouter() {
   const {
@@ -68,12 +69,30 @@ export function SimpleRoleRouter() {
       </AlertDescription>
     </Alert>;
 
-  // AP (Authorized Provider) Dashboard - Now with proper user-provider lookup
-  if (userRole === 'AP') {
-    console.log('🎯 ROUTING: AP user to EnhancedProviderDashboard with fixed lookup');
+  // Simple Dashboard Mode - Use the new Simple Dashboard Solution
+  // This provides a unified, clean experience based on role-based queries
+  const useSimpleDashboard = true; // Feature flag for Simple Dashboard Solution
+
+  if (useSimpleDashboard && ['AP', 'IC', 'IP', 'IT'].includes(userRole)) {
+    console.log('🎯 ROUTING: Using Simple Dashboard Solution for role:', userRole);
     return <div className="space-y-6">
-        
-        
+        <SuccessBanner />
+        <Alert className="bg-purple-50 border-purple-200">
+          <Shield className="h-4 w-4 text-purple-600" />
+          <AlertDescription className="text-purple-800">
+            <strong>Simple Dashboard Solution</strong> - Unified role-based dashboard using direct database queries
+          </AlertDescription>
+        </Alert>
+        <SimpleDashboard userId={user.id} />
+      </div>;
+  }
+
+  // Fallback to existing dashboards for backward compatibility
+  // AP (Authorized Provider) Dashboard - Enhanced version
+  if (userRole === 'AP') {
+    console.log('🎯 ROUTING: AP user to EnhancedProviderDashboard (fallback)');
+    return <div className="space-y-6">
+        <SuccessBanner />
         <EnhancedProviderDashboard config={{
         welcomeMessage: `Welcome, ${profile.display_name || user.email}`,
         subtitle: 'Authorized Provider Dashboard',
@@ -111,19 +130,19 @@ export function SimpleRoleRouter() {
 
   // Instructor Dashboard (IT users specifically for now)
   if (userRole === 'IT') {
-    console.log('🎯 ROUTING: IT user to ITDashboard');
-    return <ITDashboard />; // Render the specific IT Dashboard
+    console.log('🎯 ROUTING: IT user to ITDashboard (fallback)');
+    return <ITDashboard />;
   }
 
   // IP Instructor Dashboard - Now specific handler
   if (userRole === 'IP') {
-    console.log('🎯 ROUTING: IP user to IPDashboard');
+    console.log('🎯 ROUTING: IP user to IPDashboard (fallback)');
     return <IPDashboard />;
   }
 
   // IC Instructor Dashboard - Now Enterprise handler
   if (userRole === 'IC') {
-    console.log('🎯 ROUTING: IC user to EnterpriseICDashboard');
+    console.log('🎯 ROUTING: IC user to EnterpriseICDashboard (fallback)');
     return <EnterpriseICDashboard />;
   }
 
