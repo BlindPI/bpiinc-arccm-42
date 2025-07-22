@@ -65,22 +65,28 @@ export const AvailabilityForm: React.FC<AvailabilityFormProps> = ({
   };
 
   const validateForm = async (): Promise<boolean> => {
+    console.log('🔧 AvailabilityForm: Validating form data:', formData);
+    
     if (!formData.start_time || !formData.end_time) {
+      console.log('🔧 AvailabilityForm: Validation failed - missing times');
       toast.error('Please set both start and end times');
       return false;
     }
 
     if (formData.start_time >= formData.end_time) {
+      console.log('🔧 AvailabilityForm: Validation failed - end time not after start time');
       toast.error('End time must be after start time');
       return false;
     }
 
     if (!formData.effective_date) {
+      console.log('🔧 AvailabilityForm: Validation failed - missing effective date');
       toast.error('Please set an effective date');
       return false;
     }
 
     if (formData.expiry_date && formData.expiry_date <= formData.effective_date) {
+      console.log('🔧 AvailabilityForm: Validation failed - expiry date not after effective date');
       toast.error('Expiry date must be after effective date');
       return false;
     }
