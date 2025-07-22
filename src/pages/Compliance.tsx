@@ -1,30 +1,14 @@
 import React from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useProfile } from '@/hooks/useProfile';
-import { ComplianceDashboard } from '@/components/compliance/ComplianceDashboard';
-import { Loader2 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { ComplianceDashboard } from '../components/compliance/ComplianceDashboard';
 
-export default function Compliance() {
+const Compliance: React.FC = () => {
   const { user } = useAuth();
-  const { data: profile, isLoading } = useProfile();
 
-  if (isLoading) {
+  if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex items-center gap-2 text-gray-600">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          <span>Loading compliance dashboard...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user || !profile) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">
-          Unable to load user profile. Please try again.
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg text-gray-500">Please log in to view compliance.</div>
       </div>
     );
   }
@@ -32,8 +16,10 @@ export default function Compliance() {
   return (
     <ComplianceDashboard
       userId={user.id}
-      userRole={profile.role}
-      displayName={profile.display_name || user.email || 'User'}
+      userRole={user.role || 'IC'}
+      displayName={user.full_name || user.email}
     />
   );
-}
+};
+
+export default Compliance;
