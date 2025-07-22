@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { ComplianceDashboardProvider, useComplianceDashboard } from '@/contexts/ComplianceDashboardContext';
@@ -9,9 +9,6 @@ import { TeamComplianceView } from './views/TeamComplianceView';
 import { AdminComplianceView } from './views/AdminComplianceView';
 import { ComplianceUploadModal } from './ComplianceUploadModal';
 import { ComplianceNotifications } from './ComplianceNotifications';
-import { ComplianceOnboardingModal } from './onboarding/ComplianceOnboardingModal';
-import { MobileComplianceLayout } from './enhanced/MobileComplianceLayout';
-import './styles/mobile-compliance.css';
 
 interface ComplianceDashboardProps {
   userId: string;
@@ -20,24 +17,7 @@ interface ComplianceDashboardProps {
 }
 
 function ComplianceDashboardContent() {
-  const { state, refreshData } = useComplianceDashboard();
-  const [showOnboarding, setShowOnboarding] = useState(false);
-
-  // Check if user is new (no tier info or compliance records)
-  useEffect(() => {
-    if (!state.loading && !state.error) {
-      const hasComplianceData = state.data.tierInfo || (state.data.complianceRecords && state.data.complianceRecords.length > 0);
-      const isNewUser = !hasComplianceData;
-      
-      setShowOnboarding(isNewUser);
-    }
-  }, [state.loading, state.error, state.data.tierInfo, state.data.complianceRecords]);
-
-  const handleOnboardingComplete = (selectedTier: 'basic' | 'robust') => {
-    setShowOnboarding(false);
-    // Refresh the dashboard data to show the new tier setup
-    refreshData();
-  };
+  const { state } = useComplianceDashboard();
 
   if (state.loading) {
     return (
@@ -70,7 +50,7 @@ function ComplianceDashboardContent() {
     );
   }
 
-  // Render role-specific view
+  // Render role-specific view with TierRequirementsMatrix
   const renderMainContent = () => {
     switch (state.userRole) {
       case 'SA':
@@ -84,51 +64,33 @@ function ComplianceDashboardContent() {
   };
 
   return (
-    <MobileComplianceLayout>
-      <div className="min-h-screen bg-gray-50">
-        {/* Desktop Header */}
-        <div className="hidden md:block">
-          <ComplianceDashboardHeader />
-        </div>
-        
-        {/* Desktop Navigation */}
-        <div className="hidden md:block">
-          <ComplianceNavigation />
-        </div>
-        
-        {/* Main Content */}
-        <main className="container mx-auto px-4 py-6">
-          {renderMainContent()}
-        </main>
-        
-        {/* Modals and Overlays */}
-        <ComplianceUploadModal />
-        <ComplianceNotifications />
-        
-        {/* Onboarding Modal */}
-        {showOnboarding && ['IC', 'IP', 'IT', 'AP'].includes(state.userRole) && (
-          <ComplianceOnboardingModal
-            isOpen={showOnboarding}
-            onClose={() => setShowOnboarding(false)}
-            userId={state.userId}
-            userRole={state.userRole as 'AP' | 'IC' | 'IP' | 'IT'}
-            displayName={state.displayName || 'User'}
-            onComplete={handleOnboardingComplete}
-          />
-        )}
+    <div className="min-h-screen bg-gray-50">
+      {/* Desktop Header */}
+      <div className="hidden md:block">
+        <ComplianceDashboardHeader />
       </div>
-    </MobileComplianceLayout>
+      
+      {/* Desktop Navigation */}
+      <div className="hidden md:block">
+        <ComplianceNavigation />
+      </div>
+      
+      {/* Main Content - Shows TierRequirementsMatrix with Basic vs Robust comparison */}
+      <main className="container mx-auto px-4 py-6">
+        {renderMainContent()}
+      </main>
+      
+      {/* Modals */}
+      <ComplianceUploadModal />
+      <ComplianceNotifications />
+    </div>
   );
 }
 
-export function ComplianceDashboard({ userId, userRole, displayName }: ComplianceDashboardProps) {
+export const ComplianceDashboard: React.FC<ComplianceDashboardProps> = (props) => {
   return (
-    <ComplianceDashboardProvider 
-      userId={userId} 
-      userRole={userRole} 
-      displayName={displayName}
-    >
+    <ComplianceDashboardProvider {...props}>
       <ComplianceDashboardContent />
     </ComplianceDashboardProvider>
   );
-}
+};
