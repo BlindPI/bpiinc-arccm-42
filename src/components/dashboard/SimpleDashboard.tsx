@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Users, UserCheck, MapPin, AlertCircle, User, GraduationCap, Settings, BarChart3, Eye, ChevronDown } from 'lucide-react';
 import { SimpleDashboardService, UserDashboardData } from '@/services/dashboard/simpleDashboardService';
 import { LoadingDashboard } from './LoadingDashboard';
-import { AvailabilityWidget } from './widgets/AvailabilityWidget';
+import { DashboardAvailabilityCalendar } from './widgets/DashboardAvailabilityCalendar';
 
 interface SimpleDashboardProps {
   userId: string;
@@ -118,54 +118,50 @@ export const SimpleDashboard: React.FC<SimpleDashboardProps> = ({ userId }) => {
         </h1>
       </div>
 
-      {/* AVAILABILITY WIDGET */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div>
-          <AvailabilityWidget
-            userRole={dashboardData.user_role}
-            userId={userId}
-            teamIds={dashboardData.teams.map(team => team.team_id)}
-            className="h-fit"
-          />
-        </div>
-        
-        {/* TEAM SUMMARY CARD */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Team Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {dashboardData.teams.length > 0 ? (
-              <div className="space-y-3">
-                {dashboardData.teams.map(team => (
-                  <div key={team.team_id} className="p-3 border rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium">{team.team_name}</div>
-                        <div className="text-sm text-muted-foreground">{team.location_name}</div>
-                        <Badge variant="outline" className="text-xs mt-1">
-                          {team.team_role}
-                        </Badge>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-medium">{team.certificate_count}</div>
-                        <div className="text-xs text-muted-foreground">Certificates</div>
-                      </div>
+      {/* FULL AVAILABILITY CALENDAR */}
+      <DashboardAvailabilityCalendar
+        userRole={dashboardData.user_role}
+        userId={userId}
+        teamIds={dashboardData.teams.map(team => team.team_id)}
+        className="mb-6"
+      />
+
+      {/* TEAM SUMMARY CARD */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Team Overview
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {dashboardData.teams.length > 0 ? (
+            <div className="space-y-3">
+              {dashboardData.teams.map(team => (
+                <div key={team.team_id} className="p-3 border rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">{team.team_name}</div>
+                      <div className="text-sm text-muted-foreground">{team.location_name}</div>
+                      <Badge variant="outline" className="text-xs mt-1">
+                        {team.team_role}
+                      </Badge>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-medium">{team.certificate_count}</div>
+                      <div className="text-xs text-muted-foreground">Certificates</div>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-4 text-muted-foreground">
-                No teams assigned
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4 text-muted-foreground">
+              No teams assigned
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* DETAILED TEAM DATA DISPLAY WITH INTERACTIVE MODALS */}
       <Card>
