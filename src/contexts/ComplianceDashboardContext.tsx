@@ -311,13 +311,22 @@ interface ComplianceDashboardProviderProps {
   displayName: string;
 }
 
-export function ComplianceDashboardProvider({ 
-  children, 
-  userId, 
-  userRole, 
-  displayName 
+export function ComplianceDashboardProvider({
+  children,
+  userId,
+  userRole,
+  displayName
 }: ComplianceDashboardProviderProps) {
-  const [state, dispatch] = useReducer(complianceDashboardReducer, initialState);
+  // Initialize state with proper role to prevent race condition
+  const initializedState = {
+    ...initialState,
+    userId,
+    userRole: userRole as 'SA' | 'AD' | 'AP' | 'IC' | 'IP' | 'IT',
+    displayName,
+    loading: true // Start with loading true until data loads
+  };
+  
+  const [state, dispatch] = useReducer(complianceDashboardReducer, initializedState);
 
   // Initialize user info
   useEffect(() => {

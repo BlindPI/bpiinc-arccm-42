@@ -115,12 +115,38 @@ const navigationItems: NavItem[] = [
 export function ComplianceNavigation() {
   const { state, dispatch } = useComplianceDashboard();
 
+  // Prevent tab interactions during loading or role initialization
+  if (state.loading || !state.userId) {
+    return (
+      <nav className="bg-white border-b border-gray-200">
+        <div className="container mx-auto px-4">
+          <div className="hidden md:flex space-x-8 py-4">
+            <div className="animate-pulse">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-8 w-24 bg-gray-200 rounded mr-4 inline-block"></div>
+              ))}
+            </div>
+          </div>
+          <div className="md:hidden py-3">
+            <div className="animate-pulse h-8 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
   // Filter navigation items based on user role
-  const availableItems = navigationItems.filter(item => 
+  const availableItems = navigationItems.filter(item =>
     item.roles.includes(state.userRole)
   );
 
   const handleTabChange = (tabId: string) => {
+    // Additional safety check before allowing tab changes
+    if (state.loading || !state.userId) {
+      console.warn('Cannot change tabs during loading or without user ID');
+      return;
+    }
+
     dispatch({
       type: 'SET_VIEW',
       payload: { activeTab: tabId }

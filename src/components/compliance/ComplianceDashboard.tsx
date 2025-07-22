@@ -52,13 +52,27 @@ function ComplianceDashboardContent() {
 
   // Render role-specific view with TierRequirementsMatrix
   const renderMainContent = () => {
+    // Defensive check: Don't render during loading or role initialization
+    if (state.loading || !state.userId) {
+      return null; // Will show loading UI above
+    }
+
+    // Additional defensive logic for SA/AD users
+    // Ensure they never get routed to PersonalComplianceView
+    if (state.userRole === 'SA' || state.userRole === 'AD') {
+      return <AdminComplianceView />;
+    }
+
     switch (state.userRole) {
-      case 'SA':
-      case 'AD':
-        return <AdminComplianceView />;
       case 'AP':
         return <TeamComplianceView />;
+      case 'IC':
+      case 'IP':
+      case 'IT':
+        return <PersonalComplianceView />;
       default:
+        // Fallback for any undefined roles - should not happen but prevents errors
+        console.warn('Unknown user role:', state.userRole, 'defaulting to PersonalComplianceView');
         return <PersonalComplianceView />;
     }
   };
