@@ -46,9 +46,13 @@ export const AvailabilitySection: React.FC<AvailabilitySectionProps> = ({ userId
     userId
   });
 
-  // Organize availability by day of week
+  // Organize availability by day of week - ensure we handle both string and number types
   const weeklySchedule: WeeklySchedule = DAYS_OF_WEEK.reduce((schedule, day) => {
-    schedule[day.value.toString()] = availability.filter(slot => slot.day_of_week === day.value);
+    schedule[day.value.toString()] = availability.filter(slot => {
+      // Handle both string and number day_of_week values
+      const slotDay = typeof slot.day_of_week === 'string' ? parseInt(slot.day_of_week) : slot.day_of_week;
+      return slotDay === day.value;
+    });
     return schedule;
   }, {} as WeeklySchedule);
 
