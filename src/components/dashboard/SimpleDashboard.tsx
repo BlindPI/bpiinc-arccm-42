@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Users, UserCheck, MapPin, AlertCircle, User, GraduationCap, Settings, BarChart3, Eye, ChevronDown } from 'lucide-react';
 import { SimpleDashboardService, UserDashboardData } from '@/services/dashboard/simpleDashboardService';
 import { LoadingDashboard } from './LoadingDashboard';
+import { AvailabilityWidget } from './widgets/AvailabilityWidget';
 
 interface SimpleDashboardProps {
   userId: string;
@@ -117,51 +118,104 @@ export const SimpleDashboard: React.FC<SimpleDashboardProps> = ({ userId }) => {
         </h1>
       </div>
 
-      {/* SIMPLE DATA DISPLAY WITH INTERACTIVE MODALS */}
-      {dashboardData.teams.length > 0 ? (
-        <div className="space-y-4">
-          {dashboardData.teams.map(team => (
-            <Card key={team.team_id}>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-lg">
-                  <div>
-                    <div className="font-medium text-gray-600">Team</div>
-                    <Button
-                      variant="ghost"
-                      className="text-xl font-bold p-0 h-auto justify-start hover:bg-blue-50"
-                      onClick={() => handleTeamClick(team)}
-                    >
-                      {team.team_name}
-                      <ChevronDown className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div>
-                    <div className="font-medium text-gray-600">Location</div>
-                    <Button
-                      variant="ghost"
-                      className="text-xl font-bold p-0 h-auto justify-start hover:bg-green-50"
-                      onClick={() => handleLocationClick(team)}
-                    >
-                      {team.location_name}
-                      <ChevronDown className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div>
-                    <div className="font-medium text-gray-600">Certificates</div>
-                    <div className="text-xl font-bold">{team.certificate_count}</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+      {/* AVAILABILITY WIDGET */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div>
+          <AvailabilityWidget
+            userRole={dashboardData.user_role}
+            userId={userId}
+            teamIds={dashboardData.teams.map(team => team.team_id)}
+            className="h-fit"
+          />
         </div>
-      ) : (
+        
+        {/* TEAM SUMMARY CARD */}
         <Card>
-          <CardContent className="p-6">
-            <div className="text-gray-500">No teams assigned</div>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Team Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {dashboardData.teams.length > 0 ? (
+              <div className="space-y-3">
+                {dashboardData.teams.map(team => (
+                  <div key={team.team_id} className="p-3 border rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium">{team.team_name}</div>
+                        <div className="text-sm text-muted-foreground">{team.location_name}</div>
+                        <Badge variant="outline" className="text-xs mt-1">
+                          {team.team_role}
+                        </Badge>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-medium">{team.certificate_count}</div>
+                        <div className="text-xs text-muted-foreground">Certificates</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                No teams assigned
+              </div>
+            )}
           </CardContent>
         </Card>
-      )}
+      </div>
+
+      {/* DETAILED TEAM DATA DISPLAY WITH INTERACTIVE MODALS */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Detailed Team Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {dashboardData.teams.length > 0 ? (
+            <div className="space-y-4">
+              {dashboardData.teams.map(team => (
+                <div key={team.team_id} className="p-4 border rounded-lg">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-lg">
+                    <div>
+                      <div className="font-medium text-gray-600">Team</div>
+                      <Button
+                        variant="ghost"
+                        className="text-xl font-bold p-0 h-auto justify-start hover:bg-blue-50"
+                        onClick={() => handleTeamClick(team)}
+                      >
+                        {team.team_name}
+                        <ChevronDown className="ml-2 h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-600">Location</div>
+                      <Button
+                        variant="ghost"
+                        className="text-xl font-bold p-0 h-auto justify-start hover:bg-green-50"
+                        onClick={() => handleLocationClick(team)}
+                      >
+                        {team.location_name}
+                        <ChevronDown className="ml-2 h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-600">Certificates</div>
+                      <div className="text-xl font-bold">{team.certificate_count}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-gray-500 text-center py-4">No teams assigned</div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* TEAM MEMBERS MODAL */}
       <Dialog open={teamModalOpen} onOpenChange={setTeamModalOpen}>
