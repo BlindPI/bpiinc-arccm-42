@@ -208,12 +208,12 @@ export class ComplianceService {
           weight,
           applicable_tiers
         ),
-        profiles!user_compliance_records_user_id_fkey (
+        profiles (
           id,
           display_name,
           email,
           role,
-          compliance_tier 
+          compliance_tier
         )
       `)
       .order('updated_at', { ascending: false });
@@ -339,7 +339,7 @@ export class ComplianceService {
           name,
           category
         ),
-        profiles!compliance_audit_log_performed_by_fkey (
+        profiles (
           display_name,
           email
         )
@@ -624,7 +624,7 @@ export class ComplianceService {
           name,
           category
         ),
-        profiles!compliance_documents_user_id_fkey (
+        profiles (
           id,
           display_name,
           email
