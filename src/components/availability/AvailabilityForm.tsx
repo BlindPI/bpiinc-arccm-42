@@ -64,7 +64,7 @@ export const AvailabilityForm: React.FC<AvailabilityFormProps> = ({
     }));
   };
 
-  const validateForm = (): boolean => {
+  const validateForm = async (): Promise<boolean> => {
     if (!formData.start_time || !formData.end_time) {
       toast.error('Please set both start and end times');
       return false;
@@ -85,13 +85,45 @@ export const AvailabilityForm: React.FC<AvailabilityFormProps> = ({
       return false;
     }
 
+    // Check for exact duplicate (same user_id, day_of_week, start_time, end_time)
+    try {
+      const { data: existingSlots, error } = await supabase
+        .from('user_availability')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('day_of_week', formData.day_of_week)
+        .eq('start_time', formData.start_time)
+        .eq('end_time', formData.end_time)
+        .eq('is_active', true);
+
+      if (error) {
+        console.error('Error checking for duplicates:', error);
+        return true; // Allow save if we can't check
+      }
+
+      // If editing, exclude the current slot
+      const duplicates = existingSlots?.filter(slot =>
+        !editingSlot || slot.id !== editingSlot.id
+      ) || [];
+
+      if (duplicates.length > 0) {
+        const dayName = DAYS_OF_WEEK.find(d => d.value === formData.day_of_week)?.label || 'Unknown';
+        toast.error(`You already have availability set for ${dayName} ${formatTimeForInput(formData.start_time)} - ${formatTimeForInput(formData.end_time)}`);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error validating form:', error);
+      // Allow save if validation fails
+    }
+
     return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    const isValid = await validateForm();
+    if (!isValid) return;
 
     setIsSaving(true);
     try {

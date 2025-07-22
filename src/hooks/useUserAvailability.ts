@@ -8,7 +8,7 @@ export function useUserAvailability() {
   const queryClient = useQueryClient();
 
   // Get user's availability schedule
-  const { data: availability = [], isLoading, error } = useQuery({
+  const { data: availability = [], isLoading, error, refetch } = useQuery({
     queryKey: ['userAvailability', user?.id],
     queryFn: async () => {
       if (!user?.id) {
@@ -35,6 +35,8 @@ export function useUserAvailability() {
       return data as UserAvailabilitySlot[];
     },
     enabled: !!user?.id,
+    retry: 3,
+    refetchOnWindowFocus: false,
   });
 
   console.log('🔧 useUserAvailability: Hook result - availability:', availability?.length || 0, 'isLoading:', isLoading, 'error:', error);
@@ -92,9 +94,11 @@ export function useUserAvailability() {
         return data;
       }
     },
-    onSuccess: () => {
-      console.log('🔧 saveAvailability: Invalidating queries');
+    onSuccess: (data) => {
+      console.log('🔧 saveAvailability: Successfully saved, invalidating queries. Saved data:', data);
       queryClient.invalidateQueries({ queryKey: ['userAvailability'] });
+      // Force refetch to ensure latest data
+      refetch();
     },
   });
 
@@ -109,15 +113,20 @@ export function useUserAvailability() {
       if (error) throw error;
     },
     onSuccess: () => {
+      console.log('🔧 deleteAvailability: Successfully deleted, invalidating queries');
       queryClient.invalidateQueries({ queryKey: ['userAvailability'] });
+      // Force refetch to ensure latest data
+      refetch();
     },
   });
 
   return {
     availability,
     isLoading,
+    error,
     saveAvailability,
     deleteAvailability,
+    refetch,
   };
 }
 
