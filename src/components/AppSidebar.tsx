@@ -30,7 +30,8 @@ import {
   DollarSign,
   Building2,
   Mail,
-  Crown
+  Crown,
+  CheckCircle
 } from 'lucide-react';
 import {
   Sidebar,
@@ -91,6 +92,7 @@ const navigation: NavigationItem[] = [
   { name: 'Reports', href: '/reports', icon: BarChart3, group: 'Analytics & Reports' },
   
   // Compliance & Automation Group
+  { name: 'Compliance Management', href: '/compliance', icon: CheckCircle, group: 'Compliance & Automation' },
   { name: 'Automation', href: '/automation', icon: Zap, group: 'Compliance & Automation' },
   { name: 'Progression Path Builder', href: '/progression-path-builder', icon: Target, group: 'Compliance & Automation' },
   

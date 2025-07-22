@@ -47,6 +47,7 @@ import InstructorDashboard from '@/pages/InstructorDashboard';
 import InstructorRosterDetail from '@/pages/InstructorRosterDetail';
 import InstructorManagementSystem from '@/pages/instructor-system';
 import MultiCourseTrainingHub from '@/pages/MultiCourseTrainingHub';
+import Compliance from '@/pages/Compliance';
 
 export function AppRoutes() {
   const { user } = useAuth();
@@ -278,6 +279,30 @@ export function AppRoutes() {
       } />
 
       {/* Compliance & Automation Routes */}
+      <Route path="/compliance" element={
+        <ProtectedRoute>
+          <Compliance />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/compliance/admin" element={
+        <ProtectedRoute>
+          <Compliance />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/compliance/team" element={
+        <ProtectedRoute>
+          <Compliance />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/compliance/personal" element={
+        <ProtectedRoute>
+          <Compliance />
+        </ProtectedRoute>
+      } />
+
       <Route path="/automation" element={
         <ProtectedRoute>
           <Automation />

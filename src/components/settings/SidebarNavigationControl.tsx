@@ -35,7 +35,7 @@ const NAVIGATION_GROUPS = {
     'Revenue Analytics'
   ],
   'Analytics & Reports': ['Analytics Hub', 'Report Scheduler', 'Reports'],
-  'Compliance & Automation': ['Automation', 'Progression Path Builder'],
+  'Compliance & Automation': ['Compliance Management', 'Automation', 'Progression Path Builder'],
   'System Administration': ['Admin Hub', 'Integrations', 'Settings']
 };
 
