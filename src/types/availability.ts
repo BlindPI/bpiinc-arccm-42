@@ -1,4 +1,4 @@
-export type DayOfWeek = 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
+export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0 = Sunday, 1 = Monday, etc.
 
 export type AvailabilityType = 'available' | 'out_of_office' | 'busy';
 
@@ -38,13 +38,13 @@ export interface WeeklySchedule {
 }
 
 export const DAYS_OF_WEEK: { value: DayOfWeek; label: string; short: string }[] = [
-  { value: 'sunday', label: 'Sunday', short: 'Sun' },
-  { value: 'monday', label: 'Monday', short: 'Mon' },
-  { value: 'tuesday', label: 'Tuesday', short: 'Tue' },
-  { value: 'wednesday', label: 'Wednesday', short: 'Wed' },
-  { value: 'thursday', label: 'Thursday', short: 'Thu' },
-  { value: 'friday', label: 'Friday', short: 'Fri' },
-  { value: 'saturday', label: 'Saturday', short: 'Sat' },
+  { value: 0, label: 'Sunday', short: 'Sun' },
+  { value: 1, label: 'Monday', short: 'Mon' },
+  { value: 2, label: 'Tuesday', short: 'Tue' },
+  { value: 3, label: 'Wednesday', short: 'Wed' },
+  { value: 4, label: 'Thursday', short: 'Thu' },
+  { value: 5, label: 'Friday', short: 'Fri' },
+  { value: 6, label: 'Saturday', short: 'Sat' },
 ];
 
 export const AVAILABILITY_TYPES: { value: AvailabilityType; label: string; color: string }[] = [
@@ -74,4 +74,5 @@ export const DEFAULT_AVAILABILITY_SETTINGS = {
   availability_type: 'available' as AvailabilityType,
   effective_date: new Date().toISOString().split('T')[0],
   is_active: true,
+  day_of_week: 1 as DayOfWeek, // Default to Monday
 };

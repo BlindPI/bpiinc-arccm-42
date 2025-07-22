@@ -32,7 +32,7 @@ export const AvailabilityForm: React.FC<AvailabilityFormProps> = ({
   onSave
 }) => {
   const [formData, setFormData] = useState<AvailabilityFormData>({
-    day_of_week: 'monday',
+    day_of_week: 1, // Monday
     start_time: '09:00:00',
     end_time: '17:00:00',
     ...DEFAULT_AVAILABILITY_SETTINGS
@@ -141,15 +141,15 @@ export const AvailabilityForm: React.FC<AvailabilityFormProps> = ({
             <div className="space-y-2">
               <Label htmlFor="day_of_week">Day of Week</Label>
               <Select
-                value={formData.day_of_week}
-                onValueChange={(value) => handleInputChange('day_of_week', value)}
+                value={formData.day_of_week.toString()}
+                onValueChange={(value) => handleInputChange('day_of_week', parseInt(value))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select day" />
                 </SelectTrigger>
                 <SelectContent>
                   {DAYS_OF_WEEK.map(day => (
-                    <SelectItem key={day.value} value={day.value}>
+                    <SelectItem key={day.value} value={day.value.toString()}>
                       {day.label}
                     </SelectItem>
                   ))}

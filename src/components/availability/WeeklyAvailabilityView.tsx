@@ -82,7 +82,7 @@ export const WeeklyAvailabilityView: React.FC<WeeklyAvailabilityViewProps> = ({
 
         {/* Days Columns */}
         {DAYS_OF_WEEK.map(day => {
-          const daySlots = weeklySchedule[day.value] || [];
+          const daySlots = weeklySchedule[day.value.toString()] || [];
           
           return (
             <div key={day.value} className="border-r last:border-r-0 relative min-h-[400px]">

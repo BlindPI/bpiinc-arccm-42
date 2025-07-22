@@ -40,7 +40,7 @@ export const AvailabilitySection: React.FC<AvailabilitySectionProps> = ({ userId
 
   // Organize availability by day of week
   const weeklySchedule: WeeklySchedule = DAYS_OF_WEEK.reduce((schedule, day) => {
-    schedule[day.value] = availability.filter(slot => slot.day_of_week === day.value);
+    schedule[day.value.toString()] = availability.filter(slot => slot.day_of_week === day.value);
     return schedule;
   }, {} as WeeklySchedule);
 
@@ -169,7 +169,7 @@ export const AvailabilitySection: React.FC<AvailabilitySectionProps> = ({ userId
               ) : (
                 <div className="space-y-4">
                   {DAYS_OF_WEEK.map(day => {
-                    const daySlots = weeklySchedule[day.value] || [];
+                    const daySlots = weeklySchedule[day.value.toString()] || [];
                     
                     return (
                       <div key={day.value} className="border rounded-lg p-4">
