@@ -9,7 +9,6 @@ import { Upload, Users, FileText, Settings, AlertTriangle, CheckCircle } from 'l
 import { TierRequirementsMatrix } from '../components/compliance/views/TierRequirementsMatrix';
 import { ComplianceService, UserComplianceRecord } from '../services/compliance/complianceService';
 import { ComplianceTierService, ComplianceTierInfo } from '../services/compliance/complianceTierService';
-import { TierSwitchRequestService } from '../services/compliance/tierSwitchRequestService';
 import { TeamMemberComplianceService, TeamMemberComplianceStatus } from '../services/compliance/teamMemberComplianceService';
 import { useToast } from '../components/ui/use-toast';
 
@@ -20,7 +19,6 @@ const Compliance: React.FC = () => {
   const [complianceRecords, setComplianceRecords] = useState<UserComplianceRecord[]>([]);
   const [tierInfo, setTierInfo] = useState<ComplianceTierInfo | null>(null);
   const [teamMemberCompliance, setTeamMemberCompliance] = useState<TeamMemberComplianceStatus[]>([]);
-  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
@@ -45,7 +43,7 @@ const Compliance: React.FC = () => {
     try {
       setLoading(true);
       
-      // Load base compliance data
+      // Load base compliance data - only using existing tables
       const [records, tier] = await Promise.all([
         ComplianceService.getUserComplianceRecords(user.id),
         ComplianceTierService.getUserComplianceTierInfo(user.id)
@@ -54,16 +52,15 @@ const Compliance: React.FC = () => {
       setComplianceRecords(records);
       setTierInfo(tier);
 
-      // If admin, load additional data
-      if (isAdminRole) {
-        const requests = await TierSwitchRequestService.getPendingTierSwitchRequests();
-        setPendingRequests(requests);
-      }
-
-      // If provider, load team member compliance
+      // If provider, load team member compliance (if table exists)
       if (isProviderRole && user.provider_id) {
-        const teamCompliance = await TeamMemberComplianceService.getProviderTeamMemberCompliance(user.provider_id);
-        setTeamMemberCompliance(teamCompliance);
+        try {
+          const teamCompliance = await TeamMemberComplianceService.getProviderTeamMemberCompliance(user.provider_id);
+          setTeamMemberCompliance(teamCompliance);
+        } catch (teamError) {
+          console.log('Team compliance data not available:', teamError);
+          setTeamMemberCompliance([]);
+        }
       }
       
       console.log(`DEBUG: Loaded compliance data for user ${user.id}`);
@@ -71,14 +68,14 @@ const Compliance: React.FC = () => {
     } catch (error) {
       console.error('Error loading compliance data:', error);
       toast({
-        title: "Error Loading Compliance Data",
+        title: "Error Loading Compliance Data", 
         description: "Failed to load your compliance information. Please try again.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  }, [user?.id, user?.provider_id, toast, isAdminRole, isProviderRole]);
+  }, [user?.id, user?.provider_id, toast, isProviderRole]);
 
   // Load data on mount
   useEffect(() => {
@@ -104,8 +101,8 @@ const Compliance: React.FC = () => {
       try {
         setUploading(true);
         
-        // Find matching compliance record
-        const matchingRecord = complianceRecords.find(record =>
+        // Find matching compliance record using existing tables
+        const matchingRecord = complianceRecords.find(record => 
           record.compliance_metrics?.name?.toLowerCase().includes(requirementName.toLowerCase())
         );
         
@@ -120,7 +117,7 @@ const Compliance: React.FC = () => {
         
         console.log(`DEBUG: Uploading ${file.name} for compliance record ${matchingRecord.id}`);
         
-        // Upload document using compliance service
+        // Upload document using compliance service (uses existing compliance_documents table)
         await ComplianceService.uploadComplianceDocument(
           user.id,
           matchingRecord.id,
@@ -152,50 +149,42 @@ const Compliance: React.FC = () => {
     fileInput.click();
   }, [user?.id, toast, loadComplianceData, complianceRecords]);
 
-  // Handle tier switch request - simplified interface
+  // Handle tier switch request - using existing compliance_tier_history table
   const handleTierSwitch = useCallback(async (newTier: 'basic' | 'robust') => {
     if (!user?.id || !tierInfo) return;
     
     try {
-      console.log(`DEBUG: Requesting tier switch from ${tierInfo.tier} to ${newTier}`);
+      console.log(`DEBUG: Requesting tier switch from ${tierInfo.tier} to ${newTier} using existing tables`);
       
-      // Check if user already has a pending request
-      const hasPending = await TierSwitchRequestService.hasPendingRequest(user.id);
+      // Use existing tier service that works with compliance_tier_history table
+      const result = await ComplianceTierService.switchComplianceTier(user.id, newTier);
       
-      if (hasPending) {
+      if (result.success) {
         toast({
-          title: "Request Already Pending",
-          description: "You already have a pending tier switch request.",
+          title: "Tier Switch Completed",
+          description: result.message,
           variant: "default",
         });
-        return;
+        
+        // Reload compliance data to reflect changes
+        await loadComplianceData();
+      } else {
+        toast({
+          title: "Tier Switch Failed",
+          description: result.message,
+          variant: "destructive",
+        });
       }
       
-      // Create tier switch request with default justification
-      const justification = `User requested switch from ${tierInfo.tier} to ${newTier} tier via compliance dashboard.`;
-      
-      await TierSwitchRequestService.createTierSwitchRequest({
-        user_id: user.id,
-        current_tier: tierInfo.tier,
-        requested_tier: newTier,
-        justification: justification
-      });
-      
-      toast({
-        title: "Tier Switch Requested",
-        description: `Your request to switch to ${newTier} tier has been submitted for review.`,
-        variant: "default",
-      });
-      
     } catch (error) {
-      console.error('Error requesting tier switch:', error);
+      console.error('Error switching tier:', error);
       toast({
-        title: "Request Failed",
-        description: "Failed to submit tier switch request. Please try again.",
+        title: "Switch Failed",
+        description: "Failed to switch compliance tier. Please try again.",
         variant: "destructive",
       });
     }
-  }, [user?.id, tierInfo, toast]);
+  }, [user?.id, tierInfo, toast, loadComplianceData]);
 
   if (!user) {
     return (
@@ -249,7 +238,7 @@ const Compliance: React.FC = () => {
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-4">
             <TabsTrigger value="requirements" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               Requirements
@@ -262,12 +251,6 @@ const Compliance: React.FC = () => {
               <TabsTrigger value="team" className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
                 Team Compliance
-              </TabsTrigger>
-            )}
-            {isAdminRole && (
-              <TabsTrigger value="admin" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Admin Panel
               </TabsTrigger>
             )}
             <TabsTrigger value="settings" className="flex items-center gap-2">
@@ -313,7 +296,11 @@ const Compliance: React.FC = () => {
                         ) : (
                           <AlertTriangle className="h-5 w-5 text-amber-600" />
                         )}
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleDocumentUpload(record.compliance_metrics?.name || '', tierInfo?.tier || 'basic')}
+                        >
                           Upload Document
                         </Button>
                       </div>
@@ -366,75 +353,6 @@ const Compliance: React.FC = () => {
             </TabsContent>
           )}
 
-          {/* Admin Panel Tab */}
-          {isAdminRole && (
-            <TabsContent value="admin" className="mt-6">
-              <div className="grid gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Pending Tier Switch Requests</CardTitle>
-                    <CardDescription>
-                      Review and approve tier change requests
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {pendingRequests.length === 0 ? (
-                      <p className="text-gray-600">No pending requests</p>
-                    ) : (
-                      <div className="grid gap-4">
-                        {pendingRequests.map((request) => (
-                          <div key={request.id} className="flex items-center justify-between p-4 border rounded-lg">
-                            <div>
-                              <h3 className="font-medium">{request.user_profile?.display_name}</h3>
-                              <p className="text-sm text-gray-600">{request.user_profile?.email}</p>
-                              <p className="text-sm">
-                                Requesting: {request.current_tier} → {request.requested_tier}
-                              </p>
-                              <p className="text-sm text-gray-600">{request.justification}</p>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button variant="default" size="sm">Approve</Button>
-                              <Button variant="destructive" size="sm">Reject</Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>System Overview</CardTitle>
-                    <CardDescription>
-                      Global compliance statistics and system health
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="text-center p-4 bg-green-50 rounded-lg">
-                        <div className="text-2xl font-bold text-green-600">85%</div>
-                        <div className="text-sm text-gray-600">Overall Compliance</div>
-                      </div>
-                      <div className="text-center p-4 bg-blue-50 rounded-lg">
-                        <div className="text-2xl font-bold text-blue-600">{complianceRecords.length}</div>
-                        <div className="text-sm text-gray-600">Total Records</div>
-                      </div>
-                      <div className="text-center p-4 bg-amber-50 rounded-lg">
-                        <div className="text-2xl font-bold text-amber-600">{pendingRequests.length}</div>
-                        <div className="text-sm text-gray-600">Pending Requests</div>
-                      </div>
-                      <div className="text-center p-4 bg-purple-50 rounded-lg">
-                        <div className="text-2xl font-bold text-purple-600">{teamMemberCompliance.length}</div>
-                        <div className="text-sm text-gray-600">Active Users</div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-          )}
-
           {/* Settings Tab */}
           <TabsContent value="settings" className="mt-6">
             <Card>
@@ -455,10 +373,27 @@ const Compliance: React.FC = () => {
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-medium">Tier Preferences</h4>
-                      <p className="text-sm text-gray-600">Request tier changes or view current tier</p>
+                      <h4 className="font-medium">Tier Management</h4>
+                      <p className="text-sm text-gray-600">Switch between Basic and Robust compliance tiers</p>
                     </div>
-                    <Button variant="outline">Manage</Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant={tierInfo?.tier === 'basic' ? 'default' : 'outline'} 
+                        size="sm"
+                        onClick={() => handleTierSwitch('basic')}
+                        disabled={tierInfo?.tier === 'basic'}
+                      >
+                        Basic Tier
+                      </Button>
+                      <Button 
+                        variant={tierInfo?.tier === 'robust' ? 'default' : 'outline'} 
+                        size="sm"
+                        onClick={() => handleTierSwitch('robust')}
+                        disabled={tierInfo?.tier === 'robust'}
+                      >
+                        Robust Tier
+                      </Button>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
