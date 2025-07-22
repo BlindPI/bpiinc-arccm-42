@@ -19,16 +19,29 @@ export interface UserComplianceRecord {
   id: string;
   user_id: string;
   metric_id: string;
+  requirement_id?: string;
   current_value: any;
-  compliance_status: 'compliant' | 'non_compliant' | 'warning' | 'pending' | 'not_applicable'; 
+  compliance_status: 'compliant' | 'non_compliant' | 'warning' | 'pending' | 'not_applicable';
+  completion_percentage: number;
+  target_value?: string;
+  evidence_files?: any[];
+  submission_data?: any;
   last_checked_at: string;
-  next_check_due: string;
-  notes: string;
-  verified_by: string;
-  verified_at: string;
+  next_review_date?: string;
+  due_date?: string;
+  notes?: string;
+  reviewer_id?: string;
+  reviewed_at?: string;
+  review_notes?: string;
+  approved_by?: string;
+  approved_at?: string;
+  rejection_reason?: string;
+  tier: 'basic' | 'robust';
+  priority: number;
+  metadata?: any;
   created_at: string;
   updated_at: string;
-  compliance_metrics?: ComplianceMetric; 
+  compliance_metrics?: ComplianceMetric;
 }
 
 export interface ComplianceAction {
@@ -230,16 +243,30 @@ export class ComplianceService {
     complianceStatus: 'compliant' | 'non_compliant' | 'warning' | 'pending' | 'not_applicable',
     notes?: string
   ): Promise<string> {
-    const { data, error } = await supabase.rpc('update_compliance_record', {
-      p_user_id: userId,
-      p_metric_id: metricId,
-      p_current_value: currentValue,
-      p_compliance_status: complianceStatus,
-      p_notes: notes || null
-    } as any); 
+    try {
+      // Use direct database update instead of RPC to avoid schema mismatch
+      const { data, error } = await supabase
+        .from('user_compliance_records')
+        .upsert({
+          user_id: userId,
+          metric_id: metricId,
+          current_value: currentValue ? String(currentValue) : null,
+          compliance_status: complianceStatus,
+          notes: notes || null,
+          updated_at: new Date().toISOString(),
+          last_checked_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,metric_id'
+        })
+        .select('id')
+        .single();
 
-    if (error) throw error;
-    return data;
+      if (error) throw error;
+      return data?.id || 'updated';
+    } catch (error) {
+      console.error('Error updating compliance record:', error);
+      throw error;
+    }
   }
 
   // Get user compliance summary

@@ -34,6 +34,12 @@ const navigationItems: NavItem[] = [
     roles: ['IC', 'IP', 'IT']
   },
   {
+    id: 'requirements',
+    label: 'Requirements',
+    icon: FileText,
+    roles: ['IC', 'IP', 'IT']
+  },
+  {
     id: 'upload',
     label: 'Upload Documents',
     icon: Upload,

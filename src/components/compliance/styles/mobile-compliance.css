@@ -1,0 +1,182 @@
+/**
+ * MOBILE COMPLIANCE STYLES
+ * 
+ * Phase 4: Mobile Responsiveness Enhancements
+ * CSS classes for touch-friendly interactions and mobile-first design
+ */
+
+/* Safe area padding for mobile devices */
+.safe-area-padding-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Touch-friendly interaction styles */
+.touch-manipulation {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Mobile button enhancements */
+@media (max-width: 768px) {
+  /* Larger touch targets for buttons */
+  .mobile-touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Enhanced spacing for mobile */
+  .mobile-spacing {
+    padding: 1rem;
+  }
+  
+  /* Mobile card styling */
+  .mobile-card {
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Mobile navigation */
+  .mobile-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Mobile content padding to avoid bottom nav */
+  .mobile-content {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
+  
+  /* Mobile modal adjustments */
+  .mobile-modal {
+    margin: 0;
+    max-height: 90vh;
+    border-radius: 1rem 1rem 0 0;
+  }
+  
+  /* Mobile form elements */
+  .mobile-input {
+    padding: 0.75rem;
+    font-size: 1rem; /* Prevents zoom on iOS */
+    border-radius: 0.5rem;
+  }
+  
+  /* Mobile scroll containers */
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+  
+  /* Mobile grid adjustments */
+  .mobile-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  /* Mobile text sizing */
+  .mobile-text-sm {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  
+  .mobile-text-lg {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+  }
+}
+
+/* Tablet-specific styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* Tablet grid layout */
+  .tablet-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+  
+  /* Tablet card sizing */
+  .tablet-card {
+    padding: 1.5rem;
+  }
+  
+  /* Tablet navigation */
+  .tablet-nav {
+    padding: 1rem 2rem;
+  }
+}
+
+/* Dark mode support for mobile */
+@media (prefers-color-scheme: dark) {
+  .mobile-card {
+    background-color: #1f2937;
+    border-color: #374151;
+  }
+  
+  .mobile-nav {
+    background-color: #111827;
+    border-top-color: #374151;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .touch-manipulation:focus {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+  }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .mobile-scroll {
+    scroll-behavior: auto;
+  }
+  
+  .transition-all {
+    transition: none;
+  }
+}
+
+/* Landscape mobile adjustments */
+@media (max-width: 768px) and (orientation: landscape) {
+  .mobile-modal {
+    max-height: 80vh;
+  }
+  
+  .mobile-nav {
+    padding: 0.5rem 0;
+  }
+  
+  .mobile-content {
+    padding-bottom: calc(3.5rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* Very small screen adjustments */
+@media (max-width: 375px) {
+  .mobile-spacing {
+    padding: 0.75rem;
+  }
+  
+  .mobile-grid {
+    gap: 0.75rem;
+  }
+  
+  .mobile-text-sm {
+    font-size: 0.8125rem;
+  }
+}
+
+/* Large screen mobile (phablets) */
+@media (min-width: 376px) and (max-width: 414px) {
+  .mobile-card {
+    padding: 1.25rem;
+  }
+  
+  .mobile-spacing {
+    padding: 1.25rem;
+  }
+}
