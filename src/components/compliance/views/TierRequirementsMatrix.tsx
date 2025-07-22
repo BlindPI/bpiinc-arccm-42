@@ -72,6 +72,9 @@ const RequirementCard: React.FC<{
   const Icon = getCategoryIcon(requirement.category);
   const categoryColorClass = getCategoryColor(requirement.category);
   
+  // SA/AD users should not upload documents themselves - they manage other users
+  const canUpload = !['SA', 'AD'].includes(userRole);
+  
   const getStatusIcon = () => {
     switch (complianceStatus) {
       case 'compliant': return <CheckCircle className="h-4 w-4 text-green-600" />;
@@ -141,17 +144,26 @@ const RequirementCard: React.FC<{
                 <li>• Expiry date required</li>
               )}
             </ul>
-            <div className="mt-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onUploadDocument?.(requirement.name, tier)}
-                className="h-7 text-xs"
-              >
-                <Upload className="h-3 w-3 mr-1" />
-                Upload Document
-              </Button>
-            </div>
+            {canUpload && (
+              <div className="mt-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onUploadDocument?.(requirement.name, tier)}
+                  className="h-7 text-xs"
+                >
+                  <Upload className="h-3 w-3 mr-1" />
+                  Upload Document
+                </Button>
+              </div>
+            )}
+            {!canUpload && (
+              <div className="mt-2">
+                <p className="text-xs text-gray-500 italic">
+                  Upload managed through Verification Queue
+                </p>
+              </div>
+            )}
           </div>
         )}
 

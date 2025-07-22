@@ -5,6 +5,7 @@ import { AdminUserManagement } from '../admin/AdminUserManagement';
 import { AdminSystemSettings } from '../admin/AdminSystemSettings';
 import { AdminComplianceOverview } from '../admin/AdminComplianceOverview';
 import { PersonalComplianceView } from './PersonalComplianceView';
+import UserComplianceManager from '../admin/UserComplianceManager';
 
 export function AdminComplianceView() {
   const { state } = useComplianceDashboard();
@@ -15,6 +16,8 @@ export function AdminComplianceView() {
         return <AdminDocumentVerification />;
       case 'user-management':
         return <AdminUserManagement />;
+      case 'user-compliance':
+        return <UserComplianceManager />;
       case 'system-settings':
         return <AdminSystemSettings />;
       case 'requirements':

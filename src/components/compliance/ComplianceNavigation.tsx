@@ -82,6 +82,12 @@ const navigationItems: NavItem[] = [
     roles: ['SA', 'AD']
   },
   {
+    id: 'user-compliance',
+    label: 'User Compliance',
+    icon: Shield,
+    roles: ['SA', 'AD']
+  },
+  {
     id: 'system-settings',
     label: 'System Settings',
     icon: Settings,
