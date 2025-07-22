@@ -4,11 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { 
-  User, 
+import {
+  User,
   Shield,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  Clock
 } from 'lucide-react';
 import { Profile } from '@/types/profiles';
 
@@ -33,6 +34,14 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       icon: User,
       badge: profileCompleteness < 100 ? 'Incomplete' : 'Complete',
       badgeVariant: profileCompleteness < 100 ? 'secondary' : 'default'
+    },
+    {
+      id: 'availability',
+      title: 'Availability',
+      description: 'Set your weekly schedule and availability',
+      icon: Clock,
+      badge: 'Schedule',
+      badgeVariant: 'default'
     },
     {
       id: 'security',
@@ -91,7 +100,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       </Card>
 
       {/* Navigation Tabs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {tabs.map((tab) => (
           <Card 
             key={tab.id}

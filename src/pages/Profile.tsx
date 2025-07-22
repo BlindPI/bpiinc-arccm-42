@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { ProfileDetailsSection } from "@/components/profile/sections/ProfileDetailsSection";
 import { SecuritySection } from "@/components/profile/sections/SecuritySection";
+import { AvailabilitySection } from "@/components/availability";
 
 export default function Profile() {
   const { user } = useAuth();
@@ -164,6 +165,10 @@ export default function Profile() {
             onSave={handleSave}
             onChange={handleChange}
           />
+        );
+      case 'availability':
+        return (
+          <AvailabilitySection userId={user?.id || ''} />
         );
       case 'security':
         return (
