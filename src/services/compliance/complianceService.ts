@@ -208,7 +208,7 @@ export class ComplianceService {
           weight,
           applicable_tiers
         ),
-        profiles!fk_user_compliance_records_user_id (
+        profiles!user_compliance_records_user_id_fkey (
           id,
           display_name,
           email,
@@ -339,7 +339,7 @@ export class ComplianceService {
           name,
           category
         ),
-        profiles!fk_compliance_audit_log_performed_by (
+        profiles!compliance_audit_log_performed_by_fkey (
           display_name,
           email
         )
@@ -624,7 +624,7 @@ export class ComplianceService {
           name,
           category
         ),
-        profiles!fk_compliance_documents_user_id (
+        profiles!compliance_documents_user_id_fkey (
           id,
           display_name,
           email
