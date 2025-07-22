@@ -121,9 +121,16 @@ export const AvailabilityForm: React.FC<AvailabilityFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🔧 AvailabilityForm: Form submitted');
+    console.log('🔧 AvailabilityForm: Form data:', formData);
+    console.log('🔧 AvailabilityForm: onSave mutation:', onSave);
     
     const isValid = await validateForm();
-    if (!isValid) return;
+    console.log('🔧 AvailabilityForm: Form validation result:', isValid);
+    if (!isValid) {
+      console.log('🔧 AvailabilityForm: Validation failed, stopping submission');
+      return;
+    }
 
     setIsSaving(true);
     try {
@@ -133,12 +140,16 @@ export const AvailabilityForm: React.FC<AvailabilityFormProps> = ({
         is_active: true,
         ...(editingSlot && { id: editingSlot.id })
       };
+      
+      console.log('🔧 AvailabilityForm: Attempting to save data:', saveData);
+      console.log('🔧 AvailabilityForm: Mutation function exists?', !!onSave?.mutateAsync);
 
       await onSave.mutateAsync(saveData);
+      console.log('🔧 AvailabilityForm: Save successful');
       toast.success(editingSlot ? 'Availability updated successfully' : 'Availability added successfully');
       onClose();
     } catch (error: any) {
-      console.error('Error saving availability:', error);
+      console.error('🔧 AvailabilityForm: Error saving availability:', error);
       
       // Handle specific database constraint violations
       if (error?.code === '23505' && error?.message?.includes('no_overlapping_availability')) {

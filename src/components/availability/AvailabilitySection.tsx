@@ -31,12 +31,20 @@ export const AvailabilitySection: React.FC<AvailabilitySectionProps> = ({ userId
   const [editingSlot, setEditingSlot] = useState<UserAvailabilitySlot | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('calendar');
 
-  const { 
-    availability, 
-    isLoading, 
-    saveAvailability, 
-    deleteAvailability 
+  const {
+    availability,
+    isLoading,
+    saveAvailability,
+    deleteAvailability
   } = useUserAvailability();
+
+  console.log('🔧 AvailabilitySection: Hook results:', {
+    availability: availability?.length || 0,
+    isLoading,
+    saveAvailability: !!saveAvailability,
+    saveAvailabilityMutateAsync: !!saveAvailability?.mutateAsync,
+    userId
+  });
 
   // Organize availability by day of week
   const weeklySchedule: WeeklySchedule = DAYS_OF_WEEK.reduce((schedule, day) => {
