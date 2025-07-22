@@ -32,7 +32,7 @@ import { ComplianceRequirementsService } from '@/services/compliance/complianceR
 import type { RoleComplianceTemplate, ComplianceRequirementTemplate } from '@/services/compliance/complianceRequirementsService';
 
 interface TierRequirementsMatrixProps {
-  userRole: 'AP' | 'IC' | 'IP' | 'IT';
+  userRole: 'AP' | 'IC' | 'IP' | 'IT' | 'SA' | 'AD';
   currentTier: 'basic' | 'robust';
   onUploadDocument?: (requirementName: string, tier: 'basic' | 'robust') => void;
   onTierSwitch?: (newTier: 'basic' | 'robust') => void;
@@ -272,7 +272,10 @@ export const TierRequirementsMatrix: React.FC<TierRequirementsMatrixProps> = ({
   className = ""
 }) => {
   const templates = useMemo(() => {
-    return ComplianceRequirementsService.getAllTemplatesForRole(userRole);
+    // SA/AD users should see templates for a default role (IC) to understand the matrix
+    // They can manage all users, so show them what individual contributors see
+    const roleForTemplate = (userRole === 'SA' || userRole === 'AD') ? 'IC' : userRole;
+    return ComplianceRequirementsService.getAllTemplatesForRole(roleForTemplate as 'AP' | 'IC' | 'IP' | 'IT');
   }, [userRole]);
 
   const [selectedComparison, setSelectedComparison] = useState<'side-by-side' | 'basic' | 'robust'>('side-by-side');

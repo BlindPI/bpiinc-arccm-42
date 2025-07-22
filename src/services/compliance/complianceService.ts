@@ -39,6 +39,7 @@ export interface UserComplianceRecord {
   tier: 'basic' | 'robust';
   priority: number;
   metadata?: any;
+  primary_document_id?: string;
   created_at: string;
   updated_at: string;
   compliance_metrics?: ComplianceMetric;

@@ -1,25 +1,42 @@
-import React, { useState } from 'react';
-import { Toast } from '@/components/ui/toast';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Bell, 
-  CheckCircle, 
-  AlertTriangle, 
-  Upload, 
+import {
+  Bell,
+  CheckCircle,
+  AlertTriangle,
+  Upload,
   Settings,
   X
 } from 'lucide-react';
 import { useComplianceDashboard } from '@/contexts/ComplianceDashboardContext';
+import { toast } from 'sonner';
 
 export function ComplianceNotifications() {
   const { state, dispatch } = useComplianceDashboard();
   const [showAll, setShowAll] = useState(false);
+  const [lastNotificationCount, setLastNotificationCount] = useState(0);
 
   const unreadNotifications = state.notifications.filter(n => !n.read);
-  const visibleNotifications = showAll 
-    ? state.notifications.slice(0, 5) 
+  const visibleNotifications = showAll
+    ? state.notifications.slice(0, 5)
     : unreadNotifications.slice(0, 3);
+
+  // Show toast for new notifications
+  useEffect(() => {
+    const currentCount = state.notifications.length;
+    if (currentCount > lastNotificationCount && lastNotificationCount > 0) {
+      const newNotification = state.notifications[0]; // Latest notification
+      if (newNotification && !newNotification.read) {
+        const icon = getNotificationIcon(newNotification.type);
+        toast(newNotification.title, {
+          description: newNotification.message,
+          duration: 5000,
+        });
+      }
+    }
+    setLastNotificationCount(currentCount);
+  }, [state.notifications.length, lastNotificationCount]);
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -156,22 +173,6 @@ export function ComplianceNotifications() {
           )}
         </div>
       )}
-
-      {/* Individual Toast Notifications for new items */}
-      {unreadNotifications.slice(0, 1).map((notification) => (
-        <Toast
-          key={`toast-${notification.id}`}
-          className="mb-2"
-        >
-          <div className="flex items-center gap-2">
-            {getNotificationIcon(notification.type)}
-            <div>
-              <p className="font-medium">{notification.title}</p>
-              <p className="text-sm text-gray-600">{notification.message}</p>
-            </div>
-          </div>
-        </Toast>
-      ))}
     </div>
   );
 }

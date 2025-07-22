@@ -11,6 +11,7 @@ import {
   X 
 } from 'lucide-react';
 import { useComplianceDashboard } from '@/contexts/ComplianceDashboardContext';
+import { ComplianceService } from '@/services/compliance/complianceService';
 
 export function ComplianceUploadModal() {
   const { state, uploadDocument, dispatch } = useComplianceDashboard();
@@ -22,13 +23,34 @@ export function ComplianceUploadModal() {
   const [expiryDate, setExpiryDate] = useState<string>('');
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [requiresExpiry, setRequiresExpiry] = useState<boolean>(false);
 
   // Get available metrics for upload
-  const uploadableMetrics = complianceRecords.filter(record => 
+  const uploadableMetrics = complianceRecords.filter(record =>
     record.compliance_metrics?.measurement_type === 'boolean'
   );
 
   const selectedMetric = uploadableMetrics.find(record => record.metric_id === metricId);
+
+  // Check if expiry date is required when metric changes
+  React.useEffect(() => {
+    const checkExpiryRequirement = async () => {
+      if (metricId) {
+        try {
+          const requirements = await ComplianceService.getDocumentRequirements(metricId);
+          setRequiresExpiry(requirements?.requires_expiry_date || false);
+        } catch (error) {
+          console.error('Error checking document requirements:', error);
+          // Default to requiring expiry for safety
+          setRequiresExpiry(true);
+        }
+      } else {
+        setRequiresExpiry(false);
+      }
+    };
+    
+    checkExpiryRequirement();
+  }, [metricId]);
 
   const handleClose = () => {
     dispatch({ type: 'CLOSE_UPLOAD_MODAL' });
@@ -66,6 +88,7 @@ export function ComplianceUploadModal() {
 
   const handleUpload = async () => {
     if (!selectedFile || !metricId) return;
+    if (requiresExpiry && !expiryDate) return;
 
     try {
       setUploading(true);
@@ -183,24 +206,31 @@ export function ComplianceUploadModal() {
 
           {/* Expiry Date */}
           <div className="space-y-2">
-            <Label htmlFor="expiry-date">Expiry Date (Optional)</Label>
+            <Label htmlFor="expiry-date">
+              Expiry Date {requiresExpiry ? '*' : '(Optional)'}
+            </Label>
             <Input
               id="expiry-date"
               type="date"
               value={expiryDate}
               onChange={(e) => setExpiryDate(e.target.value)}
+              className={requiresExpiry && !expiryDate ? 'border-red-300' : ''}
             />
             <p className="text-xs text-gray-500">
-              Set if this document has an expiration date
+              {requiresExpiry
+                ? 'This document type requires an expiry date'
+                : 'Set if this document has an expiration date'}
             </p>
           </div>
 
           {/* Validation */}
-          {(!metricId || !selectedFile) && (
+          {(!metricId || !selectedFile || (requiresExpiry && !expiryDate)) && (
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                Please select both a compliance requirement and upload a file.
+                {!metricId || !selectedFile
+                  ? 'Please select both a compliance requirement and upload a file.'
+                  : 'Expiry date is required for this document type.'}
               </AlertDescription>
             </Alert>
           )}
@@ -218,7 +248,7 @@ export function ComplianceUploadModal() {
             <Button
               className="flex-1"
               onClick={handleUpload}
-              disabled={!metricId || !selectedFile || uploading}
+              disabled={!metricId || !selectedFile || uploading || (requiresExpiry && !expiryDate)}
             >
               {uploading ? 'Uploading...' : 'Upload Document'}
             </Button>

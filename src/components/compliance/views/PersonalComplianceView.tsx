@@ -39,7 +39,7 @@ export function PersonalComplianceView() {
       case 'requirements':
         return (
           <TierRequirementsMatrix
-            userRole={state.userRole as 'AP' | 'IC' | 'IP' | 'IT'}
+            userRole={state.userRole as 'AP' | 'IC' | 'IP' | 'IT' | 'SA' | 'AD'}
             currentTier={state.data.tierInfo?.tier || 'basic'}
             userComplianceRecords={state.data.complianceRecords}
             onUploadDocument={handleUploadDocument}
@@ -55,7 +55,7 @@ export function PersonalComplianceView() {
           <div className="space-y-6">
             {/* PHASE 1-4 IMPLEMENTATION: Enhanced Overview with TierRequirementsMatrix */}
             <TierRequirementsMatrix
-              userRole={state.userRole as 'AP' | 'IC' | 'IP' | 'IT'}
+              userRole={state.userRole as 'AP' | 'IC' | 'IP' | 'IT' | 'SA' | 'AD'}
               currentTier={state.data.tierInfo?.tier || 'basic'}
               userComplianceRecords={state.data.complianceRecords}
               onUploadDocument={handleUploadDocument}

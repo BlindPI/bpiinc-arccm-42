@@ -37,7 +37,7 @@ const navigationItems: NavItem[] = [
     id: 'requirements',
     label: 'Requirements',
     icon: FileText,
-    roles: ['IC', 'IP', 'IT']
+    roles: ['SA', 'AD', 'IC', 'IP', 'IT']
   },
   {
     id: 'upload',
