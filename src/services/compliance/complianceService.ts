@@ -208,7 +208,7 @@ export class ComplianceService {
           weight,
           applicable_tiers
         ),
-        profiles (
+        user_profile:profiles!fk_user_compliance_records_user_id (
           id,
           display_name,
           email,
@@ -624,7 +624,7 @@ export class ComplianceService {
           name,
           category
         ),
-        profiles (
+        user_profile:profiles!user_id (
           id,
           display_name,
           email
