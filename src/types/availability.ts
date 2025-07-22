@@ -1,6 +1,6 @@
 export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0 = Sunday, 1 = Monday, etc.
 
-export type AvailabilityType = 'available' | 'out_of_office' | 'busy';
+export type AvailabilityType = 'available' | 'out_of_office' | 'busy' | 'tentative';
 
 export type RecurringPattern = 'weekly' | 'monthly' | 'none';
 
@@ -49,8 +49,9 @@ export const DAYS_OF_WEEK: { value: DayOfWeek; label: string; short: string }[] 
 
 export const AVAILABILITY_TYPES: { value: AvailabilityType; label: string; color: string }[] = [
   { value: 'available', label: 'Available', color: 'green' },
-  { value: 'out_of_office', label: 'Out of Office', color: 'red' },
   { value: 'busy', label: 'Busy', color: 'yellow' },
+  { value: 'out_of_office', label: 'Out of Office', color: 'red' },
+  { value: 'tentative', label: 'Tentative', color: 'blue' },
 ];
 
 export const RECURRING_PATTERNS: { value: RecurringPattern; label: string }[] = [

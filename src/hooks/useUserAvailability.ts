@@ -1,23 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Database } from '@/integrations/supabase/types';
-
-type UserAvailability = Database['public']['Tables']['user_availability']['Row'];
-type AvailabilityInsert = Database['public']['Tables']['user_availability']['Insert'];
-type AvailabilityUpdate = Database['public']['Tables']['user_availability']['Update'];
-type AvailabilityException = Database['public']['Tables']['availability_exceptions']['Row'];
-type AvailabilityBooking = Database['public']['Tables']['availability_bookings']['Row'];
+import { UserAvailabilitySlot } from '@/types/availability';
 
 export function useUserAvailability() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
   // Get user's availability schedule
-  const { data: availability = [], isLoading } = useQuery({
+  const { data: availability = [], isLoading, error } = useQuery({
     queryKey: ['userAvailability', user?.id],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!user?.id) {
+        console.log('🔧 useUserAvailability: No user ID available');
+        return [];
+      }
+      
+      console.log('🔧 useUserAvailability: Fetching availability for user:', user.id);
       
       const { data, error } = await supabase
         .from('user_availability')
@@ -27,55 +26,26 @@ export function useUserAvailability() {
         .order('day_of_week', { ascending: true })
         .order('start_time', { ascending: true });
 
-      if (error) throw error;
-      return data as UserAvailability[];
-    },
-    enabled: !!user?.id,
-  });
-
-  // Get availability exceptions
-  const { data: exceptions = [] } = useQuery({
-    queryKey: ['availabilityExceptions', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
+      if (error) {
+        console.error('🔧 useUserAvailability: Error fetching availability:', error);
+        throw error;
+      }
       
-      const { data, error } = await supabase
-        .from('availability_exceptions')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('exception_date', new Date().toISOString().split('T')[0])
-        .order('exception_date', { ascending: true });
-
-      if (error) throw error;
-      return data as AvailabilityException[];
+      console.log('🔧 useUserAvailability: Found availability records:', data?.length || 0, data);
+      return data as UserAvailabilitySlot[];
     },
     enabled: !!user?.id,
   });
 
-  // Get upcoming bookings
-  const { data: bookings = [] } = useQuery({
-    queryKey: ['availabilityBookings', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-      
-      const { data, error } = await supabase
-        .from('availability_bookings')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('booking_date', new Date().toISOString().split('T')[0])
-        .order('booking_date', { ascending: true })
-        .order('start_time', { ascending: true });
+  console.log('🔧 useUserAvailability: Hook result - availability:', availability?.length || 0, 'isLoading:', isLoading, 'error:', error);
 
-      if (error) throw error;
-      return data as AvailabilityBooking[];
-    },
-    enabled: !!user?.id,
-  });
 
   // Create or update availability
   const saveAvailability = useMutation({
-    mutationFn: async (availabilityData: AvailabilityInsert | AvailabilityUpdate) => {
-      if ('id' in availabilityData && availabilityData.id) {
+    mutationFn: async (availabilityData: any) => {
+      console.log('🔧 saveAvailability: Saving data:', availabilityData);
+      
+      if (availabilityData.id) {
         // Update existing
         const { data, error } = await supabase
           .from('user_availability')
@@ -84,24 +54,46 @@ export function useUserAvailability() {
           .select()
           .single();
         
-        if (error) throw error;
+        if (error) {
+          console.error('🔧 saveAvailability: Update error:', error);
+          throw error;
+        }
+        console.log('🔧 saveAvailability: Updated successfully:', data);
         return data;
       } else {
         // Create new
+        const insertData = {
+          user_id: user?.id!,
+          day_of_week: availabilityData.day_of_week,
+          start_time: availabilityData.start_time,
+          end_time: availabilityData.end_time,
+          availability_type: availabilityData.availability_type,
+          recurring_pattern: availabilityData.recurring_pattern || 'weekly',
+          effective_date: availabilityData.effective_date,
+          expiry_date: availabilityData.expiry_date,
+          time_slot_duration: availabilityData.time_slot_duration || 60,
+          notes: availabilityData.notes,
+          is_active: true
+        };
+        
+        console.log('🔧 saveAvailability: Inserting data:', insertData);
+        
         const { data, error } = await supabase
           .from('user_availability')
-          .insert({
-            ...availabilityData as Omit<AvailabilityInsert, 'user_id'>,
-            user_id: user?.id!
-          })
+          .insert(insertData)
           .select()
           .single();
         
-        if (error) throw error;
+        if (error) {
+          console.error('🔧 saveAvailability: Insert error:', error);
+          throw error;
+        }
+        console.log('🔧 saveAvailability: Inserted successfully:', data);
         return data;
       }
     },
     onSuccess: () => {
+      console.log('🔧 saveAvailability: Invalidating queries');
       queryClient.invalidateQueries({ queryKey: ['userAvailability'] });
     },
   });
@@ -121,34 +113,11 @@ export function useUserAvailability() {
     },
   });
 
-  // Add availability exception
-  const addException = useMutation({
-    mutationFn: async (exception: Omit<AvailabilityException, 'id' | 'created_at' | 'user_id'>) => {
-      const { data, error } = await supabase
-        .from('availability_exceptions')
-        .insert({
-          ...exception,
-          user_id: user?.id
-        })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['availabilityExceptions'] });
-    },
-  });
-
   return {
     availability,
-    exceptions,
-    bookings,
     isLoading,
     saveAvailability,
     deleteAvailability,
-    addException,
   };
 }
 

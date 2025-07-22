@@ -17,6 +17,7 @@ import {
   DEFAULT_AVAILABILITY_SETTINGS 
 } from '@/types/availability';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AvailabilityFormProps {
   userId: string;
@@ -104,9 +105,15 @@ export const AvailabilityForm: React.FC<AvailabilityFormProps> = ({
       await onSave.mutateAsync(saveData);
       toast.success(editingSlot ? 'Availability updated successfully' : 'Availability added successfully');
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving availability:', error);
-      toast.error('Failed to save availability');
+      
+      // Handle specific database constraint violations
+      if (error?.code === '23505' && error?.message?.includes('no_overlapping_availability')) {
+        toast.error('This availability slot conflicts with an existing one. Please choose different times.');
+      } else {
+        toast.error('Failed to save availability: ' + (error?.message || 'Unknown error'));
+      }
     } finally {
       setIsSaving(false);
     }
