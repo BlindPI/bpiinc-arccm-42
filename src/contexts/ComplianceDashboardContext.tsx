@@ -332,62 +332,82 @@ export function ComplianceDashboardProvider({
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
 
-      // Common data for all roles
-      const [complianceSummary, complianceRecords, complianceActions, complianceDocuments] = 
-        await Promise.all([
-          ComplianceService.getUserComplianceSummary(userId),
-          ComplianceService.getUserComplianceRecords(userId),
-          ComplianceService.getUserComplianceActions(userId),
-          ComplianceService.getUserComplianceDocuments(userId)
-        ]);
-
-      // Get tier information
-      const tierInfo = await ComplianceTierService.getUserComplianceTierInfo(userId);
-
-      let additionalData: Partial<ComplianceDashboardData> = {};
-
-      // Role-specific data loading
+      let commonData: Partial<ComplianceDashboardData> = {};
+      
+      // Role-specific data loading - SA/AD admins don't load personal compliance data
       switch (userRole) {
         case 'SA':
         case 'AD':
-          // Admin data
+          // Admin-only data - NO personal compliance data to prevent invalid calculations
           const [allRecords, documentsForVerification] = await Promise.all([
             ComplianceService.getAllComplianceRecords(),
             ComplianceService.getDocumentsForVerification()
           ]);
-          additionalData = {
+          commonData = {
             allComplianceRecords: allRecords,
-            documentsForVerification: documentsForVerification
+            documentsForVerification: documentsForVerification,
+            // Explicitly set personal data as empty/null to prevent invalid calculations
+            complianceSummary: null,
+            complianceRecords: [],
+            complianceActions: [],
+            complianceDocuments: [],
+            tierInfo: null
           };
           break;
 
         case 'AP':
-          // Provider data
-          const [teamMemberCompliance, providerSummary] = await Promise.all([
+          // Provider data + personal data
+          const [
+            apComplianceSummary,
+            apComplianceRecords,
+            apComplianceActions,
+            apComplianceDocuments,
+            apTierInfo,
+            teamMemberCompliance,
+            providerSummary
+          ] = await Promise.all([
+            ComplianceService.getUserComplianceSummary(userId),
+            ComplianceService.getUserComplianceRecords(userId),
+            ComplianceService.getUserComplianceActions(userId),
+            ComplianceService.getUserComplianceDocuments(userId),
+            ComplianceTierService.getUserComplianceTierInfo(userId),
             TeamMemberComplianceService.getProviderTeamMemberCompliance(userId),
             TeamMemberComplianceService.getProviderComplianceSummary(userId)
           ]);
-          additionalData = {
+          commonData = {
+            complianceSummary: apComplianceSummary,
+            complianceRecords: apComplianceRecords,
+            complianceActions: apComplianceActions,
+            complianceDocuments: apComplianceDocuments,
+            tierInfo: apTierInfo,
             teamMemberCompliance: teamMemberCompliance,
             providerSummary: providerSummary
           };
           break;
 
         default:
-          // Individual contributor data is already loaded above
+          // Individual contributor data only
+          const [icComplianceSummary, icComplianceRecords, icComplianceActions, icComplianceDocuments, icTierInfo] =
+            await Promise.all([
+              ComplianceService.getUserComplianceSummary(userId),
+              ComplianceService.getUserComplianceRecords(userId),
+              ComplianceService.getUserComplianceActions(userId),
+              ComplianceService.getUserComplianceDocuments(userId),
+              ComplianceTierService.getUserComplianceTierInfo(userId)
+            ]);
+          commonData = {
+            complianceSummary: icComplianceSummary,
+            complianceRecords: icComplianceRecords,
+            complianceActions: icComplianceActions,
+            complianceDocuments: icComplianceDocuments,
+            tierInfo: icTierInfo
+          };
           break;
       }
 
       dispatch({
         type: 'SET_COMPLIANCE_DATA',
-        payload: {
-          complianceSummary,
-          complianceRecords,
-          complianceActions,
-          complianceDocuments,
-          tierInfo,
-          ...additionalData
-        }
+        payload: commonData
       });
 
     } catch (error) {
