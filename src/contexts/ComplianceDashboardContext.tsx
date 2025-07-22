@@ -77,16 +77,23 @@ export interface ComplianceDashboardState {
   // Modal states
   uploadModalOpen: boolean;
   selectedMetricId: string | null;
+  
+  // Dropdown states
+  dropdowns: {
+    notificationOpen: boolean;
+    settingsOpen: boolean;
+  };
 }
 
 // Action types
-type ComplianceDashboardAction = 
+type ComplianceDashboardAction =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_USER_INFO'; payload: { userId: string; userRole: string; displayName: string } }
   | { type: 'SET_COMPLIANCE_DATA'; payload: Partial<ComplianceDashboardData> }
   | { type: 'ADD_NOTIFICATION'; payload: ComplianceNotification }
   | { type: 'MARK_NOTIFICATION_READ'; payload: string }
+  | { type: 'MARK_ALL_NOTIFICATIONS_READ' }
   | { type: 'ADD_UPLOAD_ITEM'; payload: UploadItem }
   | { type: 'UPDATE_UPLOAD_PROGRESS'; payload: { id: string; progress: number; status?: string } }
   | { type: 'REMOVE_UPLOAD_ITEM'; payload: string }
@@ -94,6 +101,9 @@ type ComplianceDashboardAction =
   | { type: 'SET_VIEW'; payload: Partial<ViewState> }
   | { type: 'OPEN_UPLOAD_MODAL'; payload: string }
   | { type: 'CLOSE_UPLOAD_MODAL' }
+  | { type: 'TOGGLE_NOTIFICATION_DROPDOWN' }
+  | { type: 'TOGGLE_SETTINGS_DROPDOWN' }
+  | { type: 'CLOSE_ALL_DROPDOWNS' }
   | { type: 'REFRESH_DATA' };
 
 // Initial state
@@ -129,7 +139,11 @@ const initialState: ComplianceDashboardState = {
     showCompleted: true
   },
   uploadModalOpen: false,
-  selectedMetricId: null
+  selectedMetricId: null,
+  dropdowns: {
+    notificationOpen: false,
+    settingsOpen: false
+  }
 };
 
 // Reducer
@@ -169,9 +183,15 @@ function complianceDashboardReducer(
     case 'MARK_NOTIFICATION_READ':
       return {
         ...state,
-        notifications: state.notifications.map(n => 
+        notifications: state.notifications.map(n =>
           n.id === action.payload ? { ...n, read: true } : n
         )
+      };
+    
+    case 'MARK_ALL_NOTIFICATIONS_READ':
+      return {
+        ...state,
+        notifications: state.notifications.map(n => ({ ...n, read: true }))
       };
     
     case 'ADD_UPLOAD_ITEM':
@@ -226,6 +246,35 @@ function complianceDashboardReducer(
         selectedMetricId: null
       };
     
+    case 'TOGGLE_NOTIFICATION_DROPDOWN':
+      return {
+        ...state,
+        dropdowns: {
+          ...state.dropdowns,
+          notificationOpen: !state.dropdowns.notificationOpen,
+          settingsOpen: false // Close settings when opening notifications
+        }
+      };
+    
+    case 'TOGGLE_SETTINGS_DROPDOWN':
+      return {
+        ...state,
+        dropdowns: {
+          ...state.dropdowns,
+          settingsOpen: !state.dropdowns.settingsOpen,
+          notificationOpen: false // Close notifications when opening settings
+        }
+      };
+    
+    case 'CLOSE_ALL_DROPDOWNS':
+      return {
+        ...state,
+        dropdowns: {
+          notificationOpen: false,
+          settingsOpen: false
+        }
+      };
+    
     case 'REFRESH_DATA':
       return {
         ...state,
@@ -249,6 +298,7 @@ interface ComplianceDashboardContextType {
   uploadDocument: (file: File, metricId: string, expiryDate?: string) => Promise<void>;
   markActionComplete: (actionId: string) => Promise<void>;
   addNotification: (notification: Omit<ComplianceNotification, 'id' | 'timestamp'>) => void;
+  markAllNotificationsRead: () => void;
 }
 
 const ComplianceDashboardContext = createContext<ComplianceDashboardContextType | undefined>(undefined);
@@ -453,6 +503,11 @@ export function ComplianceDashboardProvider({
     });
   }, []);
 
+  // Mark all notifications as read
+  const markAllNotificationsRead = useCallback(() => {
+    dispatch({ type: 'MARK_ALL_NOTIFICATIONS_READ' });
+  }, []);
+
   // Load data on mount
   useEffect(() => {
     if (userId && userRole) {
@@ -467,7 +522,8 @@ export function ComplianceDashboardProvider({
     refreshData,
     uploadDocument,
     markActionComplete,
-    addNotification
+    addNotification,
+    markAllNotificationsRead
   };
 
   return (

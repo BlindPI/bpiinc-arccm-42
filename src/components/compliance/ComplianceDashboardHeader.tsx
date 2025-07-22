@@ -1,11 +1,19 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell, Upload, RefreshCw, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useComplianceDashboard } from '@/contexts/ComplianceDashboardContext';
+import { ComplianceNotificationDropdown } from '@/components/compliance/views/ComplianceNotificationDropdown';
+import { ComplianceSettingsDropdown } from '@/components/compliance/admin/ComplianceSettingsDropdown';
 
 export function ComplianceDashboardHeader() {
-  const { state, refreshData, dispatch } = useComplianceDashboard();
+  const navigate = useNavigate();
+  const { state, refreshData, dispatch, markAllNotificationsRead } = useComplianceDashboard();
 
   const unreadNotifications = state.notifications.filter(n => !n.read).length;
 
@@ -15,6 +23,17 @@ export function ComplianceDashboardHeader() {
 
   const handleRefresh = async () => {
     await refreshData();
+  };
+
+  const handleMarkNotificationRead = (id: string) => {
+    dispatch({ type: 'MARK_NOTIFICATION_READ', payload: id });
+  };
+
+  const handleNavigateToSettings = (path: string) => {
+    // Close dropdown first
+    dispatch({ type: 'CLOSE_ALL_DROPDOWNS' });
+    // Navigate to the settings page
+    navigate(path);
   };
 
   return (
@@ -65,31 +84,64 @@ export function ComplianceDashboardHeader() {
             </Button>
 
             {/* Notifications */}
-            <Button
-              variant="outline"
-              size="sm"
-              className="relative"
+            <DropdownMenu
+              open={state.dropdowns.notificationOpen}
+              onOpenChange={(open) => {
+                if (open) {
+                  dispatch({ type: 'TOGGLE_NOTIFICATION_DROPDOWN' });
+                } else {
+                  dispatch({ type: 'CLOSE_ALL_DROPDOWNS' });
+                }
+              }}
             >
-              <Bell className="h-4 w-4" />
-              {unreadNotifications > 0 && (
-                <Badge 
-                  variant="destructive" 
-                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="relative"
                 >
-                  {unreadNotifications}
-                </Badge>
-              )}
-            </Button>
+                  <Bell className="h-4 w-4" />
+                  {unreadNotifications > 0 && (
+                    <Badge
+                      variant="destructive"
+                      className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                    >
+                      {unreadNotifications}
+                    </Badge>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <ComplianceNotificationDropdown
+                notifications={state.notifications}
+                onMarkRead={handleMarkNotificationRead}
+                onMarkAllRead={markAllNotificationsRead}
+              />
+            </DropdownMenu>
 
-            {/* Settings (for admin roles) */}
-            {(state.userRole === 'SA' || state.userRole === 'AD') && (
-              <Button
-                variant="outline"
-                size="sm"
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-            )}
+            {/* Settings */}
+            <DropdownMenu
+              open={state.dropdowns.settingsOpen}
+              onOpenChange={(open) => {
+                if (open) {
+                  dispatch({ type: 'TOGGLE_SETTINGS_DROPDOWN' });
+                } else {
+                  dispatch({ type: 'CLOSE_ALL_DROPDOWNS' });
+                }
+              }}
+            >
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <ComplianceSettingsDropdown
+                userRole={state.userRole}
+                onNavigate={handleNavigateToSettings}
+              />
+            </DropdownMenu>
           </div>
         </div>
 
