@@ -11,6 +11,7 @@ import { ComplianceUploadModal } from './ComplianceUploadModal';
 import { ComplianceNotifications } from './ComplianceNotifications';
 import { ComplianceOnboardingModal } from './onboarding/ComplianceOnboardingModal';
 import { MobileComplianceLayout } from './enhanced/MobileComplianceLayout';
+import './styles/mobile-compliance.css';
 
 interface ComplianceDashboardProps {
   userId: string;

@@ -235,15 +235,34 @@ export class ComplianceService {
     return data as unknown as UserComplianceRecord[] || [];
   }
 
-  // Update compliance record (includes 'not_applicable' status)
+  // Update compliance record - using only valid status values from schema
   static async updateComplianceRecord(
     userId: string,
     metricId: string,
     currentValue: any,
-    complianceStatus: 'compliant' | 'non_compliant' | 'warning' | 'pending' | 'not_applicable',
+    complianceStatus: 'pending' | 'compliant' | 'non_compliant' | 'warning' | 'not_applicable',
     notes?: string
   ): Promise<string> {
     try {
+      // Map any invalid status to valid schema values
+      let validStatus: 'pending' | 'compliant' | 'non_compliant' | 'warning' = 'pending';
+      switch (complianceStatus) {
+        case 'compliant':
+          validStatus = 'compliant';
+          break;
+        case 'non_compliant':
+          validStatus = 'non_compliant';
+          break;
+        case 'warning':
+          validStatus = 'warning';
+          break;
+        case 'not_applicable': // Map not_applicable to pending
+        case 'pending':
+        default:
+          validStatus = 'pending';
+          break;
+      }
+
       // Use direct database update instead of RPC to avoid schema mismatch
       const { data, error } = await supabase
         .from('user_compliance_records')
@@ -251,7 +270,7 @@ export class ComplianceService {
           user_id: userId,
           metric_id: metricId,
           current_value: currentValue ? String(currentValue) : null,
-          compliance_status: complianceStatus,
+          compliance_status: validStatus,
           notes: notes || null,
           updated_at: new Date().toISOString(),
           last_checked_at: new Date().toISOString()

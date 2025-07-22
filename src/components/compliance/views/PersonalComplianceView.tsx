@@ -53,8 +53,15 @@ export function PersonalComplianceView() {
       default:
         return (
           <div className="space-y-6">
-            {/* Overview Layout for Personal Users */}
-            <PersonalComplianceProgress />
+            {/* PHASE 1-4 IMPLEMENTATION: Enhanced Overview with TierRequirementsMatrix */}
+            <TierRequirementsMatrix
+              userRole={state.userRole as 'AP' | 'IC' | 'IP' | 'IT'}
+              currentTier={state.data.tierInfo?.tier || 'basic'}
+              userComplianceRecords={state.data.complianceRecords}
+              onUploadDocument={handleUploadDocument}
+              onTierSwitch={handleTierSwitch}
+              className="mb-6"
+            />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <RequirementsChecklist />
               <ActionItemsPanel />
