@@ -104,7 +104,7 @@ export default function UserComplianceManager() {
       
       for (const [role, roleUsers] of Object.entries(roleGroups)) {
         // Get compliance records for all users in this role
-        const userIds = roleUsers.map(u => u.user_id);
+        const userIds = (roleUsers as UserSummary[]).map(u => u.user_id);
         const { data: records } = await supabase
           .from('user_compliance_records')
           .select(`
@@ -122,17 +122,18 @@ export default function UserComplianceManager() {
         const basicTierCompliance = basicRecords.length > 0 ? Math.round((basicCompliant / basicRecords.length) * 100) : 0;
         const robustTierCompliance = robustRecords.length > 0 ? Math.round((robustCompliant / robustRecords.length) * 100) : 0;
         
+        const roleUsersTyped = roleUsers as UserSummary[];
         const overallCompliance = Math.round(
-          roleUsers.reduce((sum, user) => sum + (user.compliance_score || 0), 0) / roleUsers.length
+          roleUsersTyped.reduce((sum, user) => sum + (user.compliance_score || 0), 0) / roleUsersTyped.length
         );
 
         roleCompliance.push({
           role,
-          totalUsers: roleUsers.length,
+          totalUsers: roleUsersTyped.length,
           basicTierCompliance,
           robustTierCompliance,
           overallCompliance,
-          users: roleUsers
+          users: roleUsersTyped
         });
       }
 
@@ -500,46 +501,125 @@ export default function UserComplianceManager() {
       {selectedUser && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-                          disabled={record.status === 'approved'}
-                          className="bg-green-50 text-green-700 hover:bg-green-100"
-                        >
-                          Approve
-                        </Button>
+            <h2 className="text-xl font-semibold">{selectedUser.display_name} - Compliance Management</h2>
+            <Button variant="outline" onClick={() => setSelectedUser(null)}>
+              ← Back to {selectedRole} Users
+            </Button>
+          </div>
 
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => updateRecordStatus(record.id, 'rejected')}
-                          disabled={record.status === 'rejected'}
-                          className="bg-red-50 text-red-700 hover:bg-red-100"
-                        >
-                          Reject
-                        </Button>
+          <div className="space-y-4">
+            {complianceRecords.map((record) => (
+              <Card key={record.id}>
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium">{record.requirement_name}</div>
+                        <Badge className={getTierColor(record.tier_level)}>
+                          {record.tier_level}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {record.category}
+                        </Badge>
                       </div>
-
-                      {record.review_notes && (
-                        <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
-                          <strong>Notes:</strong> {record.review_notes}
+                      {record.requirement_description && (
+                        <div className="text-sm text-gray-600 mt-1">
+                          {record.requirement_description}
                         </div>
                       )}
                     </div>
-                  ))}
+                    <div className="flex items-center gap-2">
+                      {getStatusIcon(record.status)}
+                      <Badge className={getStatusColor(record.status)}>
+                        {record.status}
+                      </Badge>
+                    </div>
+                  </div>
 
-                  {complianceRecords.length === 0 && (
-                    <div className="text-center text-gray-500 py-8">
-                      No compliance records found for this user
+                  {/* Show uploaded documents */}
+                  {record.uploaded_documents && record.uploaded_documents.length > 0 && (
+                    <div className="mb-3 p-2 bg-green-50 rounded">
+                      <div className="text-sm font-medium mb-2 text-green-800">Uploaded Documents:</div>
+                      {record.uploaded_documents.map((doc: ComplianceDocument) => (
+                        <div key={doc.id} className="flex items-center justify-between bg-white p-2 rounded mb-1">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-green-600" />
+                            <span className="text-sm font-medium">{doc.file_name}</span>
+                            <Badge className={getStatusColor(doc.verification_status)}>
+                              {doc.verification_status}
+                            </Badge>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => downloadDocument(doc.file_path, doc.file_name)}
+                          >
+                            <Download className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
                     </div>
                   )}
-                </div>
-              </div>
-            ) : (
+
+                  <div className="flex gap-2 mt-3">
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload(record.id, file);
+                        }}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={uploadingRecord === record.id}
+                        className="flex items-center gap-1"
+                      >
+                        <Upload className="h-3 w-3" />
+                        {uploadingRecord === record.id ? 'Uploading...' : 'Upload Document'}
+                      </Button>
+                    </label>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateRecordStatus(record.id, 'approved')}
+                      disabled={record.status === 'approved'}
+                      className="bg-green-50 text-green-700 hover:bg-green-100"
+                    >
+                      Approve
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateRecordStatus(record.id, 'rejected')}
+                      disabled={record.status === 'rejected'}
+                      className="bg-red-50 text-red-700 hover:bg-red-100"
+                    >
+                      Reject
+                    </Button>
+                  </div>
+
+                  {record.review_notes && (
+                    <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
+                      <strong>Notes:</strong> {record.review_notes}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+
+            {complianceRecords.length === 0 && (
               <div className="text-center text-gray-500 py-8">
-                Select a user from the list to view their compliance details
+                No compliance records found for this user
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
