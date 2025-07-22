@@ -196,55 +196,67 @@ export default function UserComplianceManager() {
     setUploadingRecord(recordId);
     
     try {
-      // Upload file to Supabase storage
-      const fileName = `${Date.now()}_${file.name}`;
+      const currentRecord = complianceRecords.find(r => r.id === recordId);
+      if (!currentRecord || !selectedUser) {
+        throw new Error('Missing record or user data');
+      }
+
+      // Upload file to Supabase storage with proper naming
+      const fileName = `compliance_${selectedUser.user_id}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('compliance-documents')
         .upload(fileName, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw new Error('File upload failed');
+      }
 
-      // Create compliance document record
+      // Upsert document record (insert or update if exists)
       const { data: docData, error: docError } = await supabase
         .from('compliance_documents')
-        .insert({
-          user_id: selectedUser?.user_id,
-          metric_id: complianceRecords.find(r => r.id === recordId)?.metric_id,
+        .upsert({
+          user_id: selectedUser.user_id,
+          metric_id: currentRecord.metric_id,
           file_name: file.name,
           file_path: uploadData.path,
-          file_type: file.type,
+          file_type: file.type || 'application/octet-stream',
           file_size: file.size,
-          verification_status: 'pending'
+          verification_status: 'pending',
+          upload_date: new Date().toISOString(),
+          is_current: true
+        }, {
+          onConflict: 'user_id,metric_id',
+          ignoreDuplicates: false
         })
         .select()
         .single();
 
-      if (docError) throw docError;
+      if (docError) {
+        console.error('Document upsert error:', docError);
+        throw new Error('Document record creation failed');
+      }
 
-      // Update compliance record with document reference
-      const currentRecord = complianceRecords.find(r => r.id === recordId);
-      const updatedFiles = [...(currentRecord?.evidence_files || []), {
-        id: docData.id,
-        name: file.name,
-        path: uploadData.path,
-        uploaded_at: new Date().toISOString()
-      }];
-
+      // Update compliance record status
       const { error: updateError } = await supabase
         .from('user_compliance_records')
-        .update({ 
-          evidence_files: updatedFiles,
-          status: 'submitted'
+        .update({
+          status: 'submitted',
+          updated_at: new Date().toISOString()
         })
         .eq('id', recordId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Record update error:', updateError);
+        throw new Error('Status update failed');
+      }
 
-      // Refresh records
-      await fetchUserComplianceRecords(selectedUser!.user_id);
+      // Refresh records to show changes
+      await fetchUserComplianceRecords(selectedUser.user_id);
       
     } catch (error) {
-      console.error('Error uploading file:', error);
+      console.error('Upload failed:', error);
+      alert(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setUploadingRecord(null);
     }

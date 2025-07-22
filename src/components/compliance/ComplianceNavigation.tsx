@@ -21,53 +21,18 @@ interface NavItem {
 }
 
 const navigationItems: NavItem[] = [
+  // SA/AD Admin tabs ONLY
   {
     id: 'overview',
     label: 'Overview',
     icon: BarChart3,
-    roles: ['SA', 'AD', 'AP', 'IC', 'IP', 'IT']
-  },
-  {
-    id: 'my-compliance',
-    label: 'My Compliance',
-    icon: User,
-    roles: ['IC', 'IP', 'IT']
+    roles: ['SA', 'AD']
   },
   {
     id: 'requirements',
     label: 'Requirements',
     icon: FileText,
-    roles: ['SA', 'AD', 'IC', 'IP', 'IT']
-  },
-  {
-    id: 'upload',
-    label: 'Upload Documents',
-    icon: Upload,
-    roles: ['IC', 'IP', 'IT']
-  },
-  {
-    id: 'actions',
-    label: 'Action Items',
-    icon: AlertTriangle,
-    roles: ['IC', 'IP', 'IT']
-  },
-  {
-    id: 'team-overview',
-    label: 'Team Overview',
-    icon: Users,
-    roles: ['AP']
-  },
-  {
-    id: 'team-members',
-    label: 'Team Members',
-    icon: Users,
-    roles: ['AP']
-  },
-  {
-    id: 'team-documents',
-    label: 'Documents',
-    icon: FileText,
-    roles: ['AP']
+    roles: ['SA', 'AD']
   },
   {
     id: 'verification',
@@ -92,6 +57,58 @@ const navigationItems: NavItem[] = [
     label: 'System Settings',
     icon: Settings,
     roles: ['SA', 'AD']
+  },
+  
+  // AP Team tabs
+  {
+    id: 'overview',
+    label: 'Team Overview',
+    icon: BarChart3,
+    roles: ['AP']
+  },
+  {
+    id: 'team-members',
+    label: 'Team Members',
+    icon: Users,
+    roles: ['AP']
+  },
+  {
+    id: 'team-documents',
+    label: 'Documents',
+    icon: FileText,
+    roles: ['AP']
+  },
+  
+  // Personal user tabs
+  {
+    id: 'overview',
+    label: 'Overview',
+    icon: BarChart3,
+    roles: ['IC', 'IP', 'IT']
+  },
+  {
+    id: 'my-compliance',
+    label: 'My Compliance',
+    icon: User,
+    roles: ['IC', 'IP', 'IT']
+  },
+  {
+    id: 'requirements',
+    label: 'Requirements',
+    icon: FileText,
+    roles: ['IC', 'IP', 'IT']
+  },
+  {
+    id: 'upload',
+    label: 'Upload Documents',
+    icon: Upload,
+    roles: ['IC', 'IP', 'IT']
+  },
+  {
+    id: 'actions',
+    label: 'Action Items',
+    icon: AlertTriangle,
+    roles: ['IC', 'IP', 'IT']
   }
 ];
 

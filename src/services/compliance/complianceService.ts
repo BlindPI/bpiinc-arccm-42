@@ -591,7 +591,7 @@ export class ComplianceService {
     try {
       // First upload file to Supabase Storage
       const fileExt = file.name.split('.').pop();
-      const fileName = `${userId}/${metricId}/${Date.now()}.${fileExt}`;
+      const fileName = `compliance_${userId}_${metricId}_${Date.now()}.${fileExt}`;
       
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('compliance-documents')
@@ -599,19 +599,29 @@ export class ComplianceService {
 
       if (uploadError) throw uploadError;
 
-      // Then record in database
-      const { data, error } = await supabase.rpc('upload_compliance_document', {
-        p_user_id: userId,
-        p_metric_id: metricId,
-        p_file_name: file.name,
-        p_file_path: uploadData.path,
-        p_file_type: fileExt || 'unknown',
-        p_file_size: file.size,
-        p_expiry_date: expiryDate || null
-      });
+      // Use direct database upsert instead of problematic RPC function
+      const { data, error } = await supabase
+        .from('compliance_documents')
+        .upsert({
+          user_id: userId,
+          metric_id: metricId,
+          file_name: file.name,
+          file_path: uploadData.path,
+          file_type: file.type || 'application/octet-stream',
+          file_size: file.size,
+          upload_date: new Date().toISOString(),
+          expiry_date: expiryDate || null,
+          verification_status: 'pending',
+          is_current: true
+        }, {
+          onConflict: 'user_id,metric_id',
+          ignoreDuplicates: false
+        })
+        .select('id')
+        .single();
 
       if (error) throw error;
-      return data;
+      return data?.id || 'uploaded';
     } catch (error) {
       console.error('Error uploading compliance document:', error);
       throw error;
