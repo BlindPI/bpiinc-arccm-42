@@ -165,7 +165,7 @@ export const SimpleDashboard: React.FC<SimpleDashboardProps> = ({ userId }) => {
 
       {/* TEAM MEMBERS MODAL */}
       <Dialog open={teamModalOpen} onOpenChange={setTeamModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
@@ -176,12 +176,41 @@ export const SimpleDashboard: React.FC<SimpleDashboardProps> = ({ userId }) => {
             {modalLoading ? (
               <div className="text-center py-4">Loading team members...</div>
             ) : teamMembers.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-4">
                 {teamMembers.map(member => (
-                  <div key={member.user_id} className="p-3 border rounded-lg">
-                    <div className="font-medium">{member.display_name}</div>
-                    <div className="text-sm text-gray-600">{member.email}</div>
-                    <Badge variant="outline" className="mt-1">{member.role}</Badge>
+                  <div key={member.user_id} className="p-4 border rounded-lg bg-gray-50">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <div className="font-medium text-lg">{member.display_name}</div>
+                        <div className="text-sm text-gray-600">{member.email}</div>
+                        {member.phone && (
+                          <div className="text-sm text-gray-600">{member.phone}</div>
+                        )}
+                        {member.job_title && (
+                          <div className="text-sm text-gray-500">{member.job_title}</div>
+                        )}
+                        <div className="flex gap-2 mt-2">
+                          <Badge variant="outline">{member.team_role}</Badge>
+                          {member.team_position && (
+                            <Badge variant="secondary">{member.team_position}</Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-gray-600 mb-2">Roster Submissions</div>
+                        <div className="text-xl font-bold text-blue-600">{member.roster_submissions}</div>
+                        {member.recent_rosters && member.recent_rosters.length > 0 && (
+                          <div className="mt-2">
+                            <div className="text-xs text-gray-500 mb-1">Recent:</div>
+                            {member.recent_rosters.map((roster: any) => (
+                              <div key={roster.id} className="text-xs text-gray-600 truncate">
+                                • {roster.name} ({roster.certificate_count} certs)
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

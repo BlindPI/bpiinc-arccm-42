@@ -75,16 +75,7 @@ export function SimpleRoleRouter() {
 
   if (useSimpleDashboard && ['AP', 'IC', 'IP', 'IT'].includes(userRole)) {
     console.log('🎯 ROUTING: Using Simple Dashboard Solution for role:', userRole);
-    return <div className="space-y-6">
-        <SuccessBanner />
-        <Alert className="bg-purple-50 border-purple-200">
-          <Shield className="h-4 w-4 text-purple-600" />
-          <AlertDescription className="text-purple-800">
-            <strong>Simple Dashboard Solution</strong> - Unified role-based dashboard using direct database queries
-          </AlertDescription>
-        </Alert>
-        <SimpleDashboard userId={user.id} />
-      </div>;
+    return <SimpleDashboard userId={user.id} />;
   }
 
   // Fallback to existing dashboards for backward compatibility

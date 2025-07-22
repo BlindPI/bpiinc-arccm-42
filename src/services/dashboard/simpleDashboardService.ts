@@ -210,14 +210,14 @@ export class SimpleDashboardService {
   }
 
   /**
-   * Get team members for a specific team
+   * Get team members and their roster submissions
    */
   static async getTeamMembers(teamId: string) {
     try {
       // Get team member user IDs
       const { data: teamMembers, error: teamError } = await supabase
         .from('team_members')
-        .select('user_id, role')
+        .select('user_id, role, team_position')
         .eq('team_id', teamId)
         .eq('status', 'active');
 
@@ -233,21 +233,48 @@ export class SimpleDashboardService {
       const userIds = teamMembers.map(tm => tm.user_id);
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
-        .select('id, display_name, email')
+        .select('id, display_name, email, phone, job_title')
         .in('id', userIds);
 
       if (profileError) {
         throw new Error(`Failed to get member profiles: ${profileError.message}`);
       }
 
-      // Join the data
+      // Get roster submissions created by these team members
+      const { data: rosters, error: rosterError } = await supabase
+        .from('rosters')
+        .select('id, name, created_by, created_at, status, certificate_count, course_id')
+        .in('created_by', userIds)
+        .order('created_at', { ascending: false });
+
+      if (rosterError) {
+        console.warn('Failed to get roster submissions:', rosterError.message);
+      }
+
+      // Group rosters by user
+      const rostersByUser = (rosters || []).reduce((acc, roster) => {
+        if (!acc[roster.created_by]) {
+          acc[roster.created_by] = [];
+        }
+        acc[roster.created_by].push(roster);
+        return acc;
+      }, {} as Record<string, any[]>);
+
+      // Join all data
       return teamMembers.map(member => {
         const profile = profiles?.find(p => p.id === member.user_id);
+        const userRosters = rostersByUser[member.user_id] || [];
+        
         return {
           user_id: member.user_id,
           display_name: profile?.display_name || 'Unknown',
           email: profile?.email || '',
-          role: member.role
+          phone: profile?.phone || '',
+          job_title: profile?.job_title || '',
+          team_role: member.role,
+          team_position: member.team_position || '',
+          roster_submissions: userRosters.length,
+          recent_rosters: userRosters.slice(0, 3) // Show last 3 rosters
         };
       });
     } catch (error) {
