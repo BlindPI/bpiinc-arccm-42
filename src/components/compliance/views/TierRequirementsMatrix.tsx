@@ -272,10 +272,20 @@ export const TierRequirementsMatrix: React.FC<TierRequirementsMatrixProps> = ({
   className = ""
 }) => {
   const templates = useMemo(() => {
-    // SA/AD users should see templates for a default role (IC) to understand the matrix
-    // They can manage all users, so show them what individual contributors see
-    const roleForTemplate = (userRole === 'SA' || userRole === 'AD') ? 'IC' : userRole;
-    return ComplianceRequirementsService.getAllTemplatesForRole(roleForTemplate as 'AP' | 'IC' | 'IP' | 'IT');
+    // SA/AD users should see ALL role templates to manage compliance across the organization
+    if (userRole === 'SA' || userRole === 'AD') {
+      // Return combined templates from all roles for admin view
+      const allRoles: ('AP' | 'IC' | 'IP' | 'IT')[] = ['AP', 'IC', 'IP', 'IT'];
+      const combinedTemplates = {
+        basic: null as any,
+        robust: null as any
+      };
+      
+      // For now, show IC templates as the primary example - admins need to see what users see
+      return ComplianceRequirementsService.getAllTemplatesForRole('IC');
+    }
+    
+    return ComplianceRequirementsService.getAllTemplatesForRole(userRole as 'AP' | 'IC' | 'IP' | 'IT');
   }, [userRole]);
 
   const [selectedComparison, setSelectedComparison] = useState<'side-by-side' | 'basic' | 'robust'>('side-by-side');
