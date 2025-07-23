@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Upload, Search, User, FileText, CheckCircle, XCircle, Clock, AlertTriangle, Eye, Download, Users, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface RoleComplianceData {
   role: string;
@@ -61,6 +62,7 @@ interface UserComplianceRecord {
 }
 
 export default function UserComplianceManager() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [roleData, setRoleData] = useState<RoleComplianceData[]>([]);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
@@ -82,17 +84,41 @@ export default function UserComplianceManager() {
 
   const fetchUsersAndRoleData = async () => {
     try {
-      const { data: users, error } = await supabase
+      console.log('🪲 UserComplianceManager: Fetching users and role data...');
+      console.log('🪲 UserComplianceManager: Current user ID:', currentUser?.id);
+      
+      const { data: allUsers, error } = await supabase
         .from('compliance_dashboard_summary')
         .select('*')
         .order('role', { ascending: true });
 
       if (error) throw error;
       
-      setUsers(users || []);
+      console.log('🪲 UserComplianceManager: Raw users data:', allUsers);
+      console.log('🪲 UserComplianceManager: Found users with SA role:', allUsers?.filter(u => u.role === 'SA'));
       
-      // Group users by role and calculate compliance data
-      const roleGroups = (users || []).reduce((acc: { [key: string]: UserSummary[] }, user) => {
+      // CRITICAL FIX: Filter out SA/AD admin users and current user to prevent personal data leaks
+      const filteredUsers = (allUsers || []).filter(user => {
+        // Exclude SA and AD role users entirely
+        if (user.role === 'SA' || user.role === 'AD') {
+          console.log('🚫 Filtering out admin user:', user.display_name, 'Role:', user.role);
+          return false;
+        }
+        
+        // Exclude current user regardless of role to prevent personal compliance data viewing
+        if (user.user_id === currentUser?.id) {
+          console.log('🚫 Filtering out current user:', user.display_name);
+          return false;
+        }
+        
+        return true;
+      });
+      
+      console.log('🪲 UserComplianceManager: Filtered users (admin-view only):', filteredUsers.length, 'of', allUsers?.length, 'total');
+      setUsers(filteredUsers);
+      
+      // Group filtered users by role and calculate compliance data
+      const roleGroups = filteredUsers.reduce((acc: { [key: string]: UserSummary[] }, user) => {
         const role = user.role || 'Unknown';
         if (!acc[role]) acc[role] = [];
         acc[role].push(user);
@@ -366,6 +392,9 @@ export default function UserComplianceManager() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-64"
           />
+          <Badge variant="outline" className="text-xs">
+            Admin View - {users.length} users
+          </Badge>
         </div>
       </div>
 

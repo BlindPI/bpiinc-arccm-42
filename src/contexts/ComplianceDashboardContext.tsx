@@ -227,9 +227,42 @@ function complianceDashboardReducer(
       };
     
     case 'SET_VIEW':
+      // CRITICAL DEBUG: Track view changes to catch automatic switching
+      console.log('🪲 DEBUG: SET_VIEW triggered');
+      console.log('🪲 Current activeTab:', state.view.activeTab);
+      console.log('🪲 New payload:', action.payload);
+      console.log('🪲 User role:', state.userRole);
+      console.log('🪲 Stack trace:', new Error().stack);
+      
+      // CRITICAL FIX: Prevent SA/AD admin users from being switched to personal compliance views
+      const newPayload = { ...action.payload };
+      
+      if ((state.userRole === 'SA' || state.userRole === 'AD') && action.payload.activeTab) {
+        const forbiddenTabs = [
+          'my-compliance',
+          'requirements',
+          'upload',
+          'personal',
+          'overview' // Personal overview that shows personal compliance data
+        ];
+        
+        if (forbiddenTabs.includes(action.payload.activeTab)) {
+          console.log('🚫 BLOCKED: SA/AD user attempted to switch to forbidden tab:', action.payload.activeTab);
+          console.log('🚫 Keeping current tab:', state.view.activeTab);
+          
+          // Remove the activeTab change but allow other view changes
+          delete newPayload.activeTab;
+          
+          // If no other changes, return state unchanged
+          if (Object.keys(newPayload).length === 0) {
+            return state;
+          }
+        }
+      }
+      
       return {
         ...state,
-        view: { ...state.view, ...action.payload }
+        view: { ...state.view, ...newPayload }
       };
     
     case 'OPEN_UPLOAD_MODAL':
@@ -327,12 +360,21 @@ export function ComplianceDashboardProvider({
   // Initialize state with proper role to prevent race condition
   // CRITICAL FIX: Use a static initialization that doesn't change on re-renders
   const [initializedState] = React.useState(() => {
+    // CRITICAL FIX: Set appropriate default tab for SA/AD users
+    const defaultTab = (stableProps.userRole === 'SA' || stableProps.userRole === 'AD')
+      ? 'verification'  // Admin tab for compliance document verification
+      : 'overview';     // Personal overview for other users
+    
     return {
       ...initialState,
       userId: stableProps.userId,
       userRole: stableProps.userRole,
       displayName: stableProps.displayName,
-      loading: true // Start with loading true until data loads
+      loading: true, // Start with loading true until data loads
+      view: {
+        ...initialState.view,
+        activeTab: defaultTab
+      }
     };
   });
   
