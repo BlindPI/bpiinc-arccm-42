@@ -1,6 +1,7 @@
 import React from 'react';
-import { ComplianceTierDashboard } from '../ComplianceTierDashboard';
+import UserComplianceManager from './UserComplianceManager';
 
 export function AdminComplianceOverview() {
-  return <ComplianceTierDashboard />;
+  // Show the admin role management view instead of personal compliance dashboard
+  return <UserComplianceManager />;
 }

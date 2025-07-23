@@ -411,48 +411,55 @@ export default function UserComplianceManager() {
 
       {!selectedRole && !selectedUser && (
         <div className="space-y-6">
-          {/* Role Overview Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Role Overview Cards - Responsive Grid: Full-width on desktop, stacked on mobile */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 lg:gap-6">
             {roleData.map((role) => (
-              <Card 
-                key={role.role} 
-                className="cursor-pointer hover:shadow-lg transition-shadow"
+              <Card
+                key={role.role}
+                className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02] border-l-4 border-l-blue-500"
                 onClick={() => setSelectedRole(role.role)}
               >
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    {role.role} Role
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center justify-between text-base">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-blue-600" />
+                      <span className="font-semibold">{role.role}</span>
+                    </div>
+                    <Badge variant="secondary" className="text-xs px-2 py-1">
+                      {role.totalUsers} users
+                    </Badge>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-blue-600">{role.overallCompliance}%</div>
-                      <div className="text-sm text-gray-500">Overall Compliance</div>
-                      <div className="text-xs text-gray-400">{role.totalUsers} users</div>
+                <CardContent className="pt-0">
+                  <div className="space-y-3">
+                    {/* Prominent Overall Compliance Percentage */}
+                    <div className="text-center bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3">
+                      <div className="text-2xl font-bold text-blue-700">{role.overallCompliance}%</div>
+                      <div className="text-xs font-medium text-blue-600 uppercase tracking-wide">Overall Compliance</div>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="bg-blue-50 p-2 rounded text-center">
-                        <Badge className={getTierColor('basic')} variant="outline">Basic Tier</Badge>
-                        <div className="font-bold text-blue-600 mt-1">{role.basicTierCompliance}%</div>
+                    {/* Tier Breakdown - More Compact */}
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-blue-50 p-2 rounded-md text-center border border-blue-200">
+                        <div className="text-blue-800 font-medium">Basic</div>
+                        <div className="text-lg font-bold text-blue-700">{role.basicTierCompliance}%</div>
                       </div>
-                      <div className="bg-purple-50 p-2 rounded text-center">
-                        <Badge className={getTierColor('robust')} variant="outline">Robust Tier</Badge>
-                        <div className="font-bold text-purple-600 mt-1">{role.robustTierCompliance}%</div>
+                      <div className="bg-purple-50 p-2 rounded-md text-center border border-purple-200">
+                        <div className="text-purple-800 font-medium">Robust</div>
+                        <div className="text-lg font-bold text-purple-700">{role.robustTierCompliance}%</div>
                       </div>
                     </div>
 
-                    <Button 
-                      variant="outline" 
-                      className="w-full"
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs h-8 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300"
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedRole(role.role);
                       }}
                     >
-                      View {role.role} Users
+                      Manage {role.role} Users →
                     </Button>
                   </div>
                 </CardContent>
@@ -504,45 +511,63 @@ export default function UserComplianceManager() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+          {/* User Cards - Responsive Grid: More cards per row on wide screens */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
             {roleData.find(r => r.role === selectedRole)?.users.map((user) => (
-              <Card 
-                key={user.user_id} 
-                className="cursor-pointer hover:shadow-md transition-shadow"
+              <Card
+                key={user.user_id}
+                className="cursor-pointer hover:shadow-md transition-all duration-200 hover:scale-[1.02] border-l-4 border-l-indigo-500"
                 onClick={() => setSelectedUser(user)}
               >
                 <CardContent className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <div className="font-medium">{user.display_name}</div>
-                      <div className="text-sm text-gray-500">{user.email}</div>
-                      <Badge className={getTierColor(user.compliance_tier)}>
-                        Tier {user.compliance_tier}
+                  <div className="space-y-3">
+                    {/* User Info Header */}
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm truncate">{user.display_name}</div>
+                        <div className="text-xs text-gray-500 truncate">{user.email}</div>
+                      </div>
+                      <Badge className={`${getTierColor(user.compliance_tier)} text-xs ml-2 flex-shrink-0`}>
+                        {user.compliance_tier}
                       </Badge>
                     </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-blue-600">
+                    
+                    {/* Prominent Compliance Score */}
+                    <div className="text-center bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-2">
+                      <div className="text-xl font-bold text-indigo-700">
                         {user.compliance_score || 0}%
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {user.compliant_count || 0} / {user.total_requirements || 0}
+                      <div className="text-xs text-indigo-600">
+                        {user.compliant_count || 0} / {user.total_requirements || 0} complete
                       </div>
                     </div>
-                  </div>
-                  {(user.overdue_count > 0 || user.non_compliant_count > 0) && (
-                    <div className="flex gap-1 mt-2">
-                      {user.overdue_count > 0 && (
-                        <Badge variant="destructive" className="text-xs">
-                          {user.overdue_count} overdue
-                        </Badge>
-                      )}
-                      {user.non_compliant_count > 0 && (
-                        <Badge variant="outline" className="text-xs border-orange-300 text-orange-700">
-                          {user.non_compliant_count} issues
-                        </Badge>
-                      )}
+                    
+                    {/* Status Indicators */}
+                    {(user.overdue_count > 0 || user.non_compliant_count > 0 || user.pending_count > 0) && (
+                      <div className="flex flex-wrap gap-1">
+                        {user.overdue_count > 0 && (
+                          <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
+                            {user.overdue_count} overdue
+                          </Badge>
+                        )}
+                        {user.non_compliant_count > 0 && (
+                          <Badge variant="outline" className="text-xs px-1.5 py-0.5 border-orange-300 text-orange-700">
+                            {user.non_compliant_count} issues
+                          </Badge>
+                        )}
+                        {user.pending_count > 0 && (
+                          <Badge variant="outline" className="text-xs px-1.5 py-0.5 border-yellow-300 text-yellow-700">
+                            {user.pending_count} pending
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Quick Action Hint */}
+                    <div className="text-xs text-gray-400 text-center">
+                      Click to manage compliance →
                     </div>
-                  )}
+                  </div>
                 </CardContent>
               </Card>
             ))}

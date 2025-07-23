@@ -46,19 +46,18 @@ export function AdminComplianceView() {
             {/* Admin Overview - NO PERSONAL COMPLIANCE DATA */}
             <AdminComplianceOverview />
             
-            {/* Quick Access to Key Admin Functions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white rounded-lg border p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Document Verification Queue</h3>
-                <p className="text-gray-600 text-sm mb-4">Review and approve pending compliance documents</p>
-                <AdminDocumentVerification />
-              </div>
-              
-              <div className="bg-white rounded-lg border p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">User Compliance Management</h3>
-                <p className="text-gray-600 text-sm mb-4">Manage individual user compliance records</p>
-                <UserComplianceManager />
-              </div>
+            {/* Document Verification Queue - Compact Section */}
+            <div className="bg-white rounded-lg border p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Document Verification Queue</h3>
+              <p className="text-gray-600 text-sm mb-4">Review and approve pending compliance documents</p>
+              <AdminDocumentVerification />
+            </div>
+            
+            {/* User Compliance Management - Full Width */}
+            <div className="bg-white rounded-lg border p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">User Compliance Management</h3>
+              <p className="text-gray-600 text-sm mb-4">Manage individual user compliance records by role with full-width dashboard</p>
+              <UserComplianceManager />
             </div>
           </div>
         );
