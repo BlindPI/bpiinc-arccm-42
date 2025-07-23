@@ -104,6 +104,32 @@ export default function UserComplianceManager() {
       console.log('🪲 UserComplianceManager: Raw users data:', allUsers);
       console.log('🪲 UserComplianceManager: Found users with SA role:', allUsers?.filter(u => u.role === 'SA'));
       
+      // 🪲 DIAGNOSTIC: Check for 23% compliance scores
+      const usersWithIssues = allUsers?.filter(user => user.compliance_score === 23);
+      if (usersWithIssues && usersWithIssues.length > 0) {
+        console.log('🚨 FOUND USERS WITH 23% COMPLIANCE:', usersWithIssues);
+        usersWithIssues.forEach(user => {
+          console.log('🚨 User Details:', {
+            display_name: user.display_name,
+            compliance_score: user.compliance_score,
+            total_requirements: user.total_requirements,
+            compliant_count: user.compliant_count,
+            non_compliant_count: user.non_compliant_count,
+            pending_count: user.pending_count,
+            warning_count: user.warning_count,
+            overdue_count: user.overdue_count
+          });
+        });
+      }
+      
+      // 🪲 DIAGNOSTIC: Check all users with compliance_score > 0 but compliant_count = 0
+      const suspiciousUsers = allUsers?.filter(user =>
+        user.compliance_score > 0 && user.compliant_count === 0
+      );
+      if (suspiciousUsers && suspiciousUsers.length > 0) {
+        console.log('🚨 SUSPICIOUS: Users with compliance_score > 0 but compliant_count = 0:', suspiciousUsers);
+      }
+      
       // CRITICAL FIX: Show ALL roles including SA/AD but handle them differently
       const filteredUsers = (allUsers || []).filter(user => {
         // Exclude current user to prevent personal compliance data viewing
@@ -167,11 +193,55 @@ export default function UserComplianceManager() {
         const basicTierCompliance = basicRecords.length > 0 ? Math.round((basicCompliant / basicRecords.length) * 100) : 0;
         const robustTierCompliance = robustRecords.length > 0 ? Math.round((robustCompliant / robustRecords.length) * 100) : 0;
         
-        // Calculate overall compliance, handling cases where compliance_score might be null
+        // 🪲 DIAGNOSTIC: Calculate overall compliance with detailed logging
         const validScores = roleUsersTyped.filter(user => user.compliance_score != null).map(user => user.compliance_score);
+        
+        console.log(`🪲 Role ${role} compliance calculation:`, {
+          totalUsers: roleUsersTyped.length,
+          validScores,
+          basicRecords: basicRecords.length,
+          robustRecords: robustRecords.length,
+          basicCompliant,
+          robustCompliant,
+          basicTierCompliance,
+          robustTierCompliance
+        });
+        
+        // 🪲 EDGE CASE TESTING: Test the fix for zero compliance
         const overallCompliance = validScores.length > 0
           ? Math.round(validScores.reduce((sum, score) => sum + score, 0) / validScores.length)
           : 0;
+          
+        // 🪲 TESTING: Check for various problematic scores
+        if (overallCompliance > 0 && roleUsersTyped.every(user => user.compliant_count === 0)) {
+          console.log('🚨 POTENTIAL BUG: Non-zero compliance with zero compliant items:', {
+            role,
+            overallCompliance,
+            validScores,
+            allUsersWithZeroCompliance: roleUsersTyped.map(u => ({
+              name: u.display_name,
+              score: u.compliance_score,
+              compliant: u.compliant_count,
+              total: u.total_requirements
+            }))
+          });
+        }
+        
+        // 🪲 TESTING: Verify the fix worked (no more 23%)
+        if (overallCompliance === 23 || validScores.includes(23)) {
+          console.log('🚨 OLD BUG STILL EXISTS - 23% CALCULATION:', {
+            role,
+            overallCompliance,
+            validScores,
+            calculation: `(${validScores.join(' + ')}) / ${validScores.length} = ${validScores.reduce((sum, score) => sum + score, 0) / validScores.length}`
+          });
+        } else if (overallCompliance === 0 && validScores.every(score => score === 0)) {
+          console.log('✅ FIX VERIFIED: Zero compliance correctly shows 0%:', {
+            role,
+            overallCompliance,
+            validScores
+          });
+        }
 
         roleCompliance.push({
           role,
@@ -193,6 +263,8 @@ export default function UserComplianceManager() {
 
   const fetchUserComplianceRecords = async (userId: string) => {
     try {
+      console.log('🪲 DIAGNOSTIC: Fetching compliance records for userId:', userId);
+      
       // Get user compliance records with requirements and documents
       const { data: records, error: recordsError } = await supabase
         .from('user_compliance_records')
@@ -212,6 +284,26 @@ export default function UserComplianceManager() {
         .order('due_date', { ascending: true });
 
       if (recordsError) throw recordsError;
+      
+      console.log('🪲 DIAGNOSTIC: Raw compliance records:', records);
+      console.log('🪲 DIAGNOSTIC: Records count:', records?.length || 0);
+      
+      // 🪲 DIAGNOSTIC: Check for users with no records but non-zero compliance scores
+      if (!records || records.length === 0) {
+        console.log('🚨 CRITICAL: User has NO compliance records but may have compliance score from database view');
+        
+        // Test the database function directly
+        const { data: summaryTest, error: summaryError } = await supabase.rpc('get_user_compliance_summary', {
+          p_user_id: userId
+        });
+        
+        if (!summaryError && summaryTest?.[0]) {
+          console.log('🚨 DATABASE FUNCTION RESULT:', summaryTest[0]);
+          if (summaryTest[0].overall_score > 0) {
+            console.log('🚨 CONFIRMED BUG: Database giving', summaryTest[0].overall_score, '% for user with no records!');
+          }
+        }
+      }
 
       // Get documents for each record
       const recordsWithDocs = await Promise.all(
