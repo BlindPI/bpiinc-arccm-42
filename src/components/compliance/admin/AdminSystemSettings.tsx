@@ -96,6 +96,24 @@ export function AdminSystemSettings() {
     }
   };
 
+  // 🔄 NEW: Reactivate deactivated compliance requirements
+  const handleReactivateMetric = async (metricId: string) => {
+    if (!confirm('Are you sure you want to reactivate this compliance requirement?')) return;
+
+    try {
+      const metric = metrics.find(m => m.id === metricId);
+      if (!metric) return;
+
+      await ComplianceService.upsertComplianceMetric({
+        ...metric,
+        is_active: true
+      });
+      await loadMetrics();
+    } catch (error) {
+      console.error('Failed to reactivate metric:', error);
+    }
+  };
+
   const initializeRequirements = async () => {
     try {
       setSaving(true);
@@ -327,13 +345,22 @@ export function AdminSystemSettings() {
                       >
                         Edit
                       </Button>
-                      {metric.is_active && (
+                      {metric.is_active ? (
                         <Button
                           variant="destructive"
                           size="sm"
                           onClick={() => handleDeleteMetric(metric.id)}
                         >
                           Deactivate
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleReactivateMetric(metric.id)}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          Reactivate
                         </Button>
                       )}
                     </div>
