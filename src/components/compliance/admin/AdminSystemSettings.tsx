@@ -5,8 +5,10 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Settings, 
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Settings,
   Save,
   RefreshCw,
   AlertTriangle,
@@ -14,10 +16,14 @@ import {
   FileText,
   Database,
   Shield,
-  Users
+  Users,
+  Download,
+  Plus,
+  Filter
 } from 'lucide-react';
 import { ComplianceService, ComplianceMetric } from '@/services/compliance/complianceService';
 import { ComplianceRequirementsService } from '@/services/compliance/complianceRequirementsService';
+import { supabase } from '@/integrations/supabase/client';
 
 export function AdminSystemSettings() {
   const [metrics, setMetrics] = useState<ComplianceMetric[]>([]);
@@ -26,6 +32,12 @@ export function AdminSystemSettings() {
   const [selectedMetric, setSelectedMetric] = useState<ComplianceMetric | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<ComplianceMetric>>({});
+  
+  // 🎯 NEW: Tier management state
+  const [availableTiers, setAvailableTiers] = useState<string[]>(['basic', 'robust']);
+  const [selectedTier, setSelectedTier] = useState<string>('all');
+  const [isCreatingTier, setIsCreatingTier] = useState(false);
+  const [newTierName, setNewTierName] = useState('');
 
   useEffect(() => {
     loadMetrics();
@@ -34,8 +46,16 @@ export function AdminSystemSettings() {
   const loadMetrics = async () => {
     try {
       setLoading(true);
-      const allMetrics = await ComplianceService.getComplianceMetrics();
-      setMetrics(allMetrics);
+      // 🔧 FIX: Load ALL metrics including deactivated ones (is_active: false)
+      const { data: allMetricsIncludingInactive, error } = await supabase
+        .from('compliance_metrics')
+        .select('*')
+        .order('is_active', { ascending: false }) // Active first, then inactive
+        .order('category', { ascending: true })
+        .order('name', { ascending: true });
+      
+      if (error) throw error;
+      setMetrics(allMetricsIncludingInactive || []);
     } catch (error) {
       console.error('Failed to load metrics:', error);
     } finally {
@@ -57,7 +77,53 @@ export function AdminSystemSettings() {
 
     try {
       setSaving(true);
-      await ComplianceService.upsertComplianceMetric(editForm);
+      
+      // Save the metric
+      const savedMetric = await ComplianceService.upsertComplianceMetric(editForm);
+      
+      // 🔧 FIX: If this is a new metric (no selectedMetric), create compliance records for all existing users
+      if (!selectedMetric && savedMetric.id) {
+        console.log('🔧 Creating compliance records for new metric:', savedMetric.name);
+        
+        // Get all active users
+        const { data: users, error: usersError } = await supabase
+          .from('profiles')
+          .select('id, role')
+          .eq('is_active', true);
+        
+        if (usersError) {
+          console.error('Failed to fetch users:', usersError);
+        } else if (users && users.length > 0) {
+          // Filter users based on required_for_roles
+          const applicableUsers = users.filter(user => {
+            const requiredRoles = savedMetric.required_for_roles || [];
+            return requiredRoles.length === 0 || requiredRoles.includes(user.role);
+          });
+          
+          console.log(`🔧 Creating records for ${applicableUsers.length} applicable users`);
+          
+          // Create compliance records for applicable users
+          const recordPromises = applicableUsers.map(user =>
+            supabase
+              .from('user_compliance_records')
+              .upsert({
+                user_id: user.id,
+                metric_id: savedMetric.id,
+                compliance_status: 'pending',
+                current_value: null,
+                last_checked_at: new Date().toISOString(),
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }, {
+                onConflict: 'user_id,metric_id'
+              })
+          );
+          
+          await Promise.all(recordPromises);
+          console.log('✅ Compliance records created for all applicable users');
+        }
+      }
+      
       await loadMetrics();
       setIsEditing(false);
       setSelectedMetric(null);
