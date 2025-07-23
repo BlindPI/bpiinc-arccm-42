@@ -265,8 +265,78 @@ export default function UserComplianceManager() {
     try {
       console.log('🪲 DIAGNOSTIC: Fetching compliance records for userId:', userId);
       
-      // Get user compliance records with requirements and documents
-      const { data: records, error: recordsError } = await supabase
+      // 🚨 CRITICAL FIX: Get user profile to determine role and tier
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role, compliance_tier')
+        .eq('id', userId)
+        .single();
+      
+      if (profileError) throw profileError;
+      
+      // 🚨 CRITICAL FIX: Get ALL active metrics that apply to this user's role
+      const { data: allActiveMetrics, error: metricsError } = await supabase
+        .from('compliance_metrics')
+        .select('*')
+        .eq('is_active', true);
+      
+      if (metricsError) throw metricsError;
+      
+      // Filter metrics by role and tier
+      const applicableMetrics = (allActiveMetrics || []).filter(metric => {
+        const requiredRoles = metric.required_for_roles || [];
+        const roleMatches = requiredRoles.length === 0 || requiredRoles.includes(userProfile.role);
+        const tierMatches = !metric.applicable_tiers ||
+          metric.applicable_tiers.includes(userProfile.compliance_tier || 'basic');
+        return roleMatches && tierMatches;
+      });
+      
+      console.log('🚨 APPLICABLE METRICS:', {
+        userRole: userProfile.role,
+        userTier: userProfile.compliance_tier,
+        totalActiveMetrics: allActiveMetrics?.length || 0,
+        applicableMetrics: applicableMetrics.length,
+        applicableMetricNames: applicableMetrics.map(m => m.name)
+      });
+      
+      // Get existing user compliance records
+      const { data: existingRecords, error: recordsError } = await supabase
+        .from('user_compliance_records')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (recordsError) throw recordsError;
+      
+      // 🚨 CRITICAL FIX: Create missing records for new metrics
+      const existingMetricIds = new Set((existingRecords || []).map(r => r.metric_id));
+      const missingMetrics = applicableMetrics.filter(metric => !existingMetricIds.has(metric.id));
+      
+      if (missingMetrics.length > 0) {
+        console.log('🚨 CREATING MISSING RECORDS:', missingMetrics.map(m => m.name));
+        
+        const newRecords = missingMetrics.map(metric => ({
+          user_id: userId,
+          metric_id: metric.id,
+          compliance_status: 'pending',
+          current_value: null,
+          last_checked_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }));
+        
+        const { error: insertError } = await supabase
+          .from('user_compliance_records')
+          .insert(newRecords);
+        
+        if (insertError) {
+          console.error('Failed to create missing records:', insertError);
+        } else {
+          console.log('✅ Created', missingMetrics.length, 'missing compliance records');
+        }
+      }
+      
+      // 🚨 CRITICAL FIX: Get updated records with active metrics only
+      const { data: allRecords, error: finalError } = await supabase
         .from('user_compliance_records')
         .select(`
           *,
@@ -277,37 +347,29 @@ export default function UserComplianceManager() {
             measurement_type,
             target_value,
             weight,
-            applicable_tiers
+            applicable_tiers,
+            is_active
           )
         `)
         .eq('user_id', userId)
         .order('due_date', { ascending: true });
 
-      if (recordsError) throw recordsError;
+      if (finalError) throw finalError;
       
-      console.log('🪲 DIAGNOSTIC: Raw compliance records:', records);
-      console.log('🪲 DIAGNOSTIC: Records count:', records?.length || 0);
+      // Filter out records for deactivated metrics
+      const activeRecords = (allRecords || []).filter(record =>
+        record.compliance_metrics?.is_active === true
+      );
       
-      // 🪲 DIAGNOSTIC: Check for users with no records but non-zero compliance scores
-      if (!records || records.length === 0) {
-        console.log('🚨 CRITICAL: User has NO compliance records but may have compliance score from database view');
-        
-        // Test the database function directly
-        const { data: summaryTest, error: summaryError } = await supabase.rpc('get_user_compliance_summary', {
-          p_user_id: userId
-        });
-        
-        if (!summaryError && summaryTest?.[0]) {
-          console.log('🚨 DATABASE FUNCTION RESULT:', summaryTest[0]);
-          if (summaryTest[0].overall_score > 0) {
-            console.log('🚨 CONFIRMED BUG: Database giving', summaryTest[0].overall_score, '% for user with no records!');
-          }
-        }
-      }
+      console.log('🚨 FILTERED RECORDS:', {
+        totalRecords: allRecords?.length || 0,
+        activeRecords: activeRecords.length,
+        filteredOut: (allRecords?.length || 0) - activeRecords.length
+      });
 
-      // Get documents for each record
+      // Get documents for each active record
       const recordsWithDocs = await Promise.all(
-        (records || []).map(async (record) => {
+        activeRecords.map(async (record) => {
           const { data: docs } = await supabase
             .from('compliance_documents')
             .select('id, file_name, upload_date, verification_status, file_path')

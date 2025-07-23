@@ -57,14 +57,28 @@ export function AdminSystemSettings() {
       if (error) throw error;
       setMetrics(allMetricsIncludingInactive || []);
       
-      // 🎯 Extract available tiers from metrics
-      const tiers = new Set<string>();
-      allMetricsIncludingInactive?.forEach(metric => {
-        if (metric.applicable_tiers) {
-          metric.applicable_tiers.split(',').forEach(tier => tiers.add(tier.trim()));
-        }
-      });
-      setAvailableTiers(Array.from(tiers).sort());
+      // 🚨 CRITICAL FIX: Load tiers from compliance_tiers table
+      const { data: tierData, error: tierError } = await supabase
+        .from('compliance_tiers')
+        .select('tier')
+        .order('tier');
+      
+      if (tierError) {
+        console.warn('Failed to load from compliance_tiers table, falling back to metrics:', tierError);
+        // Fallback: Extract available tiers from metrics
+        const tiers = new Set<string>();
+        allMetricsIncludingInactive?.forEach(metric => {
+          if (metric.applicable_tiers) {
+            metric.applicable_tiers.split(',').forEach(tier => tiers.add(tier.trim()));
+          }
+        });
+        setAvailableTiers(Array.from(tiers).sort());
+      } else {
+        // Use tiers from compliance_tiers table
+        const uniqueTiers = Array.from(new Set((tierData || []).map(t => t.tier))).sort();
+        setAvailableTiers(uniqueTiers);
+        console.log('✅ Loaded tiers from compliance_tiers table:', uniqueTiers);
+      }
     } catch (error) {
       console.error('Failed to load metrics:', error);
     } finally {
@@ -233,9 +247,49 @@ export function AdminSystemSettings() {
       return;
     }
     
-    setAvailableTiers([...availableTiers, tierName].sort());
-    setNewTierName('');
-    setIsCreatingTier(false);
+    try {
+      setSaving(true);
+      
+      // 🚨 CRITICAL FIX: Create tier in compliance_tiers table for all users
+      const { data: users, error: usersError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('is_active', true);
+      
+      if (usersError) throw usersError;
+      
+      if (users && users.length > 0) {
+        // Create tier records for all users
+        const tierRecords = users.map(user => ({
+          user_id: user.id,
+          tier: tierName,
+          assigned_at: new Date().toISOString(),
+          completed_requirements: 0,
+          total_requirements: 0,
+          completion_percentage: 0,
+          last_updated: new Date().toISOString()
+        }));
+        
+        const { error: insertError } = await supabase
+          .from('compliance_tiers')
+          .insert(tierRecords);
+        
+        if (insertError) {
+          console.error('Failed to create tier records:', insertError);
+        } else {
+          console.log('✅ Created tier for', users.length, 'users');
+        }
+      }
+      
+      setAvailableTiers([...availableTiers, tierName].sort());
+      setNewTierName('');
+      setIsCreatingTier(false);
+    } catch (error) {
+      console.error('Failed to create tier:', error);
+      alert('Failed to create tier: ' + (error as Error).message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const getFilteredMetrics = () => {
