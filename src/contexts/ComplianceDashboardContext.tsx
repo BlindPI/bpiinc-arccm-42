@@ -227,11 +227,6 @@ function complianceDashboardReducer(
       };
     
     case 'SET_VIEW':
-      console.log('🐛 [DEBUG] SET_VIEW action dispatched:', {
-        currentActiveTab: state.view.activeTab,
-        newActiveTab: action.payload.activeTab,
-        payload: action.payload
-      });
       return {
         ...state,
         view: { ...state.view, ...action.payload }
@@ -322,15 +317,21 @@ export function ComplianceDashboardProvider({
   userRole,
   displayName
 }: ComplianceDashboardProviderProps) {
+  // CRITICAL FIX: Memoize props to prevent provider remounts
+  const stableProps = React.useMemo(() => ({
+    userId,
+    userRole: userRole as 'SA' | 'AD' | 'AP' | 'IC' | 'IP' | 'IT',
+    displayName
+  }), [userId, userRole, displayName]);
+
   // Initialize state with proper role to prevent race condition
   // CRITICAL FIX: Use a static initialization that doesn't change on re-renders
   const [initializedState] = React.useState(() => {
-    console.log('🐛 [DEBUG] ComplianceDashboardProvider initializing with:', { userId, userRole, displayName });
     return {
       ...initialState,
-      userId,
-      userRole: userRole as 'SA' | 'AD' | 'AP' | 'IC' | 'IP' | 'IT',
-      displayName,
+      userId: stableProps.userId,
+      userRole: stableProps.userRole,
+      displayName: stableProps.displayName,
       loading: true // Start with loading true until data loads
     };
   });
@@ -339,7 +340,6 @@ export function ComplianceDashboardProvider({
 
   // Initialize user info
   useEffect(() => {
-    console.log('🐛 [DEBUG] SET_USER_INFO useEffect triggered:', { userId, userRole, displayName });
     dispatch({
       type: 'SET_USER_INFO',
       payload: { userId, userRole, displayName }
@@ -349,7 +349,6 @@ export function ComplianceDashboardProvider({
   // Load dashboard data based on role
   const loadDashboardData = useCallback(async () => {
     try {
-      console.log('🐛 [DEBUG] loadDashboardData() starting for role:', userRole, 'activeTab before loading:', state.view.activeTab);
       dispatch({ type: 'SET_LOADING', payload: true });
 
       let commonData: Partial<ComplianceDashboardData> = {};
@@ -425,12 +424,10 @@ export function ComplianceDashboardProvider({
           break;
       }
 
-      console.log('🐛 [DEBUG] About to dispatch SET_COMPLIANCE_DATA, activeTab should remain:', state.view.activeTab);
       dispatch({
         type: 'SET_COMPLIANCE_DATA',
         payload: commonData
       });
-      console.log('🐛 [DEBUG] SET_COMPLIANCE_DATA dispatched, activeTab after dispatch:', state.view.activeTab);
 
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -552,14 +549,13 @@ export function ComplianceDashboardProvider({
 
   // Load data on mount
   useEffect(() => {
-    console.log('🐛 [DEBUG] loadDashboardData useEffect triggered:', { userId, userRole, currentActiveTab: state.view.activeTab });
     if (userId && userRole) {
-      console.log('🐛 [DEBUG] About to call loadDashboardData()');
       loadDashboardData();
     }
   }, [userId, userRole, loadDashboardData]);
 
-  const contextValue: ComplianceDashboardContextType = {
+  // CRITICAL FIX: Memoize context value to prevent unnecessary re-renders
+  const contextValue: ComplianceDashboardContextType = React.useMemo(() => ({
     state,
     dispatch,
     loadDashboardData,
@@ -568,7 +564,7 @@ export function ComplianceDashboardProvider({
     markActionComplete,
     addNotification,
     markAllNotificationsRead
-  };
+  }), [state, dispatch, loadDashboardData, refreshData, uploadDocument, markActionComplete, addNotification, markAllNotificationsRead]);
 
   return (
     <ComplianceDashboardContext.Provider value={contextValue}>
