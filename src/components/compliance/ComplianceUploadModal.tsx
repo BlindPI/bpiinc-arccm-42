@@ -25,10 +25,8 @@ export function ComplianceUploadModal() {
   const [uploading, setUploading] = useState(false);
   const [requiresExpiry, setRequiresExpiry] = useState<boolean>(false);
 
-  // Get available metrics for upload
-  const uploadableMetrics = complianceRecords.filter(record =>
-    record.compliance_metrics?.measurement_type === 'boolean'
-  );
+  // Get available metrics for upload - show all compliance records
+  const uploadableMetrics = complianceRecords || [];
 
   const selectedMetric = uploadableMetrics.find(record => record.metric_id === metricId);
 
@@ -135,13 +133,13 @@ export function ComplianceUploadModal() {
               <option value="">Choose a requirement...</option>
               {uploadableMetrics.map((record) => (
                 <option key={record.metric_id} value={record.metric_id}>
-                  {record.compliance_metrics?.name}
+                  {record.compliance_metrics?.name || `Requirement ${record.metric_id.slice(0, 8)}`}
                 </option>
               ))}
             </select>
             {selectedMetric && (
               <p className="text-sm text-gray-600">
-                {selectedMetric.compliance_metrics?.description}
+                {selectedMetric.compliance_metrics?.description || 'No description available'}
               </p>
             )}
           </div>

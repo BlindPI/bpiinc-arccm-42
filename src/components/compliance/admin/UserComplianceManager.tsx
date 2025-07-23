@@ -152,12 +152,14 @@ export default function UserComplianceManager() {
           .from('user_compliance_records')
           .select(`
             *,
-            compliance_requirements(tier_level)
+            compliance_metrics!metric_id(
+              applicable_tiers
+            )
           `)
           .in('user_id', userIds);
 
-        const basicRecords = (records || []).filter(r => r.compliance_requirements?.tier_level === 'basic');
-        const robustRecords = (records || []).filter(r => r.compliance_requirements?.tier_level === 'robust');
+        const basicRecords = (records || []).filter(r => r.compliance_metrics?.applicable_tiers?.includes('basic'));
+        const robustRecords = (records || []).filter(r => r.compliance_metrics?.applicable_tiers?.includes('robust'));
 
         const basicCompliant = basicRecords.filter(r => r.status === 'compliant' || r.status === 'approved').length;
         const robustCompliant = robustRecords.filter(r => r.status === 'compliant' || r.status === 'approved').length;
@@ -196,12 +198,14 @@ export default function UserComplianceManager() {
         .from('user_compliance_records')
         .select(`
           *,
-          compliance_requirements(
-            name, 
-            description, 
-            tier_level,
+          compliance_metrics!metric_id(
+            name,
+            description,
             category,
-            document_required
+            measurement_type,
+            target_value,
+            weight,
+            applicable_tiers
           )
         `)
         .eq('user_id', userId)
@@ -220,11 +224,11 @@ export default function UserComplianceManager() {
 
           return {
             ...record,
-            requirement_name: record.compliance_requirements?.name || 'Unknown Requirement',
-            requirement_description: record.compliance_requirements?.description || '',
-            tier_level: record.compliance_requirements?.tier_level || 'basic',
-            category: record.compliance_requirements?.category || 'general',
-            document_required: record.compliance_requirements?.document_required || false,
+            requirement_name: record.compliance_metrics?.name || 'Unknown Requirement',
+            requirement_description: record.compliance_metrics?.description || '',
+            tier_level: record.compliance_metrics?.applicable_tiers?.includes('robust') ? 'robust' : 'basic',
+            category: record.compliance_metrics?.category || 'general',
+            document_required: record.compliance_metrics?.measurement_type === 'boolean' || false,
             uploaded_documents: docs || []
           };
         })
