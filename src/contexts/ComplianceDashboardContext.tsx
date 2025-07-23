@@ -318,13 +318,14 @@ export function ComplianceDashboardProvider({
   displayName
 }: ComplianceDashboardProviderProps) {
   // Initialize state with proper role to prevent race condition
-  const initializedState = {
+  // CRITICAL FIX: Use a static initialization that doesn't change on re-renders
+  const [initializedState] = React.useState(() => ({
     ...initialState,
     userId,
     userRole: userRole as 'SA' | 'AD' | 'AP' | 'IC' | 'IP' | 'IT',
     displayName,
     loading: true // Start with loading true until data loads
-  };
+  }));
   
   const [state, dispatch] = useReducer(complianceDashboardReducer, initializedState);
 
