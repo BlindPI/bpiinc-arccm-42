@@ -46,18 +46,27 @@ export function AdminComplianceView() {
             {/* Admin Overview - NO PERSONAL COMPLIANCE DATA */}
             <AdminComplianceOverview />
             
-            {/* Document Verification Queue - Compact Section */}
+            {/* Document Verification Queue - Full Width */}
             <div className="bg-white rounded-lg border p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Document Verification Queue</h3>
               <p className="text-gray-600 text-sm mb-4">Review and approve pending compliance documents</p>
               <AdminDocumentVerification />
             </div>
             
-            {/* User Compliance Management - Full Width */}
-            <div className="bg-white rounded-lg border p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">User Compliance Management</h3>
-              <p className="text-gray-600 text-sm mb-4">Manage individual user compliance records by role with full-width dashboard</p>
-              <UserComplianceManager />
+            {/* Quick Navigation to User Compliance Management */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">User Compliance Management</h3>
+                  <p className="text-gray-600 text-sm">Manage individual user compliance records by role with full-width dashboard</p>
+                </div>
+                <button
+                  onClick={() => window.location.hash = '#user-compliance'}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  Open Compliance Manager →
+                </button>
+              </div>
             </div>
           </div>
         );

@@ -3,6 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Upload, Search, User, FileText, CheckCircle, XCircle, Clock, AlertTriangle, Eye, Download, Users, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -71,6 +74,10 @@ export default function UserComplianceManager() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [uploadingRecord, setUploadingRecord] = useState<string | null>(null);
+  const [showApproveModal, setShowApproveModal] = useState<string | null>(null);
+  const [showRejectModal, setShowRejectModal] = useState<string | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState<string | null>(null);
+  const [actionNotes, setActionNotes] = useState<string>('');
 
   useEffect(() => {
     fetchUsersAndRoleData();
@@ -639,43 +646,36 @@ export default function UserComplianceManager() {
                   )}
 
                   <div className="flex gap-2 mt-3">
-                    <label className="cursor-pointer">
-                      <input
-                        type="file"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleFileUpload(record.id, file);
-                        }}
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={uploadingRecord === record.id}
-                        className="flex items-center gap-1"
-                      >
-                        <Upload className="h-3 w-3" />
-                        {uploadingRecord === record.id ? 'Uploading...' : 'Upload Document'}
-                      </Button>
-                    </label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowUploadModal(record.id)}
+                      disabled={uploadingRecord === record.id}
+                      className="flex items-center gap-1"
+                    >
+                      <Upload className="h-3 w-3" />
+                      {uploadingRecord === record.id ? 'Uploading...' : 'Upload Document'}
+                    </Button>
 
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => updateRecordStatus(record.id, 'approved')}
+                      onClick={() => setShowApproveModal(record.id)}
                       disabled={record.status === 'approved'}
                       className="bg-green-50 text-green-700 hover:bg-green-100"
                     >
+                      <CheckCircle className="h-3 w-3 mr-1" />
                       Approve
                     </Button>
 
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => updateRecordStatus(record.id, 'rejected')}
+                      onClick={() => setShowRejectModal(record.id)}
                       disabled={record.status === 'rejected'}
                       className="bg-red-50 text-red-700 hover:bg-red-100"
                     >
+                      <XCircle className="h-3 w-3 mr-1" />
                       Reject
                     </Button>
                   </div>
@@ -697,6 +697,170 @@ export default function UserComplianceManager() {
           </div>
         </div>
       )}
+
+      {/* Upload Modal */}
+      <Dialog open={!!showUploadModal} onOpenChange={() => setShowUploadModal(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5" />
+              Upload Compliance Document
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {showUploadModal && (
+              <>
+                <div className="p-3 bg-blue-50 rounded border border-blue-200">
+                  <div className="text-sm font-medium text-blue-800">
+                    {complianceRecords.find(r => r.id === showUploadModal)?.requirement_name}
+                  </div>
+                  <div className="text-xs text-blue-600 mt-1">
+                    {complianceRecords.find(r => r.id === showUploadModal)?.requirement_description}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="file-upload">Select Document</Label>
+                  <input
+                    id="file-upload"
+                    type="file"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleFileUpload(showUploadModal, file);
+                        setShowUploadModal(null);
+                      }
+                    }}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUploadModal(null)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Approve Modal */}
+      <Dialog open={!!showApproveModal} onOpenChange={() => setShowApproveModal(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              Approve Compliance Record
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {showApproveModal && (
+              <>
+                <div className="p-3 bg-green-50 rounded border border-green-200">
+                  <div className="text-sm font-medium text-green-800">
+                    {complianceRecords.find(r => r.id === showApproveModal)?.requirement_name}
+                  </div>
+                  <div className="text-xs text-green-600 mt-1">
+                    User: {selectedUser?.display_name}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="approve-notes">Approval Notes (Optional)</Label>
+                  <Textarea
+                    id="approve-notes"
+                    placeholder="Add any notes about this approval..."
+                    value={actionNotes}
+                    onChange={(e) => setActionNotes(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowApproveModal(null);
+              setActionNotes('');
+            }}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={() => {
+                if (showApproveModal) {
+                  updateRecordStatus(showApproveModal, 'approved', actionNotes);
+                  setShowApproveModal(null);
+                  setActionNotes('');
+                }
+              }}
+            >
+              Approve Record
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Modal */}
+      <Dialog open={!!showRejectModal} onOpenChange={() => setShowRejectModal(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <XCircle className="h-5 w-5 text-red-600" />
+              Reject Compliance Record
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {showRejectModal && (
+              <>
+                <div className="p-3 bg-red-50 rounded border border-red-200">
+                  <div className="text-sm font-medium text-red-800">
+                    {complianceRecords.find(r => r.id === showRejectModal)?.requirement_name}
+                  </div>
+                  <div className="text-xs text-red-600 mt-1">
+                    User: {selectedUser?.display_name}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reject-notes">Rejection Reason *</Label>
+                  <Textarea
+                    id="reject-notes"
+                    placeholder="Please provide a reason for rejection..."
+                    value={actionNotes}
+                    onChange={(e) => setActionNotes(e.target.value)}
+                    rows={3}
+                    className={!actionNotes.trim() ? 'border-red-300' : ''}
+                  />
+                  <p className="text-xs text-gray-500">
+                    This reason will be shared with the user.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowRejectModal(null);
+              setActionNotes('');
+            }}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={!actionNotes.trim()}
+              onClick={() => {
+                if (showRejectModal && actionNotes.trim()) {
+                  updateRecordStatus(showRejectModal, 'rejected', actionNotes);
+                  setShowRejectModal(null);
+                  setActionNotes('');
+                }
+              }}
+            >
+              Reject Record
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
