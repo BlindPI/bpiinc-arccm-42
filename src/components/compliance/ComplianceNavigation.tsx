@@ -147,6 +147,13 @@ export function ComplianceNavigation() {
       return;
     }
 
+    console.log('🐛 [DEBUG] ComplianceNavigation.handleTabChange() called:', {
+      from: state.view.activeTab,
+      to: tabId,
+      userRole: state.userRole,
+      loading: state.loading
+    });
+
     dispatch({
       type: 'SET_VIEW',
       payload: { activeTab: tabId }

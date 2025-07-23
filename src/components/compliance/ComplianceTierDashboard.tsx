@@ -29,22 +29,26 @@ export function ComplianceTierDashboard() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    console.log('🐛 [DEBUG] ComplianceTierDashboard useEffect triggered - about to load statistics cards');
     loadDashboardData();
   }, []);
 
   const loadDashboardData = async () => {
     try {
+      console.log('🐛 [DEBUG] ComplianceTierDashboard.loadDashboardData() starting - loading statistics cards');
       setIsLoading(true);
       const [stats, users] = await Promise.all([
         ComplianceTierService.getComplianceTierStatistics(),
         ComplianceTierService.getAllUsersComplianceTiers()
       ]);
       
+      console.log('🐛 [DEBUG] ComplianceTierDashboard statistics loaded:', { stats, userCount: users.length });
       setStatistics(stats);
       setAllUsers(users);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
+      console.log('🐛 [DEBUG] ComplianceTierDashboard.loadDashboardData() completed - statistics cards finished loading');
       setIsLoading(false);
     }
   };
