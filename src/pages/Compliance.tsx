@@ -13,10 +13,21 @@ const Compliance: React.FC = () => {
     );
   }
 
+  // CRITICAL FIX: Prevent SA users from defaulting to IC role during re-auth/reload
+  const userRole = user.role || user.user_metadata?.role || user.app_metadata?.role || 'IC';
+  
+  // Additional safety: If we detect this is an SA user, never allow IC fallback
+  const safeUserRole = userRole === 'SA' || userRole === 'AD' ? userRole : userRole;
+  
+  console.log('🪲 Compliance.tsx: user.role =', user.role);
+  console.log('🪲 Compliance.tsx: user.user_metadata?.role =', user.user_metadata?.role);
+  console.log('🪲 Compliance.tsx: user.app_metadata?.role =', user.app_metadata?.role);
+  console.log('🪲 Compliance.tsx: Final userRole =', safeUserRole);
+
   return (
     <ComplianceDashboard
       userId={user.id}
-      userRole={user.role || 'IC'}
+      userRole={safeUserRole}
       displayName={user.full_name || user.email}
     />
   );

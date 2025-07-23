@@ -380,13 +380,23 @@ export function ComplianceDashboardProvider({
   
   const [state, dispatch] = useReducer(complianceDashboardReducer, initializedState);
 
-  // Initialize user info
+  // Initialize user info with role change protection
   useEffect(() => {
+    // CRITICAL FIX: Prevent SA/AD users from being switched to other roles
+    if (state.userRole === 'SA' || state.userRole === 'AD') {
+      if (userRole !== 'SA' && userRole !== 'AD') {
+        console.error('🚫 BLOCKED: Attempted to change SA/AD user to role:', userRole);
+        console.error('🚫 Keeping existing role:', state.userRole);
+        return; // Don't update if trying to downgrade admin user
+      }
+    }
+    
+    console.log('🪲 SET_USER_INFO: userId=', userId, 'userRole=', userRole, 'displayName=', displayName);
     dispatch({
       type: 'SET_USER_INFO',
       payload: { userId, userRole, displayName }
     });
-  }, [userId, userRole, displayName]);
+  }, [userId, userRole, displayName, state.userRole]);
 
   // Load dashboard data based on role
   const loadDashboardData = useCallback(async () => {
