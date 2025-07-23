@@ -21,6 +21,21 @@ export interface UserAvailabilitySlot {
   updated_at?: string;
 }
 
+// Enhanced interface for role-based availability data
+export interface AvailabilityUser {
+  user_id: string;
+  display_name: string;
+  email: string;
+  role: string;
+  availability_slots: UserAvailabilitySlot[];
+}
+
+// Display modes for role-based availability views
+export type AvailabilityDisplayMode = 'own' | 'team';
+
+// View modes for availability calendar
+export type AvailabilityViewMode = 'list' | 'calendar' | 'summary';
+
 export interface AvailabilityFormData {
   day_of_week: DayOfWeek;
   start_time: string;

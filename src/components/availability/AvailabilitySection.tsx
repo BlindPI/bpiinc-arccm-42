@@ -3,20 +3,27 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Clock, 
-  Plus, 
-  Edit, 
-  Trash2, 
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Clock,
+  Plus,
+  Edit,
+  Trash2,
   Calendar,
-  AlertCircle 
+  AlertCircle,
+  Users,
+  Eye,
+  Shield
 } from 'lucide-react';
-import { useUserAvailability } from '@/hooks/useUserAvailability';
-import { 
-  UserAvailabilitySlot, 
-  DAYS_OF_WEEK, 
+import { useUserAvailability, useAvailabilityByUser } from '@/hooks/useUserAvailability';
+import { AvailabilityUser } from '@/types/availability';
+import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
+import {
+  UserAvailabilitySlot,
+  DAYS_OF_WEEK,
   AVAILABILITY_TYPES,
-  WeeklySchedule 
+  WeeklySchedule
 } from '@/types/availability';
 import { AvailabilityForm } from './AvailabilityForm';
 import { WeeklyAvailabilityView } from './WeeklyAvailabilityView';
@@ -27,28 +34,55 @@ interface AvailabilitySectionProps {
 }
 
 export const AvailabilitySection: React.FC<AvailabilitySectionProps> = ({ userId }) => {
+  const { user } = useAuth();
+  const { data: profile } = useProfile();
   const [showForm, setShowForm] = useState(false);
   const [editingSlot, setEditingSlot] = useState<UserAvailabilitySlot | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('calendar');
+  const [selectedUserId, setSelectedUserId] = useState<string>(userId);
+  const [displayMode, setDisplayMode] = useState<'own' | 'team'>('own');
 
+  // Use the enhanced hooks
   const {
     availability,
     isLoading,
     saveAvailability,
-    deleteAvailability
+    deleteAvailability,
+    canEditAvailability,
+    userRole
   } = useUserAvailability();
+
+  // For AP users, get team availability data
+  const { availabilityByUser, isLoading: teamLoading } = useAvailabilityByUser();
 
   console.log('🔧 AvailabilitySection: Hook results:', {
     availability: availability?.length || 0,
+    availabilityByUser: availabilityByUser?.length || 0,
     isLoading,
-    saveAvailability: !!saveAvailability,
-    saveAvailabilityMutateAsync: !!saveAvailability?.mutateAsync,
-    userId
+    teamLoading,
+    userRole,
+    displayMode,
+    selectedUserId
   });
+
+  // Determine what data to display based on role and mode
+  const getDisplayData = () => {
+    if (userRole === 'AP' && displayMode === 'team' && availabilityByUser.length > 0) {
+      const selectedUser = availabilityByUser.find(u => u.user_id === selectedUserId);
+      return selectedUser ? selectedUser.availability_slots : [];
+    }
+    
+    // For IC/IP/IT/IN users or when viewing own data
+    return availability;
+  };
+
+  const displayAvailability = getDisplayData();
+  const isViewingTeamData = userRole === 'AP' && displayMode === 'team';
+  const canEdit = !isViewingTeamData || canEditAvailability(selectedUserId);
 
   // Organize availability by day of week - ensure we handle both string and number types
   const weeklySchedule: WeeklySchedule = DAYS_OF_WEEK.reduce((schedule, day) => {
-    schedule[day.value.toString()] = availability.filter(slot => {
+    schedule[day.value.toString()] = displayAvailability.filter(slot => {
       // Handle both string and number day_of_week values
       const slotDay = typeof slot.day_of_week === 'string' ? parseInt(slot.day_of_week) : slot.day_of_week;
       return slotDay === day.value;
@@ -97,7 +131,7 @@ export const AvailabilitySection: React.FC<AvailabilitySectionProps> = ({ userId
     return AVAILABILITY_TYPES.find(t => t.value === type) || AVAILABILITY_TYPES[0];
   };
 
-  if (isLoading) {
+  if (isLoading || teamLoading) {
     return (
       <Card>
         <CardHeader>
@@ -124,8 +158,71 @@ export const AvailabilitySection: React.FC<AvailabilitySectionProps> = ({ userId
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
               Availability Schedule
+              {isViewingTeamData && (
+                <Badge variant="outline" className="ml-2">
+                  <Users className="h-3 w-3 mr-1" />
+                  Team View
+                </Badge>
+              )}
             </CardTitle>
             <div className="flex items-center gap-2">
+              {/* Role-based view controls for AP users */}
+              {userRole === 'AP' && (
+                <Select
+                  value={displayMode}
+                  onValueChange={(value: 'own' | 'team') => {
+                    setDisplayMode(value);
+                    if (value === 'own') {
+                      setSelectedUserId(userId);
+                    } else if (availabilityByUser.length > 0) {
+                      setSelectedUserId(availabilityByUser[0].user_id);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="own">
+                      <div className="flex items-center gap-2">
+                        <Eye className="h-4 w-4" />
+                        My Schedule
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="team">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Team View
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+
+              {/* User selector for team view */}
+              {isViewingTeamData && availabilityByUser.length > 0 && (
+                <Select
+                  value={selectedUserId}
+                  onValueChange={setSelectedUserId}
+                >
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availabilityByUser.map(user => (
+                      <SelectItem key={user.user_id} value={user.user_id}>
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <div className="font-medium">{user.display_name}</div>
+                            <div className="text-xs text-gray-500">{user.role}</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
               <div className="flex rounded-lg border">
                 <Button
                   variant={viewMode === 'calendar' ? 'default' : 'ghost'}
@@ -146,29 +243,50 @@ export const AvailabilitySection: React.FC<AvailabilitySectionProps> = ({ userId
                   List
                 </Button>
               </div>
-              <Button onClick={handleAddAvailability} size="sm">
-                <Plus className="h-4 w-4 mr-1" />
-                Add Availability
-              </Button>
+              
+              {canEdit && (
+                <Button onClick={handleAddAvailability} size="sm">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Availability
+                </Button>
+              )}
             </div>
           </div>
-          <p className="text-sm text-gray-600">
-            Set your weekly availability schedule. This helps others know when you're available for meetings and training sessions.
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              {isViewingTeamData
+                ? 'View and manage team member availability schedules.'
+                : 'Set your weekly availability schedule. This helps others know when you\'re available for meetings and training sessions.'
+              }
+            </p>
+            {isViewingTeamData && !canEdit && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <Shield className="h-3 w-3" />
+                View Only
+              </Badge>
+            )}
+          </div>
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {availability.length === 0 ? (
+          {displayAvailability.length === 0 ? (
             <div className="text-center py-8">
               <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No availability set</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {isViewingTeamData ? 'No availability data' : 'No availability set'}
+              </h3>
               <p className="text-gray-600 mb-4">
-                You haven't set your availability schedule yet. Add your available times to let others know when you can be scheduled.
+                {isViewingTeamData
+                  ? 'This team member hasn\'t set their availability schedule yet.'
+                  : 'You haven\'t set your availability schedule yet. Add your available times to let others know when you can be scheduled.'
+                }
               </p>
-              <Button onClick={handleAddAvailability}>
-                <Plus className="h-4 w-4 mr-2" />
-                Set Your Availability
-              </Button>
+              {canEdit && (
+                <Button onClick={handleAddAvailability}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {isViewingTeamData ? 'Add Availability for Member' : 'Set Your Availability'}
+                </Button>
+              )}
             </div>
           ) : (
             <>
@@ -247,9 +365,60 @@ export const AvailabilitySection: React.FC<AvailabilitySectionProps> = ({ userId
         </CardContent>
       </Card>
 
+      {/* Team Management Summary for AP users */}
+      {userRole === 'AP' && displayMode === 'team' && availabilityByUser.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Team Availability Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {availabilityByUser.map(user => (
+                <div key={user.user_id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <h4 className="font-medium">{user.display_name}</h4>
+                      <p className="text-sm text-gray-500">{user.role}</p>
+                    </div>
+                    <Badge variant="outline">
+                      {user.availability_slots.length} slots
+                    </Badge>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {user.availability_slots.length > 0 ? (
+                      <p>Available {DAYS_OF_WEEK.filter(day =>
+                        user.availability_slots.some(slot =>
+                          (typeof slot.day_of_week === 'string' ? parseInt(slot.day_of_week) : slot.day_of_week) === day.value
+                        )
+                      ).length} days/week</p>
+                    ) : (
+                      <p className="text-gray-400">No availability set</p>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-3"
+                    onClick={() => {
+                      setSelectedUserId(user.user_id);
+                      setViewMode('calendar');
+                    }}
+                  >
+                    View Schedule
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {showForm && (
         <AvailabilityForm
-          userId={userId}
+          userId={isViewingTeamData ? selectedUserId : userId}
           editingSlot={editingSlot}
           onClose={handleFormClose}
           onSave={saveAvailability}

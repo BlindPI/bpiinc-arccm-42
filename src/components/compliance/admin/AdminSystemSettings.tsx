@@ -108,11 +108,10 @@ export function AdminSystemSettings() {
       if (!selectedMetric && savedMetric.id) {
         console.log('🔧 Creating compliance records for new metric:', savedMetric.name);
         
-        // Get all active users
+        // Get all users
         const { data: users, error: usersError } = await supabase
           .from('profiles')
-          .select('id, role')
-          .eq('is_active', true);
+          .select('id, role');
         
         if (usersError) {
           console.error('Failed to fetch users:', usersError);
@@ -253,8 +252,7 @@ export function AdminSystemSettings() {
       // 🚨 CRITICAL FIX: Create tier in compliance_tiers table for all users
       const { data: users, error: usersError } = await supabase
         .from('profiles')
-        .select('id')
-        .eq('is_active', true);
+        .select('id');
       
       if (usersError) throw usersError;
       
