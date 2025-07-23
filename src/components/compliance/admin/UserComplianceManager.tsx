@@ -97,20 +97,15 @@ export default function UserComplianceManager() {
       console.log('🪲 UserComplianceManager: Raw users data:', allUsers);
       console.log('🪲 UserComplianceManager: Found users with SA role:', allUsers?.filter(u => u.role === 'SA'));
       
-      // CRITICAL FIX: Filter out SA/AD admin users and current user to prevent personal data leaks
+      // CRITICAL FIX: Show ALL roles including SA/AD but handle them differently
       const filteredUsers = (allUsers || []).filter(user => {
-        // Exclude SA and AD role users entirely
-        if (user.role === 'SA' || user.role === 'AD') {
-          console.log('🚫 Filtering out admin user:', user.display_name, 'Role:', user.role);
-          return false;
-        }
-        
-        // Exclude current user regardless of role to prevent personal compliance data viewing
+        // Exclude current user to prevent personal compliance data viewing
         if (user.user_id === currentUser?.id) {
           console.log('🚫 Filtering out current user:', user.display_name);
           return false;
         }
         
+        // Include all other users including SA/AD admin users for complete role visibility
         return true;
       });
       
@@ -129,8 +124,23 @@ export default function UserComplianceManager() {
       const roleCompliance: RoleComplianceData[] = [];
       
       for (const [role, roleUsers] of Object.entries(roleGroups)) {
+        const roleUsersTyped = roleUsers as UserSummary[];
+        
+        // Handle SA/AD admin roles that don't have compliance requirements
+        if (role === 'SA' || role === 'AD') {
+          roleCompliance.push({
+            role,
+            totalUsers: roleUsersTyped.length,
+            basicTierCompliance: 100, // Admin roles are considered compliant by default
+            robustTierCompliance: 100,
+            overallCompliance: 100,
+            users: roleUsersTyped
+          });
+          continue;
+        }
+        
         // Get compliance records for all users in this role
-        const userIds = (roleUsers as UserSummary[]).map(u => u.user_id);
+        const userIds = roleUsersTyped.map(u => u.user_id);
         const { data: records } = await supabase
           .from('user_compliance_records')
           .select(`
@@ -148,10 +158,11 @@ export default function UserComplianceManager() {
         const basicTierCompliance = basicRecords.length > 0 ? Math.round((basicCompliant / basicRecords.length) * 100) : 0;
         const robustTierCompliance = robustRecords.length > 0 ? Math.round((robustCompliant / robustRecords.length) * 100) : 0;
         
-        const roleUsersTyped = roleUsers as UserSummary[];
-        const overallCompliance = Math.round(
-          roleUsersTyped.reduce((sum, user) => sum + (user.compliance_score || 0), 0) / roleUsersTyped.length
-        );
+        // Calculate overall compliance, handling cases where compliance_score might be null
+        const validScores = roleUsersTyped.filter(user => user.compliance_score != null).map(user => user.compliance_score);
+        const overallCompliance = validScores.length > 0
+          ? Math.round(validScores.reduce((sum, score) => sum + score, 0) / validScores.length)
+          : 0;
 
         roleCompliance.push({
           role,

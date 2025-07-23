@@ -240,10 +240,9 @@ function complianceDashboardReducer(
       if ((state.userRole === 'SA' || state.userRole === 'AD') && action.payload.activeTab) {
         const forbiddenTabs = [
           'my-compliance',
-          'requirements',
           'upload',
-          'personal',
-          'overview' // Personal overview that shows personal compliance data
+          'personal'
+          // Removed 'overview' and 'requirements' - SA users need access to admin versions of these
         ];
         
         if (forbiddenTabs.includes(action.payload.activeTab)) {

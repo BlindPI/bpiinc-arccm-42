@@ -283,25 +283,278 @@ export const TierRequirementsMatrix: React.FC<TierRequirementsMatrixProps> = ({
   userComplianceRecords = [],
   className = ""
 }) => {
-  const templates = useMemo(() => {
-    // SA/AD users should see ALL role templates to manage compliance across the organization
+  // For SA/AD admin users, get templates for ALL roles
+  const allRoleTemplates = useMemo(() => {
     if (userRole === 'SA' || userRole === 'AD') {
-      // Return combined templates from all roles for admin view
-      const allRoles: ('AP' | 'IC' | 'IP' | 'IT')[] = ['AP', 'IC', 'IP', 'IT'];
-      const combinedTemplates = {
-        basic: null as any,
-        robust: null as any
-      };
+      const allRoles: ('SA' | 'AD' | 'AP' | 'IC' | 'IP' | 'IT')[] = ['SA', 'AD', 'AP', 'IC', 'IP', 'IT'];
+      const roleTemplatesMap: Record<string, { basic: RoleComplianceTemplate | null; robust: RoleComplianceTemplate | null }> = {};
       
-      // For now, show IC templates as the primary example - admins need to see what users see
-      return ComplianceRequirementsService.getAllTemplatesForRole('IC');
+      allRoles.forEach(role => {
+        try {
+          // SA and AD roles don't have compliance requirements themselves
+          if (role === 'SA' || role === 'AD') {
+            roleTemplatesMap[role] = {
+              basic: null,
+              robust: null
+            };
+          } else {
+            roleTemplatesMap[role] = ComplianceRequirementsService.getAllTemplatesForRole(role as 'AP' | 'IC' | 'IP' | 'IT');
+          }
+        } catch (error) {
+          console.warn(`No templates found for role: ${role}`);
+          roleTemplatesMap[role] = { basic: null, robust: null };
+        }
+      });
+      
+      return roleTemplatesMap;
+    }
+    return null;
+  }, [userRole]);
+
+  const templates = useMemo(() => {
+    if (userRole === 'SA' || userRole === 'AD') {
+      // For admin users, we'll handle this differently in the render
+      return { basic: null, robust: null };
     }
     
     return ComplianceRequirementsService.getAllTemplatesForRole(userRole as 'AP' | 'IC' | 'IP' | 'IT');
   }, [userRole]);
 
   const [selectedComparison, setSelectedComparison] = useState<'side-by-side' | 'basic' | 'robust'>('side-by-side');
+  const [selectedRole, setSelectedRole] = useState<'all' | 'AP' | 'IC' | 'IP' | 'IT'>('all');
 
+  // Admin view for SA/AD users
+  if (userRole === 'SA' || userRole === 'AD') {
+    if (!allRoleTemplates) {
+      return (
+        <Card className={className}>
+          <CardContent className="text-center py-8">
+            <p className="text-gray-500">Loading role templates...</p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    const availableRoles = Object.keys(allRoleTemplates).filter(role =>
+      role !== 'SA' && role !== 'AD' && (
+        allRoleTemplates[role]?.basic || allRoleTemplates[role]?.robust
+      )
+    ) as ('AP' | 'IC' | 'IP' | 'IT')[];
+
+    return (
+      <div className={`space-y-6 ${className}`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Admin Compliance Requirements Matrix</h2>
+            <p className="text-gray-600 text-sm mt-1">
+              View compliance requirements across all roles - {availableRoles.length} roles with requirements
+            </p>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <select
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(e.target.value as 'all' | 'AP' | 'IC' | 'IP' | 'IT')}
+              className="px-3 py-2 border rounded-md text-sm"
+            >
+              <option value="all">All Roles</option>
+              {availableRoles.map(role => (
+                <option key={role} value={role}>{role}</option>
+              ))}
+            </select>
+            <Button
+              size="sm"
+              variant={selectedComparison === 'side-by-side' ? 'default' : 'outline'}
+              onClick={() => setSelectedComparison('side-by-side')}
+            >
+              Side by Side
+            </Button>
+            <Button
+              size="sm"
+              variant={selectedComparison === 'basic' ? 'default' : 'outline'}
+              onClick={() => setSelectedComparison('basic')}
+            >
+              Basic Only
+            </Button>
+            <Button
+              size="sm"
+              variant={selectedComparison === 'robust' ? 'default' : 'outline'}
+              onClick={() => setSelectedComparison('robust')}
+            >
+              Robust Only
+            </Button>
+          </div>
+        </div>
+
+        {/* Role Status Summary */}
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="p-4">
+            <h3 className="font-medium text-blue-900 mb-3">Role Coverage Summary</h3>
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm">
+              {(['SA', 'AD', 'AP', 'IC', 'IP', 'IT'] as const).map(role => {
+                const hasRequirements = allRoleTemplates[role]?.basic || allRoleTemplates[role]?.robust;
+                return (
+                  <div key={role} className="text-center">
+                    <Badge
+                      className={hasRequirements
+                        ? "bg-green-100 text-green-800 border-green-200"
+                        : "bg-gray-100 text-gray-600 border-gray-200"
+                      }
+                    >
+                      {role}
+                    </Badge>
+                    <p className="text-xs mt-1 text-blue-700">
+                      {hasRequirements ? 'Has Requirements' : 'Admin/No Requirements'}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Display selected role(s) */}
+        {selectedRole === 'all' ? (
+          <div className="space-y-8">
+            {availableRoles.map(role => {
+              const roleTemplates = allRoleTemplates[role];
+              if (!roleTemplates || (!roleTemplates.basic && !roleTemplates.robust)) return null;
+              
+              return (
+                <div key={role} className="space-y-4">
+                  <div className="bg-gray-50 border-l-4 border-blue-500 p-4">
+                    <h3 className="text-lg font-semibold text-gray-900">{role} Role Requirements</h3>
+                  </div>
+                  
+                  {selectedComparison === 'side-by-side' && (
+                    <div className="grid lg:grid-cols-2 gap-6">
+                      {roleTemplates.basic && (
+                        <TierColumn
+                          template={roleTemplates.basic}
+                          tier="basic"
+                          userRole={role}
+                          isCurrentTier={false}
+                          userComplianceRecords={[]}
+                          onUploadDocument={undefined}
+                          onTierSwitch={undefined}
+                        />
+                      )}
+                      {roleTemplates.robust && (
+                        <TierColumn
+                          template={roleTemplates.robust}
+                          tier="robust"
+                          userRole={role}
+                          isCurrentTier={false}
+                          userComplianceRecords={[]}
+                          onUploadDocument={undefined}
+                          onTierSwitch={undefined}
+                        />
+                      )}
+                    </div>
+                  )}
+                  
+                  {selectedComparison === 'basic' && roleTemplates.basic && (
+                    <TierColumn
+                      template={roleTemplates.basic}
+                      tier="basic"
+                      userRole={role}
+                      isCurrentTier={false}
+                      userComplianceRecords={[]}
+                      onUploadDocument={undefined}
+                      onTierSwitch={undefined}
+                    />
+                  )}
+                  
+                  {selectedComparison === 'robust' && roleTemplates.robust && (
+                    <TierColumn
+                      template={roleTemplates.robust}
+                      tier="robust"
+                      userRole={role}
+                      isCurrentTier={false}
+                      userComplianceRecords={[]}
+                      onUploadDocument={undefined}
+                      onTierSwitch={undefined}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          // Single role view
+          (() => {
+            const roleTemplates = allRoleTemplates[selectedRole];
+            if (!roleTemplates || (!roleTemplates.basic && !roleTemplates.robust)) {
+              return (
+                <Card>
+                  <CardContent className="text-center py-8">
+                    <p className="text-gray-500">No requirements found for {selectedRole} role</p>
+                  </CardContent>
+                </Card>
+              );
+            }
+
+            return (
+              <div className="space-y-4">
+                {selectedComparison === 'side-by-side' && (
+                  <div className="grid lg:grid-cols-2 gap-6">
+                    {roleTemplates.basic && (
+                      <TierColumn
+                        template={roleTemplates.basic}
+                        tier="basic"
+                        userRole={selectedRole}
+                        isCurrentTier={false}
+                        userComplianceRecords={[]}
+                        onUploadDocument={undefined}
+                        onTierSwitch={undefined}
+                      />
+                    )}
+                    {roleTemplates.robust && (
+                      <TierColumn
+                        template={roleTemplates.robust}
+                        tier="robust"
+                        userRole={selectedRole}
+                        isCurrentTier={false}
+                        userComplianceRecords={[]}
+                        onUploadDocument={undefined}
+                        onTierSwitch={undefined}
+                      />
+                    )}
+                  </div>
+                )}
+                
+                {selectedComparison === 'basic' && roleTemplates.basic && (
+                  <TierColumn
+                    template={roleTemplates.basic}
+                    tier="basic"
+                    userRole={selectedRole}
+                    isCurrentTier={false}
+                    userComplianceRecords={[]}
+                    onUploadDocument={undefined}
+                    onTierSwitch={undefined}
+                  />
+                )}
+                
+                {selectedComparison === 'robust' && roleTemplates.robust && (
+                  <TierColumn
+                    template={roleTemplates.robust}
+                    tier="robust"
+                    userRole={selectedRole}
+                    isCurrentTier={false}
+                    userComplianceRecords={[]}
+                    onUploadDocument={undefined}
+                    onTierSwitch={undefined}
+                  />
+                )}
+              </div>
+            );
+          })()
+        )}
+      </div>
+    );
+  }
+
+  // Regular user view
   if (!templates.basic && !templates.robust) {
     return (
       <Card className={className}>
