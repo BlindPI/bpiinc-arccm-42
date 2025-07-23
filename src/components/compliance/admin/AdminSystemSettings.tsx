@@ -56,6 +56,15 @@ export function AdminSystemSettings() {
       
       if (error) throw error;
       setMetrics(allMetricsIncludingInactive || []);
+      
+      // 🎯 Extract available tiers from metrics
+      const tiers = new Set<string>();
+      allMetricsIncludingInactive?.forEach(metric => {
+        if (metric.applicable_tiers) {
+          metric.applicable_tiers.split(',').forEach(tier => tiers.add(tier.trim()));
+        }
+      });
+      setAvailableTiers(Array.from(tiers).sort());
     } catch (error) {
       console.error('Failed to load metrics:', error);
     } finally {
@@ -180,6 +189,84 @@ export function AdminSystemSettings() {
     }
   };
 
+  // 🎯 NEW: Tier management functions
+  const exportTierRequirements = (tierName: string) => {
+    const tierMetrics = metrics.filter(metric =>
+      metric.applicable_tiers?.includes(tierName)
+    );
+    
+    const exportData = {
+      tier: tierName,
+      exportDate: new Date().toISOString(),
+      totalRequirements: tierMetrics.length,
+      activeRequirements: tierMetrics.filter(m => m.is_active).length,
+      requirements: tierMetrics.map(metric => ({
+        name: metric.name,
+        description: metric.description,
+        category: metric.category,
+        measurement_type: metric.measurement_type,
+        weight: metric.weight,
+        required_for_roles: metric.required_for_roles,
+        is_active: metric.is_active,
+        target_value: metric.target_value
+      }))
+    };
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${tierName}_compliance_requirements_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCreateTier = async () => {
+    if (!newTierName.trim()) return;
+    
+    const tierName = newTierName.trim().toLowerCase().replace(/\s+/g, '_');
+    
+    if (availableTiers.includes(tierName)) {
+      alert('Tier already exists!');
+      return;
+    }
+    
+    setAvailableTiers([...availableTiers, tierName].sort());
+    setNewTierName('');
+    setIsCreatingTier(false);
+  };
+
+  const getFilteredMetrics = () => {
+    if (selectedTier === 'all') return metrics;
+    return metrics.filter(metric =>
+      metric.applicable_tiers?.includes(selectedTier)
+    );
+  };
+
+  const getMetricsByTier = () => {
+    const metricsByTier: { [key: string]: ComplianceMetric[] } = {};
+    
+    availableTiers.forEach(tier => {
+      metricsByTier[tier] = metrics.filter(metric =>
+        metric.applicable_tiers?.includes(tier)
+      );
+    });
+    
+    // Add metrics that don't belong to any known tier
+    const untieredMetrics = metrics.filter(metric =>
+      !metric.applicable_tiers ||
+      !availableTiers.some(tier => metric.applicable_tiers?.includes(tier))
+    );
+    
+    if (untieredMetrics.length > 0) {
+      metricsByTier['unassigned'] = untieredMetrics;
+    }
+    
+    return metricsByTier;
+  };
+
   const initializeRequirements = async () => {
     try {
       setSaving(true);
@@ -253,21 +340,91 @@ export function AdminSystemSettings() {
         </CardContent>
       </Card>
 
-      {/* Compliance Metrics Management */}
+      {/* Compliance Metrics Management - Tier-Based Organization */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Compliance Metrics
-              <Badge variant="outline">{metrics.length} metrics</Badge>
+              Compliance Metrics by Tier
+              <Badge variant="outline">{metrics.length} total metrics</Badge>
             </CardTitle>
-            <Button onClick={handleCreateNewMetric}>
-              Create New Metric
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsCreatingTier(true)}
+                className="flex items-center gap-1"
+              >
+                <Plus className="h-4 w-4" />
+                Create Tier
+              </Button>
+              <Button onClick={handleCreateNewMetric}>
+                <Plus className="h-4 w-4 mr-1" />
+                Create New Metric
+              </Button>
+            </div>
+          </div>
+          
+          {/* Tier Controls */}
+          <div className="flex items-center gap-4 mt-4">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              <Select value={selectedTier} onValueChange={setSelectedTier}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filter by tier" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Tiers</SelectItem>
+                  {availableTiers.map(tier => (
+                    <SelectItem key={tier} value={tier}>
+                      {tier.charAt(0).toUpperCase() + tier.slice(1)} Tier
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {selectedTier !== 'all' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportTierRequirements(selectedTier)}
+                className="flex items-center gap-1"
+              >
+                <Download className="h-4 w-4" />
+                Export {selectedTier.charAt(0).toUpperCase() + selectedTier.slice(1)} Tier
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
+          {/* Tier Creation Modal */}
+          {isCreatingTier && (
+            <div className="mb-6 p-4 border rounded-lg bg-blue-50">
+              <h3 className="font-medium mb-3">Create New Compliance Tier</h3>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter tier name (e.g., 'premium', 'enterprise')"
+                  value={newTierName}
+                  onChange={(e) => setNewTierName(e.target.value)}
+                  className="flex-1"
+                />
+                <Button onClick={handleCreateTier} disabled={!newTierName.trim()}>
+                  Create
+                </Button>
+                <Button variant="outline" onClick={() => {
+                  setIsCreatingTier(false);
+                  setNewTierName('');
+                }}>
+                  Cancel
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                New tiers can be used to organize compliance requirements for different organization types.
+              </p>
+            </div>
+          )}
+
           {isEditing ? (
             <div className="space-y-4 p-4 border rounded-lg">
               <h3 className="font-medium">
@@ -371,9 +528,125 @@ export function AdminSystemSettings() {
                 </Button>
               </div>
             </div>
+          ) : selectedTier === 'all' ? (
+            // Display metrics organized by tiers using tabs
+            <Tabs defaultValue={availableTiers[0]} className="w-full">
+              <TabsList className="grid w-full" style={{gridTemplateColumns: `repeat(${availableTiers.length}, 1fr)`}}>
+                {availableTiers.map(tier => {
+                  const tierMetrics = metrics.filter(m => m.applicable_tiers?.includes(tier));
+                  return (
+                    <TabsTrigger key={tier} value={tier} className="flex items-center gap-2">
+                      {tier.charAt(0).toUpperCase() + tier.slice(1)}
+                      <Badge variant="secondary" className="text-xs">
+                        {tierMetrics.length}
+                      </Badge>
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+
+              {availableTiers.map(tier => (
+                <TabsContent key={tier} value={tier} className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">
+                      {tier.charAt(0).toUpperCase() + tier.slice(1)} Tier Requirements
+                    </h3>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => exportTierRequirements(tier)}
+                    >
+                      <Download className="h-4 w-4 mr-1" />
+                      Export Tier
+                    </Button>
+                  </div>
+                  
+                  {getMetricsByTier()[tier]?.map((metric) => (
+                    <div key={metric.id} className="p-4 border rounded-lg">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h4 className="font-medium">{metric.name}</h4>
+                            <Badge variant="outline" className={getCategoryColor(metric.category)}>
+                              {metric.category}
+                            </Badge>
+                            <Badge variant="outline">
+                              {metric.measurement_type}
+                            </Badge>
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                              {tier}
+                            </Badge>
+                            {metric.is_active ? (
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <AlertTriangle className="h-4 w-4 text-red-600" />
+                            )}
+                          </div>
+                          
+                          <p className="text-sm text-gray-600 mb-2">
+                            {metric.description}
+                          </p>
+                          
+                          <div className="flex flex-wrap gap-2 text-xs text-gray-500">
+                            <span>Weight: {metric.weight}</span>
+                            <span>Roles: {metric.required_for_roles?.join(', ') || 'All'}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 ml-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditMetric(metric)}
+                          >
+                            Edit
+                          </Button>
+                          {metric.is_active ? (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteMetric(metric.id)}
+                            >
+                              Deactivate
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => handleReactivateMetric(metric.id)}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              Reactivate
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {getMetricsByTier()[tier]?.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <FileText className="mx-auto h-12 w-12 mb-4 text-gray-300" />
+                      <p className="text-lg font-medium">No {tier} tier requirements</p>
+                      <p className="text-sm">Create requirements specifically for the {tier} tier.</p>
+                    </div>
+                  )}
+                </TabsContent>
+              ))}
+            </Tabs>
           ) : (
+            // Display filtered metrics for selected tier
             <div className="space-y-4">
-              {metrics.map((metric) => (
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">
+                  {selectedTier.charAt(0).toUpperCase() + selectedTier.slice(1)} Tier Requirements
+                </h3>
+                <Badge variant="outline">
+                  {getFilteredMetrics().length} requirements
+                </Badge>
+              </div>
+              
+              {getFilteredMetrics().map((metric) => (
                 <div key={metric.id} className="p-4 border rounded-lg">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -384,6 +657,9 @@ export function AdminSystemSettings() {
                         </Badge>
                         <Badge variant="outline">
                           {metric.measurement_type}
+                        </Badge>
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                          {selectedTier}
                         </Badge>
                         {metric.is_active ? (
                           <CheckCircle className="h-4 w-4 text-green-600" />
@@ -398,7 +674,6 @@ export function AdminSystemSettings() {
                       
                       <div className="flex flex-wrap gap-2 text-xs text-gray-500">
                         <span>Weight: {metric.weight}</span>
-                        <span>Tiers: {metric.applicable_tiers}</span>
                         <span>Roles: {metric.required_for_roles?.join(', ') || 'All'}</span>
                       </div>
                     </div>
@@ -434,11 +709,11 @@ export function AdminSystemSettings() {
                 </div>
               ))}
 
-              {metrics.length === 0 && (
+              {getFilteredMetrics().length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   <Settings className="mx-auto h-12 w-12 mb-4 text-gray-300" />
-                  <p className="text-lg font-medium">No metrics configured</p>
-                  <p className="text-sm">Create your first compliance metric to get started.</p>
+                  <p className="text-lg font-medium">No {selectedTier} tier metrics configured</p>
+                  <p className="text-sm">Create your first {selectedTier} tier compliance metric.</p>
                 </div>
               )}
             </div>
