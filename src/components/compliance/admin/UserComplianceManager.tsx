@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Upload, Search, User, FileText, CheckCircle, XCircle, Clock, AlertTriangle, Eye, Download, Users, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { ComplianceRequirementsService } from '@/services/compliance/complianceRequirementsService';
 
 interface RoleComplianceData {
   role: string;
@@ -172,76 +173,61 @@ export default function UserComplianceManager() {
           continue;
         }
         
-        // Get compliance records for all users in this role
-        const userIds = roleUsersTyped.map(u => u.user_id);
-        const { data: records } = await supabase
-          .from('user_compliance_records')
-          .select(`
-            *,
-            compliance_metrics!metric_id(
-              applicable_tiers
-            )
-          `)
-          .in('user_id', userIds);
-
-        const basicRecords = (records || []).filter(r => r.compliance_metrics?.applicable_tiers?.includes('basic'));
-        const robustRecords = (records || []).filter(r => r.compliance_metrics?.applicable_tiers?.includes('robust'));
-
-        const basicCompliant = basicRecords.filter(r => r.status === 'compliant' || r.status === 'approved').length;
-        const robustCompliant = robustRecords.filter(r => r.status === 'compliant' || r.status === 'approved').length;
-
-        const basicTierCompliance = basicRecords.length > 0 ? Math.round((basicCompliant / basicRecords.length) * 100) : 0;
-        const robustTierCompliance = robustRecords.length > 0 ? Math.round((robustCompliant / robustRecords.length) * 100) : 0;
+        // 🚨 CRITICAL FIX: Use ComplianceRequirementsService for consistent counts
+        let templates = null;
+        try {
+          if (role !== 'SA' && role !== 'AD') {
+            templates = ComplianceRequirementsService.getAllTemplatesForRole(role as 'AP' | 'IC' | 'IP' | 'IT');
+            console.log(`🚨 ROLE ${role} TEMPLATES:`, {
+              basic: templates.basic ? {
+                requirementCount: templates.basic.requirements.length,
+                requirements: templates.basic.requirements.map(r => r.name)
+              } : null,
+              robust: templates.robust ? {
+                requirementCount: templates.robust.requirements.length,
+                requirements: templates.robust.requirements.map(r => r.name)
+              } : null
+            });
+          }
+        } catch (error) {
+          console.warn(`No compliance templates found for role: ${role}`);
+        }
         
-        // 🪲 DIAGNOSTIC: Calculate overall compliance with detailed logging
+        // Calculate compliance based on users' actual compliance_score from summary view
         const validScores = roleUsersTyped.filter(user => user.compliance_score != null).map(user => user.compliance_score);
         
-        console.log(`🪲 Role ${role} compliance calculation:`, {
-          totalUsers: roleUsersTyped.length,
-          validScores,
-          basicRecords: basicRecords.length,
-          robustRecords: robustRecords.length,
-          basicCompliant,
-          robustCompliant,
-          basicTierCompliance,
-          robustTierCompliance
-        });
+        // Use template-based calculation if available
+        let basicTierCompliance = 0;
+        let robustTierCompliance = 0;
         
-        // 🪲 EDGE CASE TESTING: Test the fix for zero compliance
+        if (templates) {
+          // Basic tier: users with basic tier
+          const basicUsers = roleUsersTyped.filter(u => u.compliance_tier === 'basic');
+          const basicScores = basicUsers.map(u => u.compliance_score || 0);
+          basicTierCompliance = basicScores.length > 0
+            ? Math.round(basicScores.reduce((sum, score) => sum + score, 0) / basicScores.length)
+            : 0;
+          
+          // Robust tier: users with robust tier
+          const robustUsers = roleUsersTyped.filter(u => u.compliance_tier === 'robust');
+          const robustScores = robustUsers.map(u => u.compliance_score || 0);
+          robustTierCompliance = robustScores.length > 0
+            ? Math.round(robustScores.reduce((sum, score) => sum + score, 0) / robustScores.length)
+            : 0;
+        }
+        
         const overallCompliance = validScores.length > 0
           ? Math.round(validScores.reduce((sum, score) => sum + score, 0) / validScores.length)
           : 0;
           
-        // 🪲 TESTING: Check for various problematic scores
-        if (overallCompliance > 0 && roleUsersTyped.every(user => user.compliant_count === 0)) {
-          console.log('🚨 POTENTIAL BUG: Non-zero compliance with zero compliant items:', {
-            role,
-            overallCompliance,
-            validScores,
-            allUsersWithZeroCompliance: roleUsersTyped.map(u => ({
-              name: u.display_name,
-              score: u.compliance_score,
-              compliant: u.compliant_count,
-              total: u.total_requirements
-            }))
-          });
-        }
-        
-        // 🪲 TESTING: Verify the fix worked (no more 23%)
-        if (overallCompliance === 23 || validScores.includes(23)) {
-          console.log('🚨 OLD BUG STILL EXISTS - 23% CALCULATION:', {
-            role,
-            overallCompliance,
-            validScores,
-            calculation: `(${validScores.join(' + ')}) / ${validScores.length} = ${validScores.reduce((sum, score) => sum + score, 0) / validScores.length}`
-          });
-        } else if (overallCompliance === 0 && validScores.every(score => score === 0)) {
-          console.log('✅ FIX VERIFIED: Zero compliance correctly shows 0%:', {
-            role,
-            overallCompliance,
-            validScores
-          });
-        }
+        console.log(`🚨 ROLE ${role} COMPLIANCE CALCULATION:`, {
+          totalUsers: roleUsersTyped.length,
+          templatesAvailable: !!templates,
+          basicTierCompliance,
+          robustTierCompliance,
+          overallCompliance,
+          validScores
+        });
 
         roleCompliance.push({
           role,
@@ -281,97 +267,30 @@ export default function UserComplianceManager() {
         compliance_tier: userProfile?.compliance_tier
       });
       
-      // 🚨 CRITICAL FIX: Get ALL active metrics that apply to this user's role
-      const { data: allActiveMetrics, error: metricsError } = await supabase
-        .from('compliance_metrics')
-        .select('*')
-        .eq('is_active', true);
-      
-      if (metricsError) throw metricsError;
-      
-      // CRITICAL FIX: Correct role filtering logic
-      const applicableMetrics = (allActiveMetrics || []).filter(metric => {
-        // FIXED LOGIC: Empty required_for_roles means NOT role-specific
-        const requiredRoles = metric.required_for_roles || [];
-        const roleMatches = requiredRoles.length > 0 && requiredRoles.includes(userProfile.role);
-        
-        // Filter by TIER
-        const userTier = userProfile.compliance_tier || 'basic';
-        let tierMatches = false;
-        
-        if (metric.applicable_tiers) {
-          // Database contains simple values like 'basic', 'robust', 'basic,robust'
-          const applicableTiers = metric.applicable_tiers.split(',').map(t => t.trim());
-          tierMatches = applicableTiers.includes(userTier) || applicableTiers.includes('basic,robust');
-        } else {
-          // If no applicable_tiers, default to basic tier only
-          tierMatches = userTier === 'basic';
+      // 🚨 CRITICAL FIX: Use ComplianceRequirementsService like TierRequirementsMatrix
+      let template = null;
+      try {
+        if (userProfile.role && userProfile.role !== 'SA' && userProfile.role !== 'AD') {
+          const userTier = userProfile.compliance_tier || 'basic';
+          const templates = ComplianceRequirementsService.getAllTemplatesForRole(userProfile.role as 'AP' | 'IC' | 'IP' | 'IT');
+          template = userTier === 'robust' ? templates.robust : templates.basic;
+          
+          console.log('🚨 TEMPLATE FROM SERVICE:', {
+            userRole: userProfile.role,
+            userTier,
+            template: template ? {
+              role_name: template.role_name,
+              tier: template.tier,
+              requirementCount: template.requirements.length,
+              requirements: template.requirements.map(r => r.name)
+            } : null
+          });
         }
-        
-        console.log(`🔍 METRIC FILTER: ${metric.name}`, {
-          metric_roles: requiredRoles,
-          user_role: userProfile.role,
-          role_matches: roleMatches,
-          metric_tiers: metric.applicable_tiers,
-          user_tier: userTier,
-          tier_matches: tierMatches,
-          overall_match: roleMatches && tierMatches
-        });
-        
-        return roleMatches && tierMatches;
-      });
-      
-      console.log('🚨 APPLICABLE METRICS FOR USER:', {
-        userId,
-        userRole: userProfile.role,
-        userTier: userProfile.compliance_tier,
-        totalActiveMetrics: allActiveMetrics?.length || 0,
-        applicableMetrics: applicableMetrics.length,
-        applicableMetricNames: applicableMetrics.map(m => m.name),
-        allMetricsWithTiers: allActiveMetrics?.map(m => ({
-          name: m.name,
-          applicable_tiers: m.applicable_tiers,
-          matches: !m.applicable_tiers || m.applicable_tiers.includes(userProfile.compliance_tier || 'basic')
-        }))
-      });
-      
-      // Get existing user compliance records
-      const { data: existingRecords, error: recordsError } = await supabase
-        .from('user_compliance_records')
-        .select('*')
-        .eq('user_id', userId);
-
-      if (recordsError) throw recordsError;
-      
-      // 🚨 CRITICAL FIX: Create missing records for new metrics
-      const existingMetricIds = new Set((existingRecords || []).map(r => r.metric_id));
-      const missingMetrics = applicableMetrics.filter(metric => !existingMetricIds.has(metric.id));
-      
-      if (missingMetrics.length > 0) {
-        console.log('🚨 CREATING MISSING RECORDS:', missingMetrics.map(m => m.name));
-        
-        const newRecords = missingMetrics.map(metric => ({
-          user_id: userId,
-          metric_id: metric.id,
-          compliance_status: 'pending',
-          current_value: null,
-          last_checked_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }));
-        
-        const { error: insertError } = await supabase
-          .from('user_compliance_records')
-          .insert(newRecords);
-        
-        if (insertError) {
-          console.error('Failed to create missing records:', insertError);
-        } else {
-          console.log('✅ Created', missingMetrics.length, 'missing compliance records');
-        }
+      } catch (error) {
+        console.warn('No compliance template found for role:', userProfile.role);
       }
       
-      // 🚨 CRITICAL FIX: Get updated records with active metrics only
+      // Get ALL existing user compliance records
       const { data: allRecords, error: finalError } = await supabase
         .from('user_compliance_records')
         .select(`
@@ -392,35 +311,43 @@ export default function UserComplianceManager() {
 
       if (finalError) throw finalError;
       
-      // CRITICAL FIX: Correct role filtering logic
-      const activeRecords = (allRecords || []).filter(record => {
-        const isActive = record.compliance_metrics?.is_active === true;
-        
-        // FIXED LOGIC: Empty required_for_roles means NOT role-specific
-        const requiredRoles = record.compliance_metrics?.required_for_roles || [];
-        const roleMatches = requiredRoles.length > 0 && requiredRoles.includes(userProfile.role);
-        
-        // Filter by TIER
-        const userTier = userProfile.compliance_tier || 'basic';
-        let tierMatches = false;
-        
-        if (record.compliance_metrics?.applicable_tiers) {
-          // Database contains simple values like 'basic', 'robust', 'basic,robust'
-          const applicableTiers = record.compliance_metrics.applicable_tiers.split(',').map(t => t.trim());
-          tierMatches = applicableTiers.includes(userTier) || applicableTiers.includes('basic,robust');
-        } else {
-          // If no applicable_tiers, default to basic tier only
-          tierMatches = userTier === 'basic';
-        }
-        
-        return isActive && roleMatches && tierMatches;
-      });
+      // 🚨 CRITICAL FIX: If we have a template, only show records that match template requirements
+      let activeRecords = allRecords || [];
       
-      console.log('🚨 FILTERED RECORDS:', {
-        totalRecords: allRecords?.length || 0,
-        activeRecords: activeRecords.length,
-        filteredOut: (allRecords?.length || 0) - activeRecords.length
-      });
+      if (template) {
+        const templateRequirementNames = template.requirements.map(req => req.name);
+        
+        activeRecords = (allRecords || []).filter(record => {
+          const isActive = record.compliance_metrics?.is_active === true;
+          const recordName = record.compliance_metrics?.name || '';
+          
+          // Check if record matches any template requirement (partial match)
+          const matchesTemplate = templateRequirementNames.some(templateName =>
+            recordName.includes(templateName) || templateName.includes(recordName)
+          );
+          
+          console.log(`🔍 RECORD MATCH: ${recordName}`, {
+            isActive,
+            matchesTemplate,
+            templateRequirements: templateRequirementNames
+          });
+          
+          return isActive && matchesTemplate;
+        });
+        
+        console.log('🚨 TEMPLATE FILTERED RECORDS:', {
+          templateRequirements: template.requirements.length,
+          totalRecords: allRecords?.length || 0,
+          activeRecords: activeRecords.length,
+          templateNames: templateRequirementNames,
+          matchedRecords: activeRecords.map(r => r.compliance_metrics?.name)
+        });
+      } else {
+        // Fallback to basic filtering for SA/AD or unknown roles
+        activeRecords = (allRecords || []).filter(record =>
+          record.compliance_metrics?.is_active === true
+        );
+      }
 
       // Get documents for each active record
       const recordsWithDocs = await Promise.all(
