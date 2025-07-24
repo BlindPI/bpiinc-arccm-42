@@ -450,7 +450,7 @@ export default function UserComplianceManager() {
             current_value: '',
             target_value: currentRecord.target_value || '',
             evidence_files: [],
-            due_date: currentRecord.due_date,
+            due_date: currentRecord.due_date || null, // 🚨 FIX: Ensure valid timestamp or null
             tier: selectedUser.compliance_tier || 'basic',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -563,7 +563,7 @@ export default function UserComplianceManager() {
             current_value: newStatus === 'approved' ? 'approved' : 'rejected',
             target_value: currentRecord.target_value || '',
             evidence_files: [],
-            due_date: currentRecord.due_date,
+            due_date: currentRecord.due_date || null, // 🚨 FIX: Ensure valid timestamp or null
             tier: selectedUser.compliance_tier || 'basic',
             review_notes: notes,
             reviewer_id: (await supabase.auth.getUser()).data.user?.id,
