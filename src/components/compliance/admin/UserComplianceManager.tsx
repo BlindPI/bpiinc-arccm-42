@@ -289,13 +289,13 @@ export default function UserComplianceManager() {
       
       if (metricsError) throw metricsError;
       
-      // CRITICAL FIX: Filter by BOTH role AND tier to match Matrix display
+      // CRITICAL FIX: Correct role filtering logic
       const applicableMetrics = (allActiveMetrics || []).filter(metric => {
-        // First filter by ROLE - this is what I was missing!
+        // FIXED LOGIC: Empty required_for_roles means NOT role-specific
         const requiredRoles = metric.required_for_roles || [];
-        const roleMatches = requiredRoles.length === 0 || requiredRoles.includes(userProfile.role);
+        const roleMatches = requiredRoles.length > 0 && requiredRoles.includes(userProfile.role);
         
-        // Then filter by TIER
+        // Filter by TIER
         const userTier = userProfile.compliance_tier || 'basic';
         let tierMatches = false;
         
@@ -392,15 +392,15 @@ export default function UserComplianceManager() {
 
       if (finalError) throw finalError;
       
-      // CRITICAL FIX: Filter by BOTH role AND tier to match Matrix display
+      // CRITICAL FIX: Correct role filtering logic
       const activeRecords = (allRecords || []).filter(record => {
         const isActive = record.compliance_metrics?.is_active === true;
         
-        // First filter by ROLE
+        // FIXED LOGIC: Empty required_for_roles means NOT role-specific
         const requiredRoles = record.compliance_metrics?.required_for_roles || [];
-        const roleMatches = requiredRoles.length === 0 || requiredRoles.includes(userProfile.role);
+        const roleMatches = requiredRoles.length > 0 && requiredRoles.includes(userProfile.role);
         
-        // Then filter by TIER
+        // Filter by TIER
         const userTier = userProfile.compliance_tier || 'basic';
         let tierMatches = false;
         

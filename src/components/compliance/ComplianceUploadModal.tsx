@@ -34,13 +34,13 @@ export function ComplianceUploadModal() {
       return complianceRecords;
     }
     
-    // CRITICAL FIX: Filter by BOTH role AND tier for non-admin users
+    // CRITICAL FIX: Correct role filtering logic
     const userTier = tierInfo?.tier || 'basic';
     
     return complianceRecords.filter(record => {
-      // First filter by ROLE - this was missing!
+      // FIXED LOGIC: Empty required_for_roles means NOT role-specific
       const requiredRoles = record.compliance_metrics?.required_for_roles || [];
-      const roleMatches = requiredRoles.length === 0 || requiredRoles.includes(userRole);
+      const roleMatches = requiredRoles.length > 0 && requiredRoles.includes(userRole);
       
       // Then filter by TIER
       let tierMatches = false;
