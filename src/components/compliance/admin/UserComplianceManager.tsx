@@ -720,11 +720,42 @@ export default function UserComplianceManager() {
                             {user.non_compliant_count} issues
                           </Badge>
                         )}
-                        {user.pending_count > 0 && (
-                          <Badge variant="outline" className="text-xs px-1.5 py-0.5 border-yellow-300 text-yellow-700">
-                            {user.pending_count} pending
-                          </Badge>
-                        )}
+                        {(() => {
+                          // 🚨 CRITICAL FIX: Calculate pending count from template
+                          try {
+                            if (user.role && user.role !== 'SA' && user.role !== 'AD') {
+                              const templates = ComplianceRequirementsService.getAllTemplatesForRole(user.role as 'AP' | 'IC' | 'IP' | 'IT');
+                              const userTier = user.compliance_tier || 'basic';
+                              const template = userTier === 'robust' ? templates.robust : templates.basic;
+                              
+                              if (template) {
+                                const templateCount = template.requirements.length;
+                                const completedCount = user.compliant_count || 0;
+                                const pendingCount = templateCount - completedCount;
+                                
+                                if (pendingCount > 0) {
+                                  return (
+                                    <Badge variant="outline" className="text-xs px-1.5 py-0.5 border-yellow-300 text-yellow-700">
+                                      {pendingCount} pending
+                                    </Badge>
+                                  );
+                                }
+                              }
+                            }
+                          } catch (error) {
+                            console.warn('Template not found for pending count:', user.role);
+                          }
+                          
+                          // Fallback to original database count
+                          if (user.pending_count > 0) {
+                            return (
+                              <Badge variant="outline" className="text-xs px-1.5 py-0.5 border-yellow-300 text-yellow-700">
+                                {user.pending_count} pending
+                              </Badge>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                     )}
                     
