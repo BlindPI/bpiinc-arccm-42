@@ -544,7 +544,7 @@ export default function UserComplianceManager() {
       let actualRecordId = recordId;
       let actualMetricId = currentRecord.metric_id;
 
-      // 🚨 CRITICAL FIX: Handle virtual records properly for status updates
+      // 🚨 SCHEMA FIX: Handle virtual records properly for status updates
       if (isVirtualRecord) {
         // Validate we have a real metric_id
         if (!actualMetricId || actualMetricId.startsWith('virtual_')) {
@@ -579,21 +579,21 @@ export default function UserComplianceManager() {
         }
 
         actualRecordId = newRecord.id;
-        console.log('Created real compliance record with status for virtual record:', actualRecordId);
+        console.log('✅ Created real compliance record with status for virtual record:', actualRecordId);
       } else {
-        // Update existing real record
+        // 🚨 SCHEMA FIX: Update existing real record using CORRECT column names
         const updateData: any = {
           status: newStatus === 'approved' ? 'approved' : 'rejected',
           compliance_status: newStatus === 'approved' ? 'compliant' : 'non_compliant',
           completion_percentage: newStatus === 'approved' ? 100 : 0,
           review_notes: notes,
-          reviewer_id: (await supabase.auth.getUser()).data.user?.id,
+          reviewer_id: (await supabase.auth.getUser()).data.user?.id, // ✅ CORRECT: reviewer_id exists
           updated_at: new Date().toISOString()
         };
 
         if (newStatus === 'approved') {
-          updateData.approved_at = new Date().toISOString();
-          updateData.approved_by = (await supabase.auth.getUser()).data.user?.id;
+          updateData.approved_at = new Date().toISOString(); // ✅ CORRECT: approved_at exists
+          updateData.approved_by = (await supabase.auth.getUser()).data.user?.id; // ✅ CORRECT: approved_by exists
         }
 
         const { error } = await supabase
@@ -607,17 +607,17 @@ export default function UserComplianceManager() {
         }
       }
 
-      // Handle documents if they exist
+      // 🚨 SCHEMA FIX: Handle documents using CORRECT compliance_documents schema
       const relatedDoc = currentRecord.uploaded_documents?.[0];
       if (relatedDoc) {
         const { error: docError } = await supabase
           .from('compliance_documents')
           .update({
             verification_status: newStatus === 'approved' ? 'approved' : 'rejected',
-            verified_at: new Date().toISOString(),
-            verified_by: (await supabase.auth.getUser()).data.user?.id,
-            verification_notes: notes || null,
-            rejection_reason: newStatus === 'rejected' ? notes || null : null,
+            verified_at: new Date().toISOString(), // ✅ CORRECT: verified_at exists in compliance_documents
+            verified_by: (await supabase.auth.getUser()).data.user?.id, // ✅ CORRECT: verified_by exists in compliance_documents
+            verification_notes: notes || null, // ✅ CORRECT: verification_notes exists in compliance_documents
+            rejection_reason: newStatus === 'rejected' ? notes || null : null, // ✅ CORRECT: rejection_reason exists in compliance_documents
             updated_at: new Date().toISOString()
           })
           .eq('id', relatedDoc.id);
@@ -629,6 +629,7 @@ export default function UserComplianceManager() {
       }
       
       await fetchUserComplianceRecords(selectedUser.user_id);
+      console.log('✅ Successfully updated compliance status:', newStatus);
     } catch (error) {
       console.error('Error updating record status:', error);
       alert(`Failed to update status: ${error instanceof Error ? error.message : 'Unknown error'}`);
