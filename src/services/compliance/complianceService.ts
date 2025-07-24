@@ -591,18 +591,36 @@ export class ComplianceService {
     try {
       // First upload file to Supabase Storage
       const fileExt = file.name.split('.').pop();
-      const fileName = `compliance_${userId}_${metricId}_${Date.now()}.${fileExt}`;
+      const fileName = `compliance_${userId}_${metricId}_${Date.now()}_${file.name}`;
       
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('compliance-documents')
         .upload(fileName, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw new Error(`File upload failed: ${uploadError.message}`);
+      }
 
-      // Use direct database upsert instead of problematic RPC function
+      console.log('✅ File uploaded to storage:', uploadData.path);
+
+      // CRITICAL FIX: Mark previous documents as not current for this user+metric
+      const { error: updateError } = await supabase
+        .from('compliance_documents')
+        .update({ is_current: false })
+        .eq('user_id', userId)
+        .eq('metric_id', metricId)
+        .eq('is_current', true);
+
+      if (updateError) {
+        console.warn('Warning: Could not update previous documents:', updateError);
+        // Don't throw - this is non-critical
+      }
+
+      // CRITICAL FIX: Use INSERT instead of UPSERT since each upload is a new document
       const { data, error } = await supabase
         .from('compliance_documents')
-        .upsert({
+        .insert({
           user_id: userId,
           metric_id: metricId,
           file_name: file.name,
@@ -612,16 +630,30 @@ export class ComplianceService {
           upload_date: new Date().toISOString(),
           expiry_date: expiryDate || null,
           verification_status: 'pending',
-          is_current: true
-        }, {
-          onConflict: 'user_id,metric_id',
-          ignoreDuplicates: false
+          is_current: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
         .select('id')
         .single();
 
-      if (error) throw error;
-      return data?.id || 'uploaded';
+      if (error) {
+        console.error('Database insertion error:', error);
+        
+        // If database insert fails, clean up the uploaded file
+        try {
+          await supabase.storage
+            .from('compliance-documents')
+            .remove([uploadData.path]);
+        } catch (cleanupError) {
+          console.error('Failed to cleanup uploaded file:', cleanupError);
+        }
+        
+        throw new Error(`Database record creation failed: ${error.message}`);
+      }
+
+      console.log('✅ Database record created:', data.id);
+      return data.id;
     } catch (error) {
       console.error('Error uploading compliance document:', error);
       throw error;
