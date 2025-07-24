@@ -289,13 +289,17 @@ export default function UserComplianceManager() {
       
       if (metricsError) throw metricsError;
       
-      // Filter metrics by role - SA/AD users should see ALL metrics for complete admin control
+      // Filter metrics by role and the VIEWED USER'S tier - only show what THIS user actually needs
       const applicableMetrics = (allActiveMetrics || []).filter(metric => {
         const requiredRoles = metric.required_for_roles || [];
         const roleMatches = requiredRoles.length === 0 || requiredRoles.includes(userProfile.role);
         
-        // SA/AD users see ALL requirements regardless of user's tier for complete admin control
-        return roleMatches;
+        // CRITICAL FIX: Filter by the VIEWED USER'S tier - SA sees only what this specific user needs
+        const userTier = userProfile.compliance_tier || 'basic';
+        const tierMatches = !metric.applicable_tiers ||
+          metric.applicable_tiers.includes(userTier);
+        
+        return roleMatches && tierMatches;
       });
       
       console.log('🚨 APPLICABLE METRICS FOR USER:', {
@@ -369,10 +373,17 @@ export default function UserComplianceManager() {
 
       if (finalError) throw finalError;
       
-      // Filter out records for deactivated metrics - SA/AD users see ALL records for complete admin control
-      const activeRecords = (allRecords || []).filter(record =>
-        record.compliance_metrics?.is_active === true
-      );
+      // Filter out records for deactivated metrics AND ensure they match the VIEWED USER'S tier
+      const activeRecords = (allRecords || []).filter(record => {
+        const isActive = record.compliance_metrics?.is_active === true;
+        
+        // Filter by the VIEWED USER'S tier - only show records this specific user should have
+        const userTier = userProfile.compliance_tier || 'basic';
+        const tierMatches = !record.compliance_metrics?.applicable_tiers ||
+          record.compliance_metrics.applicable_tiers.includes(userTier);
+        
+        return isActive && tierMatches;
+      });
       
       console.log('🚨 FILTERED RECORDS:', {
         totalRecords: allRecords?.length || 0,
