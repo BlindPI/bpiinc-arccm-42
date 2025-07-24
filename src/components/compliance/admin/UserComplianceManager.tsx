@@ -78,6 +78,7 @@ export default function UserComplianceManager() {
   const [showApproveModal, setShowApproveModal] = useState<string | null>(null);
   const [showRejectModal, setShowRejectModal] = useState<string | null>(null);
   const [showUploadModal, setShowUploadModal] = useState<string | null>(null);
+  const [uploadExpiryDate, setUploadExpiryDate] = useState<string>('');
   const [actionNotes, setActionNotes] = useState<string>('');
 
   useEffect(() => {
@@ -296,6 +297,7 @@ export default function UserComplianceManager() {
         .select(`
           *,
           compliance_metrics!metric_id(
+            id,
             name,
             description,
             category,
@@ -311,39 +313,89 @@ export default function UserComplianceManager() {
 
       if (finalError) throw finalError;
       
-      // 🚨 CRITICAL FIX: If we have a template, only show records that match template requirements
+      // 🚨 CRITICAL FIX: SA/AD users should see ALL template requirements (not just existing records)
       let activeRecords = allRecords || [];
       
-      if (template) {
+      if ((currentUser?.role === 'SA' || currentUser?.role === 'AD') && template) {
+        // SA/AD admins see ALL template requirements for this user's tier
+        const userTier = userProfile.compliance_tier || 'basic';
+        
+        // Get all compliance metrics that match the template requirements
+        const { data: allMetrics } = await supabase
+          .from('compliance_metrics')
+          .select('*')
+          .eq('is_active', true);
+        
+        const templateRequirementNames = template.requirements.map(req => req.name);
+        
+        // Create records for all template requirements
+        const templateRecords = [];
+        
+        for (const templateReq of template.requirements) {
+          // Find matching metric
+          const matchingMetric = allMetrics?.find(metric =>
+            metric.name === templateReq.name ||
+            metric.name.includes(templateReq.name) ||
+            templateReq.name.includes(metric.name)
+          );
+          
+          if (matchingMetric) {
+            // Check if user already has a record for this metric
+            let existingRecord = allRecords?.find(record =>
+              record.metric_id === matchingMetric.id
+            );
+            
+            if (existingRecord) {
+              // Use existing record
+              templateRecords.push(existingRecord);
+            } else {
+              // Create virtual record for missing requirement
+              const virtualRecord = {
+                id: `virtual_${matchingMetric.id}`,
+                user_id: userId,
+                metric_id: matchingMetric.id,
+                requirement_id: matchingMetric.id,
+                status: 'pending',
+                completion_percentage: 0,
+                current_value: '',
+                target_value: matchingMetric.target_value || '',
+                evidence_files: [],
+                due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+                reviewer_id: null,
+                review_notes: '',
+                compliance_metrics: matchingMetric
+              };
+              templateRecords.push(virtualRecord);
+            }
+          }
+        }
+        
+        activeRecords = templateRecords;
+        
+        console.log('🚨 SA/AD VIEW: Showing ALL template requirements:', {
+          userTier,
+          templateName: template.role_name,
+          templateRequirements: templateRequirementNames,
+          totalRecords: allRecords?.length || 0,
+          templateRecords: templateRecords.length,
+          recordNames: templateRecords.map(r => r.compliance_metrics?.name)
+        });
+      } else if (template) {
+        // Non-admin users get template filtering (existing logic)
         const templateRequirementNames = template.requirements.map(req => req.name);
         
         activeRecords = (allRecords || []).filter(record => {
           const isActive = record.compliance_metrics?.is_active === true;
           const recordName = record.compliance_metrics?.name || '';
           
-          // Check if record matches any template requirement (partial match)
           const matchesTemplate = templateRequirementNames.some(templateName =>
             recordName.includes(templateName) || templateName.includes(recordName)
           );
           
-          console.log(`🔍 RECORD MATCH: ${recordName}`, {
-            isActive,
-            matchesTemplate,
-            templateRequirements: templateRequirementNames
-          });
-          
           return isActive && matchesTemplate;
         });
-        
-        console.log('🚨 TEMPLATE FILTERED RECORDS:', {
-          templateRequirements: template.requirements.length,
-          totalRecords: allRecords?.length || 0,
-          activeRecords: activeRecords.length,
-          templateNames: templateRequirementNames,
-          matchedRecords: activeRecords.map(r => r.compliance_metrics?.name)
-        });
       } else {
-        // Fallback to basic filtering for SA/AD or unknown roles
+        // Fallback to basic filtering
         activeRecords = (allRecords || []).filter(record =>
           record.compliance_metrics?.is_active === true
         );
@@ -376,13 +428,45 @@ export default function UserComplianceManager() {
     }
   };
 
-  const handleFileUpload = async (recordId: string, file: File) => {
+  const handleFileUpload = async (recordId: string, file: File, expiryDate?: string) => {
     setUploadingRecord(recordId);
     
     try {
       const currentRecord = complianceRecords.find(r => r.id === recordId);
       if (!currentRecord || !selectedUser) {
         throw new Error('Missing record or user data');
+      }
+
+      // Check if this is a virtual record (needs real compliance record creation)
+      const isVirtualRecord = recordId.startsWith('virtual_');
+      let actualRecordId = recordId;
+
+      if (isVirtualRecord) {
+        // Create a real compliance record for virtual record
+        const { data: newRecord, error: recordError } = await supabase
+          .from('user_compliance_records')
+          .insert({
+            user_id: selectedUser.user_id,
+            metric_id: currentRecord.metric_id,
+            status: 'pending',
+            completion_percentage: 0,
+            current_value: '',
+            target_value: currentRecord.target_value || '',
+            evidence_files: [],
+            due_date: currentRecord.due_date,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (recordError) {
+          console.error('Error creating compliance record:', recordError);
+          throw new Error('Failed to create compliance record');
+        }
+
+        actualRecordId = newRecord.id;
+        console.log('Created real compliance record for virtual record:', actualRecordId);
       }
 
       // Upload file to Supabase storage with proper naming
@@ -397,19 +481,26 @@ export default function UserComplianceManager() {
       }
 
       // Upsert document record (insert or update if exists)
+      const documentData: any = {
+        user_id: selectedUser.user_id,
+        metric_id: currentRecord.metric_id,
+        file_name: file.name,
+        file_path: uploadData.path,
+        file_type: file.type || 'application/octet-stream',
+        file_size: file.size,
+        verification_status: 'pending',
+        upload_date: new Date().toISOString(),
+        is_current: true
+      };
+
+      // Add expiry date if provided
+      if (expiryDate) {
+        documentData.expiry_date = expiryDate;
+      }
+
       const { data: docData, error: docError } = await supabase
         .from('compliance_documents')
-        .upsert({
-          user_id: selectedUser.user_id,
-          metric_id: currentRecord.metric_id,
-          file_name: file.name,
-          file_path: uploadData.path,
-          file_type: file.type || 'application/octet-stream',
-          file_size: file.size,
-          verification_status: 'pending',
-          upload_date: new Date().toISOString(),
-          is_current: true
-        }, {
+        .upsert(documentData, {
           onConflict: 'user_id,metric_id',
           ignoreDuplicates: false
         })
@@ -421,14 +512,14 @@ export default function UserComplianceManager() {
         throw new Error('Document record creation failed');
       }
 
-      // Update compliance record status
+      // Update compliance record status (use actual record ID)
       const { error: updateError } = await supabase
         .from('user_compliance_records')
         .update({
           status: 'submitted',
           updated_at: new Date().toISOString()
         })
-        .eq('id', recordId);
+        .eq('id', actualRecordId);
 
       if (updateError) {
         console.error('Record update error:', updateError);
@@ -454,6 +545,38 @@ export default function UserComplianceManager() {
         throw new Error('Missing record or user data');
       }
 
+      // Check if this is a virtual record
+      const isVirtualRecord = recordId.startsWith('virtual_');
+      let actualRecordId = recordId;
+
+      if (isVirtualRecord) {
+        // Create a real compliance record for virtual record first
+        const { data: newRecord, error: recordError } = await supabase
+          .from('user_compliance_records')
+          .insert({
+            user_id: selectedUser.user_id,
+            metric_id: currentRecord.metric_id,
+            status: 'pending',
+            completion_percentage: 0,
+            current_value: '',
+            target_value: currentRecord.target_value || '',
+            evidence_files: [],
+            due_date: currentRecord.due_date,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (recordError) {
+          console.error('Error creating compliance record:', recordError);
+          throw new Error('Failed to create compliance record');
+        }
+
+        actualRecordId = newRecord.id;
+        console.log('Created real compliance record for status update:', actualRecordId);
+      }
+
       // Find the related document for this record
       const relatedDoc = currentRecord.uploaded_documents?.[0];
       if (relatedDoc) {
@@ -470,9 +593,9 @@ export default function UserComplianceManager() {
           throw verifyError;
         }
       } else {
-        // Fallback: update record directly if no document
+        // Fallback: update record directly if no document (use actual record ID)
         const updateData: any = {
-          compliance_status: newStatus === 'approved' ? 'compliant' : 'non_compliant',
+          status: newStatus === 'approved' ? 'approved' : 'rejected',
           review_notes: notes,
           updated_at: new Date().toISOString()
         };
@@ -484,7 +607,7 @@ export default function UserComplianceManager() {
         const { error } = await supabase
           .from('user_compliance_records')
           .update(updateData)
-          .eq('id', recordId);
+          .eq('id', actualRecordId);
 
         if (error) throw error;
       }
@@ -503,6 +626,9 @@ export default function UserComplianceManager() {
     const currentRecord = complianceRecords.find(r => r.id === recordId);
     if (!currentRecord) return;
 
+    // Check if this is a virtual record
+    const isVirtualRecord = recordId.startsWith('virtual_');
+
     const confirmed = confirm(
       `Are you sure you want to RESET the "${currentRecord.requirement_name}" requirement for ${selectedUser.display_name}?\n\nThis will:\n- Remove all uploaded documents\n- Reset status to pending\n- Clear all verification data\n\nThis action cannot be undone.`
     );
@@ -510,19 +636,26 @@ export default function UserComplianceManager() {
     if (!confirmed) return;
 
     try {
-      // Use new database function to reset requirement
-      const { error } = await supabase.rpc('reset_compliance_requirement', {
-        p_user_id: selectedUser.user_id,
-        p_metric_id: currentRecord.metric_id
-      });
+      if (isVirtualRecord) {
+        // For virtual records, just refresh the view - there's nothing to reset
+        console.log('Resetting virtual record - refreshing view');
+        await fetchUserComplianceRecords(selectedUser.user_id);
+      } else {
+        // Use database function to reset real requirement
+        const { error } = await supabase.rpc('reset_compliance_requirement', {
+          p_user_id: selectedUser.user_id,
+          p_metric_id: currentRecord.metric_id
+        });
 
-      if (error) {
-        console.error('Reset function error:', error);
-        throw error;
+        if (error) {
+          console.error('Reset function error:', error);
+          throw error;
+        }
+
+        await fetchUserComplianceRecords(selectedUser.user_id);
       }
 
       alert(`Successfully reset "${currentRecord.requirement_name}" for ${selectedUser.display_name}`);
-      await fetchUserComplianceRecords(selectedUser.user_id);
     } catch (error) {
       console.error('Error resetting requirement:', error);
       alert(`Failed to reset requirement: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -964,10 +1097,7 @@ export default function UserComplianceManager() {
       )}
 
       {/* Upload Modal */}
-      <Dialog open={!!showUploadModal} onOpenChange={() => {
-        setShowUploadModal(null);
-        setUploadExpiryDate('');
-      }}>
+      <Dialog open={!!showUploadModal} onOpenChange={() => setShowUploadModal(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1001,7 +1131,7 @@ export default function UserComplianceManager() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="expiry-date">Expiry Date (Optional)</Label>
+                  <Label htmlFor="expiry-date">Document Expiry Date (Optional)</Label>
                   <Input
                     id="expiry-date"
                     type="date"
@@ -1010,9 +1140,10 @@ export default function UserComplianceManager() {
                     className="w-full"
                   />
                   <p className="text-xs text-gray-500">
-                    Set if this document has an expiration date
+                    Set when this document expires (leave blank if no expiry)
                   </p>
                 </div>
+
               </>
             )}
           </div>
