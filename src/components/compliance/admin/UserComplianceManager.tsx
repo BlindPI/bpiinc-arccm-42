@@ -476,20 +476,84 @@ export default function UserComplianceManager() {
 
   const updateRecordStatus = async (recordId: string, newStatus: string, notes?: string) => {
     try {
-      const updateData: any = { status: newStatus };
-      if (notes) updateData.review_notes = notes;
-      if (newStatus === 'approved') updateData.approved_at = new Date().toISOString();
+      // CRITICAL FIX: Use the new verification function for proper document handling
+      const currentRecord = complianceRecords.find(r => r.id === recordId);
+      if (!currentRecord || !selectedUser) {
+        throw new Error('Missing record or user data');
+      }
 
-      const { error } = await supabase
-        .from('user_compliance_records')
-        .update(updateData)
-        .eq('id', recordId);
+      // Find the related document for this record
+      const relatedDoc = currentRecord.uploaded_documents?.[0];
+      if (relatedDoc) {
+        // Use new database function for proper verification with user data
+        const { error: verifyError } = await supabase.rpc('verify_compliance_document_with_user', {
+          p_document_id: relatedDoc.id,
+          p_verification_status: newStatus === 'approved' ? 'approved' : 'rejected',
+          p_verification_notes: notes || null,
+          p_rejection_reason: newStatus === 'rejected' ? notes || null : null
+        });
 
-      if (error) throw error;
+        if (verifyError) {
+          console.error('Verification function error:', verifyError);
+          throw verifyError;
+        }
+      } else {
+        // Fallback: update record directly if no document
+        const updateData: any = {
+          compliance_status: newStatus === 'approved' ? 'compliant' : 'non_compliant',
+          review_notes: notes,
+          updated_at: new Date().toISOString()
+        };
+        if (newStatus === 'approved') {
+          updateData.approved_at = new Date().toISOString();
+          updateData.approved_by = (await supabase.auth.getUser()).data.user?.id;
+        }
+
+        const { error } = await supabase
+          .from('user_compliance_records')
+          .update(updateData)
+          .eq('id', recordId);
+
+        if (error) throw error;
+      }
       
-      await fetchUserComplianceRecords(selectedUser!.user_id);
+      await fetchUserComplianceRecords(selectedUser.user_id);
     } catch (error) {
       console.error('Error updating record status:', error);
+      alert(`Failed to update status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // CRITICAL FIX: Add RESET functionality for SA users
+  const handleResetRequirement = async (recordId: string) => {
+    if (!selectedUser) return;
+    
+    const currentRecord = complianceRecords.find(r => r.id === recordId);
+    if (!currentRecord) return;
+
+    const confirmed = confirm(
+      `Are you sure you want to RESET the "${currentRecord.requirement_name}" requirement for ${selectedUser.display_name}?\n\nThis will:\n- Remove all uploaded documents\n- Reset status to pending\n- Clear all verification data\n\nThis action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      // Use new database function to reset requirement
+      const { error } = await supabase.rpc('reset_compliance_requirement', {
+        p_user_id: selectedUser.user_id,
+        p_metric_id: currentRecord.metric_id
+      });
+
+      if (error) {
+        console.error('Reset function error:', error);
+        throw error;
+      }
+
+      alert(`Successfully reset "${currentRecord.requirement_name}" for ${selectedUser.display_name}`);
+      await fetchUserComplianceRecords(selectedUser.user_id);
+    } catch (error) {
+      console.error('Error resetting requirement:', error);
+      alert(`Failed to reset requirement: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -862,7 +926,7 @@ export default function UserComplianceManager() {
                     </div>
                   )}
 
-                  <div className="flex gap-2 mt-3">
+                  <div className="flex gap-2 mt-3 flex-wrap">
                     <Button
                       variant="outline"
                       size="sm"
@@ -894,6 +958,18 @@ export default function UserComplianceManager() {
                     >
                       <XCircle className="h-3 w-3 mr-1" />
                       Reject
+                    </Button>
+
+                    {/* CRITICAL FIX: Add RESET functionality for SA users */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleResetRequirement(record.id)}
+                      className="bg-orange-50 text-orange-700 hover:bg-orange-100 border-orange-300"
+                      title="Reset this requirement - removes all documents and resets status to pending"
+                    >
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      Reset
                     </Button>
                   </div>
 
