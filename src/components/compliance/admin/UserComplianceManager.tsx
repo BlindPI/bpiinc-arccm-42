@@ -616,12 +616,15 @@ export default function UserComplianceManager() {
             verification_status: newStatus === 'approved' ? 'approved' : 'rejected',
             verified_at: new Date().toISOString(),
             verified_by: (await supabase.auth.getUser()).data.user?.id,
-            verification_notes: notes
+            verification_notes: notes || null,
+            rejection_reason: newStatus === 'rejected' ? notes || null : null,
+            updated_at: new Date().toISOString()
           })
           .eq('id', relatedDoc.id);
 
         if (docError) {
-          console.warn('Failed to update document status:', docError);
+          console.error('Failed to update document status:', docError);
+          throw new Error(`Failed to update document: ${docError.message}`);
         }
       }
       
