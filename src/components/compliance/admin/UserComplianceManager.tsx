@@ -79,6 +79,7 @@ export default function UserComplianceManager() {
   const [showRejectModal, setShowRejectModal] = useState<string | null>(null);
   const [showUploadModal, setShowUploadModal] = useState<string | null>(null);
   const [actionNotes, setActionNotes] = useState<string>('');
+  const [uploadExpiryDate, setUploadExpiryDate] = useState<string>('');
 
   useEffect(() => {
     fetchUsersAndRoleData();
@@ -376,7 +377,7 @@ export default function UserComplianceManager() {
     }
   };
 
-  const handleFileUpload = async (recordId: string, file: File) => {
+  const handleFileUpload = async (recordId: string, file: File, expiryDate?: string) => {
     setUploadingRecord(recordId);
     
     try {
@@ -386,20 +387,35 @@ export default function UserComplianceManager() {
       }
 
       // Upload file to Supabase storage with proper naming
-      const fileName = `compliance_${selectedUser.user_id}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const fileName = `compliance_${selectedUser.user_id}_${currentRecord.metric_id}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('compliance-documents')
         .upload(fileName, file);
 
       if (uploadError) {
         console.error('Storage upload error:', uploadError);
-        throw new Error('File upload failed');
+        throw new Error(`File upload failed: ${uploadError.message}`);
       }
 
-      // Upsert document record (insert or update if exists)
+      console.log('✅ File uploaded to storage:', uploadData.path);
+
+      // CRITICAL FIX: Mark previous documents as not current for this user+metric
+      const { error: updateError } = await supabase
+        .from('compliance_documents')
+        .update({ is_current: false })
+        .eq('user_id', selectedUser.user_id)
+        .eq('metric_id', currentRecord.metric_id)
+        .eq('is_current', true);
+
+      if (updateError) {
+        console.warn('Warning: Could not update previous documents:', updateError);
+        // Don't throw - this is non-critical
+      }
+
+      // CRITICAL FIX: Use INSERT instead of UPSERT since each upload is a new document
       const { data: docData, error: docError } = await supabase
         .from('compliance_documents')
-        .upsert({
+        .insert({
           user_id: selectedUser.user_id,
           metric_id: currentRecord.metric_id,
           file_name: file.name,
@@ -408,21 +424,33 @@ export default function UserComplianceManager() {
           file_size: file.size,
           verification_status: 'pending',
           upload_date: new Date().toISOString(),
-          is_current: true
-        }, {
-          onConflict: 'user_id,metric_id',
-          ignoreDuplicates: false
+          expiry_date: expiryDate || null,
+          is_current: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
         .select()
         .single();
 
       if (docError) {
-        console.error('Document upsert error:', docError);
-        throw new Error('Document record creation failed');
+        console.error('Database insertion error:', docError);
+        
+        // If database insert fails, clean up the uploaded file
+        try {
+          await supabase.storage
+            .from('compliance-documents')
+            .remove([uploadData.path]);
+        } catch (cleanupError) {
+          console.error('Failed to cleanup uploaded file:', cleanupError);
+        }
+        
+        throw new Error(`Database record creation failed: ${docError.message}`);
       }
 
+      console.log('✅ Database record created:', docData.id);
+
       // Update compliance record status
-      const { error: updateError } = await supabase
+      const { error: statusUpdateError } = await supabase
         .from('user_compliance_records')
         .update({
           status: 'submitted',
@@ -430,8 +458,8 @@ export default function UserComplianceManager() {
         })
         .eq('id', recordId);
 
-      if (updateError) {
-        console.error('Record update error:', updateError);
+      if (statusUpdateError) {
+        console.error('Record update error:', statusUpdateError);
         throw new Error('Status update failed');
       }
 
@@ -888,7 +916,10 @@ export default function UserComplianceManager() {
       )}
 
       {/* Upload Modal */}
-      <Dialog open={!!showUploadModal} onOpenChange={() => setShowUploadModal(null)}>
+      <Dialog open={!!showUploadModal} onOpenChange={() => {
+        setShowUploadModal(null);
+        setUploadExpiryDate('');
+      }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -907,28 +938,56 @@ export default function UserComplianceManager() {
                     {complianceRecords.find(r => r.id === showUploadModal)?.requirement_description}
                   </div>
                 </div>
+                
                 <div className="space-y-2">
-                  <Label htmlFor="file-upload">Select Document</Label>
+                  <Label htmlFor="file-upload">Select Document *</Label>
                   <input
                     id="file-upload"
                     type="file"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        handleFileUpload(showUploadModal, file);
-                        setShowUploadModal(null);
-                      }
-                    }}
-                    className="w-full p-2 border border-gray-300 rounded-md"
+                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                   />
+                  <p className="text-xs text-gray-500">
+                    Supported formats: PDF, DOC, DOCX, JPG, JPEG, PNG
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="expiry-date">Expiry Date (Optional)</Label>
+                  <Input
+                    id="expiry-date"
+                    type="date"
+                    value={uploadExpiryDate}
+                    onChange={(e) => setUploadExpiryDate(e.target.value)}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Set if this document has an expiration date
+                  </p>
                 </div>
               </>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowUploadModal(null)}>
+            <Button variant="outline" onClick={() => {
+              setShowUploadModal(null);
+              setUploadExpiryDate('');
+            }}>
               Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+                const file = fileInput?.files?.[0];
+                if (file && showUploadModal) {
+                  handleFileUpload(showUploadModal, file, uploadExpiryDate || undefined);
+                  setShowUploadModal(null);
+                  setUploadExpiryDate('');
+                }
+              }}
+              disabled={!showUploadModal}
+            >
+              Upload Document
             </Button>
           </DialogFooter>
         </DialogContent>
