@@ -289,12 +289,13 @@ export default function UserComplianceManager() {
       
       if (metricsError) throw metricsError;
       
-      // Filter metrics by role and the VIEWED USER'S tier - only show what THIS user actually needs
+      // CRITICAL FIX: Filter by BOTH role AND tier to match Matrix display
       const applicableMetrics = (allActiveMetrics || []).filter(metric => {
+        // First filter by ROLE - this is what I was missing!
         const requiredRoles = metric.required_for_roles || [];
         const roleMatches = requiredRoles.length === 0 || requiredRoles.includes(userProfile.role);
         
-        // CRITICAL FIX: Use simple database tier values, not role-based names
+        // Then filter by TIER
         const userTier = userProfile.compliance_tier || 'basic';
         let tierMatches = false;
         
@@ -306,6 +307,16 @@ export default function UserComplianceManager() {
           // If no applicable_tiers, default to basic tier only
           tierMatches = userTier === 'basic';
         }
+        
+        console.log(`🔍 METRIC FILTER: ${metric.name}`, {
+          metric_roles: requiredRoles,
+          user_role: userProfile.role,
+          role_matches: roleMatches,
+          metric_tiers: metric.applicable_tiers,
+          user_tier: userTier,
+          tier_matches: tierMatches,
+          overall_match: roleMatches && tierMatches
+        });
         
         return roleMatches && tierMatches;
       });
@@ -381,11 +392,15 @@ export default function UserComplianceManager() {
 
       if (finalError) throw finalError;
       
-      // Filter out records for deactivated metrics AND ensure they match the VIEWED USER'S tier
+      // CRITICAL FIX: Filter by BOTH role AND tier to match Matrix display
       const activeRecords = (allRecords || []).filter(record => {
         const isActive = record.compliance_metrics?.is_active === true;
         
-        // CRITICAL FIX: Use simple database tier values, not role-based names
+        // First filter by ROLE
+        const requiredRoles = record.compliance_metrics?.required_for_roles || [];
+        const roleMatches = requiredRoles.length === 0 || requiredRoles.includes(userProfile.role);
+        
+        // Then filter by TIER
         const userTier = userProfile.compliance_tier || 'basic';
         let tierMatches = false;
         
@@ -398,7 +413,7 @@ export default function UserComplianceManager() {
           tierMatches = userTier === 'basic';
         }
         
-        return isActive && tierMatches;
+        return isActive && roleMatches && tierMatches;
       });
       
       console.log('🚨 FILTERED RECORDS:', {

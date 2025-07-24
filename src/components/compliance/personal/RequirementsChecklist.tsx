@@ -75,32 +75,37 @@ export function RequirementsChecklist() {
     }
   };
 
-  // Filter requirements to only show items for the user's assigned tier
-  // SA/AD admins see all, other users only see their tier
+  // Filter requirements by BOTH role AND tier to match Matrix display
+  // SA/AD admins see all, other users only see their role and tier
   const filteredRecords = React.useMemo(() => {
     if (['SA', 'AD'].includes(userRole)) {
       // Admins see all compliance records
       return complianceRecords;
     }
     
-    // For non-admin users, only show records for their assigned tier using simple database values
+    // CRITICAL FIX: Filter by BOTH role AND tier for non-admin users
     const userTier = tierInfo?.tier || 'basic';
     
     return complianceRecords.filter(record => {
-      // Check if the record's metric has applicable_tiers that match user's simple tier
+      // First filter by ROLE - this was missing!
+      const requiredRoles = record.compliance_metrics?.required_for_roles || [];
+      const roleMatches = requiredRoles.length === 0 || requiredRoles.includes(userRole);
+      
+      // Then filter by TIER
+      let tierMatches = false;
       if (record.compliance_metrics?.applicable_tiers) {
         // Database contains simple values like 'basic', 'robust', 'basic,robust'
         const applicableTiers = record.compliance_metrics.applicable_tiers.split(',').map(t => t.trim());
-        return applicableTiers.includes(userTier) || applicableTiers.includes('basic,robust');
+        tierMatches = applicableTiers.includes(userTier) || applicableTiers.includes('basic,robust');
+      } else if (record.tier) {
+        // Legacy fallback: if record has a simple tier field, check that
+        tierMatches = record.tier === userTier;
+      } else {
+        // If no tier specified on record, default to basic tier only
+        tierMatches = userTier === 'basic';
       }
       
-      // Legacy fallback: if record has a simple tier field, check that
-      if (record.tier) {
-        return record.tier === userTier;
-      }
-      
-      // If no tier specified on record, default to basic tier only
-      return userTier === 'basic';
+      return roleMatches && tierMatches;
     });
   }, [complianceRecords, tierInfo, userRole]);
 
