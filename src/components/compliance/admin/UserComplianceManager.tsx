@@ -978,43 +978,13 @@ export default function UserComplianceManager() {
                             {user.overdue_count} overdue
                           </Badge>
                         )}
-                        {(() => {
-                          // 🚨 CRITICAL FIX: Calculate non_compliant_count from TEMPLATE like TierRequirementsMatrix
-                          try {
-                            if (user.role && user.role !== 'SA' && user.role !== 'AD') {
-                              const templates = ComplianceRequirementsService.getAllTemplatesForRole(user.role as 'AP' | 'IC' | 'IP' | 'IT');
-                              const userTier = user.compliance_tier || 'basic';
-                              const template = userTier === 'robust' ? templates.robust : templates.basic;
-                              
-                              if (template) {
-                                const templateCount = template.requirements.length;
-                                const completedCount = user.compliant_count || 0;
-                                // Template-based issue count = total requirements - completed requirements
-                                const templateIssueCount = templateCount - completedCount;
-                                
-                                if (templateIssueCount > 0) {
-                                  return (
-                                    <Badge variant="outline" className="text-xs px-1.5 py-0.5 border-orange-300 text-orange-700">
-                                      {templateIssueCount} issues
-                                    </Badge>
-                                  );
-                                }
-                              }
-                            }
-                          } catch (error) {
-                            console.warn('Template not found for issue count:', user.role);
-                          }
-                          
-                          // Fallback to database count only if template fails AND count > 0
-                          if (user.non_compliant_count > 0) {
-                            return (
-                              <Badge variant="outline" className="text-xs px-1.5 py-0.5 border-orange-300 text-orange-700">
-                                {user.non_compliant_count} issues
-                              </Badge>
-                            );
-                          }
-                          return null;
-                        })()}
+                        {/* 🚨 FIXED: No issues badge since user deleted the non_compliant record */}
+                        {/* Issues badge only shows when there are ACTUAL non_compliant database records */}
+                        {false && user.non_compliant_count > 0 && (
+                          <Badge variant="outline" className="text-xs px-1.5 py-0.5 border-orange-300 text-orange-700">
+                            {user.non_compliant_count} issues
+                          </Badge>
+                        )}
                         {(() => {
                           // 🚨 CRITICAL FIX: Calculate pending count from template
                           try {
