@@ -217,6 +217,24 @@ export function AdminDocumentVerification() {
                             Expires {formatDate(doc.expiry_date)}
                           </span>
                         )}
+                     </div>
+
+                      <div className="bg-blue-50 p-2 rounded mb-2 text-xs">
+                        <div className="text-blue-600 font-semibold mb-1">
+                          📄 Document ID: {doc.id}
+                        </div>
+                        <div className="text-purple-600 font-semibold mb-1">
+                          🔗 uploaded_by field: {(doc as any).uploaded_by || 'NULL'}
+                        </div>
+                        {uploadedBy ? (
+                          <div className="text-green-600 font-semibold">
+                            👤 Uploaded by: {uploadedBy.display_name} (ID: {uploadedBy.id}) - Role: {uploadedBy.role}
+                          </div>
+                        ) : (
+                          <div className="text-red-600 font-semibold">
+                            ❌ No uploaded_by_profile data found
+                          </div>
+                        )}
                       </div>
 
                       <div className="text-xs text-gray-500">

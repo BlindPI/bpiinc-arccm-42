@@ -1081,28 +1081,38 @@ export default function UserComplianceManager() {
                       {record.uploaded_documents.map((doc: ComplianceDocument) => {
                         const uploadedBy = (doc as any).uploaded_by_profile;
                         return (
-                          <div key={doc.id} className="flex items-center justify-between bg-white p-2 rounded mb-1">
-                            <div className="flex items-center gap-2">
-                              <FileText className="h-4 w-4 text-green-600" />
-                              <div className="flex flex-col">
+                          <div key={doc.id} className="bg-white p-3 rounded border mb-2">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <FileText className="h-4 w-4 text-green-600" />
                                 <span className="text-sm font-medium">{doc.file_name}</span>
-                                {uploadedBy && (
-                                  <span className="text-xs text-gray-600">
-                                    Uploaded by: {uploadedBy.display_name} (ID: {uploadedBy.id})
-                                  </span>
-                                )}
+                                <Badge className={getStatusColor(doc.verification_status)}>
+                                  {doc.verification_status}
+                                </Badge>
                               </div>
-                              <Badge className={getStatusColor(doc.verification_status)}>
-                                {doc.verification_status}
-                              </Badge>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => downloadDocument(doc.file_path, doc.file_name)}
+                              >
+                                <Download className="h-3 w-3" />
+                              </Button>
                             </div>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => downloadDocument(doc.file_path, doc.file_name)}
-                            >
-                              <Download className="h-3 w-3" />
-                            </Button>
+                            <div className="text-xs text-blue-600 font-semibold mb-1">
+                              📄 Document ID: {doc.id}
+                            </div>
+                            <div className="text-xs text-purple-600 font-semibold mb-1">
+                              🔗 uploaded_by field: {(doc as any).uploaded_by || 'NULL'}
+                            </div>
+                            {uploadedBy ? (
+                              <div className="text-xs text-green-600 font-semibold">
+                                👤 Uploaded by: {uploadedBy.display_name} (ID: {uploadedBy.id})
+                              </div>
+                            ) : (
+                              <div className="text-xs text-red-600 font-semibold">
+                                ❌ No uploaded_by_profile data found
+                              </div>
+                            )}
                           </div>
                         );
                       })}

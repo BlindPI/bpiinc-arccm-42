@@ -606,6 +606,7 @@ export class ComplianceService {
       if (uploadError) throw uploadError;
 
       // Use direct database upsert instead of problematic RPC function
+      const currentUserId = (await supabase.auth.getUser()).data.user?.id;
       const { data, error } = await supabase
         .from('compliance_documents')
         .upsert({
@@ -618,7 +619,8 @@ export class ComplianceService {
           upload_date: new Date().toISOString(),
           expiry_date: expiryDate || null,
           verification_status: 'pending',
-          is_current: true
+          is_current: true,
+          uploaded_by: currentUserId  // 🚨 FIX: Set who uploaded it
         }, {
           onConflict: 'user_id,metric_id',
           ignoreDuplicates: false
