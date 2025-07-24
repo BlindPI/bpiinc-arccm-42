@@ -313,73 +313,56 @@ export default function UserComplianceManager() {
 
       if (finalError) throw finalError;
       
-      // 🚨 CRITICAL FIX: SA/AD users should see ALL template requirements (not just existing records)
+      // 🚨 CRITICAL FIX: SA/AD users should see ALL database records for user's tier
       let activeRecords = allRecords || [];
       
-      if ((currentUser?.role === 'SA' || currentUser?.role === 'AD') && template) {
-        // SA/AD admins see ALL template requirements for this user's tier
+      if (currentUser?.role === 'SA' || currentUser?.role === 'AD') {
+        // SA/AD admins see the correct template requirements for this user's tier
         const userTier = userProfile.compliance_tier || 'basic';
         
-        // Get all compliance metrics that match the template requirements
-        const { data: allMetrics } = await supabase
-          .from('compliance_metrics')
-          .select('*')
-          .eq('is_active', true);
-        
-        const templateRequirementNames = template.requirements.map(req => req.name);
-        
-        // Create records for all template requirements
-        const templateRecords = [];
-        
-        for (const templateReq of template.requirements) {
-          // Find matching metric
-          const matchingMetric = allMetrics?.find(metric =>
-            metric.name === templateReq.name ||
-            metric.name.includes(templateReq.name) ||
-            templateReq.name.includes(metric.name)
-          );
+        if (template) {
+          // Use template to get the correct 8 requirements
+          const templateRequirementNames = template.requirements.map(req => req.name);
           
-          if (matchingMetric) {
-            // Check if user already has a record for this metric
-            let existingRecord = allRecords?.find(record =>
-              record.metric_id === matchingMetric.id
-            );
+          activeRecords = (allRecords || []).filter(record => {
+            const isActive = record.compliance_metrics?.is_active === true;
+            if (!isActive) return false;
             
-            if (existingRecord) {
-              // Use existing record
-              templateRecords.push(existingRecord);
-            } else {
-              // Create virtual record for missing requirement
-              const virtualRecord = {
-                id: `virtual_${matchingMetric.id}`,
-                user_id: userId,
-                metric_id: matchingMetric.id,
-                requirement_id: matchingMetric.id,
-                status: 'pending',
-                completion_percentage: 0,
-                current_value: '',
-                target_value: matchingMetric.target_value || '',
-                evidence_files: [],
-                due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-                reviewer_id: null,
-                review_notes: '',
-                compliance_metrics: matchingMetric
-              };
-              templateRecords.push(virtualRecord);
-            }
-          }
+            const metricName = record.compliance_metrics?.name || '';
+            
+            // Check if this metric matches one of the template requirements
+            const matchesTemplate = templateRequirementNames.some(templateName => {
+              // Exact match or metric name contains template name (handles "(robust)" suffix)
+              return metricName === templateName ||
+                     metricName === `${templateName} (${userTier})` ||
+                     metricName.includes(templateName);
+            });
+            
+            return matchesTemplate;
+          });
+          
+          console.log('🚨 SA/AD VIEW: Showing template-matched requirements for user tier:', {
+            userTier,
+            templateName: template.role_name,
+            templateRequirements: templateRequirementNames,
+            totalRecords: allRecords?.length || 0,
+            activeRecords: activeRecords.length,
+            recordNames: activeRecords.map(r => r.compliance_metrics?.name)
+          });
+        } else {
+          // Fallback: filter by tier if no template
+          activeRecords = (allRecords || []).filter(record => {
+            const isActive = record.compliance_metrics?.is_active === true;
+            if (!isActive) return false;
+            
+            const applicableTiers = record.compliance_metrics?.applicable_tiers || '';
+            const tierMatches = applicableTiers.includes(userTier) ||
+                               applicableTiers.includes('basic,robust') ||
+                               (!applicableTiers && userTier === 'basic');
+            
+            return tierMatches;
+          });
         }
-        
-        activeRecords = templateRecords;
-        
-        console.log('🚨 SA/AD VIEW: Showing ALL template requirements:', {
-          userTier,
-          templateName: template.role_name,
-          templateRequirements: templateRequirementNames,
-          totalRecords: allRecords?.length || 0,
-          templateRecords: templateRecords.length,
-          recordNames: templateRecords.map(r => r.compliance_metrics?.name)
-        });
       } else if (template) {
         // Non-admin users get template filtering (existing logic)
         const templateRequirementNames = template.requirements.map(req => req.name);
