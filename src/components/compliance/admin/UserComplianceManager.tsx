@@ -79,7 +79,6 @@ export default function UserComplianceManager() {
   const [showRejectModal, setShowRejectModal] = useState<string | null>(null);
   const [showUploadModal, setShowUploadModal] = useState<string | null>(null);
   const [actionNotes, setActionNotes] = useState<string>('');
-  const [uploadExpiryDate, setUploadExpiryDate] = useState<string>('');
 
   useEffect(() => {
     fetchUsersAndRoleData();
@@ -377,7 +376,7 @@ export default function UserComplianceManager() {
     }
   };
 
-  const handleFileUpload = async (recordId: string, file: File, expiryDate?: string) => {
+  const handleFileUpload = async (recordId: string, file: File) => {
     setUploadingRecord(recordId);
     
     try {
@@ -387,35 +386,20 @@ export default function UserComplianceManager() {
       }
 
       // Upload file to Supabase storage with proper naming
-      const fileName = `compliance_${selectedUser.user_id}_${currentRecord.metric_id}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const fileName = `compliance_${selectedUser.user_id}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('compliance-documents')
         .upload(fileName, file);
 
       if (uploadError) {
         console.error('Storage upload error:', uploadError);
-        throw new Error(`File upload failed: ${uploadError.message}`);
+        throw new Error('File upload failed');
       }
 
-      console.log('✅ File uploaded to storage:', uploadData.path);
-
-      // CRITICAL FIX: Mark previous documents as not current for this user+metric
-      const { error: updateError } = await supabase
-        .from('compliance_documents')
-        .update({ is_current: false })
-        .eq('user_id', selectedUser.user_id)
-        .eq('metric_id', currentRecord.metric_id)
-        .eq('is_current', true);
-
-      if (updateError) {
-        console.warn('Warning: Could not update previous documents:', updateError);
-        // Don't throw - this is non-critical
-      }
-
-      // CRITICAL FIX: Use INSERT instead of UPSERT since each upload is a new document
+      // Upsert document record (insert or update if exists)
       const { data: docData, error: docError } = await supabase
         .from('compliance_documents')
-        .insert({
+        .upsert({
           user_id: selectedUser.user_id,
           metric_id: currentRecord.metric_id,
           file_name: file.name,
@@ -424,33 +408,21 @@ export default function UserComplianceManager() {
           file_size: file.size,
           verification_status: 'pending',
           upload_date: new Date().toISOString(),
-          expiry_date: expiryDate || null,
-          is_current: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          is_current: true
+        }, {
+          onConflict: 'user_id,metric_id',
+          ignoreDuplicates: false
         })
         .select()
         .single();
 
       if (docError) {
-        console.error('Database insertion error:', docError);
-        
-        // If database insert fails, clean up the uploaded file
-        try {
-          await supabase.storage
-            .from('compliance-documents')
-            .remove([uploadData.path]);
-        } catch (cleanupError) {
-          console.error('Failed to cleanup uploaded file:', cleanupError);
-        }
-        
-        throw new Error(`Database record creation failed: ${docError.message}`);
+        console.error('Document upsert error:', docError);
+        throw new Error('Document record creation failed');
       }
 
-      console.log('✅ Database record created:', docData.id);
-
       // Update compliance record status
-      const { error: statusUpdateError } = await supabase
+      const { error: updateError } = await supabase
         .from('user_compliance_records')
         .update({
           status: 'submitted',
@@ -458,8 +430,8 @@ export default function UserComplianceManager() {
         })
         .eq('id', recordId);
 
-      if (statusUpdateError) {
-        console.error('Record update error:', statusUpdateError);
+      if (updateError) {
+        console.error('Record update error:', updateError);
         throw new Error('Status update failed');
       }
 
