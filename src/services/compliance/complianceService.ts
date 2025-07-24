@@ -751,7 +751,15 @@ export class ComplianceService {
         user_profile:profiles!user_id (
           id,
           display_name,
-          email
+          email,
+          role,
+          compliance_tier
+        ),
+        uploaded_by_profile:profiles!uploaded_by (
+          id,
+          display_name,
+          email,
+          role
         )
       `)
       .eq('verification_status', 'pending')

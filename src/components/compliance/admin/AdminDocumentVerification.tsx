@@ -31,11 +31,13 @@ export function AdminDocumentVerification() {
   const [processing, setProcessing] = useState<string | null>(null);
 
   // Filter documents based on search
-  const filteredDocuments = documentsForVerification.filter(doc => 
+  const filteredDocuments = documentsForVerification.filter(doc =>
     doc.file_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     doc.compliance_metrics?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (doc as any).profiles?.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (doc as any).profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    (doc as any).user_profile?.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (doc as any).user_profile?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (doc as any).uploaded_by_profile?.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (doc as any).uploaded_by_profile?.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Sort by upload date (oldest first for verification queue)
@@ -140,7 +142,8 @@ export function AdminDocumentVerification() {
         {sortedDocuments.length > 0 ? (
           <div className="space-y-4">
             {sortedDocuments.map((doc) => {
-              const profile = (doc as any).profiles;
+              const complianceUser = (doc as any).user_profile; // Who the document is FOR
+              const uploadedBy = (doc as any).uploaded_by_profile; // Who uploaded it
               const daysWaiting = getDaysWaiting(doc.upload_date);
               const isUrgent = daysWaiting > 7;
               
@@ -190,12 +193,18 @@ export function AdminDocumentVerification() {
                       <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
                         <span className="flex items-center gap-1">
                           <User className="h-3 w-3" />
-                          {profile?.display_name || 'Unknown User'}
+                          <strong>For:</strong> {complianceUser?.display_name || 'Unknown User'}
                         </span>
                         <span className="flex items-center gap-1">
                           <FileText className="h-3 w-3" />
-                          {profile?.email || 'No email'}
+                          {complianceUser?.email || 'No email'}
                         </span>
+                        {uploadedBy && uploadedBy.id !== complianceUser?.id && (
+                          <span className="flex items-center gap-1 text-blue-600">
+                            <User className="h-3 w-3" />
+                            <strong>Uploaded by:</strong> {uploadedBy.display_name} ({uploadedBy.role})
+                          </span>
+                        )}
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
                           Uploaded {formatDate(doc.upload_date)}
