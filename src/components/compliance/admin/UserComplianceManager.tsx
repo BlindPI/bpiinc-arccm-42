@@ -268,7 +268,7 @@ export default function UserComplianceManager() {
         compliance_tier: userProfile?.compliance_tier
       });
       
-      // 🚨 CRITICAL FIX: Use ComplianceRequirementsService like TierRequirementsMatrix
+      // 🚨 CRITICAL FIX: Use EXACT same logic as TierRequirementsMatrix
       let template = null;
       try {
         if (userProfile.role && userProfile.role !== 'SA' && userProfile.role !== 'AD') {
@@ -276,7 +276,7 @@ export default function UserComplianceManager() {
           const templates = ComplianceRequirementsService.getAllTemplatesForRole(userProfile.role as 'AP' | 'IC' | 'IP' | 'IT');
           template = userTier === 'robust' ? templates.robust : templates.basic;
           
-          console.log('🚨 TEMPLATE FROM SERVICE:', {
+          console.log('🚨 TEMPLATE FROM SERVICE (TierRequirementsMatrix logic):', {
             userRole: userProfile.role,
             userTier,
             template: template ? {
@@ -291,8 +291,15 @@ export default function UserComplianceManager() {
         console.warn('No compliance template found for role:', userProfile.role);
       }
       
-      // Get ALL existing user compliance records
-      const { data: allRecords, error: finalError } = await supabase
+      // If no template found (SA/AD users or invalid roles), show empty records
+      if (!template) {
+        console.log('🚨 No template found - showing empty compliance records for admin/invalid role');
+        setComplianceRecords([]);
+        return;
+      }
+      
+      // Get ALL existing user compliance records for status matching
+      const { data: allUserRecords, error: recordsError } = await supabase
         .from('user_compliance_records')
         .select(`
           *,
@@ -308,104 +315,72 @@ export default function UserComplianceManager() {
             is_active
           )
         `)
-        .eq('user_id', userId)
-        .order('due_date', { ascending: true });
+        .eq('user_id', userId);
 
-      if (finalError) throw finalError;
+      if (recordsError) throw recordsError;
       
-      // 🚨 CRITICAL FIX: SA/AD users should see ALL database records for user's tier
-      let activeRecords = allRecords || [];
-      
-      if (currentUser?.role === 'SA' || currentUser?.role === 'AD') {
-        // SA/AD admins see the correct template requirements for this user's tier
-        const userTier = userProfile.compliance_tier || 'basic';
-        
-        if (template) {
-          // Use template to get the correct 8 requirements
-          const templateRequirementNames = template.requirements.map(req => req.name);
-          
-          activeRecords = (allRecords || []).filter(record => {
-            const isActive = record.compliance_metrics?.is_active === true;
-            if (!isActive) return false;
-            
-            const metricName = record.compliance_metrics?.name || '';
-            
-            // Check if this metric matches one of the template requirements
-            const matchesTemplate = templateRequirementNames.some(templateName => {
-              // Exact match or metric name contains template name (handles "(robust)" suffix)
-              return metricName === templateName ||
-                     metricName === `${templateName} (${userTier})` ||
-                     metricName.includes(templateName);
-            });
-            
-            return matchesTemplate;
-          });
-          
-          console.log('🚨 SA/AD VIEW: Showing template-matched requirements for user tier:', {
-            userTier,
-            templateName: template.role_name,
-            templateRequirements: templateRequirementNames,
-            totalRecords: allRecords?.length || 0,
-            activeRecords: activeRecords.length,
-            recordNames: activeRecords.map(r => r.compliance_metrics?.name)
-          });
-        } else {
-          // Fallback: filter by tier if no template
-          activeRecords = (allRecords || []).filter(record => {
-            const isActive = record.compliance_metrics?.is_active === true;
-            if (!isActive) return false;
-            
-            const applicableTiers = record.compliance_metrics?.applicable_tiers || '';
-            const tierMatches = applicableTiers.includes(userTier) ||
-                               applicableTiers.includes('basic,robust') ||
-                               (!applicableTiers && userTier === 'basic');
-            
-            return tierMatches;
-          });
-        }
-      } else if (template) {
-        // Non-admin users get template filtering (existing logic)
-        const templateRequirementNames = template.requirements.map(req => req.name);
-        
-        activeRecords = (allRecords || []).filter(record => {
-          const isActive = record.compliance_metrics?.is_active === true;
-          const recordName = record.compliance_metrics?.name || '';
-          
-          const matchesTemplate = templateRequirementNames.some(templateName =>
-            recordName.includes(templateName) || templateName.includes(recordName)
+      // 🚨 CRITICAL FIX: Use TierRequirementsMatrix approach - template requirements as source of truth
+      const getComplianceStatus = (requirementName: string) => {
+        const record = allUserRecords?.find(r =>
+          r.compliance_metrics?.name?.includes(requirementName) ||
+          r.compliance_metrics?.name?.includes(`${requirementName} (${userProfile.compliance_tier})`)
+        );
+        return record?.status || 'pending';
+      };
+
+      // 🚨 CRITICAL FIX: Build records from TEMPLATE requirements, not database records
+      const templateBasedRecords = await Promise.all(
+        template.requirements.map(async (requirement, index) => {
+          // Find matching user compliance record for this template requirement
+          const matchingRecord = allUserRecords?.find(r =>
+            r.compliance_metrics?.name?.includes(requirement.name) ||
+            r.compliance_metrics?.name?.includes(`${requirement.name} (${userProfile.compliance_tier})`)
           );
           
-          return isActive && matchesTemplate;
-        });
-      } else {
-        // Fallback to basic filtering
-        activeRecords = (allRecords || []).filter(record =>
-          record.compliance_metrics?.is_active === true
-        );
-      }
-
-      // Get documents for each active record
-      const recordsWithDocs = await Promise.all(
-        activeRecords.map(async (record) => {
-          const { data: docs } = await supabase
+          // Get documents for this requirement
+          const { data: docs } = matchingRecord ? await supabase
             .from('compliance_documents')
             .select('id, file_name, upload_date, verification_status, file_path')
             .eq('user_id', userId)
-            .eq('metric_id', record.metric_id);
+            .eq('metric_id', matchingRecord.metric_id) : { data: [] };
 
+          // Create record based on template requirement (like TierRequirementsMatrix)
+          const recordId = matchingRecord?.id || `virtual_${requirement.name}_${index}`;
+          
           return {
-            ...record,
-            requirement_name: record.compliance_metrics?.name || 'Unknown Requirement',
-            requirement_description: record.compliance_metrics?.description || '',
-            tier_level: userProfile.compliance_tier || 'basic', // CRITICAL FIX: Use USER'S actual tier, not metric's applicable tiers
-            category: record.compliance_metrics?.category || 'general',
-            document_required: record.compliance_metrics?.measurement_type === 'boolean' || false,
+            id: recordId,
+            user_id: userId,
+            metric_id: matchingRecord?.metric_id || `virtual_metric_${index}`,
+            requirement_id: matchingRecord?.requirement_id || `virtual_req_${index}`,
+            status: getComplianceStatus(requirement.name),
+            completion_percentage: matchingRecord?.completion_percentage || 0,
+            current_value: matchingRecord?.current_value || '',
+            target_value: String(requirement.target_value || ''),
+            evidence_files: matchingRecord?.evidence_files || [],
+            due_date: matchingRecord?.due_date || '',
+            reviewer_id: matchingRecord?.reviewer_id || '',
+            review_notes: matchingRecord?.review_notes || '',
+            // Template-based fields (consistent with TierRequirementsMatrix)
+            requirement_name: requirement.name,
+            requirement_description: requirement.description,
+            tier_level: userProfile.compliance_tier || 'basic',
+            category: requirement.category,
+            document_required: requirement.document_requirements ? true : false,
             uploaded_documents: docs || []
           };
         })
       );
+      
+      console.log('🚨 TEMPLATE-BASED RECORDS (matching TierRequirementsMatrix):', {
+        userRole: userProfile.role,
+        userTier: userProfile.compliance_tier,
+        templateRequirements: template.requirements.length,
+        generatedRecords: templateBasedRecords.length,
+        recordNames: templateBasedRecords.map(r => r.requirement_name),
+        statuses: templateBasedRecords.map(r => ({ name: r.requirement_name, status: r.status }))
+      });
 
-      setComplianceRecords(recordsWithDocs);
+      setComplianceRecords(templateBasedRecords);
     } catch (error) {
       console.error('Error fetching compliance records:', error);
     }
