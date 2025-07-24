@@ -478,10 +478,10 @@ export default function UserComplianceManager() {
         throw new Error('File upload failed');
       }
 
-      // Upsert document record (insert or update if exists)
+      // 🚨 UPLOAD FIX: Simple insert without upsert (no unique constraint exists)
       const documentData: any = {
         user_id: selectedUser.user_id,
-        metric_id: currentRecord.metric_id,
+        metric_id: actualMetricId,
         file_name: file.name,
         file_path: uploadData.path,
         file_type: file.type || 'application/octet-stream',
@@ -498,16 +498,13 @@ export default function UserComplianceManager() {
 
       const { data: docData, error: docError } = await supabase
         .from('compliance_documents')
-        .upsert(documentData, {
-          onConflict: 'user_id,metric_id',
-          ignoreDuplicates: false
-        })
+        .insert(documentData)
         .select()
         .single();
 
       if (docError) {
-        console.error('Document upsert error:', docError);
-        throw new Error('Document record creation failed');
+        console.error('Document insert error:', docError);
+        throw new Error(`Document record creation failed: ${docError.message}`);
       }
 
       // Update compliance record status (use actual record ID)
@@ -537,7 +534,6 @@ export default function UserComplianceManager() {
 
   const updateRecordStatus = async (recordId: string, newStatus: string, notes?: string) => {
     try {
-      // CRITICAL FIX: Use the new verification function for proper document handling
       const currentRecord = complianceRecords.find(r => r.id === recordId);
       if (!currentRecord || !selectedUser) {
         throw new Error('Missing record or user data');
@@ -546,20 +542,31 @@ export default function UserComplianceManager() {
       // Check if this is a virtual record
       const isVirtualRecord = recordId.startsWith('virtual_');
       let actualRecordId = recordId;
+      let actualMetricId = currentRecord.metric_id;
 
+      // 🚨 CRITICAL FIX: Handle virtual records properly for status updates
       if (isVirtualRecord) {
+        // Validate we have a real metric_id
+        if (!actualMetricId || actualMetricId.startsWith('virtual_')) {
+          throw new Error(`Cannot update status: No valid metric found for requirement "${currentRecord.requirement_name}". This requirement may not exist in the database.`);
+        }
+
         // Create a real compliance record for virtual record first
         const { data: newRecord, error: recordError } = await supabase
           .from('user_compliance_records')
           .insert({
             user_id: selectedUser.user_id,
-            metric_id: currentRecord.metric_id,
-            status: 'pending',
-            completion_percentage: 0,
-            current_value: '',
+            metric_id: actualMetricId,
+            status: newStatus === 'approved' ? 'approved' : 'rejected',
+            compliance_status: newStatus === 'approved' ? 'compliant' : 'non_compliant',
+            completion_percentage: newStatus === 'approved' ? 100 : 0,
+            current_value: newStatus === 'approved' ? 'approved' : 'rejected',
             target_value: currentRecord.target_value || '',
             evidence_files: [],
             due_date: currentRecord.due_date,
+            tier: selectedUser.compliance_tier || 'basic',
+            review_notes: notes,
+            reviewer_id: (await supabase.auth.getUser()).data.user?.id,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
@@ -568,35 +575,22 @@ export default function UserComplianceManager() {
 
         if (recordError) {
           console.error('Error creating compliance record:', recordError);
-          throw new Error('Failed to create compliance record');
+          throw new Error(`Failed to create compliance record: ${recordError.message}`);
         }
 
         actualRecordId = newRecord.id;
-        console.log('Created real compliance record for status update:', actualRecordId);
-      }
-
-      // Find the related document for this record
-      const relatedDoc = currentRecord.uploaded_documents?.[0];
-      if (relatedDoc) {
-        // Use new database function for proper verification with user data
-        const { error: verifyError } = await supabase.rpc('verify_compliance_document_with_user', {
-          p_document_id: relatedDoc.id,
-          p_verification_status: newStatus === 'approved' ? 'approved' : 'rejected',
-          p_verification_notes: notes || null,
-          p_rejection_reason: newStatus === 'rejected' ? notes || null : null
-        });
-
-        if (verifyError) {
-          console.error('Verification function error:', verifyError);
-          throw verifyError;
-        }
+        console.log('Created real compliance record with status for virtual record:', actualRecordId);
       } else {
-        // Fallback: update record directly if no document (use actual record ID)
+        // Update existing real record
         const updateData: any = {
           status: newStatus === 'approved' ? 'approved' : 'rejected',
+          compliance_status: newStatus === 'approved' ? 'compliant' : 'non_compliant',
+          completion_percentage: newStatus === 'approved' ? 100 : 0,
           review_notes: notes,
+          reviewer_id: (await supabase.auth.getUser()).data.user?.id,
           updated_at: new Date().toISOString()
         };
+
         if (newStatus === 'approved') {
           updateData.approved_at = new Date().toISOString();
           updateData.approved_by = (await supabase.auth.getUser()).data.user?.id;
@@ -607,7 +601,28 @@ export default function UserComplianceManager() {
           .update(updateData)
           .eq('id', actualRecordId);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error updating compliance record:', error);
+          throw new Error(`Failed to update record: ${error.message}`);
+        }
+      }
+
+      // Handle documents if they exist
+      const relatedDoc = currentRecord.uploaded_documents?.[0];
+      if (relatedDoc) {
+        const { error: docError } = await supabase
+          .from('compliance_documents')
+          .update({
+            verification_status: newStatus === 'approved' ? 'approved' : 'rejected',
+            verified_at: new Date().toISOString(),
+            verified_by: (await supabase.auth.getUser()).data.user?.id,
+            verification_notes: notes
+          })
+          .eq('id', relatedDoc.id);
+
+        if (docError) {
+          console.warn('Failed to update document status:', docError);
+        }
       }
       
       await fetchUserComplianceRecords(selectedUser.user_id);
@@ -635,19 +650,68 @@ export default function UserComplianceManager() {
 
     try {
       if (isVirtualRecord) {
-        // For virtual records, just refresh the view - there's nothing to reset
-        console.log('Resetting virtual record - refreshing view');
+        // For virtual records, check if there's actually a real record in database to clear
+        const actualMetricId = currentRecord.metric_id;
+        
+        if (actualMetricId && !actualMetricId.startsWith('virtual_')) {
+          // There's a real metric, so check if user has any records for it
+          const { data: existingRecords, error: queryError } = await supabase
+            .from('user_compliance_records')
+            .select('id')
+            .eq('user_id', selectedUser.user_id)
+            .eq('metric_id', actualMetricId);
+
+          if (queryError) throw queryError;
+
+          if (existingRecords && existingRecords.length > 0) {
+            // Delete all existing records for this metric
+            const { error: deleteError } = await supabase
+              .from('user_compliance_records')
+              .delete()
+              .eq('user_id', selectedUser.user_id)
+              .eq('metric_id', actualMetricId);
+
+            if (deleteError) throw deleteError;
+
+            // Delete all documents for this metric
+            const { error: docDeleteError } = await supabase
+              .from('compliance_documents')
+              .delete()
+              .eq('user_id', selectedUser.user_id)
+              .eq('metric_id', actualMetricId);
+
+            if (docDeleteError) {
+              console.warn('Failed to delete documents:', docDeleteError);
+            }
+
+            console.log('Reset virtual record - deleted real database entries');
+          } else {
+            console.log('Reset virtual record - no real database entries to delete');
+          }
+        }
+        
         await fetchUserComplianceRecords(selectedUser.user_id);
       } else {
-        // Use database function to reset real requirement
-        const { error } = await supabase.rpc('reset_compliance_requirement', {
-          p_user_id: selectedUser.user_id,
-          p_metric_id: currentRecord.metric_id
-        });
+        // For real records, delete directly
+        const actualMetricId = currentRecord.metric_id;
+        
+        // Delete compliance record
+        const { error: deleteError } = await supabase
+          .from('user_compliance_records')
+          .delete()
+          .eq('id', recordId);
 
-        if (error) {
-          console.error('Reset function error:', error);
-          throw error;
+        if (deleteError) throw deleteError;
+
+        // Delete all documents for this metric
+        const { error: docDeleteError } = await supabase
+          .from('compliance_documents')
+          .delete()
+          .eq('user_id', selectedUser.user_id)
+          .eq('metric_id', actualMetricId);
+
+        if (docDeleteError) {
+          console.warn('Failed to delete documents:', docDeleteError);
         }
 
         await fetchUserComplianceRecords(selectedUser.user_id);
