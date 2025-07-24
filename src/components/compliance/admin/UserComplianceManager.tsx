@@ -282,12 +282,16 @@ export default function UserComplianceManager() {
       
       if (metricsError) throw metricsError;
       
-      // Filter metrics by role and tier
+      // Filter metrics by role and tier - CRITICAL FIX for tier visibility
       const applicableMetrics = (allActiveMetrics || []).filter(metric => {
         const requiredRoles = metric.required_for_roles || [];
         const roleMatches = requiredRoles.length === 0 || requiredRoles.includes(userProfile.role);
+        
+        // CRITICAL FIX: Properly filter by user's assigned tier
+        const userTier = userProfile.compliance_tier || 'basic';
         const tierMatches = !metric.applicable_tiers ||
-          metric.applicable_tiers.includes(userProfile.compliance_tier || 'basic');
+          metric.applicable_tiers.includes(userTier);
+        
         return roleMatches && tierMatches;
       });
       
@@ -356,10 +360,17 @@ export default function UserComplianceManager() {
 
       if (finalError) throw finalError;
       
-      // Filter out records for deactivated metrics
-      const activeRecords = (allRecords || []).filter(record =>
-        record.compliance_metrics?.is_active === true
-      );
+      // Filter out records for deactivated metrics AND ensure they match user's tier
+      const activeRecords = (allRecords || []).filter(record => {
+        const isActive = record.compliance_metrics?.is_active === true;
+        
+        // CRITICAL FIX: Also filter by tier - only show records that match user's assigned tier
+        const userTier = userProfile.compliance_tier || 'basic';
+        const tierMatches = !record.compliance_metrics?.applicable_tiers ||
+          record.compliance_metrics.applicable_tiers.includes(userTier);
+        
+        return isActive && tierMatches;
+      });
       
       console.log('🚨 FILTERED RECORDS:', {
         totalRecords: allRecords?.length || 0,
