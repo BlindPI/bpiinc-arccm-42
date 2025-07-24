@@ -247,7 +247,7 @@ const TierColumn: React.FC<{
           </div>
         </div>
 
-        {!isCurrentTier && onTierSwitch && (
+        {!isCurrentTier && onTierSwitch && ['SA', 'AD'].includes(userRole) && (
           <Button
             size="sm"
             variant="outline"
@@ -569,38 +569,47 @@ export const TierRequirementsMatrix: React.FC<TierRequirementsMatrixProps> = ({
     <div className={`space-y-6 ${className}`}>
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Compliance Requirements Matrix</h2>
+          <h2 className="text-xl font-semibold">
+            {['SA', 'AD'].includes(userRole) ? 'Compliance Requirements Matrix' : `My ${currentTier.charAt(0).toUpperCase() + currentTier.slice(1)} Tier Requirements`}
+          </h2>
           <p className="text-gray-600 text-sm mt-1">
-            Compare Basic vs Robust tier requirements for {userRole} role
+            {['SA', 'AD'].includes(userRole)
+              ? `Compare Basic vs Robust tier requirements for ${userRole} role`
+              : `Your current compliance requirements for ${userRole} role`
+            }
           </p>
         </div>
         
-        <div className="flex items-center space-x-2">
-          <Button
-            size="sm"
-            variant={selectedComparison === 'side-by-side' ? 'default' : 'outline'}
-            onClick={() => setSelectedComparison('side-by-side')}
-          >
-            Side by Side
-          </Button>
-          <Button
-            size="sm"
-            variant={selectedComparison === 'basic' ? 'default' : 'outline'}
-            onClick={() => setSelectedComparison('basic')}
-          >
-            Basic Only
-          </Button>
-          <Button
-            size="sm"
-            variant={selectedComparison === 'robust' ? 'default' : 'outline'}
-            onClick={() => setSelectedComparison('robust')}
-          >
-            Robust Only
-          </Button>
-        </div>
+        {/* Only show comparison controls for SA/AD admin users */}
+        {['SA', 'AD'].includes(userRole) && (
+          <div className="flex items-center space-x-2">
+            <Button
+              size="sm"
+              variant={selectedComparison === 'side-by-side' ? 'default' : 'outline'}
+              onClick={() => setSelectedComparison('side-by-side')}
+            >
+              Side by Side
+            </Button>
+            <Button
+              size="sm"
+              variant={selectedComparison === 'basic' ? 'default' : 'outline'}
+              onClick={() => setSelectedComparison('basic')}
+            >
+              Basic Only
+            </Button>
+            <Button
+              size="sm"
+              variant={selectedComparison === 'robust' ? 'default' : 'outline'}
+              onClick={() => setSelectedComparison('robust')}
+            >
+              Robust Only
+            </Button>
+          </div>
+        )}
       </div>
 
-      {selectedComparison === 'side-by-side' && (
+      {/* Admin users can see side-by-side comparison and switch between views */}
+      {['SA', 'AD'].includes(userRole) && selectedComparison === 'side-by-side' && (
         <div className="grid lg:grid-cols-2 gap-6">
           <TierColumn
             template={templates.basic}
@@ -623,7 +632,7 @@ export const TierRequirementsMatrix: React.FC<TierRequirementsMatrixProps> = ({
         </div>
       )}
 
-      {selectedComparison === 'basic' && (
+      {['SA', 'AD'].includes(userRole) && selectedComparison === 'basic' && (
         <TierColumn
           template={templates.basic}
           tier="basic"
@@ -635,7 +644,7 @@ export const TierRequirementsMatrix: React.FC<TierRequirementsMatrixProps> = ({
         />
       )}
 
-      {selectedComparison === 'robust' && (
+      {['SA', 'AD'].includes(userRole) && selectedComparison === 'robust' && (
         <TierColumn
           template={templates.robust}
           tier="robust"
@@ -644,6 +653,19 @@ export const TierRequirementsMatrix: React.FC<TierRequirementsMatrixProps> = ({
           userComplianceRecords={userComplianceRecords}
           onUploadDocument={onUploadDocument}
           onTierSwitch={onTierSwitch}
+        />
+      )}
+
+      {/* Non-admin users only see their current tier */}
+      {!['SA', 'AD'].includes(userRole) && (
+        <TierColumn
+          template={currentTier === 'basic' ? templates.basic : templates.robust}
+          tier={currentTier}
+          userRole={userRole}
+          isCurrentTier={true}
+          userComplianceRecords={userComplianceRecords}
+          onUploadDocument={onUploadDocument}
+          onTierSwitch={undefined} // No tier switching for non-admin users
         />
       )}
 

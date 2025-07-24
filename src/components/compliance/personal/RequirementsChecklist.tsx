@@ -17,6 +17,7 @@ import { useComplianceDashboard } from '@/contexts/ComplianceDashboardContext';
 export function RequirementsChecklist() {
   const { state, dispatch } = useComplianceDashboard();
   const { complianceRecords, tierInfo } = state.data;
+  const { userRole } = state;
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -74,19 +75,39 @@ export function RequirementsChecklist() {
     }
   };
 
+  // Filter requirements to only show items for the user's assigned tier
+  // SA/AD admins see all, other users only see their tier
+  const filteredRecords = React.useMemo(() => {
+    if (['SA', 'AD'].includes(userRole)) {
+      // Admins see all compliance records
+      return complianceRecords;
+    }
+    
+    // For non-admin users, only show records for their assigned tier
+    const userTier = tierInfo?.tier || 'basic';
+    return complianceRecords.filter(record => {
+      // If the record has a tier specified, it must match the user's tier
+      if (record.tier) {
+        return record.tier === userTier;
+      }
+      // If no tier specified on record, include it (legacy records)
+      return true;
+    });
+  }, [complianceRecords, tierInfo, userRole]);
+
   // Group requirements by category
-  const groupedRequirements = complianceRecords.reduce((groups, record) => {
+  const groupedRequirements = filteredRecords.reduce((groups, record) => {
     const category = record.compliance_metrics?.category || 'General';
     if (!groups[category]) {
       groups[category] = [];
     }
     groups[category].push(record);
     return groups;
-  }, {} as Record<string, typeof complianceRecords>);
+  }, {} as Record<string, typeof filteredRecords>);
 
-  // Calculate completion stats
-  const totalRequirements = complianceRecords.length;
-  const completedRequirements = complianceRecords.filter(r => r.compliance_status === 'compliant').length;
+  // Calculate completion stats using filtered records
+  const totalRequirements = filteredRecords.length;
+  const completedRequirements = filteredRecords.filter(r => r.compliance_status === 'compliant').length;
   const completionPercentage = totalRequirements > 0 ? Math.round((completedRequirements / totalRequirements) * 100) : 0;
 
   return (
@@ -96,6 +117,11 @@ export function RequirementsChecklist() {
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
             Requirements Checklist
+            {!['SA', 'AD'].includes(userRole) && tierInfo && (
+              <span className="text-sm font-normal bg-blue-100 text-blue-800 px-2 py-1 rounded-md">
+                {tierInfo.tier?.charAt(0).toUpperCase() + tierInfo.tier?.slice(1)} Tier
+              </span>
+            )}
           </CardTitle>
           <div className="text-right">
             <div className="text-sm text-gray-500">
@@ -152,11 +178,11 @@ export function RequirementsChecklist() {
                             Last checked: {formatDate(record.last_checked_at)}
                           </span>
                         )}
-                        {record.next_check_due && (
-                          <span className={isOverdue(record.next_check_due) ? 'text-red-600 font-medium' : ''}>
+                        {record.due_date && (
+                          <span className={isOverdue(record.due_date) ? 'text-red-600 font-medium' : ''}>
                             <Calendar className="inline h-3 w-3 mr-1" />
-                            Due: {formatDate(record.next_check_due)}
-                            {isOverdue(record.next_check_due) && ' (Overdue)'}
+                            Due: {formatDate(record.due_date)}
+                            {isOverdue(record.due_date) && ' (Overdue)'}
                           </span>
                         )}
                       </div>

@@ -15,8 +15,8 @@ import { ComplianceService } from '@/services/compliance/complianceService';
 
 export function ComplianceUploadModal() {
   const { state, uploadDocument, dispatch } = useComplianceDashboard();
-  const { uploadModalOpen, selectedMetricId } = state;
-  const { complianceRecords } = state.data;
+  const { uploadModalOpen, selectedMetricId, userRole } = state;
+  const { complianceRecords, tierInfo } = state.data;
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [metricId, setMetricId] = useState<string>(selectedMetricId || '');
@@ -25,8 +25,26 @@ export function ComplianceUploadModal() {
   const [uploading, setUploading] = useState(false);
   const [requiresExpiry, setRequiresExpiry] = useState<boolean>(false);
 
-  // Get available metrics for upload - show all compliance records
-  const uploadableMetrics = complianceRecords || [];
+  // Get available metrics for upload - filter by user's tier for non-admin users
+  const uploadableMetrics = React.useMemo(() => {
+    if (!complianceRecords) return [];
+    
+    // SA/AD admins can upload to any requirement
+    if (['SA', 'AD'].includes(userRole)) {
+      return complianceRecords;
+    }
+    
+    // For non-admin users, only show records for their assigned tier
+    const userTier = tierInfo?.tier || 'basic';
+    return complianceRecords.filter(record => {
+      // If the record has a tier specified, it must match the user's tier
+      if (record.tier) {
+        return record.tier === userTier;
+      }
+      // If no tier specified on record, include it (legacy records)
+      return true;
+    });
+  }, [complianceRecords, tierInfo, userRole]);
 
   const selectedMetric = uploadableMetrics.find(record => record.metric_id === metricId);
 
