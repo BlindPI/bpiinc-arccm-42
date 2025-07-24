@@ -685,7 +685,25 @@ export default function UserComplianceManager() {
                         {user.compliance_score || 0}%
                       </div>
                       <div className="text-xs text-indigo-600">
-                        {user.compliant_count || 0} / {user.total_requirements || 0} complete
+                        {(() => {
+                          // 🚨 CRITICAL FIX: Use template counts instead of summary view counts
+                          try {
+                            if (user.role && user.role !== 'SA' && user.role !== 'AD') {
+                              const templates = ComplianceRequirementsService.getAllTemplatesForRole(user.role as 'AP' | 'IC' | 'IP' | 'IT');
+                              const userTier = user.compliance_tier || 'basic';
+                              const template = userTier === 'robust' ? templates.robust : templates.basic;
+                              
+                              if (template) {
+                                const templateCount = template.requirements.length;
+                                return `${user.compliant_count || 0} / ${templateCount} complete`;
+                              }
+                            }
+                          } catch (error) {
+                            console.warn('Template not found for user:', user.role);
+                          }
+                          // Fallback to original summary counts
+                          return `${user.compliant_count || 0} / ${user.total_requirements || 0} complete`;
+                        })()}
                       </div>
                     </div>
                     
