@@ -38,21 +38,34 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
 
   // Role-based access control
   const isAdmin = profile?.role === 'SA' || profile?.role === 'AD';
+  const isAP = profile?.role === 'AP';
   const canViewAllUsers = isAdmin && allowUserSelection && !showCurrentUserOnly;
 
   // Determine which user IDs to fetch
   const userIdsToFetch = useMemo(() => {
+    // Profile page - current user only
     if (showCurrentUserOnly && user?.id) {
       return [user.id];
     }
-    if (!canViewAllUsers && user?.id) {
+    
+    // AP users - let database handle team access (return undefined)
+    if (isAP) {
+      return undefined; // Database will return user + their team members
+    }
+    
+    // IT/IP/IC users - current user only
+    if (!canViewAllUsers && !isAP && user?.id) {
       return [user.id];
     }
+    
+    // SA/AD with specific user selection
     if (selectedUserId !== 'all') {
       return [selectedUserId];
     }
+    
+    // SA/AD viewing all users
     return undefined; // Will fetch all accessible users based on role
-  }, [showCurrentUserOnly, canViewAllUsers, selectedUserId, user?.id]);
+  }, [showCurrentUserOnly, canViewAllUsers, selectedUserId, user?.id, isAP]);
 
   // Fetch monthly availability
   const { monthlyAvailability, isLoading, error, refetch } = useMonthlyAvailability({
