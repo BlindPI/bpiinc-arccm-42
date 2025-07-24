@@ -83,30 +83,15 @@ export function RequirementsChecklist() {
       return complianceRecords;
     }
     
-    // For non-admin users, only show records for their assigned tier using role-based tier names
+    // For non-admin users, only show records for their assigned tier using simple database values
     const userTier = tierInfo?.tier || 'basic';
     
-    // Map role to proper tier names as shown in the matrix
-    const getRoleBasedTierName = (role: string, tier: string) => {
-      const roleMap: Record<string, string> = {
-        'AP': 'Authorized Provider',
-        'IC': 'Instructor Certified',
-        'IP': 'Instructor Provisional',
-        'IT': 'Instructor Trainee'
-      };
-      
-      const roleName = roleMap[role] || role;
-      const tierSuffix = tier === 'basic' ? 'Basic' : 'Comprehensive';
-      return `${roleName} - ${tierSuffix}`;
-    };
-    
-    const targetTierName = getRoleBasedTierName(userRole, userTier);
-    
     return complianceRecords.filter(record => {
-      // Check if the record's metric has applicable_tiers that match user's role-based tier
+      // Check if the record's metric has applicable_tiers that match user's simple tier
       if (record.compliance_metrics?.applicable_tiers) {
+        // Database contains simple values like 'basic', 'robust', 'basic,robust'
         const applicableTiers = record.compliance_metrics.applicable_tiers.split(',').map(t => t.trim());
-        return applicableTiers.includes(targetTierName);
+        return applicableTiers.includes(userTier) || applicableTiers.includes('basic,robust');
       }
       
       // Legacy fallback: if record has a simple tier field, check that

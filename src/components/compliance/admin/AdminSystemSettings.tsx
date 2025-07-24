@@ -204,9 +204,14 @@ export function AdminSystemSettings() {
 
   // 🎯 NEW: Tier management functions
   const exportTierRequirements = (tierName: string) => {
-    const tierMetrics = metrics.filter(metric =>
-      metric.applicable_tiers?.includes(tierName)
-    );
+    // Filter metrics using simple database tier values only
+    const tierMetrics = metrics.filter(metric => {
+      if (!metric.applicable_tiers) return false;
+      
+      // Database contains simple values like 'basic', 'robust', 'basic,robust'
+      const applicableTiers = metric.applicable_tiers.split(',').map(t => t.trim());
+      return applicableTiers.includes(tierName) || applicableTiers.includes('basic,robust');
+    });
     
     const exportData = {
       tier: tierName,

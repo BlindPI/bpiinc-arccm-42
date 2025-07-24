@@ -294,30 +294,14 @@ export default function UserComplianceManager() {
         const requiredRoles = metric.required_for_roles || [];
         const roleMatches = requiredRoles.length === 0 || requiredRoles.includes(userProfile.role);
         
-        // CRITICAL FIX: Map role and tier to correct requirement set names from matrix
+        // CRITICAL FIX: Use simple database tier values, not role-based names
         const userTier = userProfile.compliance_tier || 'basic';
-        const userRole = userProfile.role;
-        
-        // Map role to proper tier names as shown in the matrix
-        const getRoleBasedTierName = (role: string, tier: string) => {
-          const roleMap: Record<string, string> = {
-            'AP': 'Authorized Provider',
-            'IC': 'Instructor Certified',
-            'IP': 'Instructor Provisional',
-            'IT': 'Instructor Trainee'
-          };
-          
-          const roleName = roleMap[role] || role;
-          const tierSuffix = tier === 'basic' ? 'Basic' : 'Comprehensive';
-          return `${roleName} - ${tierSuffix}`;
-        };
-        
-        const targetTierName = getRoleBasedTierName(userRole, userTier);
         let tierMatches = false;
         
         if (metric.applicable_tiers) {
+          // Database contains simple values like 'basic', 'robust', 'basic,robust'
           const applicableTiers = metric.applicable_tiers.split(',').map(t => t.trim());
-          tierMatches = applicableTiers.includes(targetTierName);
+          tierMatches = applicableTiers.includes(userTier) || applicableTiers.includes('basic,robust');
         } else {
           // If no applicable_tiers, default to basic tier only
           tierMatches = userTier === 'basic';
@@ -401,30 +385,14 @@ export default function UserComplianceManager() {
       const activeRecords = (allRecords || []).filter(record => {
         const isActive = record.compliance_metrics?.is_active === true;
         
-        // Filter by the VIEWED USER'S tier using the same role-based tier naming logic
+        // CRITICAL FIX: Use simple database tier values, not role-based names
         const userTier = userProfile.compliance_tier || 'basic';
-        const userRole = userProfile.role;
-        
-        // Use the same role-based tier name mapping as metrics filtering
-        const getRoleBasedTierName = (role: string, tier: string) => {
-          const roleMap: Record<string, string> = {
-            'AP': 'Authorized Provider',
-            'IC': 'Instructor Certified',
-            'IP': 'Instructor Provisional',
-            'IT': 'Instructor Trainee'
-          };
-          
-          const roleName = roleMap[role] || role;
-          const tierSuffix = tier === 'basic' ? 'Basic' : 'Comprehensive';
-          return `${roleName} - ${tierSuffix}`;
-        };
-        
-        const targetTierName = getRoleBasedTierName(userRole, userTier);
         let tierMatches = false;
         
         if (record.compliance_metrics?.applicable_tiers) {
+          // Database contains simple values like 'basic', 'robust', 'basic,robust'
           const applicableTiers = record.compliance_metrics.applicable_tiers.split(',').map(t => t.trim());
-          tierMatches = applicableTiers.includes(targetTierName);
+          tierMatches = applicableTiers.includes(userTier) || applicableTiers.includes('basic,robust');
         } else {
           // If no applicable_tiers, default to basic tier only
           tierMatches = userTier === 'basic';
