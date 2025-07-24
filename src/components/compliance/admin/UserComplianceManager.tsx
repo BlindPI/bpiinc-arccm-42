@@ -1078,24 +1078,34 @@ export default function UserComplianceManager() {
                   {record.uploaded_documents && record.uploaded_documents.length > 0 && (
                     <div className="mb-3 p-2 bg-green-50 rounded">
                       <div className="text-sm font-medium mb-2 text-green-800">Uploaded Documents:</div>
-                      {record.uploaded_documents.map((doc: ComplianceDocument) => (
-                        <div key={doc.id} className="flex items-center justify-between bg-white p-2 rounded mb-1">
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-green-600" />
-                            <span className="text-sm font-medium">{doc.file_name}</span>
-                            <Badge className={getStatusColor(doc.verification_status)}>
-                              {doc.verification_status}
-                            </Badge>
+                      {record.uploaded_documents.map((doc: ComplianceDocument) => {
+                        const uploadedBy = (doc as any).uploaded_by_profile;
+                        return (
+                          <div key={doc.id} className="flex items-center justify-between bg-white p-2 rounded mb-1">
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-green-600" />
+                              <div className="flex flex-col">
+                                <span className="text-sm font-medium">{doc.file_name}</span>
+                                {uploadedBy && (
+                                  <span className="text-xs text-gray-600">
+                                    Uploaded by: {uploadedBy.display_name} (ID: {uploadedBy.id})
+                                  </span>
+                                )}
+                              </div>
+                              <Badge className={getStatusColor(doc.verification_status)}>
+                                {doc.verification_status}
+                              </Badge>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => downloadDocument(doc.file_path, doc.file_name)}
+                            >
+                              <Download className="h-3 w-3" />
+                            </Button>
                           </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => downloadDocument(doc.file_path, doc.file_name)}
-                          >
-                            <Download className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
 

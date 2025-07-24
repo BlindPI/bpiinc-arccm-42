@@ -567,6 +567,12 @@ export class ComplianceService {
           id,
           name,
           category
+        ),
+        uploaded_by_profile:profiles!uploaded_by (
+          id,
+          display_name,
+          email,
+          role
         )
       `)
       .eq('user_id', userId)
