@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, UserCheck, MapPin, AlertCircle, User, GraduationCap, Settings, BarChart3, Eye, ChevronDown } from 'lucide-react';
+import { Users, UserCheck, MapPin, AlertCircle, User, GraduationCap, Settings, BarChart3, Eye, ChevronDown, RefreshCw } from 'lucide-react';
 import { SimpleDashboardService, UserDashboardData } from '@/services/dashboard/simpleDashboardService';
 import { LoadingDashboard } from './LoadingDashboard';
-import { DashboardAvailabilityCalendar } from './widgets/DashboardAvailabilityCalendar';
+import AvailabilityCalendar from '@/components/availability/AvailabilityCalendar';
+import { toast } from 'sonner';
 
 interface SimpleDashboardProps {
   userId: string;
@@ -16,6 +17,7 @@ interface SimpleDashboardProps {
 export const SimpleDashboard: React.FC<SimpleDashboardProps> = ({ userId }) => {
   const [dashboardData, setDashboardData] = useState<UserDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   // Modal states
@@ -27,25 +29,56 @@ export const SimpleDashboard: React.FC<SimpleDashboardProps> = ({ userId }) => {
   const [locationCertificates, setLocationCertificates] = useState<any[]>([]);
   const [modalLoading, setModalLoading] = useState(false);
 
-  useEffect(() => {
-    const loadDashboard = async () => {
-      try {
+  const loadDashboard = useCallback(async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
         setLoading(true);
-        setError(null);
-        const data = await SimpleDashboardService.getUserDashboardData(userId);
-        setDashboardData(data);
-      } catch (error) {
-        console.error('Dashboard load failed:', error);
-        setError(error instanceof Error ? error.message : 'Failed to load dashboard');
-      } finally {
-        setLoading(false);
       }
-    };
-
-    if (userId) {
-      loadDashboard();
+      setError(null);
+      
+      // Force fresh data fetch
+      const data = await SimpleDashboardService.getUserDashboardData(userId);
+      setDashboardData(data);
+      
+      if (isRefresh) {
+        toast.success('Dashboard refreshed successfully');
+      }
+    } catch (error) {
+      console.error('Dashboard load failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load dashboard';
+      setError(errorMessage);
+      
+      if (isRefresh) {
+        toast.error(`Refresh failed: ${errorMessage}`);
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
   }, [userId]);
+
+  useEffect(() => {
+    if (userId) {
+      loadDashboard(false);
+    }
+  }, [userId, loadDashboard]);
+
+  // Auto-refresh every 5 minutes to catch assignment changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (userId && !loading && !refreshing) {
+        loadDashboard(true);
+      }
+    }, 300000); // 5 minutes
+
+    return () => clearInterval(interval);
+  }, [userId, loading, refreshing, loadDashboard]);
+
+  const handleManualRefresh = () => {
+    loadDashboard(true);
+  };
 
   const handleTeamClick = async (team: any) => {
     setSelectedTeam(team);
@@ -111,20 +144,40 @@ export const SimpleDashboard: React.FC<SimpleDashboardProps> = ({ userId }) => {
 
   return (
     <div className="space-y-6">
-      {/* Welcome Header */}
-      <div>
+      {/* Welcome Header with Refresh */}
+      <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900">
           Welcome, {dashboardData.display_name}
         </h1>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs">
+            {dashboardData.user_role}
+          </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleManualRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </Button>
+        </div>
       </div>
 
-      {/* FULL AVAILABILITY CALENDAR */}
-      <DashboardAvailabilityCalendar
-        userRole={dashboardData.user_role}
-        userId={userId}
-        teamIds={dashboardData.teams.map(team => team.team_id)}
-        className="mb-6"
-      />
+      {/* MONTHLY AVAILABILITY CALENDAR */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Availability Calendar
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AvailabilityCalendar />
+        </CardContent>
+      </Card>
 
       {/* TEAM SUMMARY CARD */}
       <Card>

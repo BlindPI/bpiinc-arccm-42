@@ -3,15 +3,17 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useRoleBasedDashboardData } from '@/hooks/useRoleBasedDashboardData';
-import { 
-  Users, 
-  BookOpen, 
-  Award, 
+import {
+  Users,
+  BookOpen,
+  Award,
   AlertCircle,
   Shield,
   TrendingUp,
-  Activity
+  Activity,
+  Calendar
 } from 'lucide-react';
+import AvailabilityCalendar from '@/components/availability/AvailabilityCalendar';
 
 interface AdminDashboardProps {
   config?: any;
@@ -165,6 +167,19 @@ export default function AdminDashboard({ config, profile }: AdminDashboardProps)
               <p>No recent system activities</p>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* User Availability Calendar */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            User Availability Overview
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AvailabilityCalendar />
         </CardContent>
       </Card>
     </div>

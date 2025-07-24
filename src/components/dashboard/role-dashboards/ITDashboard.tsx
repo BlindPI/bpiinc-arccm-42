@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
-import { ShieldCheck, FileText, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { ShieldCheck, FileText, CheckCircle, AlertCircle, Clock, Calendar } from 'lucide-react';
 import { ComplianceTierService, ComplianceTierInfo } from '@/services/compliance/complianceTierService';
 import { ComplianceRequirementsService } from '@/services/compliance/complianceRequirementsService';
 import { ComplianceService, UserComplianceRecord } from '@/services/compliance/complianceService';
@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 import { useProfile } from '@/hooks/useProfile'; // Import useProfile
 import type { DatabaseUserRole } from '@/types/database-roles'; // Import DatabaseUserRole
+import AvailabilityCalendar from '@/components/availability/AvailabilityCalendar';
  
  export function ITDashboard() {
    const { user } = useAuth(); // Get user from AuthContext
@@ -199,6 +200,23 @@ import type { DatabaseUserRole } from '@/types/database-roles'; // Import Databa
           )}
         </CardContent>
       </Card>
+
+      {/* Availability Calendar Section */}
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Availability Calendar
+          </CardTitle>
+          <CardDescription>
+            View and manage your availability schedule.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AvailabilityCalendar />
+        </CardContent>
+      </Card>
+
       {/* Optional: Add a section for overdue actions or upcoming requirements */}
     </div>
   );

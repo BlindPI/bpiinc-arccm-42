@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
-import { ShieldCheck, FileText, CheckCircle, AlertCircle, Clock, BookOpen, UserCheck, Star } from 'lucide-react';
+import { ShieldCheck, FileText, CheckCircle, AlertCircle, Clock, BookOpen, UserCheck, Star, Calendar } from 'lucide-react';
 import { ComplianceTierService, ComplianceTierInfo } from '@/services/compliance/complianceTierService';
 import { ComplianceRequirementsService } from '@/services/compliance/complianceRequirementsService';
 import { ComplianceService, UserComplianceRecord } from '@/services/compliance/complianceService';
@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 import { useProfile } from '@/hooks/useProfile'; // Import useProfile
 import type { DatabaseUserRole } from '@/types/database-roles'; // Import DatabaseUserRole
+import AvailabilityCalendar from '@/components/availability/AvailabilityCalendar';
  
  export function IPDashboard() {
    const { user } = useAuth(); // Get user from AuthContext
@@ -150,6 +151,22 @@ import type { DatabaseUserRole } from '@/types/database-roles'; // Import Databa
               </AlertDescription>
             </Alert>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Availability Calendar */}
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Availability Calendar
+          </CardTitle>
+          <CardDescription>
+            Manage your teaching schedule and availability.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AvailabilityCalendar />
         </CardContent>
       </Card>
 

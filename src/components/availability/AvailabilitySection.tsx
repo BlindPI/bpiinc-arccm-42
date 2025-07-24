@@ -26,7 +26,7 @@ import {
   WeeklySchedule
 } from '@/types/availability';
 import { AvailabilityForm } from './AvailabilityForm';
-import { WeeklyAvailabilityView } from './WeeklyAvailabilityView';
+import AvailabilityCalendar from './AvailabilityCalendar';
 import { toast } from 'sonner';
 
 interface AvailabilitySectionProps {
@@ -291,11 +291,7 @@ export const AvailabilitySection: React.FC<AvailabilitySectionProps> = ({ userId
           ) : (
             <>
               {viewMode === 'calendar' ? (
-                <WeeklyAvailabilityView 
-                  weeklySchedule={weeklySchedule}
-                  onEditSlot={handleEditAvailability}
-                  onDeleteSlot={handleDeleteAvailability}
-                />
+                <AvailabilityCalendar />
               ) : (
                 <div className="space-y-4">
                   {DAYS_OF_WEEK.map(day => {

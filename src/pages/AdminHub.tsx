@@ -2,17 +2,18 @@ import { useState } from 'react';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
-import { 
-  Settings, 
-  Users, 
-  Shield, 
-  Bell, 
-  Monitor, 
+import {
+  Settings,
+  Users,
+  Shield,
+  Bell,
+  Monitor,
   Loader2,
   UserCheck,
   Database,
   Activity,
-  CheckCircle
+  CheckCircle,
+  Calendar
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -24,6 +25,7 @@ import { RoleManagementHeader } from '@/components/role-management/dashboard/Rol
 import { ProgressionDashboard } from '@/components/role-management/progression/ProgressionDashboard';
 import { useCertificateNotificationsList, useCertificateNotificationCount } from '@/hooks/useCertificateNotifications';
 import { Button } from '@/components/ui/button';
+import AvailabilityCalendar from '@/components/availability/AvailabilityCalendar';
 
 export default function AdminHub() {
   const { user, loading: authLoading } = useAuth();
@@ -128,6 +130,17 @@ export default function AdminHub() {
         { label: 'Size', value: '45.2GB' },
         { label: 'Connections', value: '127' }
       ]
+    },
+    {
+      id: 'availability',
+      title: 'User Availability',
+      description: 'Staff availability calendar and scheduling',
+      icon: <Calendar className="h-6 w-6" />,
+      badge: { text: 'Calendar', variant: 'default' as const },
+      stats: [
+        { label: 'Available Today', value: '89' },
+        { label: 'Total Slots', value: '342' }
+      ]
     }
   ];
 
@@ -194,7 +207,7 @@ export default function AdminHub() {
 
       {/* Admin Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-6 bg-muted/30">
+        <TabsList className="grid w-full grid-cols-7 bg-muted/30">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
             Overview
@@ -218,6 +231,10 @@ export default function AdminHub() {
           <TabsTrigger value="database" className="flex items-center gap-2">
             <Database className="h-4 w-4" />
             Database
+          </TabsTrigger>
+          <TabsTrigger value="availability" className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            Availability
           </TabsTrigger>
         </TabsList>
 
@@ -415,6 +432,20 @@ export default function AdminHub() {
                   </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="availability" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>User Availability Management</CardTitle>
+              <CardDescription>
+                Comprehensive view of all user availability across the system
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AvailabilityCalendar />
             </CardContent>
           </Card>
         </TabsContent>
