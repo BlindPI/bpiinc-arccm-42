@@ -18,10 +18,12 @@ import { useTeamContext } from '@/hooks/useTeamContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { providerRelationshipService } from '@/services/provider/providerRelationshipService';
-import { Shield, MapPin, Users, AlertTriangle, CheckCircle, Crown, Building2, Award, BookOpen, Activity, RefreshCw } from 'lucide-react';
+import { Shield, MapPin, Users, AlertTriangle, CheckCircle, Crown, Building2, Award, BookOpen, Activity, RefreshCw, Calendar, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 // Import new SimpleDashboard
 import { SimpleDashboard } from './SimpleDashboard';
+import AvailabilityCalendar from '@/components/availability/AvailabilityCalendar';
 
 // Import existing proven working dashboards for fallback
 import EnhancedProviderDashboard from './role-dashboards/EnhancedProviderDashboard';
@@ -147,6 +149,7 @@ function AdminQuickDashboard({
 }: {
   profile: any;
 }) {
+  const navigate = useNavigate();
   const {
     data: adminStats
   } = useQuery({
@@ -231,6 +234,14 @@ function AdminQuickDashboard({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Button
+              variant="outline"
+              className="h-20 flex-col"
+              onClick={() => navigate('/admin-hub')}
+            >
+              <Settings className="h-6 w-6 mb-2" />
+              <span className="text-sm">Admin Hub</span>
+            </Button>
             <Button variant="outline" className="h-20 flex-col">
               <Users className="h-6 w-6 mb-2" />
               <span className="text-sm">Manage Users</span>
@@ -243,11 +254,20 @@ function AdminQuickDashboard({
               <Award className="h-6 w-6 mb-2" />
               <span className="text-sm">Certificates</span>
             </Button>
-            <Button variant="outline" className="h-20 flex-col">
-              <Activity className="h-6 w-6 mb-2" />
-              <span className="text-sm">System Reports</span>
-            </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* User Availability Calendar */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            User Availability Overview
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AvailabilityCalendar showCurrentUserOnly={false} allowUserSelection={true} />
         </CardContent>
       </Card>
     </div>;

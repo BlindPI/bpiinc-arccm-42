@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import {
   Settings,
   Users,
@@ -13,7 +13,8 @@ import {
   Database,
   Activity,
   CheckCircle,
-  Calendar
+  Calendar,
+  ArrowLeft
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -31,6 +32,7 @@ export default function AdminHub() {
   const { user, loading: authLoading } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const [activeTab, setActiveTab] = useState('overview');
+  const navigate = useNavigate();
   
   // Notifications data
   const { data: notifications = [], isLoading: notificationsLoading } = useCertificateNotificationsList();
@@ -152,6 +154,15 @@ export default function AdminHub() {
         subtitle="Comprehensive system administration center"
         actions={
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Return to Dashboard
+            </Button>
             <Badge variant="outline" className="text-xs">
               {profile?.role} Access
             </Badge>
