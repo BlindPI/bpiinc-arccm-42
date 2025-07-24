@@ -274,6 +274,13 @@ export default function UserComplianceManager() {
       
       if (profileError) throw profileError;
       
+      console.log('🚨 SA USER VIEWING USER PROFILE:', {
+        viewingUserId: userId,
+        userProfile: userProfile,
+        role: userProfile?.role,
+        compliance_tier: userProfile?.compliance_tier
+      });
+      
       // 🚨 CRITICAL FIX: Get ALL active metrics that apply to this user's role
       const { data: allActiveMetrics, error: metricsError } = await supabase
         .from('compliance_metrics')
@@ -282,25 +289,27 @@ export default function UserComplianceManager() {
       
       if (metricsError) throw metricsError;
       
-      // Filter metrics by role and tier - CRITICAL FIX for tier visibility
+      // Filter metrics by role - SA/AD users should see ALL metrics for complete admin control
       const applicableMetrics = (allActiveMetrics || []).filter(metric => {
         const requiredRoles = metric.required_for_roles || [];
         const roleMatches = requiredRoles.length === 0 || requiredRoles.includes(userProfile.role);
         
-        // CRITICAL FIX: Properly filter by user's assigned tier
-        const userTier = userProfile.compliance_tier || 'basic';
-        const tierMatches = !metric.applicable_tiers ||
-          metric.applicable_tiers.includes(userTier);
-        
-        return roleMatches && tierMatches;
+        // SA/AD users see ALL requirements regardless of user's tier for complete admin control
+        return roleMatches;
       });
       
-      console.log('🚨 APPLICABLE METRICS:', {
+      console.log('🚨 APPLICABLE METRICS FOR USER:', {
+        userId,
         userRole: userProfile.role,
         userTier: userProfile.compliance_tier,
         totalActiveMetrics: allActiveMetrics?.length || 0,
         applicableMetrics: applicableMetrics.length,
-        applicableMetricNames: applicableMetrics.map(m => m.name)
+        applicableMetricNames: applicableMetrics.map(m => m.name),
+        allMetricsWithTiers: allActiveMetrics?.map(m => ({
+          name: m.name,
+          applicable_tiers: m.applicable_tiers,
+          matches: !m.applicable_tiers || m.applicable_tiers.includes(userProfile.compliance_tier || 'basic')
+        }))
       });
       
       // Get existing user compliance records
@@ -360,17 +369,10 @@ export default function UserComplianceManager() {
 
       if (finalError) throw finalError;
       
-      // Filter out records for deactivated metrics AND ensure they match user's tier
-      const activeRecords = (allRecords || []).filter(record => {
-        const isActive = record.compliance_metrics?.is_active === true;
-        
-        // CRITICAL FIX: Also filter by tier - only show records that match user's assigned tier
-        const userTier = userProfile.compliance_tier || 'basic';
-        const tierMatches = !record.compliance_metrics?.applicable_tiers ||
-          record.compliance_metrics.applicable_tiers.includes(userTier);
-        
-        return isActive && tierMatches;
-      });
+      // Filter out records for deactivated metrics - SA/AD users see ALL records for complete admin control
+      const activeRecords = (allRecords || []).filter(record =>
+        record.compliance_metrics?.is_active === true
+      );
       
       console.log('🚨 FILTERED RECORDS:', {
         totalRecords: allRecords?.length || 0,
