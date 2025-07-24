@@ -631,17 +631,84 @@ export class ComplianceService {
   // Verify compliance document (SA/AD only)
   static async verifyComplianceDocument(
     documentId: string,
-    verificationStatus: 'approved' | 'rejected', 
+    verificationStatus: 'approved' | 'rejected',
     notes?: string,
     rejectionReason?: string
   ): Promise<void> {
-    const { error } = await supabase.rpc('verify_compliance_document', {
-      p_document_id: documentId,
-      p_verification_status: verificationStatus,
-      p_verification_notes: notes || null,
-      p_rejection_reason: rejectionReason || null
-    } as any); 
-    if (error) throw error;
+    try {
+      // 🚨 SCHEMA FIX: Get document details first
+      const { data: doc, error: docError } = await supabase
+        .from('compliance_documents')
+        .select('user_id, metric_id, expiry_date')
+        .eq('id', documentId)
+        .single();
+
+      if (docError) throw docError;
+      if (!doc) throw new Error('Document not found');
+
+      // 🚨 SCHEMA FIX: Update compliance_documents table (has verified_by, verified_at, verification_notes)
+      const { error: updateDocError } = await supabase
+        .from('compliance_documents')
+        .update({
+          verification_status: verificationStatus,
+          verified_by: (await supabase.auth.getUser()).data.user?.id,
+          verified_at: new Date().toISOString(),
+          verification_notes: notes || null,
+          rejection_reason: verificationStatus === 'rejected' ? rejectionReason || null : null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', documentId);
+
+      if (updateDocError) throw updateDocError;
+
+      // 🚨 SCHEMA FIX: Update user_compliance_records table (has reviewer_id, approved_by, approved_at)
+      const newComplianceStatus = verificationStatus === 'approved'
+        ? (doc.expiry_date && new Date(doc.expiry_date) < new Date() ? 'non_compliant' : 'compliant')
+        : 'non_compliant';
+
+      const recordUpdateData: any = {
+        compliance_status: newComplianceStatus,
+        last_checked_at: new Date().toISOString(),
+        reviewer_id: (await supabase.auth.getUser()).data.user?.id,
+        updated_at: new Date().toISOString()
+      };
+
+      if (verificationStatus === 'approved') {
+        recordUpdateData.approved_at = new Date().toISOString();
+        recordUpdateData.approved_by = (await supabase.auth.getUser()).data.user?.id;
+      }
+
+      const { error: updateRecordError } = await supabase
+        .from('user_compliance_records')
+        .update(recordUpdateData)
+        .eq('user_id', doc.user_id)
+        .eq('metric_id', doc.metric_id);
+
+      if (updateRecordError) throw updateRecordError;
+
+      // 🚨 SCHEMA FIX: Create action if rejected
+      if (verificationStatus === 'rejected') {
+        await supabase
+          .from('compliance_actions')
+          .insert({
+            user_id: doc.user_id,
+            metric_id: doc.metric_id,
+            action_type: 'required',
+            title: 'Resubmit Documentation',
+            description: `Previous document was rejected: ${rejectionReason || 'No reason provided'}`,
+            priority: 'high',
+            status: 'open',
+            assigned_by: (await supabase.auth.getUser()).data.user?.id,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+      }
+
+      console.log('✅ Successfully verified document using correct schema');
+    } catch (error) {
+      console.error('Error verifying compliance document:', error);
+      throw error;
+    }
   }
 
   // Download compliance document
