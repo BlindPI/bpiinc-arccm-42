@@ -213,7 +213,7 @@ import AvailabilityCalendar from '@/components/availability/AvailabilityCalendar
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <AvailabilityCalendar />
+          <AvailabilityCalendar showCurrentUserOnly={true} allowUserSelection={false} />
         </CardContent>
       </Card>
 

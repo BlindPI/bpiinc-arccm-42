@@ -175,7 +175,7 @@ export const SimpleDashboard: React.FC<SimpleDashboardProps> = ({ userId }) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <AvailabilityCalendar />
+          <AvailabilityCalendar showCurrentUserOnly={false} allowUserSelection={false} />
         </CardContent>
       </Card>
 

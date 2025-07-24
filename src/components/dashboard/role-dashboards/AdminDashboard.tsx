@@ -179,7 +179,7 @@ export default function AdminDashboard({ config, profile }: AdminDashboardProps)
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <AvailabilityCalendar />
+          <AvailabilityCalendar showCurrentUserOnly={false} allowUserSelection={true} />
         </CardContent>
       </Card>
     </div>

@@ -445,7 +445,7 @@ export default function AdminHub() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <AvailabilityCalendar />
+              <AvailabilityCalendar showCurrentUserOnly={false} allowUserSelection={true} />
             </CardContent>
           </Card>
         </TabsContent>

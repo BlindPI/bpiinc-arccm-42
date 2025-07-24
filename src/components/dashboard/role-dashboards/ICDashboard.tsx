@@ -153,7 +153,7 @@ export function ICDashboard() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <AvailabilityCalendar />
+          <AvailabilityCalendar showCurrentUserOnly={true} allowUserSelection={false} />
         </CardContent>
       </Card>
 

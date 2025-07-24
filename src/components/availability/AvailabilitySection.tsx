@@ -291,7 +291,7 @@ export const AvailabilitySection: React.FC<AvailabilitySectionProps> = ({ userId
           ) : (
             <>
               {viewMode === 'calendar' ? (
-                <AvailabilityCalendar />
+                <AvailabilityCalendar showCurrentUserOnly={true} allowUserSelection={false} />
               ) : (
                 <div className="space-y-4">
                   {DAYS_OF_WEEK.map(day => {
