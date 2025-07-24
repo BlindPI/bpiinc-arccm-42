@@ -294,10 +294,34 @@ export default function UserComplianceManager() {
         const requiredRoles = metric.required_for_roles || [];
         const roleMatches = requiredRoles.length === 0 || requiredRoles.includes(userProfile.role);
         
-        // CRITICAL FIX: Filter by the VIEWED USER'S tier - SA sees only what this specific user needs
+        // CRITICAL FIX: Map role and tier to correct requirement set names from matrix
         const userTier = userProfile.compliance_tier || 'basic';
-        const tierMatches = !metric.applicable_tiers ||
-          metric.applicable_tiers.includes(userTier);
+        const userRole = userProfile.role;
+        
+        // Map role to proper tier names as shown in the matrix
+        const getRoleBasedTierName = (role: string, tier: string) => {
+          const roleMap: Record<string, string> = {
+            'AP': 'Authorized Provider',
+            'IC': 'Instructor Certified',
+            'IP': 'Instructor Provisional',
+            'IT': 'Instructor Trainee'
+          };
+          
+          const roleName = roleMap[role] || role;
+          const tierSuffix = tier === 'basic' ? 'Basic' : 'Comprehensive';
+          return `${roleName} - ${tierSuffix}`;
+        };
+        
+        const targetTierName = getRoleBasedTierName(userRole, userTier);
+        let tierMatches = false;
+        
+        if (metric.applicable_tiers) {
+          const applicableTiers = metric.applicable_tiers.split(',').map(t => t.trim());
+          tierMatches = applicableTiers.includes(targetTierName);
+        } else {
+          // If no applicable_tiers, default to basic tier only
+          tierMatches = userTier === 'basic';
+        }
         
         return roleMatches && tierMatches;
       });
@@ -377,10 +401,34 @@ export default function UserComplianceManager() {
       const activeRecords = (allRecords || []).filter(record => {
         const isActive = record.compliance_metrics?.is_active === true;
         
-        // Filter by the VIEWED USER'S tier - only show records this specific user should have
+        // Filter by the VIEWED USER'S tier using the same role-based tier naming logic
         const userTier = userProfile.compliance_tier || 'basic';
-        const tierMatches = !record.compliance_metrics?.applicable_tiers ||
-          record.compliance_metrics.applicable_tiers.includes(userTier);
+        const userRole = userProfile.role;
+        
+        // Use the same role-based tier name mapping as metrics filtering
+        const getRoleBasedTierName = (role: string, tier: string) => {
+          const roleMap: Record<string, string> = {
+            'AP': 'Authorized Provider',
+            'IC': 'Instructor Certified',
+            'IP': 'Instructor Provisional',
+            'IT': 'Instructor Trainee'
+          };
+          
+          const roleName = roleMap[role] || role;
+          const tierSuffix = tier === 'basic' ? 'Basic' : 'Comprehensive';
+          return `${roleName} - ${tierSuffix}`;
+        };
+        
+        const targetTierName = getRoleBasedTierName(userRole, userTier);
+        let tierMatches = false;
+        
+        if (record.compliance_metrics?.applicable_tiers) {
+          const applicableTiers = record.compliance_metrics.applicable_tiers.split(',').map(t => t.trim());
+          tierMatches = applicableTiers.includes(targetTierName);
+        } else {
+          // If no applicable_tiers, default to basic tier only
+          tierMatches = userTier === 'basic';
+        }
         
         return isActive && tierMatches;
       });
@@ -404,7 +452,7 @@ export default function UserComplianceManager() {
             ...record,
             requirement_name: record.compliance_metrics?.name || 'Unknown Requirement',
             requirement_description: record.compliance_metrics?.description || '',
-            tier_level: record.compliance_metrics?.applicable_tiers?.includes('robust') ? 'robust' : 'basic',
+            tier_level: userProfile.compliance_tier || 'basic', // CRITICAL FIX: Use USER'S actual tier, not metric's applicable tiers
             category: record.compliance_metrics?.category || 'general',
             document_required: record.compliance_metrics?.measurement_type === 'boolean' || false,
             uploaded_documents: docs || []

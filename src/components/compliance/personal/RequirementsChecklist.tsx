@@ -83,15 +83,39 @@ export function RequirementsChecklist() {
       return complianceRecords;
     }
     
-    // For non-admin users, only show records for their assigned tier
+    // For non-admin users, only show records for their assigned tier using role-based tier names
     const userTier = tierInfo?.tier || 'basic';
+    
+    // Map role to proper tier names as shown in the matrix
+    const getRoleBasedTierName = (role: string, tier: string) => {
+      const roleMap: Record<string, string> = {
+        'AP': 'Authorized Provider',
+        'IC': 'Instructor Certified',
+        'IP': 'Instructor Provisional',
+        'IT': 'Instructor Trainee'
+      };
+      
+      const roleName = roleMap[role] || role;
+      const tierSuffix = tier === 'basic' ? 'Basic' : 'Comprehensive';
+      return `${roleName} - ${tierSuffix}`;
+    };
+    
+    const targetTierName = getRoleBasedTierName(userRole, userTier);
+    
     return complianceRecords.filter(record => {
-      // If the record has a tier specified, it must match the user's tier
+      // Check if the record's metric has applicable_tiers that match user's role-based tier
+      if (record.compliance_metrics?.applicable_tiers) {
+        const applicableTiers = record.compliance_metrics.applicable_tiers.split(',').map(t => t.trim());
+        return applicableTiers.includes(targetTierName);
+      }
+      
+      // Legacy fallback: if record has a simple tier field, check that
       if (record.tier) {
         return record.tier === userTier;
       }
-      // If no tier specified on record, include it (legacy records)
-      return true;
+      
+      // If no tier specified on record, default to basic tier only
+      return userTier === 'basic';
     });
   }, [complianceRecords, tierInfo, userRole]);
 
