@@ -337,12 +337,39 @@ export default function UserComplianceManager() {
             r.compliance_metrics?.name?.includes(`${requirement.name} (${userProfile.compliance_tier})`)
           );
           
+          // 🚨 UPLOAD FIX: Find the actual metric ID from compliance_metrics table
+          let actualMetricId = matchingRecord?.metric_id;
+          
+          if (!actualMetricId) {
+            // Look up the metric by name to get the real metric_id for upload functionality
+            const { data: metricData } = await supabase
+              .from('compliance_metrics')
+              .select('id')
+              .eq('name', requirement.name)
+              .eq('is_active', true)
+              .single();
+            
+            actualMetricId = metricData?.id;
+            
+            // If exact match not found, try with tier suffix
+            if (!actualMetricId) {
+              const { data: metricDataWithTier } = await supabase
+                .from('compliance_metrics')
+                .select('id')
+                .eq('name', `${requirement.name} (${userProfile.compliance_tier})`)
+                .eq('is_active', true)
+                .single();
+              
+              actualMetricId = metricDataWithTier?.id;
+            }
+          }
+          
           // Get documents for this requirement
-          const { data: docs } = matchingRecord ? await supabase
+          const { data: docs } = actualMetricId ? await supabase
             .from('compliance_documents')
             .select('id, file_name, upload_date, verification_status, file_path')
             .eq('user_id', userId)
-            .eq('metric_id', matchingRecord.metric_id) : { data: [] };
+            .eq('metric_id', actualMetricId) : { data: [] };
 
           // Create record based on template requirement (like TierRequirementsMatrix)
           const recordId = matchingRecord?.id || `virtual_${requirement.name}_${index}`;
@@ -350,7 +377,7 @@ export default function UserComplianceManager() {
           return {
             id: recordId,
             user_id: userId,
-            metric_id: matchingRecord?.metric_id || `virtual_metric_${index}`,
+            metric_id: actualMetricId || `virtual_metric_${index}`, // Use real metric_id when available
             requirement_id: matchingRecord?.requirement_id || `virtual_req_${index}`,
             status: getComplianceStatus(requirement.name),
             completion_percentage: matchingRecord?.completion_percentage || 0,
@@ -366,7 +393,9 @@ export default function UserComplianceManager() {
             tier_level: userProfile.compliance_tier || 'basic',
             category: requirement.category,
             document_required: requirement.document_requirements ? true : false,
-            uploaded_documents: docs || []
+            uploaded_documents: docs || [],
+            // Store template requirement for upload function
+            templateRequirement: requirement
           };
         })
       );
@@ -395,9 +424,18 @@ export default function UserComplianceManager() {
         throw new Error('Missing record or user data');
       }
 
-      // Check if this is a virtual record (needs real compliance record creation)
+      // 🚨 CRITICAL FIX: Handle virtual records properly with real metric_id validation
       const isVirtualRecord = recordId.startsWith('virtual_');
       let actualRecordId = recordId;
+      let actualMetricId = currentRecord.metric_id;
+
+      // Validate we have a real metric_id (not virtual)
+      if (isVirtualRecord || !actualMetricId || actualMetricId.startsWith('virtual_')) {
+        // For virtual records, we need to find the real metric_id from the database
+        if (!actualMetricId || actualMetricId.startsWith('virtual_')) {
+          throw new Error(`Cannot upload document: No valid metric found for requirement "${currentRecord.requirement_name}". This requirement may not exist in the database.`);
+        }
+      }
 
       if (isVirtualRecord) {
         // Create a real compliance record for virtual record
@@ -405,13 +443,15 @@ export default function UserComplianceManager() {
           .from('user_compliance_records')
           .insert({
             user_id: selectedUser.user_id,
-            metric_id: currentRecord.metric_id,
+            metric_id: actualMetricId,
             status: 'pending',
+            compliance_status: 'pending',
             completion_percentage: 0,
             current_value: '',
             target_value: currentRecord.target_value || '',
             evidence_files: [],
             due_date: currentRecord.due_date,
+            tier: selectedUser.compliance_tier || 'basic',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
@@ -420,7 +460,7 @@ export default function UserComplianceManager() {
 
         if (recordError) {
           console.error('Error creating compliance record:', recordError);
-          throw new Error('Failed to create compliance record');
+          throw new Error(`Failed to create compliance record: ${recordError.message}`);
         }
 
         actualRecordId = newRecord.id;
