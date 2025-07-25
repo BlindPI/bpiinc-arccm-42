@@ -68,54 +68,43 @@ export class SimpleDashboardService {
         const actualProviderId = userProvider?.id || userId;
         console.log('🔧 AP USER: Using provider_id:', actualProviderId);
       
-      // AP USER: Get teams by location (same approach as working AvailabilityCalendar)
-      console.log('🔧 AP USER: Getting teams by location for provider_id:', actualProviderId);
+      // AP USER: Get teams via provider_team_assignments (same approach as working AvailabilityCalendar)
+      console.log('🔧 AP USER: Getting teams via provider_team_assignments for provider_id:', actualProviderId);
       
-      // First: Get provider's assigned locations
-      const { data: providerLocations, error: locationError } = await supabase
-        .from('authorized_providers')
+      // Get teams directly assigned to this provider via provider_team_assignments
+      const { data: assignedTeams, error: assignmentError } = await supabase
+        .from('provider_team_assignments')
         .select(`
-          id,
-          name,
-          location_id,
-          locations (
+          team_id,
+          provider_id,
+          status,
+          teams (
             id,
             name,
-            city,
-            state,
-            address
+            location_id,
+            status
           )
         `)
-        .eq('id', actualProviderId)
-        .single();
+        .eq('provider_id', actualProviderId)
+        .eq('status', 'active');
 
-      if (locationError) {
-        console.error('🔧 Provider location query FAILED:', locationError);
-        throw new Error(`Failed to get provider location: ${locationError.message}`);
+      if (assignmentError) {
+        console.error('🔧 Provider team assignments query FAILED:', assignmentError);
+        throw new Error(`Failed to get provider team assignments: ${assignmentError.message}`);
       }
 
-      console.log('🔧 Provider location query SUCCESS:', providerLocations);
+      console.log('🔧 Provider team assignments query SUCCESS:', assignedTeams);
       
-      let locationBasedTeams: any[] = [];
-      if (providerLocations?.location_id) {
-        // Second: Get all teams for this location
-        const { data: teamsAtLocation, error: teamsError } = await supabase
-          .from('teams')
-          .select('id, name, location_id, status')
-          .eq('location_id', providerLocations.location_id)
-          .eq('status', 'active');
-        
-        if (teamsError) {
-          console.error('🔧 Teams at location query FAILED:', teamsError);
-        } else {
-          console.log('🔧 Teams at location query SUCCESS:', teamsAtLocation);
-          locationBasedTeams = (teamsAtLocation || []).map(team => ({
-            team_id: team.id,
-            role: 'provider',
-            relationship_type: 'manager'
-          }));
-        }
-      }
+      // Convert provider team assignments to managed teams
+      const assignmentBasedTeams = (assignedTeams || [])
+        .filter(assignment => assignment.teams?.status === 'active')
+        .map(assignment => ({
+          team_id: assignment.team_id,
+          role: 'provider',
+          relationship_type: 'manager'
+        }));
+
+      console.log('🔧 Assignment-based teams:', assignmentBasedTeams);
 
       // Second: Teams they are MEMBERS of (fallback)
       console.log('🔧 AP USER: Also checking team_members as fallback');
@@ -132,8 +121,8 @@ export class SimpleDashboardService {
 
       console.log('🔧 Team members query SUCCESS:', regularMemberships);
 
-      // Convert location-based teams to managed teams
-      const managedTeams = locationBasedTeams;
+      // Convert assignment-based teams to managed teams
+      const managedTeams = assignmentBasedTeams;
 
       const memberTeams = (regularMemberships || []).map(membership => ({
         team_id: membership.team_id,
