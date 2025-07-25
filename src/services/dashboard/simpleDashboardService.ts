@@ -53,8 +53,7 @@ export class SimpleDashboardService {
         .from('authorized_providers')
         .select('id')
         .eq('user_id', userId)
-        .eq('status', 'APPROVED')
-        .single();
+        .maybeSingle();
 
       if (userProviderError || !userProvider) {
         console.error('🔧 Failed to get provider_id for AP user:', userProviderError);
