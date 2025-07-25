@@ -23,7 +23,7 @@ export interface DashboardConfig {
 
 export class SimpleDashboardService {
   /**
-   * Get user's dashboard data - one simple query
+   * Get user's dashboard data - handles AP users with provider assignments
    */
   static async getUserDashboardData(userId: string): Promise<UserDashboardData> {
     // Step 1: Get user profile
@@ -37,15 +37,53 @@ export class SimpleDashboardService {
       throw new Error(`Failed to get user profile: ${profileError?.message}`);
     }
 
-    // Step 2: Get user's team memberships (simple query)
-    const { data: teamMemberships, error: teamError } = await supabase
-      .from('team_members')
-      .select('team_id, role')
-      .eq('user_id', userId)
-      .eq('status', 'active');
+    let teamMemberships: any[] = [];
 
-    if (teamError) {
-      throw new Error(`Failed to get team memberships: ${teamError.message}`);
+    // Step 2: Get user's team memberships - different logic for AP vs other roles
+    if (profile.role === 'AP') {
+      // For AP users, check provider_team_assignments first
+      const { data: providerAssignments, error: providerError } = await supabase
+        .from('provider_team_assignments')
+        .select(`
+          team_id,
+          assignment_role as role
+        `)
+        .eq('provider_id', userId)
+        .eq('status', 'active');
+
+      if (providerError) {
+        throw new Error(`Failed to get provider assignments: ${providerError.message}`);
+      }
+
+      teamMemberships = providerAssignments || [];
+
+      // If no provider assignments found, fall back to team_members
+      if (teamMemberships.length === 0) {
+        const { data: regularMemberships, error: teamError } = await supabase
+          .from('team_members')
+          .select('team_id, role')
+          .eq('user_id', userId)
+          .eq('status', 'active');
+
+        if (teamError) {
+          throw new Error(`Failed to get team memberships: ${teamError.message}`);
+        }
+
+        teamMemberships = regularMemberships || [];
+      }
+    } else {
+      // For non-AP users, use standard team_members approach
+      const { data: regularMemberships, error: teamError } = await supabase
+        .from('team_members')
+        .select('team_id, role')
+        .eq('user_id', userId)
+        .eq('status', 'active');
+
+      if (teamError) {
+        throw new Error(`Failed to get team memberships: ${teamError.message}`);
+      }
+
+      teamMemberships = regularMemberships || [];
     }
 
     if (!teamMemberships || teamMemberships.length === 0) {
