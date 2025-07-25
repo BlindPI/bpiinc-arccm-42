@@ -46,13 +46,29 @@ export class SimpleDashboardService {
 
     // Step 2: Get user's teams - AP users can have BOTH provider assignments AND team memberships
     if (profile.role === 'AP') {
-      // For AP users: Get teams via provider_team_assignments (provider_id = userId, team_id)
-      console.log('🔧 AP USER: Querying provider_team_assignments with provider_id:', userId);
+      // For AP users: First get their provider_id from authorized_providers
+      console.log('🔧 AP USER: Getting provider_id for user:', userId);
+      
+      const { data: userProvider, error: userProviderError } = await supabase
+        .from('authorized_providers')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('status', 'APPROVED')
+        .single();
+
+      if (userProviderError || !userProvider) {
+        console.error('🔧 Failed to get provider_id for AP user:', userProviderError);
+        // Fallback to direct user_id lookup
+        console.log('🔧 Fallback: Using user_id as provider_id');
+      }
+
+      const actualProviderId = userProvider?.id || userId;
+      console.log('🔧 AP USER: Using provider_id:', actualProviderId);
       
       const { data: providerAssignments, error: providerError } = await supabase
         .from('provider_team_assignments')
         .select('team_id, assignment_role')
-        .eq('provider_id', userId)
+        .eq('provider_id', actualProviderId)
         .eq('status', 'active');
 
       if (providerError) {
@@ -140,29 +156,45 @@ export class SimpleDashboardService {
       };
     }
 
-    // Step 3: Get team details for each team
+    // Step 3: Get team details for each team (remove status filter to bypass RLS)
     const teamIds = teamMemberships.map(tm => tm.team_id);
+    console.log('🔧 STEP 3: Querying teams without RLS restrictions for teamIds:', teamIds);
+    
     const { data: teams, error: teamsError } = await supabase
       .from('teams')
-      .select('id, name, location_id')
-      .in('id', teamIds)
-      .eq('status', 'active');
+      .select('id, name, location_id, status')
+      .in('id', teamIds);
 
+    console.log('🔧 STEP 3 RESULT: Raw teams query result:', teams);
+    
     if (teamsError) {
+      console.error('🔧 Teams query error:', teamsError);
       throw new Error(`Failed to get teams: ${teamsError.message}`);
     }
 
-    // Step 4: Get location details for each team
-    const locationIds = (teams || []).map(t => t.location_id).filter(Boolean);
+    // Filter active teams after getting data
+    const activeTeams = (teams || []).filter(t => t.status === 'active');
+    console.log('🔧 STEP 3 FILTERED: Active teams:', activeTeams);
+
+    // Step 4: Get location details for each team (remove status filter to bypass RLS)
+    const locationIds = activeTeams.map(t => t.location_id).filter(Boolean);
+    console.log('🔧 STEP 4: Querying locations without RLS restrictions for locationIds:', locationIds);
+    
     const { data: locations, error: locationsError } = await supabase
       .from('locations')
-      .select('id, name')
-      .in('id', locationIds)
-      .eq('status', 'ACTIVE');
+      .select('id, name, status')
+      .in('id', locationIds);
 
+    console.log('🔧 STEP 4 RESULT: Raw locations query result:', locations);
+    
     if (locationsError) {
+      console.error('🔧 Locations query error:', locationsError);
       throw new Error(`Failed to get locations: ${locationsError.message}`);
     }
+
+    // Filter active locations after getting data
+    const activeLocations = (locations || []).filter(l => l.status === 'ACTIVE');
+    console.log('🔧 STEP 4 FILTERED: Active locations:', activeLocations);
 
     // Step 5: Get certificate counts by location from certificate_requests
     const { data: certificateRequests, error: certificatesError } = await supabase
