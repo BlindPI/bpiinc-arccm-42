@@ -27,12 +27,6 @@ export function useProfile() {
         return null;
       }
 
-      // If user already has profile data, use it
-      if (user.profile && user.profile.role) {
-        console.log('🔧 useProfile: Using existing user.profile data:', user.profile);
-        return user.profile as Profile;
-      }
-
       try {
         console.log('🔧 useProfile: Fetching from profiles table for user:', user.id);
         const startTime = performance.now();
