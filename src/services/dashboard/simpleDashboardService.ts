@@ -29,40 +29,44 @@ export class SimpleDashboardService {
     console.log('🔧 =================== SimpleDashboardService START ===================');
     console.log('🔧 Input userId:', userId);
     
-    // Step 1: Get user profile
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, role, display_name')
-      .eq('id', userId)
-      .single();
+    try {
+      // Step 1: Get user profile
+      console.log('🔧 STEP 1: Getting user profile...');
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, role, display_name')
+        .eq('id', userId)
+        .single();
 
-    if (profileError || !profile) {
-      console.error('🔧 Profile fetch FAILED:', profileError);
-      throw new Error(`Failed to get user profile: ${profileError?.message}`);
-    }
-
-    console.log('🔧 Profile SUCCESS:', profile);
-    let teamMemberships: any[] = [];
-
-    // Step 2: Get user's teams - AP users can have BOTH provider assignments AND team memberships
-    if (profile.role === 'AP') {
-      // For AP users: First get their provider_id from authorized_providers
-      console.log('🔧 AP USER: Getting provider_id for user:', userId);
-      
-      const { data: userProvider, error: userProviderError } = await supabase
-        .from('authorized_providers')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (userProviderError || !userProvider) {
-        console.error('🔧 Failed to get provider_id for AP user:', userProviderError);
-        // Fallback to direct user_id lookup
-        console.log('🔧 Fallback: Using user_id as provider_id');
+      if (profileError || !profile) {
+        console.error('🔧 Profile fetch FAILED:', profileError);
+        throw new Error(`Failed to get user profile: ${profileError?.message}`);
       }
 
-      const actualProviderId = userProvider?.id || userId;
-      console.log('🔧 AP USER: Using provider_id:', actualProviderId);
+      console.log('🔧 Profile SUCCESS:', profile);
+      let teamMemberships: any[] = [];
+
+      // Step 2: Get user's teams - AP users can have BOTH provider assignments AND team memberships
+      if (profile.role === 'AP') {
+        // For AP users: First get their provider_id from authorized_providers
+        console.log('🔧 AP USER: Getting provider_id for user:', userId);
+        
+        const { data: userProvider, error: userProviderError } = await supabase
+          .from('authorized_providers')
+          .select('id, name, status')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        console.log('🔧 Provider query result:', { userProvider, userProviderError });
+
+        if (userProviderError || !userProvider) {
+          console.error('🔧 Failed to get provider_id for AP user:', userProviderError);
+          // Fallback to direct user_id lookup
+          console.log('🔧 Fallback: Using user_id as provider_id');
+        }
+
+        const actualProviderId = userProvider?.id || userId;
+        console.log('🔧 AP USER: Using provider_id:', actualProviderId);
       
       const { data: providerAssignments, error: providerError } = await supabase
         .from('provider_team_assignments')
@@ -259,6 +263,10 @@ export class SimpleDashboardService {
       display_name: profile.display_name,
       teams: teamsWithDetails
     };
+    } catch (error) {
+      console.error('🔧 SimpleDashboardService FATAL ERROR:', error);
+      throw error;
+    }
   }
 
   /**
