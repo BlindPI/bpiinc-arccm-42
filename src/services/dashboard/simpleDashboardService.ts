@@ -26,6 +26,9 @@ export class SimpleDashboardService {
    * Get user's dashboard data - handles AP users with provider assignments
    */
   static async getUserDashboardData(userId: string): Promise<UserDashboardData> {
+    console.log('🔧 =================== SimpleDashboardService START ===================');
+    console.log('🔧 Input userId:', userId);
+    
     // Step 1: Get user profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -34,16 +37,18 @@ export class SimpleDashboardService {
       .single();
 
     if (profileError || !profile) {
+      console.error('🔧 Profile fetch FAILED:', profileError);
       throw new Error(`Failed to get user profile: ${profileError?.message}`);
     }
 
+    console.log('🔧 Profile SUCCESS:', profile);
     let teamMemberships: any[] = [];
 
     // Step 2: Get user's teams - AP users can have BOTH provider assignments AND team memberships
     if (profile.role === 'AP') {
-      // For AP users: Get BOTH teams they manage AND teams they're members of
+      // For AP users: Get teams via provider_team_assignments (provider_id = userId, team_id)
+      console.log('🔧 AP USER: Querying provider_team_assignments with provider_id:', userId);
       
-      // First: Teams they are assigned to MANAGE
       const { data: providerAssignments, error: providerError } = await supabase
         .from('provider_team_assignments')
         .select('team_id, assignment_role')
@@ -51,10 +56,14 @@ export class SimpleDashboardService {
         .eq('status', 'active');
 
       if (providerError) {
+        console.error('🔧 Provider assignments query FAILED:', providerError);
         throw new Error(`Failed to get provider assignments: ${providerError.message}`);
       }
 
-      // Second: Teams they are MEMBERS of
+      console.log('🔧 Provider assignments query SUCCESS:', providerAssignments);
+
+      // Second: Teams they are MEMBERS of (fallback)
+      console.log('🔧 AP USER: Also checking team_members as fallback');
       const { data: regularMemberships, error: teamError } = await supabase
         .from('team_members')
         .select('team_id, role')
@@ -62,13 +71,16 @@ export class SimpleDashboardService {
         .eq('status', 'active');
 
       if (teamError) {
+        console.error('🔧 Team members query FAILED:', teamError);
         throw new Error(`Failed to get team memberships: ${teamError.message}`);
       }
+
+      console.log('🔧 Team members query SUCCESS:', regularMemberships);
 
       // Combine both relationships, prioritizing provider assignments
       const managedTeams = (providerAssignments || []).map(assignment => ({
         team_id: assignment.team_id,
-        role: assignment.assignment_role, // Use assignment_role directly
+        role: assignment.assignment_role,
         relationship_type: 'manager'
       }));
 
@@ -77,6 +89,9 @@ export class SimpleDashboardService {
         role: membership.role,
         relationship_type: 'member'
       }));
+
+      console.log('🔧 Managed teams:', managedTeams);
+      console.log('🔧 Member teams:', memberTeams);
 
       // Merge and deduplicate (prioritize manager role if both exist)
       const teamMap = new Map();
@@ -94,7 +109,7 @@ export class SimpleDashboardService {
       });
 
       teamMemberships = Array.from(teamMap.values());
-      console.log('🔧 AP User - Combined Teams:', { userId, managedTeams, memberTeams, finalTeams: teamMemberships });
+      console.log('🔧 AP User - Final combined teams:', teamMemberships);
     } else {
       // For non-AP users: Get teams they are MEMBERS of
       const { data: regularMemberships, error: teamError } = await supabase
