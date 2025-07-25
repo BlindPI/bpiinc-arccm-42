@@ -44,10 +44,7 @@ export class SimpleDashboardService {
       // For AP users, check provider_team_assignments first
       const { data: providerAssignments, error: providerError } = await supabase
         .from('provider_team_assignments')
-        .select(`
-          team_id,
-          assignment_role as role
-        `)
+        .select('team_id, assignment_role')
         .eq('provider_id', userId)
         .eq('status', 'active');
 
