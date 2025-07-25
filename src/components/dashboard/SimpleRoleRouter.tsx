@@ -80,22 +80,22 @@ export function SimpleRoleRouter() {
     return <SimpleDashboard userId={user.id} />;
   }
 
+  // DISABLED: AP users now use SimpleDashboard above (lines 78-81)
   // Fallback to existing dashboards for backward compatibility
-  // AP (Authorized Provider) Dashboard - Enhanced version
-  if (userRole === 'AP') {
-    console.log('🎯 ROUTING: AP user to EnhancedProviderDashboard (fallback)');
-    return <div className="space-y-6">
-        <SuccessBanner />
-        <EnhancedProviderDashboard config={{
-        welcomeMessage: `Welcome, ${profile.display_name || user.email}`,
-        subtitle: 'Authorized Provider Dashboard',
-        widgets: []
-      }} profile={{
-        ...profile,
-        status: profile.status || 'ACTIVE'
-      }} />
-      </div>;
-  }
+  // if (userRole === 'AP') {
+  //   console.log('🎯 ROUTING: AP user to EnhancedProviderDashboard (fallback)');
+  //   return <div className="space-y-6">
+  //       <SuccessBanner />
+  //       <EnhancedProviderDashboard config={{
+  //       welcomeMessage: `Welcome, ${profile.display_name || user.email}`,
+  //       subtitle: 'Authorized Provider Dashboard',
+  //       widgets: []
+  //     }} profile={{
+  //       ...profile,
+  //       status: profile.status || 'ACTIVE'
+  //     }} />
+  //     </div>;
+  // }
 
   // Team Member Dashboard (for users with team assignments)
   if (primaryTeam) {
