@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Users, UserCheck, MapPin, AlertCircle, User, GraduationCap, Settings, BarChart3, Eye, ChevronDown, RefreshCw } from 'lucide-react';
 import { SimpleDashboardService, UserDashboardData } from '@/services/dashboard/simpleDashboardService';
 import { providerRelationshipService } from '@/services/provider/ProviderRelationshipService_FIXED_CLEAN';
+import { supabase } from '@/integrations/supabase/client';
 import { LoadingDashboard } from './LoadingDashboard';
 import AvailabilityCalendar from '@/components/availability/AvailabilityCalendar';
 import { toast } from 'sonner';
@@ -43,7 +44,7 @@ export const SimpleDashboard: React.FC<SimpleDashboardProps> = ({ userId }) => {
       
       // EMERGENCY BYPASS: Use working ProviderRelationshipService directly
       // Step 1: Get provider_id from authorized_providers table using user_id
-      const { data: authProviders, error: authError } = await (window as any).supabase
+      const { data: authProviders, error: authError } = await supabase
         .from('authorized_providers')
         .select('id, name')
         .eq('user_id', userId)
@@ -75,14 +76,9 @@ export const SimpleDashboard: React.FC<SimpleDashboardProps> = ({ userId }) => {
       
       const dashboardData: UserDashboardData = {
         user_id: userId,
-        display_name: 'The Test User', // Hardcoded for now
+        display_name: 'The Test User',
         user_role: 'AP',
-        provider_name: authProviders.name,
-        teams: teams,
-        locations: [],
-        total_certificates: 0,
-        pending_requests: 0,
-        last_updated: new Date().toISOString()
+        teams: teams
       };
       
       console.log('🔧 SimpleDashboard: Final dashboard data:', dashboardData);
