@@ -68,9 +68,11 @@ export class SimpleDashboardService {
         const actualProviderId = userProvider?.id || userId;
         console.log('🔧 AP USER: Using provider_id:', actualProviderId);
       
+      // Direct query to provider_team_assignments table
+      console.log('🔧 AP USER: Querying provider_team_assignments with provider_id:', actualProviderId);
       const { data: providerAssignments, error: providerError } = await supabase
         .from('provider_team_assignments')
-        .select('team_id, assignment_role')
+        .select('team_id, assignment_role, status')
         .eq('provider_id', actualProviderId)
         .eq('status', 'active');
 
