@@ -87,9 +87,11 @@ export function useProfile() {
         return null;
       }
     },
-    enabled: !!user?.id && authReady && !authLoading,
+    enabled: !!user?.id, // Simplified - just need user ID
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 10, // 10 minutes
+    refetchOnMount: false, // Don't refetch if we have data
+    refetchOnWindowFocus: false, // Don't refetch on window focus
     retry: (failureCount, error: any) => {
       // Don't retry for missing profiles
       if (error?.code === 'PGRST116') {
