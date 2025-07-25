@@ -39,15 +39,14 @@ export class SimpleDashboardService {
 
     let teamMemberships: any[] = [];
 
-    // Step 2: Get user's team memberships - different logic for AP vs other roles
+    // Step 2: Get user's teams - AP users can have BOTH provider assignments AND team memberships
     if (profile.role === 'AP') {
-      // For AP users, check provider_team_assignments first
+      // For AP users: Get BOTH teams they manage AND teams they're members of
+      
+      // First: Teams they are assigned to MANAGE
       const { data: providerAssignments, error: providerError } = await supabase
         .from('provider_team_assignments')
-        .select(`
-          team_id,
-          assignment_role as role
-        `)
+        .select('team_id, assignment_role')
         .eq('provider_id', userId)
         .eq('status', 'active');
 
@@ -55,24 +54,7 @@ export class SimpleDashboardService {
         throw new Error(`Failed to get provider assignments: ${providerError.message}`);
       }
 
-      teamMemberships = providerAssignments || [];
-
-      // If no provider assignments found, fall back to team_members
-      if (teamMemberships.length === 0) {
-        const { data: regularMemberships, error: teamError } = await supabase
-          .from('team_members')
-          .select('team_id, role')
-          .eq('user_id', userId)
-          .eq('status', 'active');
-
-        if (teamError) {
-          throw new Error(`Failed to get team memberships: ${teamError.message}`);
-        }
-
-        teamMemberships = regularMemberships || [];
-      }
-    } else {
-      // For non-AP users, use standard team_members approach
+      // Second: Teams they are MEMBERS of
       const { data: regularMemberships, error: teamError } = await supabase
         .from('team_members')
         .select('team_id, role')
@@ -83,10 +65,58 @@ export class SimpleDashboardService {
         throw new Error(`Failed to get team memberships: ${teamError.message}`);
       }
 
-      teamMemberships = regularMemberships || [];
+      // Combine both relationships, prioritizing provider assignments
+      const managedTeams = (providerAssignments || []).map(assignment => ({
+        team_id: assignment.team_id,
+        role: assignment.assignment_role, // Use assignment_role directly
+        relationship_type: 'manager'
+      }));
+
+      const memberTeams = (regularMemberships || []).map(membership => ({
+        team_id: membership.team_id,
+        role: membership.role,
+        relationship_type: 'member'
+      }));
+
+      // Merge and deduplicate (prioritize manager role if both exist)
+      const teamMap = new Map();
+      
+      // Add managed teams first (higher priority)
+      managedTeams.forEach(team => {
+        teamMap.set(team.team_id, team);
+      });
+      
+      // Add member teams only if not already managing
+      memberTeams.forEach(team => {
+        if (!teamMap.has(team.team_id)) {
+          teamMap.set(team.team_id, team);
+        }
+      });
+
+      teamMemberships = Array.from(teamMap.values());
+      console.log('🔧 AP User - Combined Teams:', { userId, managedTeams, memberTeams, finalTeams: teamMemberships });
+    } else {
+      // For non-AP users: Get teams they are MEMBERS of
+      const { data: regularMemberships, error: teamError } = await supabase
+        .from('team_members')
+        .select('team_id, role')
+        .eq('user_id', userId)
+        .eq('status', 'active');
+
+      if (teamError) {
+        throw new Error(`Failed to get team memberships: ${teamError.message}`);
+      }
+
+      teamMemberships = (regularMemberships || []).map(membership => ({
+        team_id: membership.team_id,
+        role: membership.role,
+        relationship_type: 'member'
+      }));
+      console.log('🔧 Non-AP User - Team Memberships:', { userId, memberships: teamMemberships });
     }
 
     if (!teamMemberships || teamMemberships.length === 0) {
+      console.log('🔧 No teams found for user:', { userId, role: profile.role });
       return {
         user_id: profile.id,
         user_role: profile.role,
