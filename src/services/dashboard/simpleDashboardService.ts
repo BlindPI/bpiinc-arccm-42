@@ -181,14 +181,33 @@ export class SimpleDashboardService {
     }, {} as Record<string, number>);
 
     // Step 6: Join the data in JavaScript
+    console.log('🔧 STEP 6: Starting join logic');
+    console.log('🔧 teamMemberships:', teamMemberships);
+    console.log('🔧 teams query result:', teams);
+    console.log('🔧 locations query result:', locations);
+    
     const teamsWithDetails = teamMemberships
       .map(membership => {
+        console.log('🔧 Processing membership:', membership);
         const team = teams?.find(t => t.id === membership.team_id);
-        const location = locations?.find(l => l.id === team?.location_id);
+        console.log('🔧 Found team for', membership.team_id, ':', team);
         
-        if (!team || !location) return null;
+        if (!team) {
+          console.log('🔧 PROBLEM: No team found for team_id:', membership.team_id);
+          console.log('🔧 Available teams:', teams?.map(t => ({ id: t.id, name: t.name })));
+          return null;
+        }
         
-        return {
+        const location = locations?.find(l => l.id === team.location_id);
+        console.log('🔧 Found location for', team.location_id, ':', location);
+        
+        if (!location) {
+          console.log('🔧 PROBLEM: No location found for location_id:', team.location_id);
+          console.log('🔧 Available locations:', locations?.map(l => ({ id: l.id, name: l.name })));
+          return null;
+        }
+        
+        const result = {
           team_id: team.id,
           team_name: team.name,
           team_role: membership.role,
@@ -196,8 +215,12 @@ export class SimpleDashboardService {
           location_name: location.name,
           certificate_count: certificateCountsByLocation[team.location_id] || 0
         };
+        console.log('🔧 Successfully created team result:', result);
+        return result;
       })
       .filter(Boolean) as UserDashboardData['teams'];
+
+    console.log('🔧 FINAL teamsWithDetails:', teamsWithDetails);
 
     return {
       user_id: profile.id,
