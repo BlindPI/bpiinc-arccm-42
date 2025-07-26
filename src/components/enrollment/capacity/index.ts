@@ -64,7 +64,6 @@ export type {
 export type {
   // Base hover overlay types
   BaseHoverOverlayProps,
-  MobileHoverOverlayProps,
   HoverOverlayState,
   HoverOverlayConfig,
   OverlayA11yProps,
@@ -79,12 +78,9 @@ export type {
   CapacityMetricsDisplayProps,
   WaitlistInfo,
   WaitlistDisplayProps,
-  CapacityTrendsProps,
-  TrendData,
   
   // Calendar integration types
   CalendarIntegrationProps,
-  CalendarCapacityHoverProps,
   OverlayManagerState,
   
   // Event and utility types
@@ -100,15 +96,10 @@ export type {
 // CONVENIENCE RE-EXPORTS
 // ============================================================================
 
-// Main components most commonly used
-export {
-  // Phase 2 essentials
-  CapacityStatusBadge as CapacityBadge,
-  EnrollmentCapacityGuard as CapacityGuard,
-  RosterCapacityDisplay as CapacityDisplay,
-  
-  // Phase 3 essentials
-  CalendarCapacityHover as CalendarHover,
-  CapacityInfoOverlay as InfoOverlay,
-  CapacityMetricsDisplay as MetricsDisplay
-};
+// Main components most commonly used - using direct aliases
+export { CapacityStatusBadge as CapacityBadge } from './CapacityStatusBadge';
+export { EnrollmentCapacityGuard as CapacityGuard } from './EnrollmentCapacityGuard';
+export { RosterCapacityDisplay as CapacityDisplay } from './RosterCapacityDisplay';
+export { CalendarCapacityHover as CalendarHover } from './CapacityInfoOverlay';
+export { CapacityInfoOverlay as InfoOverlay } from './CapacityInfoOverlay';
+export { CapacityMetricsDisplay as MetricsDisplay } from './CapacityMetricsDisplay';
