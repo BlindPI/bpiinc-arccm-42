@@ -373,7 +373,14 @@ export default function UserComplianceManager() {
               upload_date, 
               verification_status, 
               file_path,
-              uploaded_by_profile:profiles!uploaded_by(id, display_name, email, role)
+              expiry_date,
+              verified_at,
+              verified_by,
+              verification_notes,
+              created_at,
+              updated_at,
+              uploaded_by_profile:profiles!uploaded_by(id, display_name, email, role),
+              verified_by_profile:profiles!verified_by(id, display_name, email, role)
             `)
             .eq('user_id', userId)
             .eq('metric_id', actualMetricId) : { data: [] };
@@ -1087,6 +1094,11 @@ export default function UserComplianceManager() {
                       <div className="text-sm font-medium mb-2 text-green-800">Uploaded Documents:</div>
                       {record.uploaded_documents.map((doc: ComplianceDocument) => {
                         const uploadedBy = (doc as any).uploaded_by_profile;
+                        const verifiedBy = (doc as any).verified_by_profile;
+                        const isExpired = doc.expiry_date && new Date(doc.expiry_date) < new Date();
+                        const isExpiringSoon = doc.expiry_date && !isExpired && 
+                          new Date(doc.expiry_date) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+                        
                         return (
                           <div key={doc.id} className="bg-white p-3 rounded border mb-2">
                             <div className="flex items-center justify-between mb-2">
@@ -1096,6 +1108,16 @@ export default function UserComplianceManager() {
                                 <Badge className={getStatusColor(doc.verification_status)}>
                                   {doc.verification_status}
                                 </Badge>
+                                {isExpired && (
+                                  <Badge variant="destructive" className="text-xs">
+                                    EXPIRED
+                                  </Badge>
+                                )}
+                                {isExpiringSoon && !isExpired && (
+                                  <Badge variant="outline" className="text-xs border-orange-500 text-orange-600">
+                                    EXPIRING SOON
+                                  </Badge>
+                                )}
                               </div>
                               <Button
                                 size="sm"
@@ -1113,9 +1135,35 @@ export default function UserComplianceManager() {
                                 </span>
                               </div>
                               <div className="flex justify-between">
-                                <span>Upload date:</span>
-                                <span className="font-medium">{new Date(doc.upload_date || doc.created_at).toLocaleDateString()}</span>
+                                <span>Upload timestamp:</span>
+                                <span className="font-medium">
+                                  {new Date(doc.upload_date || doc.created_at).toLocaleString()}
+                                </span>
                               </div>
+                              {doc.expiry_date && (
+                                <div className="flex justify-between">
+                                  <span>Expires:</span>
+                                  <span className={`font-medium ${isExpired ? 'text-red-600' : isExpiringSoon ? 'text-orange-600' : 'text-green-600'}`}>
+                                    {new Date(doc.expiry_date).toLocaleDateString()}
+                                  </span>
+                                </div>
+                              )}
+                              {doc.verified_at && (
+                                <div className="flex justify-between">
+                                  <span>{doc.verification_status === 'approved' ? 'Approved' : 'Verified'} timestamp:</span>
+                                  <span className="font-medium text-green-600">
+                                    {new Date(doc.verified_at).toLocaleString()}
+                                  </span>
+                                </div>
+                              )}
+                              {verifiedBy && doc.verified_at && (
+                                <div className="flex justify-between">
+                                  <span>{doc.verification_status === 'approved' ? 'Approved' : 'Verified'} by:</span>
+                                  <span className="font-medium text-green-600">
+                                    {verifiedBy.display_name} ({verifiedBy.role})
+                                  </span>
+                                </div>
+                              )}
                               <div className="flex justify-between">
                                 <span>Status:</span>
                                 <span className={`font-medium ${doc.verification_status === 'pending' ? 'text-yellow-600' : doc.verification_status === 'approved' ? 'text-green-600' : 'text-red-600'}`}>
