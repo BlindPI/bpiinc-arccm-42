@@ -228,12 +228,12 @@ export function AdminDocumentVerification() {
                             <span className="text-gray-600">Document for:</span>
                             <span className="font-medium">{complianceUser?.display_name || 'Unknown User'}</span>
                           </div>
-                          {uploadedBy && uploadedBy.id !== complianceUser?.id && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Uploaded by:</span>
-                              <span className="font-medium">{uploadedBy.display_name} ({uploadedBy.role})</span>
-                            </div>
-                          )}
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Uploaded by:</span>
+                            <span className="font-medium">
+                              {uploadedBy ? `${uploadedBy.display_name} (${uploadedBy.role})` : 'Unknown'}
+                            </span>
+                          </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Upload date:</span>
                             <span className="font-medium">{new Date(doc.upload_date).toLocaleDateString()}</span>

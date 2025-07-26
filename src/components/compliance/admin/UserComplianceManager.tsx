@@ -1099,12 +1099,12 @@ export default function UserComplianceManager() {
                               </Button>
                             </div>
                             <div className="space-y-1 text-xs text-gray-600">
-                              {uploadedBy && uploadedBy.id !== user?.id && (
-                                <div className="flex justify-between">
-                                  <span>Uploaded by:</span>
-                                  <span className="font-medium text-blue-600">{uploadedBy.display_name} ({uploadedBy.role})</span>
-                                </div>
-                              )}
+                              <div className="flex justify-between">
+                                <span>Uploaded by:</span>
+                                <span className="font-medium text-blue-600">
+                                  {uploadedBy ? `${uploadedBy.display_name} (${uploadedBy.role})` : 'Unknown'}
+                                </span>
+                              </div>
                               <div className="flex justify-between">
                                 <span>Upload date:</span>
                                 <span className="font-medium">{new Date(doc.upload_date || doc.created_at).toLocaleDateString()}</span>
