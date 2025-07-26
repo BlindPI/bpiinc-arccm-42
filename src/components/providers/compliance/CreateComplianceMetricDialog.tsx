@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ComplianceService } from '@/services/compliance/complianceService';
 import { Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 // Define measurement type enum based on database constraints
 type MeasurementType = 'boolean' | 'percentage' | 'date' | 'numeric';
@@ -46,7 +47,8 @@ export function CreateComplianceMetricDialog({ onMetricCreated }: CreateComplian
     measurement_type: DEFAULT_MEASUREMENT_TYPE,
     target_value: {},
     weight: 1,
-    required_for_roles: [] as string[]
+    required_for_roles: [] as string[],
+    applicable_tiers: 'basic,robust'
   });
 
   const categories = [
@@ -81,10 +83,50 @@ export function CreateComplianceMetricDialog({ onMetricCreated }: CreateComplian
           break;
       }
 
-      await ComplianceService.upsertComplianceMetric({
+      const savedMetric = await ComplianceService.upsertComplianceMetric({
         ...formData,
         target_value: targetValue
       });
+
+      // Create compliance records for all existing users
+      console.log('🔧 Creating compliance records for new metric:', savedMetric.name);
+      
+      // Get all users
+      const { data: users, error: usersError } = await supabase
+        .from('profiles')
+        .select('id, role');
+      
+      if (usersError) {
+        console.error('Failed to fetch users:', usersError);
+      } else if (users && users.length > 0) {
+        // Filter users based on required_for_roles
+        const applicableUsers = users.filter(user => {
+          const requiredRoles = savedMetric.required_for_roles || [];
+          return requiredRoles.length === 0 || requiredRoles.includes(user.role);
+        });
+        
+        console.log(`🔧 Creating records for ${applicableUsers.length} applicable users`);
+        
+        // Create compliance records for applicable users
+        const recordPromises = applicableUsers.map(user =>
+          supabase
+            .from('user_compliance_records')
+            .upsert({
+              user_id: user.id,
+              metric_id: savedMetric.id,
+              compliance_status: 'pending',
+              current_value: null,
+              last_checked_at: new Date().toISOString(),
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'user_id,metric_id'
+            })
+        );
+        
+        await Promise.all(recordPromises);
+        console.log('✅ Compliance records created for all applicable users');
+      }
 
       toast({
         title: 'Success',
@@ -99,7 +141,8 @@ export function CreateComplianceMetricDialog({ onMetricCreated }: CreateComplian
         measurement_type: DEFAULT_MEASUREMENT_TYPE,
         target_value: {},
         weight: 1,
-        required_for_roles: []
+        required_for_roles: [],
+        applicable_tiers: 'basic,robust'
       });
       onMetricCreated();
     } catch (error) {
@@ -204,6 +247,23 @@ export function CreateComplianceMetricDialog({ onMetricCreated }: CreateComplian
               value={formData.weight}
               onChange={(e) => setFormData(prev => ({ ...prev, weight: parseInt(e.target.value) }))}
             />
+          </div>
+
+          <div>
+            <Label htmlFor="applicable_tiers">Applicable Tiers</Label>
+            <Select 
+              value={formData.applicable_tiers} 
+              onValueChange={(value) => setFormData(prev => ({ ...prev, applicable_tiers: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select applicable tiers" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="basic,robust">Both Tiers</SelectItem>
+                <SelectItem value="basic">Basic Only</SelectItem>
+                <SelectItem value="robust">Robust Only</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
