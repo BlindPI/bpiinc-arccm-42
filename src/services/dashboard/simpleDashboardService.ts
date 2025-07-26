@@ -417,16 +417,33 @@ export class SimpleDashboardService {
         activeMembers.map(async (member) => {
           console.log('🔧 TEAM_MEMBERS: Fetching profile for user:', member.user_id);
           
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('id, display_name, email, phone, job_title, role')
-            .eq('id', member.user_id)
-            .single();
+          console.log('🔧 TEAM_MEMBERS: Attempting to fetch profile for user_id:', member.user_id);
+          
+          // **TRY DIRECT QUERY**: Bypass potential RLS issues with a simpler approach
+          let profile = null;
+          
+          try {
+            // First try a simple profiles query
+            const { data: profileData, error: profileError } = await supabase
+              .from('profiles')
+              .select('id, display_name, email, phone, job_title, role')
+              .eq('id', member.user_id)
+              .maybeSingle(); // Use maybeSingle to avoid throwing on no results
 
-          if (profileError) {
-            console.warn('🔧 TEAM_MEMBERS: Profile fetch failed for user:', member.user_id, profileError);
-          } else {
-            console.log('🔧 TEAM_MEMBERS: Profile fetched successfully for:', member.user_id, profile?.display_name || 'NO_DISPLAY_NAME');
+            if (profileError) {
+              console.error('🔧 TEAM_MEMBERS: Profile query error:', profileError);
+            } else if (profileData) {
+              profile = profileData;
+              console.log('🔧 TEAM_MEMBERS: Profile found:', {
+                id: profile.id,
+                display_name: profile.display_name,
+                email: profile.email
+              });
+            } else {
+              console.warn('🔧 TEAM_MEMBERS: No profile found for user:', member.user_id);
+            }
+          } catch (error) {
+            console.error('🔧 TEAM_MEMBERS: Profile fetch exception:', error);
           }
 
           return {

@@ -60,24 +60,74 @@ export function EnhancedRostersView() {
   const { data: rosters, isLoading } = useQuery({
     queryKey: ['enhanced-rosters', isAdmin, profile?.id],
     queryFn: async () => {
+      console.log('🔧 ROSTERS: Fetching rosters for user:', profile?.id, 'role:', profile?.role, 'isAdmin:', isAdmin);
+
+      if (!isAdmin && profile?.id && profile?.role === 'AP') {
+        // **FIXED: AP users get location-based filtering (same as certificates)**
+        console.log('🔧 ROSTERS: AP user detected - using location-based filtering');
+        
+        // Get provider ID and location for this AP user
+        const { data: apUser, error: apError } = await supabase
+          .from('authorized_providers')
+          .select('id, primary_location_id')
+          .eq('user_id', profile.id)
+          .single();
+          
+        if (apError || !apUser?.primary_location_id) {
+          console.error('🔧 ROSTERS: Could not find provider/location for AP user:', apError);
+          return [];
+        }
+        
+        const locationId = apUser.primary_location_id;
+        console.log('🔧 ROSTERS: Using location-based filtering for location:', locationId);
+        
+        // Get rosters for this location
+        const { data, error } = await supabase
+          .from('rosters')
+          .select('*')
+          .eq('location_id', locationId)
+          .eq('status', 'ACTIVE')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('🔧 ROSTERS: Location-based roster query failed:', error);
+          throw error;
+        }
+
+        console.log('🔧 ROSTERS: AP user location-based rosters found:', data?.length || 0);
+        
+        return (data || []).map(item => ({
+          ...item,
+          status: item.status as 'ACTIVE' | 'ARCHIVED' | 'DRAFT',
+          course: undefined,
+          location: undefined,
+          creator: undefined
+        })) as Roster[];
+      }
+
+      // **ADMIN USERS or OTHER ROLES**: Use original logic
       let query = supabase
         .from('rosters')
         .select('*');
 
       if (!isAdmin && profile?.id) {
-        // AP users: Don't filter by created_by - let RLS handle location-based visibility
-        if (profile?.role === 'AP') {
-          console.log('AP user: Relying on RLS for location-based roster visibility');
-          // RLS policy will filter rosters based on AP user's location assignments
-        } else {
-          // Other roles: Filter by created_by (existing behavior)
-          query = query.eq('created_by', profile.id);
-        }
+        // Other roles: Filter by created_by (existing behavior)
+        console.log('🔧 ROSTERS: Non-AP user - filtering by created_by');
+        query = query.eq('created_by', profile.id);
+      } else {
+        console.log('🔧 ROSTERS: Admin user - no filtering');
       }
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await query
+        .eq('status', 'ACTIVE')
+        .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('🔧 ROSTERS: Standard roster query failed:', error);
+        throw error;
+      }
+      
+      console.log('🔧 ROSTERS: Standard rosters found:', data?.length || 0);
       
       return (data || []).map(item => ({
         ...item,
