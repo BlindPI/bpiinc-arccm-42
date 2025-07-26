@@ -1346,6 +1346,8 @@ export type Database = {
           end_time: string
           hours_credited: number | null
           id: string
+          location_id: string | null
+          max_capacity: number | null
           requires_approval: boolean | null
           start_time: string
           status: string
@@ -1370,6 +1372,8 @@ export type Database = {
           end_time: string
           hours_credited?: number | null
           id?: string
+          location_id?: string | null
+          max_capacity?: number | null
           requires_approval?: boolean | null
           start_time: string
           status?: string
@@ -1394,6 +1398,8 @@ export type Database = {
           end_time?: string
           hours_credited?: number | null
           id?: string
+          location_id?: string | null
+          max_capacity?: number | null
           requires_approval?: boolean | null
           start_time?: string
           status?: string
@@ -1464,6 +1470,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
             referencedColumns: ["id"]
           },
           {
@@ -2241,6 +2254,13 @@ export type Database = {
             columns: ["availability_booking_id"]
             isOneToOne: false
             referencedRelation: "availability_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_sync_events_availability_booking_id_fkey"
+            columns: ["availability_booking_id"]
+            isOneToOne: false
+            referencedRelation: "availability_bookings_with_location"
             referencedColumns: ["id"]
           },
           {
@@ -4245,6 +4265,7 @@ export type Database = {
           rejection_reason: string | null
           updated_at: string | null
           upload_date: string | null
+          uploaded_by: string | null
           user_id: string
           verification_notes: string | null
           verification_status: string | null
@@ -4264,6 +4285,7 @@ export type Database = {
           rejection_reason?: string | null
           updated_at?: string | null
           upload_date?: string | null
+          uploaded_by?: string | null
           user_id: string
           verification_notes?: string | null
           verification_status?: string | null
@@ -4283,6 +4305,7 @@ export type Database = {
           rejection_reason?: string | null
           updated_at?: string | null
           upload_date?: string | null
+          uploaded_by?: string | null
           user_id?: string
           verification_notes?: string | null
           verification_status?: string | null
@@ -4295,6 +4318,34 @@ export type Database = {
             columns: ["metric_id"]
             isOneToOne: false
             referencedRelation: "compliance_metrics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "compliance_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -6388,28 +6439,43 @@ export type Database = {
       }
       course_prerequisites: {
         Row: {
+          alternative_qualification: string | null
           course_id: string
           created_at: string
           id: string
+          is_active: boolean | null
           is_required: boolean
+          min_score_required: number | null
           prerequisite_course_id: string
+          prerequisite_type: string
           updated_at: string
+          validity_months: number | null
         }
         Insert: {
+          alternative_qualification?: string | null
           course_id: string
           created_at?: string
           id?: string
+          is_active?: boolean | null
           is_required?: boolean
+          min_score_required?: number | null
           prerequisite_course_id: string
+          prerequisite_type?: string
           updated_at?: string
+          validity_months?: number | null
         }
         Update: {
+          alternative_qualification?: string | null
           course_id?: string
           created_at?: string
           id?: string
+          is_active?: boolean | null
           is_required?: boolean
+          min_score_required?: number | null
           prerequisite_course_id?: string
+          prerequisite_type?: string
           updated_at?: string
+          validity_months?: number | null
         }
         Relationships: [
           {
@@ -6530,6 +6596,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "course_roster_assignments_availability_booking_id_fkey"
+            columns: ["availability_booking_id"]
+            isOneToOne: false
+            referencedRelation: "availability_bookings_with_location"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "course_roster_assignments_course_offering_id_fkey"
             columns: ["course_offering_id"]
             isOneToOne: false
@@ -6542,6 +6615,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "roster_booking_assignments"
             referencedColumns: ["roster_id"]
+          },
+          {
+            foreignKeyName: "course_roster_assignments_roster_id_fkey"
+            columns: ["roster_id"]
+            isOneToOne: false
+            referencedRelation: "roster_capacity_status"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "course_roster_assignments_roster_id_fkey"
@@ -6653,6 +6733,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      course_templates: {
+        Row: {
+          code: string
+          course_components: Json | null
+          created_at: string | null
+          description: string | null
+          duration_hours: number
+          id: string
+          is_active: boolean | null
+          max_students: number | null
+          name: string
+          required_specialties: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          course_components?: Json | null
+          created_at?: string | null
+          description?: string | null
+          duration_hours: number
+          id?: string
+          is_active?: boolean | null
+          max_students?: number | null
+          name: string
+          required_specialties?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          course_components?: Json | null
+          created_at?: string | null
+          description?: string | null
+          duration_hours?: number
+          id?: string
+          is_active?: boolean | null
+          max_students?: number | null
+          name?: string
+          required_specialties?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       course_type_certification_levels: {
         Row: {
@@ -8416,6 +8538,7 @@ export type Database = {
           lead_source: string | null
           loss_reason: string | null
           next_step: string | null
+          notes: string | null
           opportunity_name: string
           opportunity_status: string | null
           opportunity_type: string | null
@@ -8450,6 +8573,7 @@ export type Database = {
           lead_source?: string | null
           loss_reason?: string | null
           next_step?: string | null
+          notes?: string | null
           opportunity_name: string
           opportunity_status?: string | null
           opportunity_type?: string | null
@@ -8484,6 +8608,7 @@ export type Database = {
           lead_source?: string | null
           loss_reason?: string | null
           next_step?: string | null
+          notes?: string | null
           opportunity_name?: string
           opportunity_status?: string | null
           opportunity_type?: string | null
@@ -9980,6 +10105,53 @@ export type Database = {
         }
         Relationships: []
       }
+      instructor_availability: {
+        Row: {
+          created_at: string | null
+          day_of_week: number
+          effective_date: string | null
+          end_date: string | null
+          end_time: string
+          id: string
+          instructor_id: string | null
+          is_recurring: boolean | null
+          start_time: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          day_of_week: number
+          effective_date?: string | null
+          end_date?: string | null
+          end_time: string
+          id?: string
+          instructor_id?: string | null
+          is_recurring?: boolean | null
+          start_time: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          day_of_week?: number
+          effective_date?: string | null
+          end_date?: string | null
+          end_time?: string
+          id?: string
+          instructor_id?: string | null
+          is_recurring?: boolean | null
+          start_time?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instructor_availability_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       instructor_certifications: {
         Row: {
           certification_name: string
@@ -10149,6 +10321,62 @@ export type Database = {
             columns: ["instructor_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instructor_profiles: {
+        Row: {
+          certification_level: string | null
+          created_at: string | null
+          display_name: string | null
+          email: string
+          first_name: string | null
+          id: string
+          is_active: boolean | null
+          last_name: string | null
+          location_id: string | null
+          max_students_per_session: number | null
+          phone: string | null
+          specialties: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          certification_level?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          email: string
+          first_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_name?: string | null
+          location_id?: string | null
+          max_students_per_session?: number | null
+          phone?: string | null
+          specialties?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          certification_level?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          email?: string
+          first_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_name?: string | null
+          location_id?: string | null
+          max_students_per_session?: number | null
+          phone?: string | null
+          specialties?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instructor_profiles_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
             referencedColumns: ["id"]
           },
         ]
@@ -12528,6 +12756,42 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          auth_key: string
+          created_at: string
+          endpoint: string
+          id: string
+          is_active: boolean
+          p256dh_key: string
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth_key: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          is_active?: boolean
+          p256dh_key: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth_key?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          is_active?: boolean
+          p256dh_key?: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       realtime_metrics: {
         Row: {
           category: string
@@ -13512,6 +13776,13 @@ export type Database = {
             foreignKeyName: "roster_enrollments_roster_id_fkey"
             columns: ["roster_id"]
             isOneToOne: false
+            referencedRelation: "roster_capacity_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roster_enrollments_roster_id_fkey"
+            columns: ["roster_id"]
+            isOneToOne: false
             referencedRelation: "student_rosters"
             referencedColumns: ["id"]
           },
@@ -13596,6 +13867,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "roster_booking_assignments"
             referencedColumns: ["roster_id"]
+          },
+          {
+            foreignKeyName: "roster_export_logs_roster_id_fkey"
+            columns: ["roster_id"]
+            isOneToOne: false
+            referencedRelation: "roster_capacity_status"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "roster_export_logs_roster_id_fkey"
@@ -14045,6 +14323,272 @@ export type Database = {
           },
         ]
       }
+      session_component_progress: {
+        Row: {
+          attempts: number | null
+          attendance_percentage: number | null
+          attendance_status: string | null
+          completed_by: string | null
+          completion_notes: string | null
+          created_at: string | null
+          duration_actual_minutes: number | null
+          end_time: string | null
+          id: string
+          instructor_notes: string | null
+          max_attempts: number | null
+          participant_feedback: string | null
+          participation_score: number | null
+          passed: boolean | null
+          score: number | null
+          session_enrollment_id: string
+          session_template_component_id: string
+          start_time: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          attempts?: number | null
+          attendance_percentage?: number | null
+          attendance_status?: string | null
+          completed_by?: string | null
+          completion_notes?: string | null
+          created_at?: string | null
+          duration_actual_minutes?: number | null
+          end_time?: string | null
+          id?: string
+          instructor_notes?: string | null
+          max_attempts?: number | null
+          participant_feedback?: string | null
+          participation_score?: number | null
+          passed?: boolean | null
+          score?: number | null
+          session_enrollment_id: string
+          session_template_component_id: string
+          start_time?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          attempts?: number | null
+          attendance_percentage?: number | null
+          attendance_status?: string | null
+          completed_by?: string | null
+          completion_notes?: string | null
+          created_at?: string | null
+          duration_actual_minutes?: number | null
+          end_time?: string | null
+          id?: string
+          instructor_notes?: string | null
+          max_attempts?: number | null
+          participant_feedback?: string | null
+          participation_score?: number | null
+          passed?: boolean | null
+          score?: number | null
+          session_enrollment_id?: string
+          session_template_component_id?: string
+          start_time?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_session_component_progress_component"
+            columns: ["session_template_component_id"]
+            isOneToOne: false
+            referencedRelation: "session_template_components"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_session_component_progress_enrollment"
+            columns: ["session_enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "session_enrollments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_enrollments: {
+        Row: {
+          amount_paid: number | null
+          assessment_score: number | null
+          attendance_percentage: number | null
+          attendance_status: string | null
+          completed_by: string | null
+          completion_notes: string | null
+          completion_status: string | null
+          completion_time: string | null
+          created_at: string | null
+          enrollment_date: string | null
+          id: string
+          instructor_notes: string | null
+          notes: string | null
+          overall_passed: boolean | null
+          overall_score: number | null
+          overall_status: string | null
+          participant_feedback: string | null
+          participation_score: number | null
+          payment_status: string | null
+          session_id: string | null
+          start_time: string | null
+          student_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount_paid?: number | null
+          assessment_score?: number | null
+          attendance_percentage?: number | null
+          attendance_status?: string | null
+          completed_by?: string | null
+          completion_notes?: string | null
+          completion_status?: string | null
+          completion_time?: string | null
+          created_at?: string | null
+          enrollment_date?: string | null
+          id?: string
+          instructor_notes?: string | null
+          notes?: string | null
+          overall_passed?: boolean | null
+          overall_score?: number | null
+          overall_status?: string | null
+          participant_feedback?: string | null
+          participation_score?: number | null
+          payment_status?: string | null
+          session_id?: string | null
+          start_time?: string | null
+          student_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount_paid?: number | null
+          assessment_score?: number | null
+          attendance_percentage?: number | null
+          attendance_status?: string | null
+          completed_by?: string | null
+          completion_notes?: string | null
+          completion_status?: string | null
+          completion_time?: string | null
+          created_at?: string | null
+          enrollment_date?: string | null
+          id?: string
+          instructor_notes?: string | null
+          notes?: string | null
+          overall_passed?: boolean | null
+          overall_score?: number | null
+          overall_status?: string | null
+          participant_feedback?: string | null
+          participation_score?: number | null
+          payment_status?: string | null
+          session_id?: string | null
+          start_time?: string | null
+          student_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_enrollments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_enrollments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_enrollment_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_template_components: {
+        Row: {
+          allows_parallel: boolean | null
+          assessment_type: string | null
+          break_type: string | null
+          component_description: string | null
+          component_name: string | null
+          component_type: string
+          course_id: string | null
+          created_at: string | null
+          created_by: string | null
+          duration_minutes: number
+          equipment_required: string[] | null
+          has_assessment: boolean | null
+          id: string
+          instructor_required: boolean | null
+          is_break: boolean | null
+          is_mandatory: boolean | null
+          max_participants: number | null
+          min_score_required: number | null
+          notes: string | null
+          room_required: boolean | null
+          sequence_order: number
+          session_template_id: string
+          special_requirements: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          allows_parallel?: boolean | null
+          assessment_type?: string | null
+          break_type?: string | null
+          component_description?: string | null
+          component_name?: string | null
+          component_type?: string
+          course_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          duration_minutes: number
+          equipment_required?: string[] | null
+          has_assessment?: boolean | null
+          id?: string
+          instructor_required?: boolean | null
+          is_break?: boolean | null
+          is_mandatory?: boolean | null
+          max_participants?: number | null
+          min_score_required?: number | null
+          notes?: string | null
+          room_required?: boolean | null
+          sequence_order: number
+          session_template_id: string
+          special_requirements?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          allows_parallel?: boolean | null
+          assessment_type?: string | null
+          break_type?: string | null
+          component_description?: string | null
+          component_name?: string | null
+          component_type?: string
+          course_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          duration_minutes?: number
+          equipment_required?: string[] | null
+          has_assessment?: boolean | null
+          id?: string
+          instructor_required?: boolean | null
+          is_break?: boolean | null
+          is_mandatory?: boolean | null
+          max_participants?: number | null
+          min_score_required?: number | null
+          notes?: string | null
+          room_required?: boolean | null
+          sequence_order?: number
+          session_template_id?: string
+          special_requirements?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_session_template_components_template"
+            columns: ["session_template_id"]
+            isOneToOne: false
+            referencedRelation: "training_session_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_enrollment_profiles: {
         Row: {
           assessment_status: string | null
@@ -14271,6 +14815,13 @@ export type Database = {
             foreignKeyName: "student_roster_members_roster_id_fkey"
             columns: ["roster_id"]
             isOneToOne: false
+            referencedRelation: "roster_capacity_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_roster_members_roster_id_fkey"
+            columns: ["roster_id"]
+            isOneToOne: false
             referencedRelation: "student_rosters"
             referencedColumns: ["id"]
           },
@@ -14286,6 +14837,7 @@ export type Database = {
       student_rosters: {
         Row: {
           availability_booking_id: string | null
+          booking_id: string | null
           course_id: string | null
           course_name: string
           course_sequence: Json | null
@@ -14306,6 +14858,7 @@ export type Database = {
         }
         Insert: {
           availability_booking_id?: string | null
+          booking_id?: string | null
           course_id?: string | null
           course_name: string
           course_sequence?: Json | null
@@ -14326,6 +14879,7 @@ export type Database = {
         }
         Update: {
           availability_booking_id?: string | null
+          booking_id?: string | null
           course_id?: string | null
           course_name?: string
           course_sequence?: Json | null
@@ -14350,6 +14904,13 @@ export type Database = {
             columns: ["availability_booking_id"]
             isOneToOne: true
             referencedRelation: "availability_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_student_rosters_availability_booking"
+            columns: ["availability_booking_id"]
+            isOneToOne: true
+            referencedRelation: "availability_bookings_with_location"
             referencedColumns: ["id"]
           },
           {
@@ -14378,6 +14939,27 @@ export type Database = {
             columns: ["availability_booking_id"]
             isOneToOne: true
             referencedRelation: "availability_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_rosters_availability_booking_id_fkey"
+            columns: ["availability_booking_id"]
+            isOneToOne: true
+            referencedRelation: "availability_bookings_with_location"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_rosters_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "availability_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_rosters_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "availability_bookings_with_location"
             referencedColumns: ["id"]
           },
           {
@@ -17197,6 +17779,199 @@ export type Database = {
         }
         Relationships: []
       }
+      training_session_templates: {
+        Row: {
+          code: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          estimated_break_minutes: number | null
+          id: string
+          is_active: boolean | null
+          is_public: boolean | null
+          max_participants: number | null
+          name: string
+          provider_id: string | null
+          required_equipment: string[] | null
+          required_instructors: number | null
+          required_rooms: number | null
+          requires_approval: boolean | null
+          template_type: string
+          total_duration_minutes: number
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          estimated_break_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_public?: boolean | null
+          max_participants?: number | null
+          name: string
+          provider_id?: string | null
+          required_equipment?: string[] | null
+          required_instructors?: number | null
+          required_rooms?: number | null
+          requires_approval?: boolean | null
+          template_type?: string
+          total_duration_minutes: number
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          estimated_break_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_public?: boolean | null
+          max_participants?: number | null
+          name?: string
+          provider_id?: string | null
+          required_equipment?: string[] | null
+          required_instructors?: number | null
+          required_rooms?: number | null
+          requires_approval?: boolean | null
+          template_type?: string
+          total_duration_minutes?: number
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      training_sessions: {
+        Row: {
+          average_score: number | null
+          base_price: number | null
+          completion_date: string | null
+          completion_rate: number | null
+          course_template: string | null
+          created_at: string | null
+          current_enrollment: number | null
+          description: string | null
+          early_bird_deadline: string | null
+          early_bird_price: number | null
+          end_time: string
+          equipment_assignments: Json | null
+          group_discount_percentage: number | null
+          id: string
+          instructor_assignments: Json | null
+          instructor_id: string | null
+          location_id: string | null
+          max_capacity: number | null
+          provider_id: string | null
+          registration_status: string | null
+          room_assignments: Json | null
+          session_code: string | null
+          session_date: string
+          session_template_id: string | null
+          session_type: string | null
+          start_time: string
+          status: string | null
+          time_zone: string | null
+          title: string
+          updated_at: string | null
+          updated_by: string | null
+          waitlist_enabled: boolean | null
+        }
+        Insert: {
+          average_score?: number | null
+          base_price?: number | null
+          completion_date?: string | null
+          completion_rate?: number | null
+          course_template?: string | null
+          created_at?: string | null
+          current_enrollment?: number | null
+          description?: string | null
+          early_bird_deadline?: string | null
+          early_bird_price?: number | null
+          end_time: string
+          equipment_assignments?: Json | null
+          group_discount_percentage?: number | null
+          id?: string
+          instructor_assignments?: Json | null
+          instructor_id?: string | null
+          location_id?: string | null
+          max_capacity?: number | null
+          provider_id?: string | null
+          registration_status?: string | null
+          room_assignments?: Json | null
+          session_code?: string | null
+          session_date: string
+          session_template_id?: string | null
+          session_type?: string | null
+          start_time: string
+          status?: string | null
+          time_zone?: string | null
+          title: string
+          updated_at?: string | null
+          updated_by?: string | null
+          waitlist_enabled?: boolean | null
+        }
+        Update: {
+          average_score?: number | null
+          base_price?: number | null
+          completion_date?: string | null
+          completion_rate?: number | null
+          course_template?: string | null
+          created_at?: string | null
+          current_enrollment?: number | null
+          description?: string | null
+          early_bird_deadline?: string | null
+          early_bird_price?: number | null
+          end_time?: string
+          equipment_assignments?: Json | null
+          group_discount_percentage?: number | null
+          id?: string
+          instructor_assignments?: Json | null
+          instructor_id?: string | null
+          location_id?: string | null
+          max_capacity?: number | null
+          provider_id?: string | null
+          registration_status?: string | null
+          room_assignments?: Json | null
+          session_code?: string | null
+          session_date?: string
+          session_template_id?: string | null
+          session_type?: string | null
+          start_time?: string
+          status?: string | null
+          time_zone?: string | null
+          title?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          waitlist_enabled?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_training_sessions_template"
+            columns: ["session_template_id"]
+            isOneToOne: false
+            referencedRelation: "training_session_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_sessions_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_achievements: {
         Row: {
           achieved_at: string | null
@@ -17391,14 +18166,17 @@ export type Database = {
         Row: {
           availability_type: Database["public"]["Enums"]["availability_type"]
           created_at: string
-          day_of_week: Database["public"]["Enums"]["day_of_week"]
+          date_override: boolean | null
+          day_of_week: Database["public"]["Enums"]["day_of_week"] | null
           effective_date: string
           end_time: string
           expiry_date: string | null
           id: string
           is_active: boolean
+          is_recurring: boolean | null
           notes: string | null
           recurring_pattern: string | null
+          specific_date: string | null
           start_time: string
           time_slot_duration: number
           updated_at: string
@@ -17407,14 +18185,17 @@ export type Database = {
         Insert: {
           availability_type?: Database["public"]["Enums"]["availability_type"]
           created_at?: string
-          day_of_week: Database["public"]["Enums"]["day_of_week"]
+          date_override?: boolean | null
+          day_of_week?: Database["public"]["Enums"]["day_of_week"] | null
           effective_date?: string
           end_time: string
           expiry_date?: string | null
           id?: string
           is_active?: boolean
+          is_recurring?: boolean | null
           notes?: string | null
           recurring_pattern?: string | null
+          specific_date?: string | null
           start_time: string
           time_slot_duration?: number
           updated_at?: string
@@ -17423,14 +18204,17 @@ export type Database = {
         Update: {
           availability_type?: Database["public"]["Enums"]["availability_type"]
           created_at?: string
-          day_of_week?: Database["public"]["Enums"]["day_of_week"]
+          date_override?: boolean | null
+          day_of_week?: Database["public"]["Enums"]["day_of_week"] | null
           effective_date?: string
           end_time?: string
           expiry_date?: string | null
           id?: string
           is_active?: boolean
+          is_recurring?: boolean | null
           notes?: string | null
           recurring_pattern?: string | null
+          specific_date?: string | null
           start_time?: string
           time_slot_duration?: number
           updated_at?: string
@@ -17583,6 +18367,7 @@ export type Database = {
           compliance_status: string | null
           created_at: string | null
           current_value: string | null
+          document_count: number | null
           due_date: string | null
           evidence_files: Json | null
           id: string
@@ -17591,6 +18376,7 @@ export type Database = {
           metric_id: string
           next_review_date: string | null
           notes: string | null
+          primary_document_id: string | null
           priority: number | null
           rejection_reason: string | null
           reminder_sent_at: string | null
@@ -17612,6 +18398,7 @@ export type Database = {
           compliance_status?: string | null
           created_at?: string | null
           current_value?: string | null
+          document_count?: number | null
           due_date?: string | null
           evidence_files?: Json | null
           id?: string
@@ -17620,6 +18407,7 @@ export type Database = {
           metric_id: string
           next_review_date?: string | null
           notes?: string | null
+          primary_document_id?: string | null
           priority?: number | null
           rejection_reason?: string | null
           reminder_sent_at?: string | null
@@ -17641,6 +18429,7 @@ export type Database = {
           compliance_status?: string | null
           created_at?: string | null
           current_value?: string | null
+          document_count?: number | null
           due_date?: string | null
           evidence_files?: Json | null
           id?: string
@@ -17649,6 +18438,7 @@ export type Database = {
           metric_id?: string
           next_review_date?: string | null
           notes?: string | null
+          primary_document_id?: string | null
           priority?: number | null
           rejection_reason?: string | null
           reminder_sent_at?: string | null
@@ -17760,6 +18550,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_compliance_records_primary_document_id_fkey"
+            columns: ["primary_document_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_documents"
             referencedColumns: ["id"]
           },
         ]
@@ -19307,6 +20104,157 @@ export type Database = {
           },
         ]
       }
+      ap_availability_access_summary: {
+        Row: {
+          ap_user: string | null
+          permission_source: string | null
+          permission_table: string | null
+          target_role: string | null
+          target_user: string | null
+          team_name: string | null
+        }
+        Relationships: []
+      }
+      availability_bookings_with_location: {
+        Row: {
+          approval_date: string | null
+          approved_by: string | null
+          billable_hours: number | null
+          booking_date: string | null
+          booking_type: Database["public"]["Enums"]["booking_type"] | null
+          bulk_operation_id: string | null
+          course_id: string | null
+          course_offering_id: string | null
+          course_sequence: Json | null
+          created_at: string | null
+          created_by: string | null
+          created_by_name: string | null
+          description: string | null
+          end_time: string | null
+          hours_credited: number | null
+          id: string | null
+          location_city: string | null
+          location_id: string | null
+          location_name: string | null
+          location_state: string | null
+          requires_approval: boolean | null
+          start_time: string | null
+          status: string | null
+          team_id: string | null
+          title: string | null
+          updated_at: string | null
+          user_display_name: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_bookings_bulk_operation_id_fkey"
+            columns: ["bulk_operation_id"]
+            isOneToOne: false
+            referencedRelation: "bulk_operation_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "certification_requirements"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "course_completion_summary"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_course_offering_id_fkey"
+            columns: ["course_offering_id"]
+            isOneToOne: false
+            referencedRelation: "course_offerings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "availability_bookings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cache_performance: {
         Row: {
           active_entries: number | null
@@ -19590,6 +20538,58 @@ export type Database = {
         }
         Relationships: []
       }
+      monthly_user_availability: {
+        Row: {
+          availability_type:
+            | Database["public"]["Enums"]["availability_type"]
+            | null
+          date_override: boolean | null
+          day_of_week: Database["public"]["Enums"]["day_of_week"] | null
+          display_date: string | null
+          display_name: string | null
+          email: string | null
+          end_time: string | null
+          id: string | null
+          is_active: boolean | null
+          is_recurring: boolean | null
+          notes: string | null
+          recurring_pattern: string | null
+          role: string | null
+          specific_date: string | null
+          start_time: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_availability_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_dashboard_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_availability_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_availability_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_availability_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       performance_dashboard: {
         Row: {
           avg_response_time: number | null
@@ -19651,13 +20651,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "fk_student_rosters_availability_booking"
+            columns: ["availability_booking_id"]
+            isOneToOne: true
+            referencedRelation: "availability_bookings_with_location"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "student_rosters_availability_booking_id_fkey"
             columns: ["availability_booking_id"]
             isOneToOne: true
             referencedRelation: "availability_bookings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "student_rosters_availability_booking_id_fkey"
+            columns: ["availability_booking_id"]
+            isOneToOne: true
+            referencedRelation: "availability_bookings_with_location"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      roster_capacity_status: {
+        Row: {
+          available_spots: number | null
+          capacity_status: string | null
+          created_at: string | null
+          current_enrollment: number | null
+          id: string | null
+          max_capacity: number | null
+          roster_name: string | null
+          updated_at: string | null
+          utilization_percentage: number | null
+        }
+        Insert: {
+          available_spots?: never
+          capacity_status?: never
+          created_at?: string | null
+          current_enrollment?: never
+          id?: string | null
+          max_capacity?: number | null
+          roster_name?: string | null
+          updated_at?: string | null
+          utilization_percentage?: never
+        }
+        Update: {
+          available_spots?: never
+          capacity_status?: never
+          created_at?: string | null
+          current_enrollment?: never
+          id?: string | null
+          max_capacity?: number | null
+          roster_name?: string | null
+          updated_at?: string | null
+          utilization_percentage?: never
+        }
+        Relationships: []
       }
       supervision_progress: {
         Row: {
@@ -19882,6 +20932,14 @@ export type Database = {
         Args: { p_team_id: string; p_start_date: string; p_end_date: string }
         Returns: Json
       }
+      calculate_session_completion_rate: {
+        Args: { p_session_id: string }
+        Returns: number
+      }
+      calculate_student_component_progress: {
+        Args: { p_enrollment_id: string }
+        Returns: number
+      }
       calculate_system_health_score: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -19905,6 +20963,10 @@ export type Database = {
       calculate_user_engagement_score: {
         Args: { p_user_id: string; p_date?: string }
         Returns: number
+      }
+      can_access_user_availability: {
+        Args: { target_user_id: string; requesting_user_id?: string }
+        Returns: boolean
       }
       can_user_manage_team_enhanced: {
         Args: { p_team_id: string; p_user_id: string }
@@ -19953,6 +21015,10 @@ export type Database = {
       check_role_progression_eligibility: {
         Args: { user_id: string; target_role: string }
         Returns: boolean
+      }
+      check_roster_capacity: {
+        Args: { p_roster_id: string; p_additional_students?: number }
+        Returns: Json
       }
       check_schedule_conflicts: {
         Args: {
@@ -20036,6 +21102,17 @@ export type Database = {
           message: string
         }[]
       }
+      create_session_from_template: {
+        Args: {
+          p_template_id: string
+          p_session_date: string
+          p_start_time: string
+          p_location_id: string
+          p_instructor_id: string
+          p_created_by?: string
+        }
+        Returns: string
+      }
       create_team_bypass_rls: {
         Args:
           | {
@@ -20059,15 +21136,7 @@ export type Database = {
           description: string
           team_type: string
           status: string
-          performance_score: number
-          location_id: string
-          provider_id: string
-          created_by: string
           created_at: string
-          updated_at: string
-          metadata: Json
-          monthly_targets: Json
-          current_metrics: Json
         }[]
       }
       create_user_from_invitation: {
@@ -20098,9 +21167,77 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      dblink: {
+        Args: { "": string }
+        Returns: Record<string, unknown>[]
+      }
+      dblink_cancel_query: {
+        Args: { "": string }
+        Returns: string
+      }
+      dblink_close: {
+        Args: { "": string }
+        Returns: string
+      }
+      dblink_connect: {
+        Args: { "": string }
+        Returns: string
+      }
+      dblink_connect_u: {
+        Args: { "": string }
+        Returns: string
+      }
+      dblink_current_query: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      dblink_disconnect: {
+        Args: Record<PropertyKey, never> | { "": string }
+        Returns: string
+      }
+      dblink_error_message: {
+        Args: { "": string }
+        Returns: string
+      }
+      dblink_exec: {
+        Args: { "": string }
+        Returns: string
+      }
+      dblink_fdw_validator: {
+        Args: { options: string[]; catalog: unknown }
+        Returns: undefined
+      }
+      dblink_get_connections: {
+        Args: Record<PropertyKey, never>
+        Returns: string[]
+      }
+      dblink_get_notify: {
+        Args: Record<PropertyKey, never> | { conname: string }
+        Returns: Record<string, unknown>[]
+      }
+      dblink_get_pkey: {
+        Args: { "": string }
+        Returns: Database["public"]["CompositeTypes"]["dblink_pkey_results"][]
+      }
+      dblink_get_result: {
+        Args: { "": string }
+        Returns: Record<string, unknown>[]
+      }
+      dblink_is_busy: {
+        Args: { "": string }
+        Returns: number
+      }
       delete_team_bypass_rls: {
         Args: { p_team_id: string }
         Returns: boolean
+      }
+      enroll_student_in_session: {
+        Args: {
+          p_session_id: string
+          p_student_id: string
+          p_skip_prerequisite_check?: boolean
+        }
+        Returns: string
       }
       evaluate_progression_eligibility: {
         Args: { p_user_id: string; p_target_role: string }
@@ -20212,6 +21349,18 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: {
           team_data: Json
+        }[]
+      }
+      get_ap_team_availability_access: {
+        Args: { ap_user_id?: string }
+        Returns: {
+          user_id: string
+          display_name: string
+          email: string
+          role: string
+          team_id: string
+          team_name: string
+          permission_level: string
         }[]
       }
       get_ap_user_assignments: {
@@ -20439,6 +21588,19 @@ export type Database = {
         Args: { p_instructor_id: string }
         Returns: Json
       }
+      get_location_availability: {
+        Args: {
+          p_location_id: string
+          p_start_date: string
+          p_end_date: string
+        }
+        Returns: {
+          booking_date: string
+          total_bookings: number
+          training_sessions: number
+          available_slots: number
+        }[]
+      }
       get_metric_aggregation: {
         Args: { p_metric_name: string; p_start_time: string; p_period: string }
         Returns: {
@@ -20615,6 +21777,52 @@ export type Database = {
           revoked_certificates: number
         }[]
       }
+      get_rosters_bypass_rls: {
+        Args: { p_user_role: string; p_user_id: string; p_location_id?: string }
+        Returns: {
+          id: string
+          name: string
+          created_by: string
+          created_at: string
+          updated_at: string
+          status: string
+          location_id: string
+          course_id: string
+          issue_date: string
+          metadata: Json
+          certificate_count: number
+          description: string
+          instructor_name: string
+          roster_type: string
+        }[]
+      }
+      get_session_template_summary: {
+        Args: { p_template_id: string }
+        Returns: {
+          template_name: string
+          total_duration_minutes: number
+          component_count: number
+          break_count: number
+          assessment_count: number
+          required_instructors: number
+          max_participants: number
+        }[]
+      }
+      get_student_session_progress: {
+        Args: { p_enrollment_id: string }
+        Returns: {
+          component_name: string
+          component_type: string
+          sequence_order: number
+          status: string
+          score: number
+          passed: boolean
+          attendance_status: string
+          start_time: string
+          end_time: string
+          duration_minutes: number
+        }[]
+      }
       get_system_admin_dashboard_metrics: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -20763,6 +21971,31 @@ export type Database = {
         Args: { p_user_id?: string }
         Returns: number
       }
+      get_user_availability_for_date_range: {
+        Args: {
+          start_date: string
+          end_date: string
+          user_ids?: string[]
+          requesting_user_id?: string
+          requesting_user_role?: string
+        }
+        Returns: {
+          id: string
+          user_id: string
+          availability_date: string
+          day_of_week: number
+          start_time: string
+          end_time: string
+          availability_type: string
+          recurring_pattern: string
+          is_recurring: boolean
+          specific_date: string
+          notes: string
+          display_name: string
+          email: string
+          role: string
+        }[]
+      }
       get_user_compliance_summary: {
         Args: { p_user_id: string }
         Returns: {
@@ -20813,6 +22046,10 @@ export type Database = {
       initialize_all_integrations: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      initialize_component_progress: {
+        Args: { p_enrollment_id: string }
+        Returns: number
       }
       initiate_workflow: {
         Args: {
@@ -21045,6 +22282,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      test_sa_user_access: {
+        Args: { test_user_id?: string }
+        Returns: {
+          test_name: string
+          test_result: boolean
+          error_message: string
+        }[]
+      }
       test_simple_crm_insert: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -21079,6 +22324,17 @@ export type Database = {
           p_notes?: string
         }
         Returns: string
+      }
+      update_component_progress: {
+        Args: {
+          p_progress_id: string
+          p_status: string
+          p_score?: number
+          p_attendance_status?: string
+          p_instructor_notes?: string
+          p_completed_by?: string
+        }
+        Returns: boolean
       }
       update_realtime_metrics: {
         Args: Record<PropertyKey, never>
@@ -21127,16 +22383,34 @@ export type Database = {
         Returns: undefined
       }
       upload_compliance_document: {
-        Args: {
-          p_user_id: string
-          p_metric_id: string
-          p_file_name: string
-          p_file_path: string
-          p_file_type: string
-          p_file_size: number
-          p_expiry_date?: string
-        }
+        Args:
+          | {
+              p_user_id: string
+              p_metric_id: string
+              p_file_name: string
+              p_file_path: string
+              p_file_type: string
+              p_file_size: number
+              p_expiry_date?: string
+            }
+          | {
+              p_user_id: string
+              p_metric_id: string
+              p_file_name: string
+              p_file_path: string
+              p_file_type: string
+              p_file_size: number
+              p_expiry_date?: string
+            }
         Returns: string
+      }
+      vacuum_tables: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      vacuum_user_compliance_records: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       validate_ap_user_selection: {
         Args: { p_workflow_id: string; p_ap_user_id: string }
@@ -21144,6 +22418,10 @@ export type Database = {
       }
       validate_configuration_value: {
         Args: { p_data_type: string; p_value: Json; p_validation_rules?: Json }
+        Returns: boolean
+      }
+      validate_course_prerequisites: {
+        Args: { p_student_id: string; p_course_id: string }
         Returns: boolean
       }
       validate_crm_data_integrity: {
@@ -21175,6 +22453,14 @@ export type Database = {
           stored_count: number
           actual_count: number
           discrepancy: number
+        }[]
+      }
+      validate_session_template: {
+        Args: { p_template_id: string }
+        Returns: {
+          is_valid: boolean
+          error_count: number
+          validation_errors: string[]
         }[]
       }
       verify_certificate: {
@@ -21211,7 +22497,10 @@ export type Database = {
       permission_type: "view" | "edit" | "manage"
     }
     CompositeTypes: {
-      [_ in never]: never
+      dblink_pkey_results: {
+        position: number | null
+        colname: string | null
+      }
     }
   }
 }
