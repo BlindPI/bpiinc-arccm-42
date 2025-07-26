@@ -367,7 +367,14 @@ export default function UserComplianceManager() {
           // Get documents for this requirement
           const { data: docs } = actualMetricId ? await supabase
             .from('compliance_documents')
-            .select('id, file_name, upload_date, verification_status, file_path')
+            .select(`
+              id, 
+              file_name, 
+              upload_date, 
+              verification_status, 
+              file_path,
+              uploaded_by_profile:profiles!uploaded_by(id, display_name, email, role)
+            `)
             .eq('user_id', userId)
             .eq('metric_id', actualMetricId) : { data: [] };
 
