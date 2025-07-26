@@ -1098,21 +1098,24 @@ export default function UserComplianceManager() {
                                 <Download className="h-3 w-3" />
                               </Button>
                             </div>
-                            <div className="text-xs text-blue-600 font-semibold mb-1">
-                              📄 Document ID: {doc.id}
-                            </div>
-                            <div className="text-xs text-purple-600 font-semibold mb-1">
-                              🔗 uploaded_by field: {(doc as any).uploaded_by || 'NULL'}
-                            </div>
-                            {uploadedBy ? (
-                              <div className="text-xs text-green-600 font-semibold">
-                                👤 Uploaded by: {uploadedBy.display_name} (ID: {uploadedBy.id})
+                            <div className="space-y-1 text-xs text-gray-600">
+                              {uploadedBy && uploadedBy.id !== user?.id && (
+                                <div className="flex justify-between">
+                                  <span>Uploaded by:</span>
+                                  <span className="font-medium text-blue-600">{uploadedBy.display_name} ({uploadedBy.role})</span>
+                                </div>
+                              )}
+                              <div className="flex justify-between">
+                                <span>Upload date:</span>
+                                <span className="font-medium">{new Date(doc.upload_date || doc.created_at).toLocaleDateString()}</span>
                               </div>
-                            ) : (
-                              <div className="text-xs text-red-600 font-semibold">
-                                ❌ No uploaded_by_profile data found
+                              <div className="flex justify-between">
+                                <span>Status:</span>
+                                <span className={`font-medium ${doc.verification_status === 'pending' ? 'text-yellow-600' : doc.verification_status === 'approved' ? 'text-green-600' : 'text-red-600'}`}>
+                                  {doc.verification_status}
+                                </span>
                               </div>
-                            )}
+                            </div>
                           </div>
                         );
                       })}

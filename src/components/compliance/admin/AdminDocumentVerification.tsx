@@ -219,22 +219,32 @@ export function AdminDocumentVerification() {
                         )}
                      </div>
 
-                      <div className="bg-blue-50 p-2 rounded mb-2 text-xs">
-                        <div className="text-blue-600 font-semibold mb-1">
-                          📄 Document ID: {doc.id}
+                      <div className="bg-blue-50 p-3 rounded mb-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="text-blue-700 font-medium">Document Information</div>
                         </div>
-                        <div className="text-purple-600 font-semibold mb-1">
-                          🔗 uploaded_by field: {(doc as any).uploaded_by || 'NULL'}
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Document for:</span>
+                            <span className="font-medium">{complianceUser?.display_name || 'Unknown User'}</span>
+                          </div>
+                          {uploadedBy && uploadedBy.id !== complianceUser?.id && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Uploaded by:</span>
+                              <span className="font-medium">{uploadedBy.display_name} ({uploadedBy.role})</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Upload date:</span>
+                            <span className="font-medium">{new Date(doc.upload_date).toLocaleDateString()}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Status:</span>
+                            <span className={`font-medium ${doc.verification_status === 'pending' ? 'text-yellow-600' : 'text-green-600'}`}>
+                              {doc.verification_status}
+                            </span>
+                          </div>
                         </div>
-                        {uploadedBy ? (
-                          <div className="text-green-600 font-semibold">
-                            👤 Uploaded by: {uploadedBy.display_name} (ID: {uploadedBy.id}) - Role: {uploadedBy.role}
-                          </div>
-                        ) : (
-                          <div className="text-red-600 font-semibold">
-                            ❌ No uploaded_by_profile data found
-                          </div>
-                        )}
                       </div>
 
                       <div className="text-xs text-gray-500">
