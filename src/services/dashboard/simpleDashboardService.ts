@@ -376,71 +376,68 @@ export class SimpleDashboardService {
   }
 
   /**
-   * Get team members and their roster submissions
+   * Get team members and their roster submissions - Using SafeTeamService pattern
    */
   static async getTeamMembers(teamId: string) {
     try {
-      // Get team member user IDs
+      console.log('🔧 TEAM_MEMBERS: Starting getTeamMembers for teamId:', teamId);
+      
+      // First get team members using simple query (SafeTeamService pattern)
       const { data: teamMembers, error: teamError } = await supabase
         .from('team_members')
-        .select('user_id, role, team_position')
-        .eq('team_id', teamId)
-        .eq('status', 'active');
+        .select('user_id, role, team_position, status, created_at')
+        .eq('team_id', teamId);
+
+      console.log('🔧 TEAM_MEMBERS: Raw team members query result:', { teamMembers, teamError });
 
       if (teamError) {
+        console.error('🔧 TEAM_MEMBERS: Error fetching team members:', teamError);
         throw new Error(`Failed to get team members: ${teamError.message}`);
       }
 
       if (!teamMembers || teamMembers.length === 0) {
+        console.log('🔧 TEAM_MEMBERS: No team members found for team:', teamId);
         return [];
       }
 
-      // Get profile details for team members using a join to avoid RLS issues
-      const userIds = teamMembers.map(tm => tm.user_id);
-      
-      // Try to get profiles with a join approach to bypass RLS limitations
-      const { data: teamMembersWithProfiles, error: joinError } = await supabase
-        .from('team_members')
-        .select(`
-          user_id,
-          role,
-          team_position,
-          profiles!inner (
-            id,
-            display_name,
-            email,
-            phone,
-            job_title
-          )
-        `)
-        .eq('team_id', teamId)
-        .eq('status', 'active');
+      // Filter active members
+      const activeMembers = teamMembers.filter(tm => tm.status === 'active');
+      console.log('🔧 TEAM_MEMBERS: Active members count:', activeMembers.length);
 
-      if (joinError) {
-        console.warn('Join approach failed, trying direct profile fetch:', joinError);
-        
-        // Fallback: Try direct profile fetch
-        const { data: profiles, error: profileError } = await supabase
-          .from('profiles')
-          .select('id, display_name, email, phone, job_title')
-          .in('id', userIds);
-
-        if (profileError) {
-          console.error('Direct profile fetch also failed:', profileError);
-          // Don't throw error, just use empty profiles to show Unknown
-          var fallbackProfiles = [];
-        } else {
-          var fallbackProfiles = profiles;
-        }
-        
-        // Use original teamMembers with fetched profiles
-        var finalTeamMembers = teamMembers;
-        var finalProfiles = fallbackProfiles;
-      } else {
-        // Use the joined data
-        var finalTeamMembers = teamMembersWithProfiles || [];
-        var finalProfiles = (teamMembersWithProfiles || []).map(tm => tm.profiles).filter(Boolean);
+      if (activeMembers.length === 0) {
+        console.log('🔧 TEAM_MEMBERS: No active members found');
+        return [];
       }
+
+      const userIds = activeMembers.map(tm => tm.user_id);
+      console.log('🔧 TEAM_MEMBERS: User IDs to fetch profiles for:', userIds);
+
+      // Get profiles separately to avoid RLS issues (SafeTeamService pattern)
+      const membersWithProfiles = await Promise.all(
+        activeMembers.map(async (member) => {
+          console.log('🔧 TEAM_MEMBERS: Fetching profile for user:', member.user_id);
+          
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, display_name, email, phone, job_title, role')
+            .eq('id', member.user_id)
+            .single();
+
+          if (profileError) {
+            console.warn('🔧 TEAM_MEMBERS: Profile fetch failed for user:', member.user_id, profileError);
+          } else {
+            console.log('🔧 TEAM_MEMBERS: Profile fetched successfully for:', member.user_id, profile?.display_name);
+          }
+
+          return {
+            ...member,
+            joined_at: member.created_at || new Date().toISOString(),
+            profile: profile || null
+          };
+        })
+      );
+
+      console.log('🔧 TEAM_MEMBERS: Members with profiles:', membersWithProfiles.length);
 
       // Get roster submissions created by these team members
       const { data: rosters, error: rosterError } = await supabase
@@ -450,8 +447,10 @@ export class SimpleDashboardService {
         .order('created_at', { ascending: false });
 
       if (rosterError) {
-        console.warn('Failed to get roster submissions:', rosterError.message);
+        console.warn('🔧 TEAM_MEMBERS: Failed to get roster submissions:', rosterError.message);
       }
+
+      console.log('🔧 TEAM_MEMBERS: Rosters found:', rosters?.length || 0);
 
       // Group rosters by user
       const rostersByUser = (rosters || []).reduce((acc, roster) => {
@@ -462,21 +461,12 @@ export class SimpleDashboardService {
         return acc;
       }, {} as Record<string, any[]>);
 
-      // Join all data
-      return finalTeamMembers.map(member => {
-        let profile;
-        
-        if (member.profiles) {
-          // From joined data
-          profile = member.profiles;
-        } else {
-          // From separate profile fetch
-          profile = finalProfiles?.find(p => p.id === member.user_id);
-        }
-        
+      // Format final result
+      const result = membersWithProfiles.map(member => {
+        const profile = member.profile;
         const userRosters = rostersByUser[member.user_id] || [];
         
-        return {
+        const formattedMember = {
           user_id: member.user_id,
           display_name: profile?.display_name || `User ${member.user_id.substring(0, 8)}`,
           email: profile?.email || '',
@@ -487,9 +477,15 @@ export class SimpleDashboardService {
           roster_submissions: userRosters.length,
           recent_rosters: userRosters.slice(0, 3) // Show last 3 rosters
         };
+
+        console.log('🔧 TEAM_MEMBERS: Formatted member:', formattedMember.display_name, 'Rosters:', formattedMember.roster_submissions);
+        return formattedMember;
       });
+
+      console.log('🔧 TEAM_MEMBERS: Final result count:', result.length);
+      return result;
     } catch (error) {
-      console.error('Error getting team members:', error);
+      console.error('🔧 TEAM_MEMBERS: Fatal error getting team members:', error);
       return [];
     }
   }

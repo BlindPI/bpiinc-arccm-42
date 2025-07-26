@@ -104,30 +104,97 @@ export class CertificateMetricsService {
   }
 
   /**
-   * Get total certificates count
+   * Get total certificates count - FIXED: Uses location-based filtering for AP users
    */
   static async getTotalCertificates(userId?: string, isAdmin: boolean = false): Promise<number> {
     try {
-      let query = supabase
-        .from('certificates')
-        .select('id', { count: 'exact' })
-        .eq('status', 'ACTIVE');
+      console.log('🔧 METRICS: getTotalCertificates for userId:', userId, 'isAdmin:', isAdmin);
 
-      // Filter by user if not admin
-      if (!isAdmin && userId) {
-        query = query.eq('issued_by', userId);
+      // **ADMIN USERS**: See all certificates
+      if (isAdmin) {
+        const { count, error } = await supabase
+          .from('certificates')
+          .select('id', { count: 'exact' })
+          .eq('status', 'ACTIVE');
+
+        if (error) {
+          console.error('🔧 METRICS: Error fetching admin certificates:', error);
+          return 0;
+        }
+
+        console.log('🔧 METRICS: Admin total certificates:', count);
+        return count || 0;
       }
 
-      const { count, error } = await query;
-
-      if (error) {
-        console.error('Error fetching total certificates:', error);
+      if (!userId) {
+        console.log('🔧 METRICS: No userId provided for non-admin user');
         return 0;
       }
 
+      // **AP USERS**: Use location-based filtering (same as EnhancedCertificatesView)
+      // First check if this is an AP user
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+
+      if (profileError || !profile) {
+        console.error('🔧 METRICS: Error fetching user profile:', profileError);
+        return 0;
+      }
+
+      if (profile.role === 'AP') {
+        console.log('🔧 METRICS: AP user detected - using location-based filtering');
+        
+        // Get provider ID for this AP user
+        const { data: apUser, error: apError } = await supabase
+          .from('authorized_providers')
+          .select('id, primary_location_id')
+          .eq('user_id', userId)
+          .single();
+          
+        if (apError || !apUser?.primary_location_id) {
+          console.error('🔧 METRICS: Could not find provider/location for AP user:', apError);
+          return 0;
+        }
+        
+        const locationId = apUser.primary_location_id;
+        console.log('🔧 METRICS: Using location-based filtering for location:', locationId);
+        
+        // Get certificates for this location
+        const { count, error } = await supabase
+          .from('certificates')
+          .select('id', { count: 'exact' })
+          .eq('location_id', locationId)
+          .eq('status', 'ACTIVE');
+
+        if (error) {
+          console.error('🔧 METRICS: Error fetching location-based certificates:', error);
+          return 0;
+        }
+
+        console.log('🔧 METRICS: AP user location-based certificate count:', count);
+        return count || 0;
+      }
+
+      // **OTHER USERS**: Use issued_by filtering (original logic)
+      console.log('🔧 METRICS: Non-AP user - using issued_by filtering');
+      const { count, error } = await supabase
+        .from('certificates')
+        .select('id', { count: 'exact' })
+        .eq('status', 'ACTIVE')
+        .eq('issued_by', userId);
+
+      if (error) {
+        console.error('🔧 METRICS: Error fetching user certificates:', error);
+        return 0;
+      }
+
+      console.log('🔧 METRICS: Non-AP user certificate count:', count);
       return count || 0;
     } catch (error) {
-      console.error('Error in getTotalCertificates:', error);
+      console.error('🔧 METRICS: Error in getTotalCertificates:', error);
       return 0;
     }
   }
@@ -220,33 +287,98 @@ export class CertificateMetricsService {
   }
 
   /**
-   * Get recent activity count (last 7 days)
+   * Get recent activity count (last 7 days) - FIXED: Uses location-based filtering for AP users
    */
   static async getRecentActivity(userId?: string, isAdmin: boolean = false): Promise<number> {
     try {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      console.log('🔧 METRICS: getRecentActivity for userId:', userId, 'isAdmin:', isAdmin);
 
-      let query = supabase
-        .from('certificates')
-        .select('id', { count: 'exact' })
-        .gte('created_at', sevenDaysAgo.toISOString());
+      // **ADMIN USERS**: See all recent activity
+      if (isAdmin) {
+        const { count, error } = await supabase
+          .from('certificates')
+          .select('id', { count: 'exact' })
+          .gte('created_at', sevenDaysAgo.toISOString());
 
-      // Filter by user if not admin
-      if (!isAdmin && userId) {
-        query = query.eq('issued_by', userId);
+        if (error) {
+          console.error('🔧 METRICS: Error fetching admin recent activity:', error);
+          return 0;
+        }
+
+        console.log('🔧 METRICS: Admin recent activity:', count);
+        return count || 0;
       }
 
-      const { count, error } = await query;
-
-      if (error) {
-        console.error('Error fetching recent activity:', error);
+      if (!userId) {
+        console.log('🔧 METRICS: No userId provided for non-admin user');
         return 0;
       }
 
+      // **AP USERS**: Use location-based filtering (consistent with getTotalCertificates)
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+
+      if (profileError || !profile) {
+        console.error('🔧 METRICS: Error fetching user profile for recent activity:', profileError);
+        return 0;
+      }
+
+      if (profile.role === 'AP') {
+        console.log('🔧 METRICS: AP user - using location-based recent activity filtering');
+        
+        // Get provider location for this AP user
+        const { data: apUser, error: apError } = await supabase
+          .from('authorized_providers')
+          .select('primary_location_id')
+          .eq('user_id', userId)
+          .single();
+          
+        if (apError || !apUser?.primary_location_id) {
+          console.error('🔧 METRICS: Could not find location for AP user recent activity:', apError);
+          return 0;
+        }
+        
+        const locationId = apUser.primary_location_id;
+        console.log('🔧 METRICS: Using location-based recent activity for location:', locationId);
+        
+        // Get recent certificates for this location
+        const { count, error } = await supabase
+          .from('certificates')
+          .select('id', { count: 'exact' })
+          .eq('location_id', locationId)
+          .gte('created_at', sevenDaysAgo.toISOString());
+
+        if (error) {
+          console.error('🔧 METRICS: Error fetching location-based recent activity:', error);
+          return 0;
+        }
+
+        console.log('🔧 METRICS: AP user location-based recent activity:', count);
+        return count || 0;
+      }
+
+      // **OTHER USERS**: Use issued_by filtering (original logic)
+      console.log('🔧 METRICS: Non-AP user - using issued_by recent activity filtering');
+      const { count, error } = await supabase
+        .from('certificates')
+        .select('id', { count: 'exact' })
+        .gte('created_at', sevenDaysAgo.toISOString())
+        .eq('issued_by', userId);
+
+      if (error) {
+        console.error('🔧 METRICS: Error fetching user recent activity:', error);
+        return 0;
+      }
+
+      console.log('🔧 METRICS: Non-AP user recent activity:', count);
       return count || 0;
     } catch (error) {
-      console.error('Error in getRecentActivity:', error);
+      console.error('🔧 METRICS: Error in getRecentActivity:', error);
       return 0;
     }
   }
