@@ -199,12 +199,10 @@ export function AdminDocumentVerification() {
                           <FileText className="h-3 w-3" />
                           {complianceUser?.email || 'No email'}
                         </span>
-                        {uploadedBy && uploadedBy.id !== complianceUser?.id && (
-                          <span className="flex items-center gap-1 text-blue-600">
-                            <User className="h-3 w-3" />
-                            <strong>Uploaded by:</strong> {uploadedBy.display_name} ({uploadedBy.role})
-                          </span>
-                        )}
+                        <span className="flex items-center gap-1 text-blue-600">
+                          <User className="h-3 w-3" />
+                          <strong>Uploaded by:</strong> {uploadedBy ? `${uploadedBy.display_name} (${uploadedBy.role})` : 'Unknown'}
+                        </span>
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
                           Uploaded {formatDate(doc.upload_date)}
