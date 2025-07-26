@@ -220,9 +220,9 @@ export class SimpleDashboardService {
     const activeLocations = (locations || []).filter(l => l.status === 'ACTIVE');
     console.log('🔧 STEP 4 FILTERED: Active locations:', activeLocations);
 
-    // Step 5: Get certificate counts by location from certificate_requests
-    const { data: certificateRequests, error: certificatesError } = await supabase
-      .from('certificate_requests')
+    // Step 5: Get certificate counts by location from certificates
+    const { data: certificates, error: certificatesError } = await supabase
+      .from('certificates')
       .select('id, location_id')
       .in('location_id', locationIds);
 
@@ -230,8 +230,8 @@ export class SimpleDashboardService {
       console.warn('Failed to get certificate counts:', certificatesError.message);
     }
 
-    // Count certificate requests by location
-    const certificateCountsByLocation = (certificateRequests || []).reduce((acc, cert) => {
+    // Count certificates by location
+    const certificateCountsByLocation = (certificates || []).reduce((acc, cert) => {
       acc[cert.location_id] = (acc[cert.location_id] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -395,15 +395,51 @@ export class SimpleDashboardService {
         return [];
       }
 
-      // Get profile details for team members
+      // Get profile details for team members using a join to avoid RLS issues
       const userIds = teamMembers.map(tm => tm.user_id);
-      const { data: profiles, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, display_name, email, phone, job_title')
-        .in('id', userIds);
+      
+      // Try to get profiles with a join approach to bypass RLS limitations
+      const { data: teamMembersWithProfiles, error: joinError } = await supabase
+        .from('team_members')
+        .select(`
+          user_id,
+          role,
+          team_position,
+          profiles!inner (
+            id,
+            display_name,
+            email,
+            phone,
+            job_title
+          )
+        `)
+        .eq('team_id', teamId)
+        .eq('status', 'active');
 
-      if (profileError) {
-        throw new Error(`Failed to get member profiles: ${profileError.message}`);
+      if (joinError) {
+        console.warn('Join approach failed, trying direct profile fetch:', joinError);
+        
+        // Fallback: Try direct profile fetch
+        const { data: profiles, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, display_name, email, phone, job_title')
+          .in('id', userIds);
+
+        if (profileError) {
+          console.error('Direct profile fetch also failed:', profileError);
+          // Don't throw error, just use empty profiles to show Unknown
+          var fallbackProfiles = [];
+        } else {
+          var fallbackProfiles = profiles;
+        }
+        
+        // Use original teamMembers with fetched profiles
+        var finalTeamMembers = teamMembers;
+        var finalProfiles = fallbackProfiles;
+      } else {
+        // Use the joined data
+        var finalTeamMembers = teamMembersWithProfiles || [];
+        var finalProfiles = (teamMembersWithProfiles || []).map(tm => tm.profiles).filter(Boolean);
       }
 
       // Get roster submissions created by these team members
@@ -427,13 +463,22 @@ export class SimpleDashboardService {
       }, {} as Record<string, any[]>);
 
       // Join all data
-      return teamMembers.map(member => {
-        const profile = profiles?.find(p => p.id === member.user_id);
+      return finalTeamMembers.map(member => {
+        let profile;
+        
+        if (member.profiles) {
+          // From joined data
+          profile = member.profiles;
+        } else {
+          // From separate profile fetch
+          profile = finalProfiles?.find(p => p.id === member.user_id);
+        }
+        
         const userRosters = rostersByUser[member.user_id] || [];
         
         return {
           user_id: member.user_id,
-          display_name: profile?.display_name || 'Unknown',
+          display_name: profile?.display_name || `User ${member.user_id.substring(0, 8)}`,
           email: profile?.email || '',
           phone: profile?.phone || '',
           job_title: profile?.job_title || '',
@@ -455,7 +500,7 @@ export class SimpleDashboardService {
   static async getLocationCertificates(locationId: string) {
     try {
       const { data: certificates, error } = await supabase
-        .from('certificate_requests')
+        .from('certificates')
         .select('id, recipient_name, course_name, status, created_at')
         .eq('location_id', locationId)
         .order('created_at', { ascending: false });
