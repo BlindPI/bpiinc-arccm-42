@@ -2,9 +2,18 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, Clock, MapPin, Users } from 'lucide-react';
-import type { Database } from '@/integrations/supabase/types';
-
-type AvailabilityBooking = Database['public']['Tables']['availability_bookings']['Row'];
+interface AvailabilityBooking {
+  id: string;
+  user_id: string;
+  booking_date: string;
+  start_time: string;
+  end_time: string;
+  booking_type: string;
+  title: string;
+  description: string | null;
+  status: string;
+  [key: string]: any;
+}
 
 interface AvailabilityBookingsProps {
   bookings: AvailabilityBooking[];

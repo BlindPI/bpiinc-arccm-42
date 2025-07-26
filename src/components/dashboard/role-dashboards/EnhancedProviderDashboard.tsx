@@ -326,7 +326,7 @@ const EnhancedProviderDashboard: React.FC<EnhancedProviderDashboardProps> = ({
           current_value: existingRecord?.current_value,
           compliance_status: existingRecord?.compliance_status || 'pending',
           last_checked_at: existingRecord?.last_checked_at,
-          next_check_due: existingRecord?.next_check_due,
+          next_check_due: (existingRecord as any)?.next_check_due,
           notes: existingRecord?.notes,
           record_id: existingRecord?.id
         };

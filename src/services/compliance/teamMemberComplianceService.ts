@@ -148,7 +148,7 @@ export class TeamMemberComplianceService {
             name: record.compliance_metrics?.name || 'Unknown Requirement',
             category: record.compliance_metrics?.category || 'general',
             status: record.compliance_status,
-            due_date: record.next_check_due
+            due_date: (record as any).next_check_due
           }));
 
           // Determine overall compliance status
