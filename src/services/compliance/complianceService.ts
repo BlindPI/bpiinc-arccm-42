@@ -768,6 +768,12 @@ export class ComplianceService {
           display_name,
           email,
           role
+        ),
+        verified_by_profile:profiles!verified_by (
+          id,
+          display_name,
+          email,
+          role
         )
       `)
       .eq('verification_status', 'pending')

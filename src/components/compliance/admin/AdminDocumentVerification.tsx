@@ -111,6 +111,17 @@ export function AdminDocumentVerification() {
     }
   };
 
+  const isExpiringSoon = (expiryDate: string | null) => {
+    if (!expiryDate) return false;
+    try {
+      const expiry = new Date(expiryDate);
+      const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      return expiry <= thirtyDaysFromNow && expiry >= new Date();
+    } catch {
+      return false;
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -233,12 +244,39 @@ export function AdminDocumentVerification() {
                             </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Upload date:</span>
-                            <span className="font-medium">{new Date(doc.upload_date).toLocaleDateString()}</span>
+                            <span className="text-gray-600">Upload timestamp:</span>
+                            <span className="font-medium">{new Date(doc.upload_date).toLocaleString()}</span>
                           </div>
+                          {doc.expiry_date && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Expires:</span>
+                              <span className={`font-medium ${
+                                isExpired(doc.expiry_date) ? 'text-red-600' : 
+                                isExpiringSoon(doc.expiry_date) ? 'text-orange-600' : 'text-green-600'
+                              }`}>
+                                {new Date(doc.expiry_date).toLocaleDateString()}
+                              </span>
+                            </div>
+                          )}
+                          {doc.verified_at && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">{doc.verification_status === 'approved' ? 'Approved' : 'Verified'} timestamp:</span>
+                              <span className="font-medium text-green-600">
+                                {new Date(doc.verified_at).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {(doc as any).verified_by_profile && doc.verified_at && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">{doc.verification_status === 'approved' ? 'Approved' : 'Verified'} by:</span>
+                              <span className="font-medium text-green-600">
+                                {(doc as any).verified_by_profile.display_name} ({(doc as any).verified_by_profile.role})
+                              </span>
+                            </div>
+                          )}
                           <div className="flex justify-between">
                             <span className="text-gray-600">Status:</span>
-                            <span className={`font-medium ${doc.verification_status === 'pending' ? 'text-yellow-600' : 'text-green-600'}`}>
+                            <span className={`font-medium ${doc.verification_status === 'pending' ? 'text-yellow-600' : doc.verification_status === 'approved' ? 'text-green-600' : 'text-red-600'}`}>
                               {doc.verification_status}
                             </span>
                           </div>
