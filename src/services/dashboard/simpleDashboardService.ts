@@ -426,7 +426,7 @@ export class SimpleDashboardService {
           if (profileError) {
             console.warn('🔧 TEAM_MEMBERS: Profile fetch failed for user:', member.user_id, profileError);
           } else {
-            console.log('🔧 TEAM_MEMBERS: Profile fetched successfully for:', member.user_id, profile?.display_name);
+            console.log('🔧 TEAM_MEMBERS: Profile fetched successfully for:', member.user_id, profile?.display_name || 'NO_DISPLAY_NAME');
           }
 
           return {
@@ -439,18 +439,57 @@ export class SimpleDashboardService {
 
       console.log('🔧 TEAM_MEMBERS: Members with profiles:', membersWithProfiles.length);
 
-      // Get roster submissions created by these team members
-      const { data: rosters, error: rosterError } = await supabase
+      // **FIXED: Get rosters with location-based filtering for AP users**
+      console.log('🔧 TEAM_MEMBERS: Getting rosters with location filtering...');
+      
+      // Determine if we need location-based filtering (for AP users)
+      const currentUser = await supabase.auth.getUser();
+      let locationFilter = null;
+      
+      if (currentUser.data.user) {
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', currentUser.data.user.id)
+          .single();
+
+        if (userProfile?.role === 'AP') {
+          // Get AP user's location for filtering
+          const { data: apProvider } = await supabase
+            .from('authorized_providers')
+            .select('primary_location_id')
+            .eq('user_id', currentUser.data.user.id)
+            .single();
+
+          if (apProvider?.primary_location_id) {
+            locationFilter = apProvider.primary_location_id;
+            console.log('🔧 TEAM_MEMBERS: AP user - will filter rosters by location:', locationFilter);
+          }
+        }
+      }
+
+      // Get rosters created by team members, with location filtering for AP users
+      let rosterQuery = supabase
         .from('rosters')
-        .select('id, name, created_by, created_at, status, certificate_count, course_id')
+        .select('id, name, created_by, created_at, status, certificate_count, course_id, location_id')
         .in('created_by', userIds)
-        .order('created_at', { ascending: false });
+        .eq('status', 'ACTIVE');
+
+      // Apply location filter for AP users
+      if (locationFilter) {
+        rosterQuery = rosterQuery.eq('location_id', locationFilter);
+        console.log('🔧 TEAM_MEMBERS: Applied location filter to rosters query');
+      }
+
+      rosterQuery = rosterQuery.order('created_at', { ascending: false });
+
+      const { data: rosters, error: rosterError } = await rosterQuery;
 
       if (rosterError) {
         console.warn('🔧 TEAM_MEMBERS: Failed to get roster submissions:', rosterError.message);
       }
 
-      console.log('🔧 TEAM_MEMBERS: Rosters found:', rosters?.length || 0);
+      console.log('🔧 TEAM_MEMBERS: Rosters found (with location filtering):', rosters?.length || 0);
 
       // Group rosters by user
       const rostersByUser = (rosters || []).reduce((acc, roster) => {
@@ -461,14 +500,28 @@ export class SimpleDashboardService {
         return acc;
       }, {} as Record<string, any[]>);
 
+      console.log('🔧 TEAM_MEMBERS: Rosters grouped by user:', Object.keys(rostersByUser).length, 'users have rosters');
+
       // Format final result
       const result = membersWithProfiles.map(member => {
         const profile = member.profile;
         const userRosters = rostersByUser[member.user_id] || [];
         
+        // Enhanced display name logic with better fallbacks
+        let displayName = profile?.display_name;
+        if (!displayName || displayName.trim() === '') {
+          // Try email first part if no display name
+          if (profile?.email) {
+            displayName = profile.email.split('@')[0];
+          } else {
+            // Last resort: truncated user ID
+            displayName = `User ${member.user_id.substring(0, 8)}`;
+          }
+        }
+
         const formattedMember = {
           user_id: member.user_id,
-          display_name: profile?.display_name || `User ${member.user_id.substring(0, 8)}`,
+          display_name: displayName,
           email: profile?.email || '',
           phone: profile?.phone || '',
           job_title: profile?.job_title || '',
