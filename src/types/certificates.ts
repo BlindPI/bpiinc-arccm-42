@@ -56,6 +56,12 @@ export interface Certificate {
   is_batch_emailed: boolean;
   batch_email_id: string | null;
   roster_id: string | null;
+  // Additional fields that may be present in database
+  generation_status?: string | null;
+  instructor_level?: string | null;
+  instructor_name?: string | null;
+  thumbnail_status?: string | null;
+  thumbnail_url?: string | null;
 }
 
 // Add EmailTemplate interface for location email templates

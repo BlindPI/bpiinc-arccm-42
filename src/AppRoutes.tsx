@@ -40,7 +40,7 @@ import CRMHub from '@/pages/CRMHub';
 import AuthorizedProviders from '@/pages/AuthorizedProviders';
 import CRMDiagnostics from '@/pages/CRMDiagnostics';
 import EmailWorkflowsPage from '@/app/crm/email-workflows/page';
-import { AvailabilityManager } from '@/components/availability/AvailabilityManager';
+// Removed AvailabilityManager - component deleted
 import CourseManagement from '@/pages/CourseManagement';
 import LocationManagement from '@/pages/LocationManagement';
 import InstructorDashboard from '@/pages/InstructorDashboard';
@@ -199,12 +199,7 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      {/* Availability Management Routes */}
-      <Route path="/availability" element={
-        <ProtectedRoute>
-          <AvailabilityManager />
-        </ProtectedRoute>
-      } />
+      {/* Availability Management Routes - Component removed */}
 
       {/* Certificate Routes */}
       <Route path="/certificates" element={

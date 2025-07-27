@@ -18,6 +18,7 @@ import { CertificateMetricsHeader } from "@/components/certificates/dashboard/Ce
 import { CertificateNavigationCards } from "@/components/certificates/navigation/CertificateNavigationCards";
 import { MobileTabNavigation } from "@/components/certificates/mobile/MobileTabNavigation";
 import { useDashboardMetrics, useNavigationStats } from "@/hooks/useCertificateMetrics";
+import { PDFGenerationButton } from "@/components/certificates/PDFGenerationButton";
 
 export default function Certifications() {
   const { data: profile } = useProfile();
@@ -98,25 +99,30 @@ export default function Certifications() {
       
       {/* Navigation Toggle - Desktop Only */}
       {!isMobile && (
-        <div className="flex justify-end gap-2">
-          <Button
-            variant={viewMode === 'cards' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('cards')}
-            className="flex items-center gap-2"
-          >
-            <Grid className="h-4 w-4" />
-            Cards View
-          </Button>
-          <Button
-            variant={viewMode === 'tabs' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('tabs')}
-            className="flex items-center gap-2"
-          >
-            <List className="h-4 w-4" />
-            Tabs View
-          </Button>
+        <div className="flex justify-between items-center gap-2">
+          <div className="flex gap-2">
+            {canManageRequests && <PDFGenerationButton />}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant={viewMode === 'cards' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('cards')}
+              className="flex items-center gap-2"
+            >
+              <Grid className="h-4 w-4" />
+              Cards View
+            </Button>
+            <Button
+              variant={viewMode === 'tabs' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('tabs')}
+              className="flex items-center gap-2"
+            >
+              <List className="h-4 w-4" />
+              Tabs View
+            </Button>
+          </div>
         </div>
       )}
 
