@@ -23,7 +23,7 @@ export default function Certifications() {
   const { data: profile } = useProfile();
   const isMobile = useIsMobile();
   const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
-  const [activeTab, setActiveTab] = useState("batch");
+  const [activeTab, setActiveTab] = useState("certificates");
   const [viewMode, setViewMode] = useState<'cards' | 'tabs'>(isMobile ? 'tabs' : 'cards');
 
   // Fetch real metrics data
